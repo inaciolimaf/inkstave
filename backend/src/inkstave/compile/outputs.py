@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import enum
 import hashlib
+import logging
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -20,6 +21,10 @@ if TYPE_CHECKING:
     from inkstave.storage.base import ObjectStore
 
 _AUX_SUFFIXES = (".aux", ".fls", ".fdb_latexmk", ".out", ".toc", ".bbl", ".blg")
+
+# Module-level logger (spec 23 §5.2.2 default). A caller may inject its own bound
+# logger via ``OutputStore(logger=...)``; existing call sites get this default.
+logger = logging.getLogger("inkstave.compile.outputs")
 
 
 def classify(name: str) -> OutputKind:
@@ -92,10 +97,18 @@ class StoredObject:
 
 
 class OutputStore:
-    def __init__(self, *, storage: ObjectStore, repo: OutputRepository, settings: Settings) -> None:
+    def __init__(
+        self,
+        *,
+        storage: ObjectStore,
+        repo: OutputRepository,
+        settings: Settings,
+        logger: logging.Logger = logger,
+    ) -> None:
         self._storage = storage
         self._repo = repo
         self._settings = settings
+        self._logger = logger
 
     def _key(self, project_id: UUID, compile_id: UUID, name: str) -> str:
         return f"{self._settings.compile_output_prefix}/{project_id}/{compile_id}/{name}"
@@ -122,6 +135,10 @@ class OutputStore:
                 etag=etag,
             )
             rows.append(row)
+        self._logger.debug(
+            "persisted compile outputs",
+            extra={"compile_id": str(compile_id), "count": len(rows)},
+        )
         return rows
 
     def _stored(self, row: CompileOutput) -> StoredObject:
@@ -141,17 +158,24 @@ class OutputStore:
         row = await self._repo.get_by_kind(compile_id, OutputKind.LOG.value)
         return self._stored(row) if row is not None else None
 
+    async def open_synctex(self, compile_id: UUID) -> StoredObject | None:
+        row = await self._repo.get_by_kind(compile_id, OutputKind.SYNCTEX.value)
+        return self._stored(row) if row is not None else None
+
     async def list_outputs(self, compile_id: UUID) -> list[CompileOutput]:
         return await self._repo.list_for_compile(compile_id)
 
     async def delete_for_compile(self, compile_id: UUID) -> None:
+        # Delete storage objects BEFORE the rows. Storage delete is idempotent
+        # (missing keys are a no-op), so a failure mid-sweep leaves the rows in
+        # place and the next retention pass retries cleanly — no orphaned bytes.
         keys = await self._repo.storage_keys_for_compile(compile_id)
-        await self._repo.delete_for_compile(compile_id)
         for key in keys:
             await self._storage.delete(key)
+        await self._repo.delete_for_compile(compile_id)
 
     async def delete_for_project(self, project_id: UUID) -> None:
         keys = await self._repo.storage_keys_for_project(project_id)
-        await self._repo.delete_for_project(project_id)
         for key in keys:
             await self._storage.delete(key)
+        await self._repo.delete_for_project(project_id)

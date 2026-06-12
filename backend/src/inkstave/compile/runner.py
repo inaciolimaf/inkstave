@@ -93,7 +93,13 @@ class LocalTectonicRunner:
             argv.append("--only-cached")
         if self._bundle_url:
             argv += ["--bundle", self._bundle_url]
-        env = {**os.environ, "TECTONIC_CACHE_DIR": str(self._cache_dir)}
+        # Minimal, allow-listed environment (spec 52 §5.4): do NOT inherit the full
+        # process env, so application secrets (JWT_SECRET, OPENROUTER_API_KEY, DB/Redis
+        # creds) are never exposed to a LaTeX compile. Tectonic has no shell-escape, so
+        # \write18 is disabled by design.
+        passthrough = ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR")
+        env = {k: os.environ[k] for k in passthrough if k in os.environ}
+        env["TECTONIC_CACHE_DIR"] = str(self._cache_dir)
         return TectonicCommand(argv=argv, env=env)
 
     async def run(

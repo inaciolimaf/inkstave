@@ -92,11 +92,39 @@ class CompileService:
                 result = _empty(CompileStatus.SYSTEM_ERROR, log_text=str(exc))
                 return result
 
-            if not (workdir / "input" / opts.main_file).is_file():
-                result = _empty(
-                    CompileStatus.FAILURE, log_text=f"root document not found: {opts.main_file}"
+            input_dir = workdir / "input"
+            root = opts.main_file
+            if not (input_dir / root).is_file():
+                # The requested root (default "main.tex") is missing: fall back to a
+                # .tex file in the project so it still compiles. Prefer the shallowest
+                # file that actually declares \documentclass (a real root), otherwise
+                # the first .tex by path. Only fail if there is no .tex at all.
+                candidates = sorted(
+                    (
+                        p.relative_to(input_dir).as_posix()
+                        for p in input_dir.rglob("*.tex")
+                        if p.is_file()
+                    ),
+                    key=lambda rel: (rel.count("/"), rel),
                 )
-                return result
+                if not candidates:
+                    return _empty(
+                        CompileStatus.FAILURE,
+                        log_text=(
+                            f"No LaTeX root document found: '{opts.main_file}' is missing and the "
+                            "project has no .tex file to compile."
+                        ),
+                    )
+                root = candidates[0]
+                for rel in candidates:
+                    try:
+                        if "\\documentclass" in (input_dir / rel).read_text(
+                            "utf-8", errors="ignore"
+                        ):
+                            root = rel
+                            break
+                    except OSError:
+                        continue
 
             if cancel.is_cancelled:
                 result = _empty(CompileStatus.CANCELLED)
@@ -104,13 +132,13 @@ class CompileService:
 
             outcome = await self._runner.run(
                 workdir=workdir,
-                main_file=opts.main_file,
+                main_file=root,
                 output_dir=workdir / "output",
                 timeout_s=timeout_s,
                 limits=limits,
                 cancel=cancel,
             )
-            result = self._build_result(workdir, opts.main_file, outcome, limits)
+            result = self._build_result(workdir, root, outcome, limits)
             return result
         except Exception as exc:  # pragma: no cover - defensive catch-all
             result = _empty(CompileStatus.SYSTEM_ERROR, log_text=f"compile failed: {exc}")

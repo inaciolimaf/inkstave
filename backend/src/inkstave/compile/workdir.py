@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import shutil
 from collections.abc import AsyncIterator
@@ -122,6 +123,12 @@ async def assemble_inputs(
                 await asyncio.to_thread(handle.write, chunk)
         finally:
             await asyncio.to_thread(handle.close)
+            # Close the source stream (async generator) so a partially-consumed
+            # input on an early error path does not leak the underlying handle.
+            aclose = getattr(stream, "aclose", None)
+            if aclose is not None:
+                with contextlib.suppress(Exception):
+                    await aclose()
         count += 1
         if count > limits.max_input_files:
             raise InputLimitError(f"too many input files (> {limits.max_input_files})")
