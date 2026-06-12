@@ -15,5 +15,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Explicit thread pool so parallelism is spec-defined rather than implicit
+    // (spec 53 §5.3 / AC10). maxThreads is capped for CI cores.
+    pool: "threads",
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads: 4,
+      },
+    },
   },
 });

@@ -29,5 +29,14 @@ export default tseslint.config(
     files: ["src/components/ui/**/*.{ts,tsx}", "src/test/**/*.{ts,tsx}"],
     rules: { "react-refresh/only-export-components": "off" },
   },
+  {
+    // Playwright e2e suite (spec 54): Node + browser globals, no React rules.
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
   prettier,
 );
