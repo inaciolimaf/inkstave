@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -36,10 +38,11 @@ export function FileTreeBody({
   onNewDoc: () => void;
   onUpload: () => void;
 }) {
+  const { t } = useTranslation("files");
   return (
     <div className="flex-1 overflow-auto p-1">
       {isLoading && (
-        <div className="space-y-2 p-1" aria-busy="true" aria-label="Loading files">
+        <div className="space-y-2 p-1" aria-busy="true" aria-label={t("loadingFiles")}>
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-6 w-full" />
           ))}
@@ -48,9 +51,9 @@ export function FileTreeBody({
 
       {isError && (
         <div role="alert" className="space-y-2 p-3 text-center text-sm">
-          <p className="text-destructive">Couldn’t load the file tree.</p>
+          <p className="text-destructive">{t("loadError")}</p>
           <Button variant="outline" size="sm" onClick={onRetry}>
-            Retry
+            {t("common:action.retry")}
           </Button>
         </div>
       )}
@@ -59,14 +62,14 @@ export function FileTreeBody({
         <FileTreeContext.Provider value={ctx}>
           {root.children.length === 0 ? (
             <div className="space-y-2 p-3 text-center text-sm text-muted-foreground">
-              <p>{readOnly ? "No files yet." : "No files yet — create one."}</p>
+              <p>{readOnly ? t("empty.readOnly") : t("empty.editable")}</p>
               {!readOnly && (
                 <div className="flex justify-center gap-2">
                   <Button size="sm" variant="outline" onClick={onNewDoc}>
-                    New file
+                    {t("action.newFile")}
                   </Button>
                   <Button size="sm" variant="outline" onClick={onUpload}>
-                    Upload
+                    {t("common:action.upload")}
                   </Button>
                 </div>
               )}
@@ -74,7 +77,7 @@ export function FileTreeBody({
           ) : (
             <ul
               role="tree"
-              aria-label="Project files"
+              aria-label={t("treeLabel")}
               className="select-none"
               onKeyDown={onKeyDown}
               onDragOver={onRootDragOver}

@@ -1,4 +1,6 @@
 /** A single diff hunk with an accept/reject toggle and per-line markers (spec 47). */
+import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -16,20 +18,21 @@ export function HunkView({
   blocked: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useTranslation("review");
   let oldNo = hunk.oldStart;
   let newNo = hunk.newStart;
   return (
     <div className={cn("rounded-md border", blocked && "opacity-60")}>
       <div className="flex items-center gap-2 border-b bg-muted/40 px-2 py-1 font-mono text-xs">
         <span className="flex-1 truncate">{hunk.header}</span>
-        {blocked && <Badge variant="destructive">No longer applies</Badge>}
+        {blocked && <Badge variant="destructive">{t("hunk.noLongerApplies")}</Badge>}
         <label className="flex items-center gap-1 font-sans">
-          <span className="text-xs">{accepted ? "Accept" : "Reject"}</span>
+          <span className="text-xs">{accepted ? t("hunk.accept") : t("hunk.reject")}</span>
           <Switch
             checked={accepted && !blocked}
             disabled={blocked}
             onCheckedChange={onToggle}
-            aria-label={`Accept change: ${hunk.header}`}
+            aria-label={t("hunk.acceptChange", { header: hunk.header })}
           />
         </label>
       </div>
@@ -38,7 +41,12 @@ export function HunkView({
           const oldLabel = line.type === "add" ? "" : String(oldNo++);
           const newLabel = line.type === "del" ? "" : String(newNo++);
           const marker = line.type === "add" ? "+" : line.type === "del" ? "-" : " ";
-          const sr = line.type === "add" ? "added" : line.type === "del" ? "removed" : "";
+          const sr =
+            line.type === "add"
+              ? t("hunk.added")
+              : line.type === "del"
+                ? t("hunk.removed")
+                : "";
           return (
             <div
               key={i}

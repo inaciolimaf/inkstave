@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import i18n from "@/i18n/config";
+
 import { UploadError, uploadFile } from "./api";
 import { treeKey } from "./use-file-tree";
 
@@ -48,7 +50,7 @@ export function useUploads(projectId: string) {
         setUploads((u) =>
           u.map((it) => (it.key === key ? { ...it, pct: 100, status: "done" } : it)),
         );
-        toast.success(`Uploaded ${file.name}`);
+        toast.success(i18n.t("files:toast.uploaded", { name: file.name }));
         await qc.invalidateQueries({ queryKey: treeKey(projectId) });
         return "ok";
       } catch (err) {
@@ -58,8 +60,8 @@ export function useUploads(projectId: string) {
         );
         toast.error(
           code === "name_conflict"
-            ? `“${file.name}” already exists`
-            : `Upload of ${file.name} failed`,
+            ? i18n.t("files:toast.uploadConflict", { name: file.name })
+            : i18n.t("files:toast.uploadFailed", { name: file.name }),
         );
         // A first-time name conflict additionally prompts the user to Replace
         // or Cancel (spec 17 §5.3.5); a failed Replace just reports the error.

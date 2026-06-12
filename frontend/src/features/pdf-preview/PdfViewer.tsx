@@ -6,6 +6,7 @@
  * scrolls the target page into view; scrolling reports the visible page back.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { PdfDocument, PdfPage } from "./pdfjs";
 import type { PdfViewport } from "./hooks/usePdfViewport";
@@ -29,6 +30,7 @@ function PdfPageView({
   onPageClick?: PageClickHandler;
   highlight?: SyncTexBox | null;
 }) {
+  const { t } = useTranslation("preview");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleDoubleClick = useCallback(
@@ -69,7 +71,7 @@ function PdfPageView({
       data-page={pageNumber}
       onDoubleClick={handleDoubleClick}
       className="relative mx-auto my-2 w-fit bg-white shadow"
-      aria-label={`Page ${pageNumber}`}
+      aria-label={t("viewer.page", { pageNumber })}
     >
       <canvas ref={canvasRef} className="block" />
       {overlay && (
@@ -99,6 +101,7 @@ export function PdfViewer({
   onPageClick?: PageClickHandler;
   highlight?: { page: number; box: SyncTexBox } | null;
 }) {
+  const { t } = useTranslation("preview");
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -168,7 +171,7 @@ export function PdfViewer({
       ref={containerRef}
       onScroll={onScroll}
       role="document"
-      aria-label="PDF preview"
+      aria-label={t("pane.pdfPreview")}
       className="h-full overflow-auto bg-muted/30 p-2"
     >
       {Array.from({ length: numPages }, (_, i) => (

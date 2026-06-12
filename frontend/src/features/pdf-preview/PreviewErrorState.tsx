@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 
@@ -6,19 +7,10 @@ import type { CompileJobStatus } from "./types";
 
 type ErrorOutcome = Extract<CompileJobStatus, "failure" | "timeout" | "error">;
 
-const COPY: Record<ErrorOutcome, { title: string; message: string }> = {
-  failure: {
-    title: "Compilation failed",
-    message: "Your document didn’t compile. Check the log for the LaTeX errors.",
-  },
-  timeout: {
-    title: "Compilation timed out",
-    message: "The compile took too long and was stopped. Simplify the document or try again.",
-  },
-  error: {
-    title: "Something went wrong",
-    message: "The compile couldn’t be completed due to a system error.",
-  },
+const COPY_KEYS: Record<ErrorOutcome, { title: string; message: string }> = {
+  failure: { title: "errorState.failureTitle", message: "errorState.failureMessage" },
+  timeout: { title: "errorState.timeoutTitle", message: "errorState.timeoutMessage" },
+  error: { title: "errorState.errorTitle", message: "errorState.errorMessage" },
 };
 
 /** Failed / timed-out / errored compile messaging (spec 24, §5.3.7). */
@@ -33,7 +25,8 @@ export function PreviewErrorState({
   onViewLog: () => void;
   onRetry: () => void;
 }) {
-  const copy = COPY[outcome];
+  const { t } = useTranslation("preview");
+  const copy = COPY_KEYS[outcome];
   return (
     <div
       role="alert"
@@ -41,15 +34,15 @@ export function PreviewErrorState({
     >
       <AlertTriangle className="size-8 text-destructive" aria-hidden="true" />
       <div className="space-y-1">
-        <p className="font-medium text-destructive">{copy.title}</p>
-        <p className="text-muted-foreground">{detail || copy.message}</p>
+        <p className="font-medium text-destructive">{t(copy.title)}</p>
+        <p className="text-muted-foreground">{detail || t(copy.message)}</p>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" onClick={onViewLog}>
-          View log
+          {t("errorState.viewLog")}
         </Button>
         <Button size="sm" onClick={onRetry}>
-          Try again
+          {t("errorState.tryAgain")}
         </Button>
       </div>
     </div>

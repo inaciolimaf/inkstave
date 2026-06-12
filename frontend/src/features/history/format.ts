@@ -1,4 +1,5 @@
 /** Small formatting helpers for the history UI (spec 38). */
+import i18n from "@/i18n/config";
 
 const _UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 60 * 60 * 24 * 365],
@@ -9,18 +10,17 @@ const _UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["second", 1],
 ];
 
-const _rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-
-/** "2 hours ago" style relative time for an ISO timestamp. */
+/** "2 hours ago" style relative time for an ISO timestamp. Localised at call time. */
 export function relativeTime(iso: string, now: number = Date.now()): string {
+  const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
   const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
   const abs = Math.abs(seconds);
   for (const [unit, secs] of _UNITS) {
     if (abs >= secs || unit === "second") {
-      return _rtf.format(Math.round(seconds / secs), unit);
+      return rtf.format(Math.round(seconds / secs), unit);
     }
   }
-  return _rtf.format(0, "second");
+  return rtf.format(0, "second");
 }
 
 /** Absolute ISO-ish time for the tooltip. */

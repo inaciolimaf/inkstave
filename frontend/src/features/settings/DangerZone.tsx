@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ import { deleteAccount } from "./api";
 import { errMessage } from "./errMessage";
 
 export function DangerZone() {
+  const { t } = useTranslation(["settings", "common"]);
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
@@ -39,7 +41,7 @@ export function DangerZone() {
     setBusy(true);
     try {
       await deleteAccount(password);
-      toast.success("Account deleted.");
+      toast.success(t("danger.success"));
       await logout();
       navigate("/login");
     } catch (err) {
@@ -51,27 +53,22 @@ export function DangerZone() {
   return (
     <Card className="border-destructive/50">
       <CardHeader>
-        <CardTitle className="text-destructive">Delete account</CardTitle>
-        <CardDescription>
-          Permanently deletes your account and the projects you own. This cannot be undone.
-        </CardDescription>
+        <CardTitle className="text-destructive">{t("danger.title")}</CardTitle>
+        <CardDescription>{t("danger.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive">Delete my account</Button>
+            <Button variant="destructive">{t("danger.trigger")}</Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Enter your password and type <strong>DELETE</strong> to confirm. Your owned projects
-                will be removed.
-              </AlertDialogDescription>
+              <AlertDialogTitle>{t("danger.dialogTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("danger.dialogDescription")}</AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="del-pw">Password</Label>
+                <Label htmlFor="del-pw">{t("danger.password")}</Label>
                 <Input
                   id="del-pw"
                   type="password"
@@ -80,7 +77,7 @@ export function DangerZone() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="del-confirm">Type DELETE</Label>
+                <Label htmlFor="del-confirm">{t("danger.typeDelete")}</Label>
                 <Input
                   id="del-confirm"
                   value={typed}
@@ -90,7 +87,7 @@ export function DangerZone() {
               </div>
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common:action.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
@@ -99,7 +96,7 @@ export function DangerZone() {
                 disabled={busy || typed !== "DELETE" || !password}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {busy ? "Deleting…" : "Delete account"}
+                {busy ? t("danger.deleting") : t("danger.submit")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

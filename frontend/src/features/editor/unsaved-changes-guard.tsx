@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useBlocker } from "react-router-dom";
 
 import {
@@ -14,6 +15,7 @@ import {
 
 /** Warns on in-app navigation (router blocker) and full-page unload while dirty. */
 export function UnsavedChangesGuard({ when }: { when: boolean }) {
+  const { t } = useTranslation("editor");
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       when && currentLocation.pathname !== nextLocation.pathname,
@@ -40,14 +42,16 @@ export function UnsavedChangesGuard({ when }: { when: boolean }) {
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Leave with unsaved changes?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Your latest edits haven’t finished saving. If you leave now they may be lost.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("unsavedGuard.title")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("unsavedGuard.description")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => blocked && blocker.reset()}>Stay</AlertDialogCancel>
-          <AlertDialogAction onClick={() => blocked && blocker.proceed()}>Leave</AlertDialogAction>
+          <AlertDialogCancel onClick={() => blocked && blocker.reset()}>
+            {t("unsavedGuard.stay")}
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={() => blocked && blocker.proceed()}>
+            {t("unsavedGuard.leave")}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

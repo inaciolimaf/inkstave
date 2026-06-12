@@ -2,6 +2,10 @@
 // tests (added from spec 09 onwards) can assert on the DOM.
 import "@testing-library/jest-dom";
 
+// Initialise the global i18n instance so components using useTranslation render
+// real (English, in jsdom) copy under test rather than raw keys.
+import "@/i18n/config";
+
 // jsdom lacks the pointer-capture / scroll APIs that Radix primitives (Dialog,
 // DropdownMenu, Select) call. Polyfill them as no-ops so those components work
 // under test.

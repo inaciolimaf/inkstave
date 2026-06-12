@@ -7,6 +7,8 @@
  */
 import { useEffect, useState } from "react";
 
+import i18n from "@/i18n/config";
+
 import { getCompilePdf } from "../api";
 import { type PdfDocument, loadPdfDocument } from "../pdfjs";
 
@@ -47,7 +49,7 @@ export function usePdfDocument(projectId: string, compileId: string | null): Pdf
           pdf: null,
           numPages: 0,
           loading: false,
-          error: err instanceof Error ? err.message : "Could not load the PDF.",
+          error: err instanceof Error ? err.message : i18n.t("preview:errors.loadPdf"),
         });
       });
 

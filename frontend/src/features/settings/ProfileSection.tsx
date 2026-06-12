@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "@/auth/auth-context";
@@ -17,6 +18,7 @@ import { updateProfile } from "./api";
 import { errMessage } from "./errMessage";
 
 export function ProfileSection() {
+  const { t } = useTranslation("settings");
   const { user, applyUser } = useAuth();
   const [name, setName] = useState(user?.display_name ?? "");
   const [busy, setBusy] = useState(false);
@@ -28,7 +30,7 @@ export function ProfileSection() {
     try {
       const updated = await updateProfile({ display_name: name.trim() });
       applyUser(updated);
-      toast.success("Profile updated.");
+      toast.success(t("profile.updated"));
     } catch (err) {
       toast.error(errMessage(err));
     } finally {
@@ -39,8 +41,8 @@ export function ProfileSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>Your display name and avatar.</CardDescription>
+        <CardTitle>{t("profile.title")}</CardTitle>
+        <CardDescription>{t("profile.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={save} className="space-y-4">
@@ -56,7 +58,7 @@ export function ProfileSection() {
               </span>
             )}
             <div className="flex-1 space-y-1">
-              <Label htmlFor="display-name">Display name</Label>
+              <Label htmlFor="display-name">{t("profile.displayName")}</Label>
               <Input
                 id="display-name"
                 value={name}
@@ -67,7 +69,7 @@ export function ProfileSection() {
             </div>
           </div>
           <Button type="submit" disabled={busy || !name.trim()}>
-            {busy ? "Saving…" : "Save profile"}
+            {busy ? t("profile.saving") : t("profile.save")}
           </Button>
         </form>
       </CardContent>

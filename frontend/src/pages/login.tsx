@@ -1,10 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/auth-context";
+import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
-import { type LoginValues, loginSchema } from "@/lib/validation";
+import { type LoginValues, makeLoginSchema } from "@/lib/validation";
 
 interface LocationState {
   from?: { pathname?: string };
@@ -26,14 +28,16 @@ interface LocationState {
 }
 
 export function LoginPage() {
+  const { t } = useTranslation(["auth", "common"]);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state ?? {}) as LocationState;
   const [formError, setFormError] = useState<string | null>(null);
+  const schema = useMemo(() => makeLoginSchema((k) => t(k)), [t]);
 
   const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
   });
 
@@ -44,11 +48,11 @@ export function LoginPage() {
       navigate(state.from?.pathname ?? "/", { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        if (error.status === 401) setFormError("Invalid email or password.");
-        else if (error.status === 429) setFormError("Too many attempts. Please try again later.");
+        if (error.status === 401) setFormError(t("login.invalidCredentials"));
+        else if (error.status === 429) setFormError(t("login.tooManyAttempts"));
         else setFormError(error.detail);
       } else {
-        setFormError("Something went wrong. Please try again.");
+        setFormError(t("common:state.error"));
       }
     }
   };
@@ -56,16 +60,17 @@ export function LoginPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+      <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Sign in to Inkstave</CardTitle>
-          <CardDescription>Enter your email and password to continue.</CardDescription>
+          <CardTitle className="text-xl">{t("login.title")}</CardTitle>
+          <CardDescription>{t("login.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {state.justRegistered && (
             <Alert className="mb-4">
-              <AlertDescription>Account created — please sign in.</AlertDescription>
+              <AlertDescription>{t("login.justRegistered")}</AlertDescription>
             </Alert>
           )}
           {formError && (
@@ -80,12 +85,12 @@ export function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("fields.email")}</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         autoComplete="email"
-                        placeholder="you@example.com"
+                        placeholder={t("fields.emailPlaceholder")}
                         {...field}
                       />
                     </FormControl>
@@ -98,7 +103,7 @@ export function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t("fields.password")}</FormLabel>
                     <FormControl>
                       <Input type="password" autoComplete="current-password" {...field} />
                     </FormControl>
@@ -108,17 +113,17 @@ export function LoginPage() {
               />
               <Button type="submit" className="w-full" disabled={pending}>
                 {pending && <Loader2 className="animate-spin" />}
-                Sign in
+                {t("login.submit")}
               </Button>
             </form>
           </Form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            No account?{" "}
+            {t("login.noAccount")}{" "}
             <Link
               to="/register"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Create one
+              {t("login.createOne")}
             </Link>
           </p>
         </CardContent>

@@ -1,4 +1,6 @@
 /** Reverse-chronological versions list with pagination + selection (spec 38). */
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,6 +30,7 @@ function VersionRow({
   onAddLabel,
   onDeleteLabel,
 }: RowProps) {
+  const { t } = useTranslation("history");
   return (
     <div
       role="button"
@@ -53,7 +56,9 @@ function VersionRow({
         >
           {version.author ? initials(version.author.name) : "?"}
         </span>
-        <span className="mr-auto truncate font-medium">{version.author?.name ?? "Unknown"}</span>
+        <span className="mr-auto truncate font-medium">
+          {version.author?.name ?? t("timeline.unknownAuthor")}
+        </span>
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -67,7 +72,7 @@ function VersionRow({
       </div>
       <div className="mt-1 flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
-          v{version.version} · {version.opCount} change{version.opCount === 1 ? "" : "s"}
+          v{version.version} · {t("timeline.changes", { count: version.opCount })}
         </span>
         <HistoryLabels
           version={version.version}
@@ -100,6 +105,7 @@ export function HistoryTimeline({
   onAddLabel: (version: number, name: string) => void;
   onDeleteLabel: (labelId: string) => void;
 }) {
+  const { t } = useTranslation("history");
   const query = useVersions(projectId, docId, true);
 
   if (query.isLoading) {
@@ -114,9 +120,9 @@ export function HistoryTimeline({
   if (query.isError) {
     return (
       <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-        Couldn’t load history.
+        {t("timeline.loadFailed")}
         <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
-          Retry
+          {t("common:action.retry")}
         </Button>
       </div>
     );
@@ -124,11 +130,11 @@ export function HistoryTimeline({
 
   const versions = (query.data?.pages ?? []).flatMap((page) => page.versions);
   if (versions.length === 0) {
-    return <p className="text-sm text-muted-foreground">No history yet.</p>;
+    return <p className="text-sm text-muted-foreground">{t("timeline.empty")}</p>;
   }
 
   return (
-    <div className="space-y-2" role="list" aria-label="Version history">
+    <div className="space-y-2" role="list" aria-label={t("timeline.ariaLabel")}>
       {versions.map((version) => (
         <div role="listitem" key={version.version}>
           <VersionRow
@@ -150,7 +156,7 @@ export function HistoryTimeline({
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}
         >
-          {query.isFetchingNextPage ? "Loading…" : "Load more"}
+          {query.isFetchingNextPage ? t("timeline.loading") : t("timeline.loadMore")}
         </Button>
       )}
     </div>

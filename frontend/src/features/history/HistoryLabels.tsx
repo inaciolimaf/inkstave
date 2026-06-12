@@ -1,6 +1,7 @@
 /** Inline label badges with add/delete for editors/owners (spec 38). */
 import { Tag, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export function HistoryLabels({
   onAdd: (version: number, name: string) => void;
   onDelete: (labelId: string) => void;
 }) {
+  const { t } = useTranslation("history");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
 
@@ -33,7 +35,7 @@ export function HistoryLabels({
           {canWrite && (
             <button
               type="button"
-              aria-label={`Remove label ${label.name}`}
+              aria-label={t("labels.remove", { name: label.name })}
               className="rounded-sm hover:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
@@ -52,7 +54,7 @@ export function HistoryLabels({
               size="icon"
               variant="ghost"
               className="size-5"
-              aria-label={`Add label to version ${version}`}
+              aria-label={t("labels.addToVersion", { version })}
               onClick={(e) => e.stopPropagation()}
             >
               <Tag className="size-3" />
@@ -77,11 +79,11 @@ export function HistoryLabels({
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Label name"
-                aria-label="Label name"
+                placeholder={t("labels.namePlaceholder")}
+                aria-label={t("labels.nameAriaLabel")}
               />
               <Button type="submit" size="sm" disabled={!name.trim()}>
-                Add
+                {t("labels.add")}
               </Button>
             </form>
           </PopoverContent>

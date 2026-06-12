@@ -1,10 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,21 +23,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createFirstAdmin } from "@/features/setup/api";
 import { useSetupStatus } from "@/features/setup/useSetupStatus";
 import { ApiError } from "@/lib/api-client";
-import { passwordSchema } from "@/lib/validation";
+import { makePasswordSchema } from "@/lib/validation";
 
-const setupSchema = z.object({
-  display_name: z.string().min(1, "Display name is required."),
-  email: z.string().min(1, "Email is required.").email("Enter a valid email address."),
-  password: passwordSchema,
-});
+const makeSetupSchema = (t: (key: string) => string) =>
+  z.object({
+    display_name: z.string().min(1, t("validation.displayNameRequired")),
+    email: z.string().min(1, t("validation.emailRequired")).email(t("validation.emailInvalid")),
+    password: makePasswordSchema(t),
+  });
 
-type SetupValues = z.infer<typeof setupSchema>;
+type SetupValues = z.infer<ReturnType<typeof makeSetupSchema>>;
 
 /** First-run admin creation (spec 63). Public route; only useful when no admin exists. */
 export function SetupPage() {
+  const { t } = useTranslation(["auth", "common"]);
   const status = useSetupStatus();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
+  const setupSchema = useMemo(() => makeSetupSchema((k) => t(k)), [t]);
 
   const form = useForm<SetupValues>({
     resolver: zodResolver(setupSchema),
@@ -57,9 +62,7 @@ export function SetupPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
         <Alert variant="destructive" className="w-full max-w-sm" role="alert">
-          <AlertDescription>
-            Couldn’t reach the server to check setup status. Please try again.
-          </AlertDescription>
+          <AlertDescription>{t("setup.statusError")}</AlertDescription>
         </Alert>
       </div>
     );
@@ -82,7 +85,7 @@ export function SetupPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status === 409) {
-          setFormError("Setup is already complete. Redirecting to sign in…");
+          setFormError(t("setup.alreadyComplete"));
         } else if (error.status === 422 && error.fieldErrors) {
           for (const [field, message] of Object.entries(error.fieldErrors)) {
             if (field === "email" || field === "password" || field === "display_name") {
@@ -95,7 +98,7 @@ export function SetupPage() {
           setFormError(error.detail);
         }
       } else {
-        setFormError("Something went wrong. Please try again.");
+        setFormError(t("common:state.error"));
       }
     }
   };
@@ -103,11 +106,12 @@ export function SetupPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+      <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Set up Inkstave</CardTitle>
-          <CardDescription>Create the first administrator account.</CardDescription>
+          <CardTitle className="text-xl">{t("setup.title")}</CardTitle>
+          <CardDescription>{t("setup.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {formError && (
@@ -122,7 +126,7 @@ export function SetupPage() {
                 name="display_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Display name</FormLabel>
+                    <FormLabel>{t("fields.displayName")}</FormLabel>
                     <FormControl>
                       <Input autoComplete="name" {...field} />
                     </FormControl>
@@ -135,12 +139,12 @@ export function SetupPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("fields.email")}</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         autoComplete="email"
-                        placeholder="admin@example.com"
+                        placeholder={t("fields.adminEmailPlaceholder")}
                         {...field}
                       />
                     </FormControl>
@@ -153,7 +157,7 @@ export function SetupPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t("fields.password")}</FormLabel>
                     <FormControl>
                       <Input type="password" autoComplete="new-password" {...field} />
                     </FormControl>
@@ -163,7 +167,7 @@ export function SetupPage() {
               />
               <Button type="submit" className="w-full" disabled={pending}>
                 {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create admin
+                {t("setup.submit")}
               </Button>
             </form>
           </Form>

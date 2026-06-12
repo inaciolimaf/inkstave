@@ -1,5 +1,6 @@
 /** Per-file diff section: header, accept/reject-all, and diff/preview toggle (spec 47). */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -26,34 +27,35 @@ export function FileSection({
   onSetAll: (accepted: boolean) => void;
   previewText: string;
 }) {
+  const { t } = useTranslation("review");
   const [showPreview, setShowPreview] = useState(false);
   const accepted = file.hunks.filter((h) => decisions[h.id] && !blockedIds.includes(h.id)).length;
   return (
-    <section className="space-y-2" aria-label={`Changes to ${file.path}`}>
+    <section className="space-y-2" aria-label={t("file.changesTo", { path: file.path })}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{file.path}</span>
-        {file.isNewFile && <Badge variant="secondary">New file</Badge>}
-        {file.isDeletion && <Badge variant="destructive">Deleted</Badge>}
+        {file.isNewFile && <Badge variant="secondary">{t("file.newFile")}</Badge>}
+        {file.isDeletion && <Badge variant="destructive">{t("file.deleted")}</Badge>}
         <span className="text-xs text-muted-foreground">
-          {accepted}/{file.hunks.length} hunks
+          {t("file.hunkCount", { accepted, total: file.hunks.length })}
         </span>
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant="ghost" onClick={() => onSetAll(true)}>
-            Accept all
+            {t("file.acceptAll")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => onSetAll(false)}>
-            Reject all
+            {t("file.rejectAll")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setShowPreview((p) => !p)}>
-            {showPreview ? "Diff" : "Preview"}
+            {showPreview ? t("file.diff") : t("file.preview")}
           </Button>
         </div>
       </div>
       {baseChanged && (
         <Alert variant="destructive" className="py-2">
-          <AlertTitle className="text-sm">This file changed since the proposal</AlertTitle>
+          <AlertTitle className="text-sm">{t("file.baseChangedTitle")}</AlertTitle>
           <AlertDescription className="text-xs">
-            Hunks that no longer apply are marked and will be skipped.
+            {t("file.baseChangedDescription")}
           </AlertDescription>
         </Alert>
       )}

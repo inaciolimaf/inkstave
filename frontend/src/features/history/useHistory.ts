@@ -8,6 +8,8 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import i18n from "@/i18n/config";
+
 import { createLabel, deleteLabel, getDiff, listVersions, restoreVersion } from "./api";
 import type { VersionsPage } from "./types";
 
@@ -71,7 +73,7 @@ export function useHistoryMutations(projectId: string, docId: string) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) qc.setQueryData(versionsCacheKey, context.previous);
-      toast.error("Couldn’t add the label.");
+      toast.error(i18n.t("history:toast.addLabelFailed"));
     },
     onSettled: invalidate,
   });

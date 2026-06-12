@@ -1,4 +1,6 @@
 /** "People with access" list: role controls, transfer/remove/leave actions (spec 33). */
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -37,9 +39,10 @@ export function MembersList({
   onTransfer,
   onRemove,
 }: MembersListProps) {
+  const { t } = useTranslation(["sharing", "common"]);
   return (
-    <section aria-label="People with access" className="space-y-2">
-      <h3 className="text-sm font-medium">People with access</h3>
+    <section aria-label={t("members.sectionLabel")} className="space-y-2">
+      <h3 className="text-sm font-medium">{t("members.title")}</h3>
       {isLoading && (
         <div className="space-y-2" data-testid="members-loading">
           <Skeleton className="h-9 w-full" />
@@ -48,9 +51,9 @@ export function MembersList({
       )}
       {isError && (
         <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-          Couldn’t load members.
+          {t("members.loadError")}
           <Button size="sm" variant="outline" onClick={() => refetch()}>
-            Retry
+            {t("common:action.retry")}
           </Button>
         </div>
       )}
@@ -60,7 +63,7 @@ export function MembersList({
             <div className="mr-auto min-w-0">
               <p className="truncate font-medium">
                 {m.name}
-                {m.userId === currentUserId && " (You)"}
+                {m.userId === currentUserId && t("members.you")}
               </p>
               <p className="truncate text-xs text-muted-foreground">{m.email}</p>
             </div>
@@ -69,16 +72,25 @@ export function MembersList({
                 value={m.role}
                 onValueChange={(v) => onChangeRole(m.userId, v as InviteRole)}
               >
-                <SelectTrigger className="w-24" aria-label={`Role for ${m.name}`}>
+                <SelectTrigger
+                  className="w-24 capitalize"
+                  aria-label={t("members.roleFor", { name: m.name })}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="editor">Editor</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="editor" className="capitalize">
+                    {t("role.editor")}
+                  </SelectItem>
+                  <SelectItem value="viewer" className="capitalize">
+                    {t("role.viewer")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             ) : (
-              <span className="text-xs capitalize text-muted-foreground">{m.role}</span>
+              <span className="text-xs capitalize text-muted-foreground">
+                {t(`role.${m.role}`)}
+              </span>
             )}
             {isOwner && m.role !== "owner" && (
               <>
@@ -87,29 +99,29 @@ export function MembersList({
                   variant="ghost"
                   onClick={() =>
                     onConfirm({
-                      title: `Make ${m.name} the owner?`,
-                      description: "You will become an editor. This cannot be undone here.",
-                      action: "Transfer",
+                      title: t("members.transferConfirm.title", { name: m.name }),
+                      description: t("members.transferConfirm.description"),
+                      action: t("members.transferConfirm.action"),
                       run: () => onTransfer(m.userId),
                     })
                   }
                 >
-                  Transfer
+                  {t("members.transfer")}
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
-                  aria-label={`Remove ${m.name}`}
+                  aria-label={t("members.removeLabel", { name: m.name })}
                   onClick={() =>
                     onConfirm({
-                      title: `Remove ${m.name}?`,
-                      description: "They will lose access to this project.",
-                      action: "Remove",
+                      title: t("members.removeConfirm.title", { name: m.name }),
+                      description: t("members.removeConfirm.description"),
+                      action: t("members.removeConfirm.action"),
                       run: () => onRemove(m.userId),
                     })
                   }
                 >
-                  Remove
+                  {t("members.remove")}
                 </Button>
               </>
             )}
@@ -119,14 +131,14 @@ export function MembersList({
                 variant="ghost"
                 onClick={() =>
                   onConfirm({
-                    title: "Leave this project?",
-                    description: "You will lose access until invited again.",
-                    action: "Leave",
+                    title: t("members.leaveConfirm.title"),
+                    description: t("members.leaveConfirm.description"),
+                    action: t("members.leaveConfirm.action"),
                     run: () => onRemove(m.userId),
                   })
                 }
               >
-                Leave project
+                {t("members.leave")}
               </Button>
             )}
           </li>

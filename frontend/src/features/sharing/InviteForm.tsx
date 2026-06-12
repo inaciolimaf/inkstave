@@ -1,4 +1,6 @@
 /** Invite-by-email form with inline validation and server-error display (spec 33). */
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,6 +33,7 @@ export function InviteForm({
   isPending: boolean;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslation("sharing");
   const emailValid = EMAIL_RE.test(email.trim());
 
   return (
@@ -47,12 +50,12 @@ export function InviteForm({
       >
         <div className="flex-1">
           <label htmlFor="invite-email" className="text-sm font-medium">
-            Invite by email
+            {t("invite.label")}
           </label>
           <Input
             id="invite-email"
             type="email"
-            placeholder="name@example.com"
+            placeholder={t("invite.placeholder")}
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -63,20 +66,24 @@ export function InviteForm({
           />
         </div>
         <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as InviteRole)}>
-          <SelectTrigger className="w-28" aria-label="Invite role">
+          <SelectTrigger className="w-28 capitalize" aria-label={t("invite.roleLabel")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="editor">Editor</SelectItem>
-            <SelectItem value="viewer">Viewer</SelectItem>
+            <SelectItem value="editor" className="capitalize">
+              {t("role.editor")}
+            </SelectItem>
+            <SelectItem value="viewer" className="capitalize">
+              {t("role.viewer")}
+            </SelectItem>
           </SelectContent>
         </Select>
         <Button type="submit" disabled={!emailValid || isPending}>
-          Invite
+          {t("invite.submit")}
         </Button>
       </form>
       {email.length > 0 && !emailValid && (
-        <p className="text-sm text-destructive">Enter a valid email address.</p>
+        <p className="text-sm text-destructive">{t("invite.invalidEmail")}</p>
       )}
       {inviteError && (
         <p id="invite-error" className="text-sm text-destructive" role="alert">

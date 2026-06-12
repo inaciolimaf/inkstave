@@ -1,7 +1,9 @@
 import { Check, ChevronRight, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import i18n from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 import type { CompileStatus } from "./types";
@@ -10,7 +12,7 @@ function statusLine(meta: CompileStatus | null): string | null {
   if (!meta) return null;
   const parts: string[] = [meta.status];
   if (meta.duration_ms != null) parts.push(`${(meta.duration_ms / 1000).toFixed(1)}s`);
-  if (meta.exit_code != null) parts.push(`exit ${meta.exit_code}`);
+  if (meta.exit_code != null) parts.push(i18n.t("preview:status.exit", { code: meta.exit_code }));
   return parts.join(" · ");
 }
 
@@ -36,6 +38,7 @@ export function LogPanel({
   onFetch: () => void;
   meta: CompileStatus | null;
 }) {
+  const { t } = useTranslation(["preview", "common"]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -74,7 +77,7 @@ export function LogPanel({
             className={cn("size-4 transition-transform", expanded && "rotate-90")}
             aria-hidden="true"
           />
-          Log
+          {t("log.title")}
         </button>
         {line && <span className="truncate text-xs text-muted-foreground">{line}</span>}
         {expanded && log != null && (
@@ -83,10 +86,10 @@ export function LogPanel({
             variant="ghost"
             className="ml-auto h-7"
             onClick={copy}
-            aria-label="Copy log to clipboard"
+            aria-label={t("log.copyToClipboard")}
           >
             {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("common:action.copied") : t("common:action.copy")}
           </Button>
         )}
       </div>
@@ -94,15 +97,15 @@ export function LogPanel({
         <div
           id="compile-log-region"
           role="region"
-          aria-label="Compile log"
+          aria-label={t("log.compileLog")}
           tabIndex={0}
           className="max-h-48 overflow-auto bg-muted/40 px-3 py-2 font-mono text-xs whitespace-pre-wrap"
         >
-          {loading && <span className="text-muted-foreground">Loading log…</span>}
+          {loading && <span className="text-muted-foreground">{t("log.loadingLog")}</span>}
           {error && <span className="text-destructive">{error}</span>}
           {!loading &&
             !error &&
-            (log ? log : <span className="text-muted-foreground">No log output.</span>)}
+            (log ? log : <span className="text-muted-foreground">{t("log.noLogOutput")}</span>)}
         </div>
       )}
     </div>

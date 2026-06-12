@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import { config } from "@/config";
+import i18n from "@/i18n/config";
 
 import { cancelCompile, compileEventsUrl, getCompile, requestCompile } from "../api";
 import { type CompileState, type CompileStatus, isActive, isTerminal } from "../types";
@@ -61,7 +62,9 @@ function reduce(state: State, action: Action): State {
         error:
           s.status === "error" || s.status === "failure" || s.status === "timeout"
             ? (failureDetail(s) ??
-              (s.status === "error" ? "Compilation error." : "Compilation failed."))
+              (s.status === "error"
+                ? i18n.t("preview:announce.error")
+                : i18n.t("preview:announce.failed")))
             : null,
       };
     }
@@ -70,10 +73,16 @@ function reduce(state: State, action: Action): State {
   }
 }
 
-const PROGRESS_LABELS: Partial<Record<CompileState, string>> = {
-  queued: "Queued…",
-  running: "Compiling…",
-};
+function progressLabelFor(status: CompileState): string {
+  switch (status) {
+    case "queued":
+      return i18n.t("preview:compile.queued");
+    case "running":
+      return i18n.t("preview:compile.compiling");
+    default:
+      return i18n.t("preview:compile.working");
+  }
+}
 
 export interface UseCompile {
   status: CompileState;
@@ -183,7 +192,7 @@ export function useCompile(
         activeRef.current = false;
         dispatch({
           type: "systemError",
-          message: err instanceof Error ? err.message : "Could not start the compile.",
+          message: err instanceof Error ? err.message : i18n.t("preview:errors.startCompile"),
         });
       });
   }, [projectId, handleSnapshot, subscribe]);
@@ -204,7 +213,7 @@ export function useCompile(
     compileId: state.compileId,
     lastSuccessId: state.lastSuccessId,
     meta: state.meta,
-    progressLabel: isActive(state.status) ? (PROGRESS_LABELS[state.status] ?? "Working…") : null,
+    progressLabel: isActive(state.status) ? progressLabelFor(state.status) : null,
     error: state.error,
     compile,
     cancel,

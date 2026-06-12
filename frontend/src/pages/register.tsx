@@ -1,10 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/auth/auth-context";
+import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,17 +20,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
-import { type RegisterValues, registerSchema } from "@/lib/validation";
+import { type RegisterValues, makeRegisterSchema } from "@/lib/validation";
 
 const FIELD_NAMES = new Set(["email", "password", "display_name"]);
 
 export function RegisterPage() {
+  const { t } = useTranslation(["auth", "common"]);
   const { register } = useAuth();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
+  const schema = useMemo(() => makeRegisterSchema((k) => t(k)), [t]);
 
   const form = useForm<RegisterValues>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(schema),
     defaultValues: { email: "", display_name: "", password: "", confirm_password: "" },
   });
 
@@ -44,7 +48,7 @@ export function RegisterPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status === 409) {
-          setFormError("An account with this email already exists.");
+          setFormError(t("register.emailExists"));
         } else if (error.status === 422 && error.fieldErrors) {
           for (const [field, message] of Object.entries(error.fieldErrors)) {
             if (FIELD_NAMES.has(field)) {
@@ -57,7 +61,7 @@ export function RegisterPage() {
           setFormError(error.detail);
         }
       } else {
-        setFormError("Something went wrong. Please try again.");
+        setFormError(t("common:state.error"));
       }
     }
   };
@@ -65,11 +69,12 @@ export function RegisterPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+      <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Create your account</CardTitle>
-          <CardDescription>Start writing with Inkstave.</CardDescription>
+          <CardTitle className="text-xl">{t("register.title")}</CardTitle>
+          <CardDescription>{t("register.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {formError && (
@@ -84,7 +89,7 @@ export function RegisterPage() {
                 name="display_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Display name</FormLabel>
+                    <FormLabel>{t("fields.displayName")}</FormLabel>
                     <FormControl>
                       <Input autoComplete="name" {...field} />
                     </FormControl>
@@ -97,12 +102,12 @@ export function RegisterPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t("fields.email")}</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         autoComplete="email"
-                        placeholder="you@example.com"
+                        placeholder={t("fields.emailPlaceholder")}
                         {...field}
                       />
                     </FormControl>
@@ -115,7 +120,7 @@ export function RegisterPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t("fields.password")}</FormLabel>
                     <FormControl>
                       <Input type="password" autoComplete="new-password" {...field} />
                     </FormControl>
@@ -128,7 +133,7 @@ export function RegisterPage() {
                 name="confirm_password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirm password</FormLabel>
+                    <FormLabel>{t("fields.confirmPassword")}</FormLabel>
                     <FormControl>
                       <Input type="password" autoComplete="new-password" {...field} />
                     </FormControl>
@@ -138,17 +143,17 @@ export function RegisterPage() {
               />
               <Button type="submit" className="w-full" disabled={pending}>
                 {pending && <Loader2 className="animate-spin" />}
-                Create account
+                {t("register.submit")}
               </Button>
             </form>
           </Form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {t("register.haveAccount")}{" "}
             <Link
               to="/login"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Sign in
+              {t("common:action.signIn")}
             </Link>
           </p>
         </CardContent>

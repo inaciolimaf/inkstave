@@ -8,6 +8,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export function PdfToolbar({
   viewport: PdfViewport;
   onDownload?: () => void;
 }) {
+  const { t } = useTranslation("preview");
   const { page, numPages, zoomPercent, fitMode } = viewport;
   const [draft, setDraft] = useState(String(page));
 
@@ -41,19 +43,19 @@ export function PdfToolbar({
         size="icon"
         variant="ghost"
         className="size-8"
-        aria-label="Zoom out"
+        aria-label={t("toolbar.zoomOut")}
         onClick={viewport.zoomOut}
       >
         <ZoomOut aria-hidden="true" />
       </Button>
-      <span className="min-w-12 text-center text-xs tabular-nums" aria-label="Zoom level">
+      <span className="min-w-12 text-center text-xs tabular-nums" aria-label={t("toolbar.zoomLevel")}>
         {zoomPercent}%
       </span>
       <Button
         size="icon"
         variant="ghost"
         className="size-8"
-        aria-label="Zoom in"
+        aria-label={t("toolbar.zoomIn")}
         onClick={viewport.zoomIn}
       >
         <ZoomIn aria-hidden="true" />
@@ -62,7 +64,7 @@ export function PdfToolbar({
         size="icon"
         variant={fitMode === "width" ? "secondary" : "ghost"}
         className="size-8"
-        aria-label="Fit width"
+        aria-label={t("toolbar.fitWidth")}
         aria-pressed={fitMode === "width"}
         onClick={viewport.fitWidth}
       >
@@ -72,7 +74,7 @@ export function PdfToolbar({
         size="icon"
         variant={fitMode === "page" ? "secondary" : "ghost"}
         className="size-8"
-        aria-label="Fit page"
+        aria-label={t("toolbar.fitPage")}
         aria-pressed={fitMode === "page"}
         onClick={viewport.fitPage}
       >
@@ -85,7 +87,7 @@ export function PdfToolbar({
         size="icon"
         variant="ghost"
         className="size-8"
-        aria-label="Previous page"
+        aria-label={t("toolbar.previousPage")}
         onClick={viewport.goPrev}
         disabled={page <= 1}
       >
@@ -98,16 +100,16 @@ export function PdfToolbar({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={submitJump}
-          aria-label="Page number"
+          aria-label={t("toolbar.pageNumber")}
           className="h-7 w-12 px-1 text-center tabular-nums"
         />
-        <span className="text-muted-foreground">of {numPages}</span>
+        <span className="text-muted-foreground">{t("toolbar.of", { numPages })}</span>
       </form>
       <Button
         size="icon"
         variant="ghost"
         className="size-8"
-        aria-label="Next page"
+        aria-label={t("toolbar.nextPage")}
         onClick={viewport.goNext}
         disabled={page >= numPages}
       >
@@ -119,7 +121,7 @@ export function PdfToolbar({
           size="icon"
           variant="ghost"
           className="ml-auto size-8"
-          aria-label="Download PDF"
+          aria-label={t("toolbar.downloadPdf")}
           onClick={onDownload}
         >
           <Download aria-hidden="true" />

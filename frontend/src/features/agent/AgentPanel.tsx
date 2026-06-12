@@ -1,6 +1,7 @@
 /** The dockable AI agent chat panel (spec 46). */
 import { MessageSquarePlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,12 +26,6 @@ import type { DocumentBridge } from "@/features/diff-review/types";
 import { AgentComposer, AgentErrorState, RunControls } from "./controls";
 import { AgentTranscript } from "./transcript";
 import { useAgentChat } from "./useAgentChat";
-
-const EXAMPLES = [
-  "Rewrite the introduction to be more concise.",
-  "Find where the methodology section is defined.",
-  "Add a conclusion summarising the key results.",
-];
 
 const ACTIVE_PHASES = ["starting", "streaming", "stopping"];
 
@@ -102,14 +97,13 @@ function usePanelWidth() {
 }
 
 function EmptyState({ onPick }: { onPick: (text: string) => void }) {
+  const { t } = useTranslation("agent");
+  const examples = [t("empty.example1"), t("empty.example2"), t("empty.example3")];
   return (
     <div className="flex-1 space-y-3 p-4 text-sm text-muted-foreground">
-      <p>
-        Ask the agent to read or revise your project. It proposes changes you review — it never
-        edits files directly.
-      </p>
+      <p>{t("empty.intro")}</p>
       <div className="flex flex-col gap-2">
-        {EXAMPLES.map((ex) => (
+        {examples.map((ex) => (
           <button
             key={ex}
             type="button"
@@ -140,6 +134,7 @@ export function AgentPanel({
   /** Flush open collab docs before a run so the agent reads current text (spec 28/42). */
   onBeforeSend?: () => Promise<void>;
 }) {
+  const { t } = useTranslation("agent");
   const chat = useAgentChat(projectId, onBeforeSend);
   const [composerText, setComposerText] = useState("");
   const [reviewId, setReviewId] = useState<string | null>(null);
@@ -152,7 +147,7 @@ export function AgentPanel({
 
   const active = ACTIVE_PHASES.includes(chat.run.phase);
   const activeSession = chat.sessions.find((s) => s.id === chat.activeSessionId);
-  const title = activeSession?.title ?? "New chat";
+  const title = activeSession?.title ?? t("newChat");
   const noItems = chat.run.items.length === 0;
   const showLoading = chat.transcriptLoading && noItems;
   const isEmpty = noItems && !chat.transcriptLoading;
@@ -161,7 +156,7 @@ export function AgentPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        aria-label="AI agent"
+        aria-label={t("ariaLabel")}
         // Width is user-driven (drag handle below) and persisted; cap it on small
         // screens so it never overflows the viewport. The inline width overrides
         // the Sheet's default fixed width, making the panel resizable (spec §5.4).
@@ -171,7 +166,7 @@ export function AgentPanel({
         {/* Drag-to-resize handle on the panel's left edge (spec §5.4). */}
         <div
           role="separator"
-          aria-label="Resize agent panel"
+          aria-label={t("resizeHandle")}
           aria-orientation="vertical"
           tabIndex={0}
           onPointerDown={onPointerDown}
@@ -186,7 +181,7 @@ export function AgentPanel({
                 size="icon"
                 variant="ghost"
                 className="size-7"
-                aria-label="New chat"
+                aria-label={t("newChat")}
                 onClick={() => void chat.newChat()}
               >
                 <MessageSquarePlus className="size-4" />
@@ -194,24 +189,24 @@ export function AgentPanel({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="ghost" className="h-7">
-                    Sessions
+                    {t("sessions")}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void chat.newChat()}>New chat</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void chat.newChat()}>
+                    {t("newChat")}
+                  </DropdownMenuItem>
                   {chat.sessions.length > 0 && <DropdownMenuSeparator />}
                   {chat.sessions.map((s) => (
                     <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
-                      {s.title ?? "Untitled chat"}
+                      {s.title ?? t("untitledChat")}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
-          <SheetDescription className="sr-only">
-            Chat with the AI writing assistant. It proposes changes for you to review.
-          </SheetDescription>
+          <SheetDescription className="sr-only">{t("description")}</SheetDescription>
         </SheetHeader>
 
         {showLoading ? (
@@ -219,7 +214,7 @@ export function AgentPanel({
             className="flex-1 space-y-2 p-4"
             role="status"
             aria-busy="true"
-            aria-label="Loading conversation"
+            aria-label={t("loadingConversation")}
           >
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-1/2" />

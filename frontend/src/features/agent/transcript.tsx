@@ -1,6 +1,7 @@
 /** Transcript rendering: message bubbles, tool rows, diff cards (spec 46). */
 import { Check, ChevronDown, ChevronRight, FileDiff, Loader2, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,12 +11,12 @@ import { cn } from "@/lib/utils";
 import { Markdown } from "./Markdown";
 import type { TranscriptItem } from "./types";
 
-const TOOL_LABELS: Record<string, string> = {
-  search_project: "Searched the project",
-  read_file: "Read a file",
-  list_tree: "Listed the file tree",
-  locate_section: "Located a section",
-  propose_edit: "Proposed an edit",
+const TOOL_LABEL_KEYS: Record<string, string> = {
+  search_project: "transcript.tools.search_project",
+  read_file: "transcript.tools.read_file",
+  list_tree: "transcript.tools.list_tree",
+  locate_section: "transcript.tools.locate_section",
+  propose_edit: "transcript.tools.propose_edit",
 };
 
 /** Render text as plain, escaped React children (no HTML execution), with ``` code blocks. */
@@ -41,6 +42,7 @@ function renderText(text: string): ReactNode {
 }
 
 function MessageBubble({ item }: { item: Extract<TranscriptItem, { kind: "message" }> }) {
+  const { t } = useTranslation("agent");
   const isUser = item.role === "user";
   return (
     <div
@@ -58,15 +60,19 @@ function MessageBubble({ item }: { item: Extract<TranscriptItem, { kind: "messag
         </span>
       )}
       {item.status === "cancelled" && (
-        <span className="mt-1 block text-xs italic text-muted-foreground">Run cancelled</span>
+        <span className="mt-1 block text-xs italic text-muted-foreground">
+          {t("transcript.runCancelled")}
+        </span>
       )}
     </div>
   );
 }
 
 function ToolActivityRow({ item }: { item: Extract<TranscriptItem, { kind: "tool" }> }) {
+  const { t } = useTranslation("agent");
   const [open, setOpen] = useState(false);
-  const label = TOOL_LABELS[item.name] ?? item.name;
+  const labelKey = TOOL_LABEL_KEYS[item.name];
+  const label = labelKey ? t(labelKey) : item.name;
   const icon =
     item.status === "running" ? (
       <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
@@ -103,22 +109,23 @@ function DiffProposalCard({
   item: Extract<TranscriptItem, { kind: "diff-proposal" }>;
   onReviewProposal: (proposalId: string) => void;
 }) {
+  const { t } = useTranslation("agent");
   const hunks = item.files.reduce((n, f) => n + f.hunkCount, 0);
   return (
     <Card className="mr-auto max-w-[85%] space-y-2 p-3">
       <div className="flex items-center gap-2 text-sm font-medium">
         <FileDiff className="size-4 text-primary" aria-hidden="true" />
-        Proposed changes
+        {t("transcript.proposedChanges")}
       </div>
       <ul className="text-xs text-muted-foreground">
         {item.files.map((f) => (
-          <li key={f.path}>
-            {f.path} · {f.hunkCount} hunk{f.hunkCount === 1 ? "" : "s"}
-          </li>
+          <li key={f.path}>{t("transcript.hunkLine", { path: f.path, count: f.hunkCount })}</li>
         ))}
       </ul>
       <Button size="sm" onClick={() => onReviewProposal(item.proposalId)}>
-        Review changes{hunks ? ` (${hunks})` : ""}
+        {hunks
+          ? t("transcript.reviewChangesCount", { count: hunks })
+          : t("transcript.reviewChanges")}
       </Button>
     </Card>
   );
@@ -133,6 +140,7 @@ export function AgentTranscript({
   loading: boolean;
   onReviewProposal: (proposalId: string) => void;
 }) {
+  const { t } = useTranslation("agent");
   const ref = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
 
@@ -177,7 +185,7 @@ export function AgentTranscript({
         ref={ref}
         onScroll={onScroll}
         role="log"
-        aria-label="Conversation"
+        aria-label={t("transcript.conversation")}
         className="flex h-full flex-col gap-2 overflow-auto p-3"
       >
         {items.map((item) => {
@@ -205,7 +213,7 @@ export function AgentTranscript({
           className="absolute bottom-2 left-1/2 -translate-x-1/2"
           onClick={() => setPinned(true)}
         >
-          Jump to latest
+          {t("transcript.jumpToLatest")}
         </Button>
       )}
     </div>

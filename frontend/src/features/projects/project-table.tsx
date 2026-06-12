@@ -1,4 +1,5 @@
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Download, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import { useDownloadProject } from "./use-download-project";
 import {
   Table,
   TableBody,
@@ -42,18 +45,34 @@ export function RowActionsMenu({
   onRename,
   onDelete,
 }: { project: Project } & RowActions) {
+  const { t } = useTranslation("projects");
+  const { download, downloadingId } = useDownloadProject();
+  const isDownloading = downloadingId === project.id;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Project actions">
+        <Button variant="ghost" size="icon" aria-label={t("actionsMenu.label")}>
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onOpen(project)}>Open</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onOpen(project)}>
+          {t("actionsMenu.open")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault(); // keep the menu open while the download is in flight
+            void download(project.id, project.name);
+          }}
+          disabled={isDownloading}
+          aria-busy={isDownloading}
+        >
+          {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
+          {t("actionsMenu.download")}
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onRename(project)}>
           <Pencil />
-          Rename
+          {t("common:action.rename")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -61,7 +80,7 @@ export function RowActionsMenu({
           className="text-destructive focus:text-destructive"
         >
           <Trash2 />
-          Delete
+          {t("common:action.delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -69,15 +88,16 @@ export function RowActionsMenu({
 }
 
 export function ProjectTable({ projects, ...actions }: { projects: Project[] } & RowActions) {
+  const { t } = useTranslation("projects");
   return (
     <Table>
-      <TableCaption className="sr-only">Your projects</TableCaption>
+      <TableCaption className="sr-only">{t("table.caption")}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Last modified</TableHead>
+          <TableHead>{t("table.name")}</TableHead>
+          <TableHead>{t("table.lastModified")}</TableHead>
           <TableHead className="w-12 text-right">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t("table.actions")}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -101,6 +121,7 @@ export function ProjectTable({ projects, ...actions }: { projects: Project[] } &
 }
 
 export function ProjectCardGrid({ projects, ...actions }: { projects: Project[] } & RowActions) {
+  const { t } = useTranslation("projects");
   return (
     <ul className="grid gap-3">
       {projects.map((project) => (
@@ -115,7 +136,7 @@ export function ProjectCardGrid({ projects, ...actions }: { projects: Project[] 
               <RowActionsMenu project={project} {...actions} />
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Last modified {formatDate(project.updatedAt)}
+              {t("card.lastModified", { date: formatDate(project.updatedAt) })}
             </CardContent>
           </Card>
         </li>

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import i18n from "@/i18n/config";
+
 import * as api from "./api";
 import type { TreeNode } from "./types";
 import { addChild, removeNode, reparent, updateNode } from "./tree-utils";
@@ -39,9 +41,9 @@ export function useCreateEntity(projectId: string) {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous);
-      toast.error("Could not create item");
+      toast.error(i18n.t("files:toast.createError"));
     },
-    onSuccess: (entity) => toast.success(`Created ${entity.name}`),
+    onSuccess: (entity) => toast.success(i18n.t("files:toast.created", { name: entity.name })),
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 }
@@ -60,9 +62,9 @@ export function useRenameEntity(projectId: string) {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous);
-      toast.error("Could not rename item");
+      toast.error(i18n.t("files:toast.renameError"));
     },
-    onSuccess: () => toast.success("Renamed"),
+    onSuccess: () => toast.success(i18n.t("files:toast.renamed")),
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 }
@@ -81,9 +83,9 @@ export function useMoveEntity(projectId: string) {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous);
-      toast.error("Could not move item");
+      toast.error(i18n.t("files:toast.moveError"));
     },
-    onSuccess: () => toast.success("Moved"),
+    onSuccess: () => toast.success(i18n.t("files:toast.moved")),
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 }
@@ -101,9 +103,9 @@ export function useDeleteEntity(projectId: string) {
     },
     onError: (_e, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous);
-      toast.error("Could not delete item");
+      toast.error(i18n.t("files:toast.deleteError"));
     },
-    onSuccess: () => toast.success("Deleted"),
+    onSuccess: () => toast.success(i18n.t("files:toast.deleted")),
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 }

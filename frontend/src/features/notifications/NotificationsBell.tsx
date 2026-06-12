@@ -1,12 +1,14 @@
 /** Top-bar notifications bell: unread badge, list, mark-read/dismiss/accept (spec 39). */
 import { Bell, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import i18n from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 import type { AppNotification } from "./types";
@@ -19,7 +21,7 @@ function relativeTime(iso: string): string {
     ["hour", 3600],
     ["minute", 60],
   ];
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
   for (const [unit, secs] of units) {
     if (Math.abs(seconds) >= secs) return rtf.format(Math.round(seconds / secs), unit);
   }
@@ -29,15 +31,18 @@ function relativeTime(iso: string): string {
 function describe(n: AppNotification): ReactNode {
   if (n.type === "project_invite") {
     const p = n.payload;
+    const inviter = String(p.inviter_name ?? i18n.t("notifications:invite.defaultInviter"));
+    const project = String(p.project_name ?? i18n.t("notifications:invite.defaultProject"));
+    const role = String(p.role ?? i18n.t("notifications:invite.defaultRole"));
     return (
       <>
-        {String(p.inviter_name ?? "Someone")} invited you to{" "}
-        <strong>{String(p.project_name ?? "a project")}</strong> as{" "}
-        {String(p.role ?? "collaborator")}
+        {i18n.t("notifications:invite.prefix", { inviter })}
+        <strong>{project}</strong>
+        {i18n.t("notifications:invite.suffix", { role })}
       </>
     );
   }
-  return String(n.payload.message ?? "You have a new notification.");
+  return String(n.payload.message ?? i18n.t("notifications:fallbackMessage"));
 }
 
 function NotificationRow({
@@ -51,6 +56,7 @@ function NotificationRow({
   onDismiss: (id: string) => void;
   onAccept: (n: AppNotification) => void;
 }) {
+  const { t } = useTranslation("notifications");
   const unread = notification.readAt === null;
   return (
     <div
@@ -60,7 +66,7 @@ function NotificationRow({
       <button
         type="button"
         className="min-w-0 flex-1 text-left"
-        aria-label={unread ? "Mark read" : "Notification"}
+        aria-label={unread ? t("markRead") : t("notification")}
         onClick={() => unread && onRead(notification.id)}
       >
         <span className="block break-words">{describe(notification)}</span>
@@ -71,7 +77,7 @@ function NotificationRow({
       <div className="flex shrink-0 flex-col items-end gap-1">
         <button
           type="button"
-          aria-label="Dismiss notification"
+          aria-label={t("dismiss")}
           className="text-muted-foreground hover:text-destructive"
           onClick={() => onDismiss(notification.id)}
         >
@@ -84,7 +90,7 @@ function NotificationRow({
             className="mt-1 h-7"
             onClick={() => onAccept(notification)}
           >
-            Accept
+            {t("accept")}
           </Button>
         )}
       </div>
@@ -93,6 +99,7 @@ function NotificationRow({
 }
 
 export function NotificationsBell() {
+  const { t } = useTranslation("notifications");
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const unread = useUnreadCount();
@@ -120,7 +127,7 @@ export function NotificationsBell() {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label={`Notifications${count > 0 ? `, ${count} unread` : ""}`}
+          aria-label={count > 0 ? t("unreadAria", { count }) : t("title")}
         >
           <Bell className="size-5" />
           {count > 0 && (
@@ -135,7 +142,7 @@ export function NotificationsBell() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-2">
         <div className="mb-1 flex items-center justify-between px-1">
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-sm font-medium">{t("title")}</span>
           {count > 0 && (
             <Button
               size="sm"
@@ -143,7 +150,7 @@ export function NotificationsBell() {
               className="h-6 text-xs"
               onClick={() => readAll.mutate()}
             >
-              Mark all read
+              {t("markAllRead")}
             </Button>
           )}
         </div>
@@ -157,15 +164,15 @@ export function NotificationsBell() {
             className="flex items-center justify-between p-2 text-sm text-destructive"
             role="alert"
           >
-            Couldn’t load notifications.
+            {t("loadFailed")}
             <Button size="sm" variant="outline" onClick={() => void list.refetch()}>
-              Retry
+              {t("common:action.retry")}
             </Button>
           </div>
         ) : (list.data?.items.length ?? 0) === 0 ? (
-          <p className="p-4 text-center text-sm text-muted-foreground">You’re all caught up.</p>
+          <p className="p-4 text-center text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
-          <div className="max-h-96 space-y-1 overflow-auto" role="list" aria-label="Notifications">
+          <div className="max-h-96 space-y-1 overflow-auto" role="list" aria-label={t("title")}>
             {list.data!.items.map((n) => (
               <NotificationRow
                 key={n.id}

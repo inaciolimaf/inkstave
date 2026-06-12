@@ -1,5 +1,6 @@
 /** The diff-review surface: per-file diff, per-hunk accept/reject, preview, apply (spec 47). */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ export function DiffReviewDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation("review");
+  const { t: tCommon } = useTranslation("common");
   const r = useDiffReview(projectId, sessionId, proposalId, bridge, open);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -61,9 +64,9 @@ export function DiffReviewDialog({
   const onApply = async () => {
     const outcome = await r.apply();
     if (outcome.phase === "error") {
-      toast.error("Some changes couldn’t be applied.");
+      toast.error(t("toast.applyError"));
     } else {
-      toast.success("Changes applied to your document.");
+      toast.success(t("toast.applySuccess"));
     }
   };
 
@@ -92,21 +95,19 @@ export function DiffReviewDialog({
           }
         }}
       >
-        <DialogDescription className="sr-only">
-          Review the agent’s proposed changes and accept or reject each hunk before applying.
-        </DialogDescription>
+        <DialogDescription className="sr-only">{t("description")}</DialogDescription>
         <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0">
-          <DialogTitle>Review proposed changes</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <div className="flex items-center gap-2 pr-6">
             <span className="text-sm text-muted-foreground">
-              {r.counts.accepted}/{r.counts.total} accepted
+              {t("accepted", { accepted: r.counts.accepted, total: r.counts.total })}
             </span>
             <Button
               size="sm"
               disabled={r.applyPhase === "applying" || r.counts.total === 0}
               onClick={() => r.setApplyPhase("confirming")}
             >
-              Apply
+              {t("apply")}
             </Button>
           </div>
         </DialogHeader>
@@ -119,22 +120,22 @@ export function DiffReviewDialog({
             </div>
           ) : r.isError ? (
             <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-              Couldn’t load the proposal.
+              {t("loadError")}
               <Button size="sm" variant="outline" onClick={() => void r.refetch()}>
-                Retry
+                {tCommon("action.retry")}
               </Button>
             </div>
           ) : !r.proposal || r.proposal.files.length === 0 ? (
-            <p className="text-sm text-muted-foreground">This proposal has no changes.</p>
+            <p className="text-sm text-muted-foreground">{t("noChanges")}</p>
           ) : r.applyPhase === "error" ? (
             <ApplyResultAlert
-              title="Some changes could not be applied"
+              title={t("applyResult.errorTitle")}
               results={r.results ?? []}
               variant="destructive"
               role="alert"
             />
           ) : r.applyPhase === "applied" ? (
-            <ApplyResultAlert title="Changes applied" results={r.results ?? []} />
+            <ApplyResultAlert title={t("applyResult.successTitle")} results={r.results ?? []} />
           ) : (
             r.proposal.files.map((file) => (
               <FileSection

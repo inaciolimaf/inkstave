@@ -1,0 +1,37 @@
+/** Generic, app-wide strings reused across features (the `common` namespace). */
+export default {
+  action: {
+    cancel: "Cancel",
+    save: "Save",
+    saving: "Saving…",
+    delete: "Delete",
+    deleting: "Deleting…",
+    create: "Create",
+    creating: "Creating…",
+    close: "Close",
+    confirm: "Confirm",
+    retry: "Retry",
+    back: "Back",
+    remove: "Remove",
+    rename: "Rename",
+    edit: "Edit",
+    search: "Search",
+    send: "Send",
+    copy: "Copy",
+    copied: "Copied",
+    upload: "Upload",
+    signOut: "Log out",
+    signIn: "Sign in",
+  },
+  state: {
+    loading: "Loading…",
+    error: "Something went wrong. Please try again.",
+    empty: "Nothing here yet.",
+  },
+  errorBoundary: {
+    title: "Something went wrong",
+    body: "The page hit an unexpected error. You can try again, or reload if the problem persists.",
+    retry: "Try again",
+    reload: "Reload page",
+  },
+};

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import i18n from "@/i18n/config";
 import * as api from "./api";
 import type { Project, SortKey } from "./types";
 
@@ -16,9 +17,9 @@ export function useCreateProject() {
     mutationFn: (name: string) => api.createProject(name),
     onSuccess: (project) => {
       qc.setQueryData<Project[]>(PROJECTS_KEY, (old) => [project, ...(old ?? [])]);
-      toast.success("Project created");
+      toast.success(i18n.t("projects:toast.created"));
     },
-    onError: () => toast.error("Could not create project"),
+    onError: () => toast.error(i18n.t("projects:toast.createError")),
   });
 }
 
@@ -36,9 +37,9 @@ export function useRenameProject() {
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(PROJECTS_KEY, ctx.previous);
-      toast.error("Could not rename project");
+      toast.error(i18n.t("projects:toast.renameError"));
     },
-    onSuccess: () => toast.success("Project renamed"),
+    onSuccess: () => toast.success(i18n.t("projects:toast.renamed")),
     onSettled: () => qc.invalidateQueries({ queryKey: PROJECTS_KEY }),
   });
 }
@@ -55,9 +56,9 @@ export function useDeleteProject() {
     },
     onError: (_err, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(PROJECTS_KEY, ctx.previous);
-      toast.error("Could not delete project");
+      toast.error(i18n.t("projects:toast.deleteError"));
     },
-    onSuccess: () => toast.success("Project deleted"),
+    onSuccess: () => toast.success(i18n.t("projects:toast.deleted")),
     onSettled: () => qc.invalidateQueries({ queryKey: PROJECTS_KEY }),
   });
 }

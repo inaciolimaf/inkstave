@@ -1,4 +1,6 @@
 /** Confirmation AlertDialogs for the diff-review surface: apply + discard (spec 47). */
+import { useTranslation } from "react-i18next";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,29 +24,42 @@ export function ApplyConfirmDialog({
   plan: { fileCount: number; applicable: number; blocked: number };
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation("review");
+  const { t: tCommon } = useTranslation("common");
+  const manyChanges = plan.applicable !== 1;
+  const manyFiles = plan.fileCount !== 1;
+  const descriptionKey = manyChanges
+    ? manyFiles
+      ? "confirmApply.descriptionMany_fileMany"
+      : "confirmApply.descriptionMany"
+    : manyFiles
+      ? "confirmApply.description_fileMany"
+      : "confirmApply.description";
+  const blockedText =
+    plan.blocked > 0
+      ? t(plan.blocked === 1 ? "confirmApply.blocked" : "confirmApply.blockedMany", {
+          count: plan.blocked,
+        })
+      : "";
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Apply changes?</AlertDialogTitle>
+          <AlertDialogTitle>{t("confirmApply.title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will write {plan.applicable} accepted change
-            {plan.applicable === 1 ? "" : "s"} across {plan.fileCount} file
-            {plan.fileCount === 1 ? "" : "s"} into your document
-            {plan.fileCount === 1 ? "" : "s"}.
-            {plan.blocked > 0 &&
-              ` ${plan.blocked} hunk${plan.blocked === 1 ? "" : "s"} no longer apply and will be skipped.`}
+            {t(descriptionKey, { applicable: plan.applicable, fileCount: plan.fileCount })}
+            {blockedText}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{tCommon("action.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               onConfirm();
             }}
           >
-            Apply
+            {t("confirmApply.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -62,18 +77,17 @@ export function DiscardConfirmDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation("review");
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Discard your review?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Your accept/reject choices will be lost.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("confirmDiscard.title")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("confirmDiscard.description")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep reviewing</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Discard</AlertDialogAction>
+          <AlertDialogCancel>{t("confirmDiscard.keep")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t("confirmDiscard.discard")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

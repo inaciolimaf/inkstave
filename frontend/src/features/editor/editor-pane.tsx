@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { EditorView } from "@codemirror/view";
 import { FileText, LocateFixed } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,16 +21,18 @@ import { documentKey } from "./use-document";
 import { useEditorPreferences } from "./use-editor-preferences";
 
 function EmptyState() {
+  const { t } = useTranslation("editor");
   return (
     <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-      Select a file to start editing.
+      {t("pane.selectFile")}
     </div>
   );
 }
 
 function LoadingState() {
+  const { t } = useTranslation("editor");
   return (
-    <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading document">
+    <div className="space-y-2 p-4" aria-busy="true" aria-label={t("pane.loadingDocument")}>
       {Array.from({ length: 8 }).map((_, i) => (
         <Skeleton key={i} className="h-4" style={{ width: `${90 - (i % 4) * 12}%` }} />
       ))}
@@ -38,14 +41,15 @@ function LoadingState() {
 }
 
 function ErrorState({ onRetry, notFound }: { onRetry: () => void; notFound: boolean }) {
+  const { t } = useTranslation("editor");
   return (
     <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-sm">
       <p className="text-destructive">
-        {notFound ? "This document no longer exists." : "Couldn’t load this document."}
+        {notFound ? t("pane.documentGone") : t("pane.loadFailed")}
       </p>
       {!notFound && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Retry
+          {t("pane.retry")}
         </Button>
       )}
     </div>
@@ -53,10 +57,11 @@ function ErrorState({ onRetry, notFound }: { onRetry: () => void; notFound: bool
 }
 
 function BinaryNotice() {
+  const { t } = useTranslation("editor");
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
       <FileText className="size-8" />
-      <p>This is a binary file and can’t be edited here.</p>
+      <p>{t("pane.binaryFile")}</p>
     </div>
   );
 }
@@ -96,6 +101,7 @@ export function EditorPane({
   /** Viewer role → mount the collab editor read-only (spec 34). */
   readOnly?: boolean;
 }) {
+  const { t } = useTranslation("editor");
   const { settings, dark, update } = useEditorPreferences();
 
   // Folders are ignored: keep the last opened doc/file as the active entity.
@@ -201,7 +207,7 @@ export function EditorPane({
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b px-3 py-1.5">
         <span className="mr-auto truncate text-sm font-medium">
-          {openEntity?.name ?? "No file open"}
+          {openEntity?.name ?? t("pane.noFileOpen")}
         </span>
         {isDoc && !collabActive && (
           <SaveStatusIndicator status={status} onRetry={saveNow} lastSavedAt={lastSavedAt} />
@@ -211,8 +217,8 @@ export function EditorPane({
             variant="ghost"
             size="icon"
             className="size-8"
-            aria-label="Sync to PDF"
-            title="Jump to this line in the PDF"
+            aria-label={t("pane.syncToPdf")}
+            title={t("pane.syncToPdfTitle")}
             disabled={!syncEnabled}
             onClick={onSyncToPdf}
           >

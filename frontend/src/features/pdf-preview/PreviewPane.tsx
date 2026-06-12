@@ -5,6 +5,9 @@
  */
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import i18n from "@/i18n/config";
 
 import { getCompilePdf } from "./api";
 import { CompileButton } from "./CompileButton";
@@ -30,15 +33,15 @@ function announce(status: string, progressLabel: string | null): string {
   if (progressLabel) return progressLabel;
   switch (status) {
     case "success":
-      return "Compilation succeeded.";
+      return i18n.t("preview:announce.succeeded");
     case "failure":
-      return "Compilation failed.";
+      return i18n.t("preview:announce.failed");
     case "timeout":
-      return "Compilation timed out.";
+      return i18n.t("preview:announce.timedOut");
     case "cancelled":
-      return "Compilation cancelled.";
+      return i18n.t("preview:announce.cancelled");
     case "error":
-      return "Compilation error.";
+      return i18n.t("preview:announce.error");
     default:
       return "";
   }
@@ -97,6 +100,7 @@ export function PreviewPane({
   /** Click a problem row → jump to its source line. */
   onProblemJump?: (file: string, line: number) => void;
 }) {
+  const { t } = useTranslation("preview");
   const compile = useCompile(projectId, flush);
   const pdfDoc = usePdfDocument(projectId, compile.lastSuccessId);
   const viewport = usePdfViewport(pdfDoc.numPages);
@@ -150,21 +154,21 @@ export function PreviewPane({
     );
   } else if (active) {
     body = (
-      <Centered label="Compiling">
+      <Centered label={t("compile.progressLabel")}>
         <Loader2 className="size-6 animate-spin" aria-hidden="true" />
-        <p>{compile.progressLabel ?? "Compiling…"}</p>
+        <p>{compile.progressLabel ?? t("compile.compiling")}</p>
       </Centered>
     );
   } else if (pdfDoc.loading) {
     body = (
-      <Centered label="Loading PDF">
+      <Centered label={t("loading.loadingPdfLabel")}>
         <Loader2 className="size-6 animate-spin" aria-hidden="true" />
-        <p>Loading preview…</p>
+        <p>{t("loading.loadingPreview")}</p>
       </Centered>
     );
   } else if (pdfDoc.error) {
     body = (
-      <Centered label="PDF error">
+      <Centered label={t("loading.pdfErrorLabel")}>
         <p className="text-destructive">{pdfDoc.error}</p>
       </Centered>
     );
@@ -182,7 +186,7 @@ export function PreviewPane({
   }
 
   return (
-    <div className="flex h-full flex-col" aria-label="PDF preview pane">
+    <div className="flex h-full flex-col" aria-label={t("pane.label")}>
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <CompileButton
           state={compile.status}
@@ -212,7 +216,11 @@ export function PreviewPane({
 
       {/* Problems and the raw log share one tabbed region (spec 27 §5.3). */}
       <div className="flex flex-col border-t">
-        <div role="tablist" aria-label="Compile output" className="flex items-center gap-1 px-2">
+        <div
+          role="tablist"
+          aria-label={t("pane.compileOutput")}
+          className="flex items-center gap-1 px-2"
+        >
           {(["problems", "log"] as const).map((tab) => (
             <button
               key={tab}
@@ -228,7 +236,7 @@ export function PreviewPane({
                   : "border-b-2 border-transparent px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground/80"
               }
             >
-              {tab === "problems" ? "Problems" : "Log"}
+              {tab === "problems" ? t("problems.title") : t("log.title")}
             </button>
           ))}
         </div>

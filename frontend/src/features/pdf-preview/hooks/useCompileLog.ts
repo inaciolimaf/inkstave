@@ -6,6 +6,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import i18n from "@/i18n/config";
+
 import { getCompileLog } from "../api";
 
 export interface CompileLogState {
@@ -38,7 +40,7 @@ export function useCompileLog(projectId: string, compileId: string | null): Comp
       .then((text) => setLog(text))
       .catch((err: unknown) => {
         fetchedFor.current = null; // allow a retry
-        setError(err instanceof Error ? err.message : "Could not load the log.");
+        setError(err instanceof Error ? err.message : i18n.t("preview:errors.loadLog"));
       })
       .finally(() => setLoading(false));
   }, [projectId, compileId]);

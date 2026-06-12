@@ -2,6 +2,7 @@
 import { EditorState } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * A read-only CodeMirror 6 preview of the would-be file content (#192). Mounts a
@@ -10,6 +11,7 @@ import { useEffect, useRef } from "react";
  * imports) so this surface stays self-contained.
  */
 export function ReadonlyCodePreview({ value }: { value: string }) {
+  const { t } = useTranslation("review");
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -46,7 +48,7 @@ export function ReadonlyCodePreview({ value }: { value: string }) {
     <div
       ref={hostRef}
       data-testid="preview-editor"
-      aria-label="File preview"
+      aria-label={t("filePreview")}
       aria-readonly="true"
       className="max-h-72 overflow-auto rounded-md border bg-muted/30 text-xs [&_.cm-editor]:bg-transparent"
     />

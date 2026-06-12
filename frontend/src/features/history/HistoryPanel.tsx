@@ -1,5 +1,6 @@
 /** The History side panel: timeline + diff + restore (spec 38). */
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
@@ -27,6 +28,7 @@ export function HistoryPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation("history");
   const perms = usePermissions(projectId);
   const canWrite = hasCapability(perms.data, "doc_write");
   const { addLabel, removeLabel, restore } = useHistoryMutations(projectId, docId);
@@ -63,18 +65,16 @@ export function HistoryPanel({
         : null;
 
   const onAddLabel = (version: number, name: string) =>
-    addLabel.mutate({ version, name }, { onError: () => toast.error("Couldn’t add the label.") });
+    addLabel.mutate({ version, name }, { onError: () => toast.error(t("toast.addLabelFailed")) });
   const onDeleteLabel = (labelId: string) =>
-    removeLabel.mutate(labelId, { onError: () => toast.error("Couldn’t remove the label.") });
+    removeLabel.mutate(labelId, { onError: () => toast.error(t("toast.removeLabelFailed")) });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-4 sm:max-w-3xl">
         <SheetHeader>
-          <SheetTitle>Version history</SheetTitle>
-          <SheetDescription>
-            Browse versions, see what changed, and restore — restoring creates a new version.
-          </SheetDescription>
+          <SheetTitle>{t("panel.title")}</SheetTitle>
+          <SheetDescription>{t("panel.description")}</SheetDescription>
         </SheetHeader>
         <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
           <div className="overflow-auto pr-1">

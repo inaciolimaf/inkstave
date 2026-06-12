@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   AlertDialog,
@@ -35,12 +36,16 @@ export function CreateEntityDialog({
   type: "folder" | "doc";
   onCreate: (name: string) => void;
 }) {
+  const { t } = useTranslation("files");
   const [name, setName] = useState("");
   useEffect(() => {
-    if (open) setName(type === "folder" ? "New folder" : "untitled.tex");
-  }, [open, type]);
+    if (open)
+      setName(
+        type === "folder" ? t("createDialog.defaultFolderName") : t("createDialog.defaultFileName"),
+      );
+  }, [open, type, t]);
 
-  const error = name ? validateEntityName(name) : "Name is required.";
+  const error = name ? validateEntityName(name) : t("validate.required");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +56,14 @@ export function CreateEntityDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{type === "folder" ? "New folder" : "New file"}</DialogTitle>
+          <DialogTitle>
+            {type === "folder" ? t("createDialog.folderTitle") : t("createDialog.fileTitle")}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3" noValidate>
           <div className="space-y-1">
             <label htmlFor="entity-name" className="text-sm font-medium">
-              Name
+              {t("createDialog.nameLabel")}
             </label>
             <Input
               id="entity-name"
@@ -74,7 +81,7 @@ export function CreateEntityDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={!!error}>
-              Create
+              {t("common:action.create")}
             </Button>
           </DialogFooter>
         </form>
@@ -94,25 +101,24 @@ export function DeleteEntityDialog({
   node: TreeNode | null;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation("files");
   const isFolder = node?.type === "folder";
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete “{node?.name}”?</AlertDialogTitle>
+          <AlertDialogTitle>{t("deleteDialog.title", { name: node?.name })}</AlertDialogTitle>
           <AlertDialogDescription>
-            {isFolder
-              ? "This folder and everything inside it will be permanently deleted."
-              : "This cannot be undone."}
+            {isFolder ? t("deleteDialog.folderDescription") : t("deleteDialog.fileDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common:action.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className={cn(buttonVariants({ variant: "destructive" }))}
             onClick={onConfirm}
           >
-            Delete
+            {t("common:action.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,6 +1,7 @@
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import { PublicOnly, RequireAuth } from "@/auth/require-auth";
+import { LandingPage } from "@/features/landing/landing-page";
 import { ProjectsPage } from "@/features/projects/projects-page";
 import { ConfirmEmailPage } from "@/features/settings/ConfirmEmailPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
@@ -11,6 +12,8 @@ import { RegisterPage } from "@/pages/register";
 import { SetupPage } from "@/pages/setup-page";
 
 const router = createBrowserRouter([
+  // Public marketing landing page (reachable signed-out).
+  { path: "/", element: <LandingPage /> },
   // First-run admin creation; public (reachable signed-out, no setup gate itself).
   { path: "/setup", element: <SetupPage /> },
   {
@@ -34,7 +37,6 @@ const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
-      { path: "/", element: <Navigate to="/projects" replace /> },
       { path: "/projects", element: <ProjectsPage /> },
       { path: "/projects/:projectId", element: <EditorPage /> },
       { path: "/settings", element: <SettingsPage /> },

@@ -1,4 +1,6 @@
 /** Post-apply summary alert: per-file applied/skipped/error counts (spec 47, #190). */
+import { useTranslation } from "react-i18next";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import type { ApplyFileResult } from "./types";
@@ -19,15 +21,18 @@ export function ApplyResultAlert({
   variant?: "destructive";
   role?: "alert";
 }) {
+  const { t } = useTranslation("review");
   return (
     <Alert variant={variant} role={role}>
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="text-xs">
         {results.map((res) => (
           <div key={res.path}>
-            {res.path}: {res.appliedHunks.length} applied
-            {res.blockedHunks.length ? `, ${res.blockedHunks.length} skipped` : ""}
-            {res.error ? ` — error: ${res.error}` : ""}
+            {res.path}: {t("applyResult.applied", { count: res.appliedHunks.length })}
+            {res.blockedHunks.length
+              ? t("applyResult.skipped", { count: res.blockedHunks.length })
+              : ""}
+            {res.error ? t("applyResult.error", { error: res.error }) : ""}
           </div>
         ))}
       </AlertDescription>

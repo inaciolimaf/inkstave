@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import i18n from "@/i18n/config";
+
 import { FileTreeBody } from "./file-tree-body";
 import { type FileTreeContextValue, type MenuAction } from "./file-tree-context";
 import { CreateEntityDialog, DeleteEntityDialog } from "./file-tree-dialogs";
@@ -118,7 +120,7 @@ export function FileTreePanel({
       if (readOnly) return; // no move/drag for viewers (spec 34 §5.3)
       if (!root || id === newParentId) return;
       if (isSelfOrDescendant(root, id, newParentId)) {
-        toast.error("Can’t move a folder into itself");
+        toast.error(i18n.t("files:toast.moveIntoSelf"));
         return;
       }
       const dragged = findNode(root, id);

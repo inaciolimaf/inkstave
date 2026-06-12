@@ -1,5 +1,6 @@
 /** Restore-with-confirmation for a selected version (spec 38). */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
@@ -27,6 +28,7 @@ export function RestoreVersionButton({
   version: number;
   restore: RestoreMutation;
 }) {
+  const { t } = useTranslation("history");
   const [open, setOpen] = useState(false);
   const [labelName, setLabelName] = useState("");
 
@@ -34,25 +36,24 @@ export function RestoreVersionButton({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button size="sm" variant="outline">
-          Restore this version
+          {t("restore.trigger")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Restore version {version}?</AlertDialogTitle>
+          <AlertDialogTitle>{t("restore.confirmTitle", { version })}</AlertDialogTitle>
           <AlertDialogDescription>
-            The document’s current content will be replaced with version {version}. A new version is
-            created — nothing is deleted, and you can restore back at any time.
+            {t("restore.confirmDescription", { version })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Input
           value={labelName}
           onChange={(e) => setLabelName(e.target.value)}
-          placeholder="Add a label for this restore (optional)"
-          aria-label="Restore label"
+          placeholder={t("restore.labelPlaceholder")}
+          aria-label={t("restore.labelAriaLabel")}
         />
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("restore.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             disabled={restore.isPending}
             onClick={(e) => {
@@ -62,17 +63,17 @@ export function RestoreVersionButton({
                 {
                   onSuccess: (result) => {
                     toast.success(
-                      `Restored to version ${version}; created version ${result.newVersion}.`,
+                      t("restore.success", { version, newVersion: result.newVersion }),
                     );
                     setLabelName("");
                     setOpen(false);
                   },
-                  onError: () => toast.error("Restore failed. Please try again."),
+                  onError: () => toast.error(t("restore.error")),
                 },
               );
             }}
           >
-            {restore.isPending ? "Restoring…" : "Restore"}
+            {restore.isPending ? t("restore.restoring") : t("restore.action")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

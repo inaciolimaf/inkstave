@@ -1,4 +1,6 @@
 /** Confirmation AlertDialog shared by transfer/remove/leave/revoke actions (spec 33). */
+import { useTranslation } from "react-i18next";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +26,7 @@ export function ConfirmDialog({
   confirm: Confirm | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("common");
   return (
     <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && onClose()}>
       <AlertDialogContent>
@@ -32,7 +35,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{confirm?.description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("action.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
               confirm?.run();

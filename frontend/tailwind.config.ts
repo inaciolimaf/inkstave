@@ -45,6 +45,27 @@ export default {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
+        // Landing-only "ink on paper" palette. The tokens are defined inside
+        // `.landing-root` (see features/landing/landing.css), so these utilities
+        // resolve only on the marketing page and never touch the app shell.
+        paper: {
+          DEFAULT: "hsl(var(--paper))",
+          deep: "hsl(var(--paper-deep))",
+          deeper: "hsl(var(--paper-deeper))",
+        },
+        ink: {
+          DEFAULT: "hsl(var(--ink))",
+          soft: "hsl(var(--ink-soft))",
+          faint: "hsl(var(--ink-faint))",
+        },
+        rule: "hsl(var(--rule))",
+      },
+      // Extra families used only on the landing (applied via `font-serif` /
+      // `font-mono`). `sans` is intentionally left as the Tailwind default so
+      // the existing app keeps its system font stack.
+      fontFamily: {
+        serif: ['"Newsreader"', "Georgia", "Cambria", "serif"],
+        mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",

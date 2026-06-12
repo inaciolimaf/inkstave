@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "@/auth/auth-context";
@@ -27,6 +28,7 @@ import { putEditorPreferences } from "./api";
 import { errMessage } from "./errMessage";
 
 export function EditorPreferencesSection() {
+  const { t } = useTranslation("settings");
   const { user, applyUser } = useAuth();
   const prefs = user?.editor_preferences ?? DEFAULT_EDITOR_PREFERENCES;
 
@@ -44,30 +46,30 @@ export function EditorPreferencesSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Editor preferences</CardTitle>
-        <CardDescription>Applied to your editor immediately and saved to your account.</CardDescription>
+        <CardTitle>{t("editor.title")}</CardTitle>
+        <CardDescription>{t("editor.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="pref-theme">Theme</Label>
+          <Label htmlFor="pref-theme">{t("editor.theme")}</Label>
           <Select value={prefs.theme} onValueChange={(v) => set({ theme: v as EditorTheme })}>
-            <SelectTrigger id="pref-theme" aria-label="Theme" className="w-40">
+            <SelectTrigger id="pref-theme" aria-label={t("editor.theme")} className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="system">System</SelectItem>
-              <SelectItem value="light">Light</SelectItem>
-              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="system">{t("editor.themeSystem")}</SelectItem>
+              <SelectItem value="light">{t("editor.themeLight")}</SelectItem>
+              <SelectItem value="dark">{t("editor.themeDark")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="pref-font">Font size</Label>
+          <Label htmlFor="pref-font">{t("editor.fontSize")}</Label>
           <Select
             value={String(prefs.font_size)}
             onValueChange={(v) => set({ font_size: Number(v) })}
           >
-            <SelectTrigger id="pref-font" aria-label="Font size" className="w-40">
+            <SelectTrigger id="pref-font" aria-label={t("editor.fontSize")} className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -80,15 +82,15 @@ export function EditorPreferencesSection() {
           </Select>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="pref-keymap">Keymap</Label>
+          <Label htmlFor="pref-keymap">{t("editor.keymap")}</Label>
           <Select value={prefs.keymap} onValueChange={(v) => set({ keymap: v as EditorKeymap })}>
-            <SelectTrigger id="pref-keymap" aria-label="Keymap" className="w-40">
+            <SelectTrigger id="pref-keymap" aria-label={t("editor.keymap")} className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="default">Default</SelectItem>
-              <SelectItem value="vim">Vim</SelectItem>
-              <SelectItem value="emacs">Emacs</SelectItem>
+              <SelectItem value="default">{t("editor.keymapDefault")}</SelectItem>
+              <SelectItem value="vim">{t("editor.keymapVim")}</SelectItem>
+              <SelectItem value="emacs">{t("editor.keymapEmacs")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

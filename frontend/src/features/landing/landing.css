@@ -1,0 +1,197 @@
+/*
+ * Landing-only styles. Everything is scoped under `.landing-root` so the
+ * marketing page can introduce a warm "ink on paper" palette, serif display
+ * type and richer motion without altering the app shell (which stays on the
+ * shadcn light theme + system font).
+ */
+
+.landing-root {
+  /* Paper — warm off-whites, slightly varied per band for depth. */
+  --paper: 40 40% 97.5%;
+  --paper-deep: 39 32% 95%;
+  --paper-deeper: 36 26% 92%;
+
+  /* Ink — reuses the app's navy as the darkest value, then softer greys. */
+  --ink: 222 47% 11%;
+  --ink-soft: 221 19% 31%;
+  --ink-faint: 220 13% 49%;
+
+  /* Hairline rules — the quiet structural lines of an editorial layout. */
+  --rule: 36 22% 84%;
+
+  background-color: hsl(var(--paper));
+  color: hsl(var(--ink));
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-feature-settings:
+    "cv05" 1,
+    "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.landing-root ::selection {
+  background-color: hsl(var(--ink) / 0.9);
+  color: hsl(var(--paper));
+}
+
+/* Optical-size aware serif display. Newsreader has a real italic we lean on
+   for editorial emphasis. */
+.font-display {
+  font-family: "Newsreader", Georgia, Cambria, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.012em;
+}
+
+/* A faint dotted-grid texture used behind the hero. */
+.paper-grid {
+  background-image: radial-gradient(hsl(var(--ink) / 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Scroll-reveal — paired with the useReveal() IntersectionObserver.   */
+/* ------------------------------------------------------------------ */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Hand-drawn underline that "inks in" when its section reveals. */
+.ink-underline {
+  background-image: linear-gradient(hsl(var(--ink) / 0.85), hsl(var(--ink) / 0.85));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 0.08em;
+  transition: background-size 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s;
+  padding-bottom: 0.1em;
+}
+.reveal.is-visible .ink-underline,
+.is-visible.ink-underline {
+  background-size: 100% 0.08em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Keyframes                                                           */
+/* ------------------------------------------------------------------ */
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.caret {
+  display: inline-block;
+  width: 0.6ch;
+  margin-left: 1px;
+  background: hsl(var(--ink));
+  animation: caret-blink 1.05s steps(1) infinite;
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.float-soft {
+  animation: float-soft 7s ease-in-out infinite;
+}
+
+@keyframes drift {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: drift 38s linear infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise-in {
+  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Collaboration cursor flag that gently bobs. */
+@keyframes cursor-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.cursor-bob {
+  animation: cursor-bob 2.8s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Honour reduced-motion: drop every animation + reveal to a calm rest */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .landing-root .ink-underline {
+    background-size: 100% 0.08em;
+    transition: none;
+  }
+  .landing-root .float-soft,
+  .landing-root .marquee-track,
+  .landing-root .pulse-dot,
+  .landing-root .caret,
+  .landing-root .cursor-bob,
+  .landing-root .rise-in {
+    animation: none;
+  }
+}

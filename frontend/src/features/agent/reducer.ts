@@ -1,4 +1,6 @@
 /** Pure, idempotent reducer over spec-44 events → AgentRunState (spec 46). */
+import i18n from "@/i18n/config";
+
 import type {
   AgentEvent,
   AgentRunState,
@@ -11,17 +13,19 @@ export function initialRunState(sessionId: string | null = null): AgentRunState 
   return { sessionId, runId: null, phase: "idle", items: [], seenSeqs: [] };
 }
 
+const FRIENDLY_ERROR_CODES = new Set([
+  "cancelled",
+  "agent_rate_limited",
+  "rate_limited",
+  "agent_budget_exceeded",
+  "budget_exceeded",
+  "llm_error",
+  "internal",
+]);
+
 function friendlyError(code: string, message: string): string {
-  const map: Record<string, string> = {
-    cancelled: "Run cancelled.",
-    agent_rate_limited: "You’ve hit the agent rate limit. Please try again shortly.",
-    rate_limited: "You’ve hit a usage limit. Please try again shortly.",
-    agent_budget_exceeded: "This run reached the token or cost budget.",
-    budget_exceeded: "This run would exceed the token budget.",
-    llm_error: "The AI service is temporarily unavailable.",
-    internal: "The agent run failed. Please try again.",
-  };
-  return map[code] ?? message ?? "Something went wrong.";
+  if (FRIENDLY_ERROR_CODES.has(code)) return i18n.t(`agent:error.messages.${code}`);
+  return message || i18n.t("agent:error.messages.generic");
 }
 
 // Rate-limit/transport/internal errors are retryable; a hit budget is not.

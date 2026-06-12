@@ -1,6 +1,8 @@
 import type { EditorView } from "@codemirror/view";
-import { History, Share2, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Download, History, Share2, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,8 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { useAuth } from "@/auth/auth-context";
 import { isReadOnly, usePermissions } from "@/features/sharing/usePermissions";
 import { NotificationsBell } from "@/features/notifications/NotificationsBell";
+import { getProject } from "@/features/projects/api";
+import { useDownloadProject } from "@/features/projects/use-download-project";
 import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
 
@@ -32,6 +36,7 @@ const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
 
 export function EditorWorkspace({ projectId }: { projectId: string }) {
+  const { t } = useTranslation("editor");
   const [selected, setSelected] = useState<TreeEntity | null>(null);
   const [dirty, setDirty] = useState(false);
   const [openDoc, setOpenDoc] = useState<TreeEntity | null>(null);
@@ -47,6 +52,12 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const currentUser = user ? { id: user.id, name: user.display_name } : null;
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
+  const projectQuery = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => getProject(projectId),
+    staleTime: 60_000,
+  });
+  const { download, downloadingId } = useDownloadProject();
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const agentKey = `inkstave.agent.open.${projectId}`;
@@ -122,10 +133,10 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         pendingReveal.current = { path: file, line };
         setSelected(node);
       } else {
-        toast.message(`Open ${file} to jump there`);
+        toast.message(t("toolbar.openToJump", { file }));
       }
     },
-    [openDoc, tree.data],
+    [openDoc, tree.data, t],
   );
 
   // After a cross-file jump, reveal the line once the new document has loaded.
@@ -169,7 +180,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
             onClick={() => setAgentOpen((v) => !v)}
           >
             <Sparkles aria-hidden="true" className="size-4" />
-            Agent
+            {t("toolbar.agent")}
           </Button>
         )}
         <Button
@@ -180,11 +191,21 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           onClick={() => setHistoryOpen(true)}
         >
           <History aria-hidden="true" className="size-4" />
-          History
+          {t("toolbar.history")}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={downloadingId === projectId}
+          aria-busy={downloadingId === projectId}
+          onClick={() => void download(projectId, projectQuery.data?.name ?? "project")}
+        >
+          <Download aria-hidden="true" className="size-4" />
+          {t("toolbar.download")}
         </Button>
         <Button size="sm" variant="outline" onClick={() => setShareOpen(true)}>
           <Share2 aria-hidden="true" className="size-4" />
-          Share
+          {t("toolbar.share")}
         </Button>
         <NotificationsBell />
       </div>

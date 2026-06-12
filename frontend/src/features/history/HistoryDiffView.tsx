@@ -1,4 +1,6 @@
 /** Renders the spec-37 diff hunks with added/removed markers (spec 38). */
+import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,11 +52,12 @@ function HunkView({ hunk }: { hunk: DiffHunk }) {
 
 /** Detail header for the selected version: shows its label badges (spec 38 §5.3.4). */
 function DetailHeader({ version, labels }: { version: number | null; labels: LabelBrief[] }) {
+  const { t } = useTranslation("history");
   if (version === null || labels.length === 0) return null;
   return (
     <div
       className="flex flex-wrap items-center gap-1 border-b p-2"
-      aria-label={`Labels for version ${version}`}
+      aria-label={t("diff.labelsForVersion", { version })}
     >
       {labels.map((label) => (
         <Badge key={label.id} variant="secondary">
@@ -80,13 +83,14 @@ export function HistoryDiffView({
   selectedVersion?: number | null;
   selectedLabels?: LabelBrief[];
 }) {
+  const { t } = useTranslation("history");
   const query = useDiff(projectId, docId, from, to);
   const header = <DetailHeader version={selectedVersion} labels={selectedLabels} />;
 
   const body = (() => {
     if (from === null) {
       return (
-        <p className="p-4 text-sm text-muted-foreground">Select a version to see what changed.</p>
+        <p className="p-4 text-sm text-muted-foreground">{t("diff.selectPrompt")}</p>
       );
     }
     if (query.isLoading) {
@@ -101,9 +105,9 @@ export function HistoryDiffView({
     if (query.isError || !query.data) {
       return (
         <div className="flex items-center gap-2 p-4 text-sm text-destructive" role="alert">
-          Couldn’t load the diff.
+          {t("diff.loadFailed")}
           <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
-            Retry
+            {t("common:action.retry")}
           </Button>
         </div>
       );
@@ -111,21 +115,21 @@ export function HistoryDiffView({
 
     const diff = query.data;
     if (diff.binary) {
-      return <p className="p-4 text-sm text-muted-foreground">This document has no text diff.</p>;
+      return <p className="p-4 text-sm text-muted-foreground">{t("diff.binary")}</p>;
     }
     if (diff.tooLarge) {
       return (
-        <p className="p-4 text-sm text-muted-foreground">This version is too large to diff.</p>
+        <p className="p-4 text-sm text-muted-foreground">{t("diff.tooLarge")}</p>
       );
     }
     if (diff.hunks.length === 0) {
       return (
-        <p className="p-4 text-sm text-muted-foreground">No changes between these versions.</p>
+        <p className="p-4 text-sm text-muted-foreground">{t("diff.noChanges")}</p>
       );
     }
 
     return (
-      <div className="space-y-3 p-2" role="region" aria-label="Version diff">
+      <div className="space-y-3 p-2" role="region" aria-label={t("diff.ariaLabel")}>
         {diff.hunks.map((hunk, i) => (
           <HunkView key={i} hunk={hunk} />
         ))}

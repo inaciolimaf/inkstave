@@ -1,4 +1,5 @@
 import { Loader2, Play, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 
@@ -20,27 +21,33 @@ export function CompileButton({
   onCompile: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation(["preview", "common"]);
   const active = isActive(state);
 
   if (active) {
     return (
       <div className="flex items-center gap-2">
-        <Button size="sm" disabled aria-label="Compiling" aria-disabled="true">
+        <Button size="sm" disabled aria-label={t("compile.progressLabel")} aria-disabled="true">
           <Loader2 className="animate-spin" aria-hidden="true" />
-          {progressLabel ?? "Compiling…"}
+          {progressLabel ?? t("compile.compiling")}
         </Button>
-        <Button size="sm" variant="outline" onClick={onCancel} aria-label="Cancel compilation">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onCancel}
+          aria-label={t("compile.cancelCompilation")}
+        >
           <X aria-hidden="true" />
-          Cancel
+          {t("common:action.cancel")}
         </Button>
       </div>
     );
   }
 
   return (
-    <Button size="sm" onClick={onCompile} aria-label="Compile project">
+    <Button size="sm" onClick={onCompile} aria-label={t("compile.compileProject")}>
       <Play aria-hidden="true" />
-      Compile
+      {t("compile.compile")}
     </Button>
   );
 }

@@ -6,6 +6,8 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import i18n from "@/i18n/config";
+
 import {
   type InverseResult,
   type SyncReason,
@@ -23,11 +25,11 @@ export interface PdfHighlight {
 
 function toastReason(reason: SyncReason): void {
   if (reason === "synctex_unavailable") {
-    toast.message("SyncTeX data not available for this compile");
+    toast.message(i18n.t("preview:sync.unavailable"));
   } else if (reason === "no_match") {
-    toast.message("No matching location");
+    toast.message(i18n.t("preview:sync.noMatch"));
   } else {
-    toast.error("Sync failed");
+    toast.error(i18n.t("preview:sync.failed"));
   }
 }
 
@@ -57,7 +59,7 @@ export function useSyncTex(projectId: string, compileId: string | null): UseSync
       }
       const box = result.value.boxes[0];
       if (!box) {
-        toast.message("No matching location");
+        toast.message(i18n.t("preview:sync.noMatch"));
         return;
       }
       nonce.current += 1;

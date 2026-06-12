@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   AlertDialog,
@@ -22,21 +23,26 @@ export function UploadList({
   uploads: UploadItem[];
   onDismiss: (key: string) => void;
 }) {
+  const { t } = useTranslation("files");
   if (uploads.length === 0) return null;
   return (
-    <ul className="space-y-1 border-t p-2" aria-label="Uploads">
+    <ul className="space-y-1 border-t p-2" aria-label={t("uploadsLabel")}>
       {uploads.map((u) => (
         <li key={u.key} className="space-y-1 text-xs">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate">{u.name}</span>
             <div className="flex items-center gap-1">
               <span className={u.status === "error" ? "text-destructive" : "text-muted-foreground"}>
-                {u.status === "error" ? "Failed" : u.status === "done" ? "Done" : `${u.pct}%`}
+                {u.status === "error"
+                  ? t("uploadStatus.failed")
+                  : u.status === "done"
+                    ? t("uploadStatus.done")
+                    : `${u.pct}%`}
               </span>
               {u.status !== "uploading" && (
                 <button
                   type="button"
-                  aria-label={`Dismiss ${u.name}`}
+                  aria-label={t("dismissUpload", { name: u.name })}
                   onClick={() => onDismiss(u.key)}
                 >
                   <X className="size-3" />
@@ -61,20 +67,19 @@ export function UploadConflictDialog({
   onCancel: () => void;
   onReplace: () => void;
 }) {
+  const { t } = useTranslation("files");
   return (
     <AlertDialog open={conflict !== null} onOpenChange={(v) => !v && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>File already exists</AlertDialogTitle>
+          <AlertDialogTitle>{t("conflictDialog.title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {conflict
-              ? `“${conflict.file.name}” already exists in this folder. Replace it with the uploaded file?`
-              : null}
+            {conflict ? t("conflictDialog.description", { name: conflict.file.name }) : null}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onReplace}>Replace</AlertDialogAction>
+          <AlertDialogCancel>{t("common:action.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onReplace}>{t("conflictDialog.replace")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

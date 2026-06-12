@@ -1,4 +1,6 @@
 /** "Share" modal: invite by email, manage members & pending invites (spec 33). */
+import { useTranslation } from "react-i18next";
+
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,7 @@ export function ShareDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation("sharing");
   const {
     user,
     email,
@@ -47,8 +50,8 @@ export function ShareDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Share project</DialogTitle>
-          <DialogDescription>Invite collaborators and manage who has access.</DialogDescription>
+          <DialogTitle>{t("dialog.title")}</DialogTitle>
+          <DialogDescription>{t("dialog.description")}</DialogDescription>
         </DialogHeader>
 
         {isOwner && (

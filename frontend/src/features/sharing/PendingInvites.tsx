@@ -1,4 +1,6 @@
 /** Owner-only list of pending invites with revoke action (spec 33). */
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 
 import type { Confirm } from "./ConfirmDialog";
@@ -13,31 +15,34 @@ export function PendingInvites({
   onConfirm: (confirm: Confirm) => void;
   onRevoke: (inviteId: string) => void;
 }) {
+  const { t } = useTranslation("sharing");
   return (
-    <section aria-label="Pending invites" className="space-y-2">
-      <h3 className="text-sm font-medium">Pending invites</h3>
+    <section aria-label={t("pending.sectionLabel")} className="space-y-2">
+      <h3 className="text-sm font-medium">{t("pending.title")}</h3>
       {invites.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No pending invites.</p>
+        <p className="text-sm text-muted-foreground">{t("pending.empty")}</p>
       ) : (
         <ul className="space-y-1">
           {invites.map((inv) => (
             <li key={inv.id} className="flex items-center gap-2 text-sm">
               <span className="mr-auto truncate">{inv.email}</span>
-              <span className="text-xs capitalize text-muted-foreground">{inv.role}</span>
+              <span className="text-xs capitalize text-muted-foreground">
+                {t(`role.${inv.role}`)}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
-                aria-label={`Revoke invite for ${inv.email}`}
+                aria-label={t("pending.revokeLabel", { email: inv.email })}
                 onClick={() =>
                   onConfirm({
-                    title: `Revoke invite for ${inv.email}?`,
-                    description: "The invitation link will stop working.",
-                    action: "Revoke",
+                    title: t("pending.revokeConfirm.title", { email: inv.email }),
+                    description: t("pending.revokeConfirm.description"),
+                    action: t("pending.revokeConfirm.action"),
                     run: () => onRevoke(inv.id),
                   })
                 }
               >
-                Revoke
+                {t("pending.revoke")}
               </Button>
             </li>
           ))}

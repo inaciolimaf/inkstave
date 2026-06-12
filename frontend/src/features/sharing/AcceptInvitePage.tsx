@@ -1,5 +1,6 @@
 /** Accept-invite screen at `/invite/:token` (spec 33). */
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -10,6 +11,7 @@ import { ApiError } from "@/lib/api-client";
 import { acceptInvite, declineInvite, getInvitePreview } from "./api";
 
 export function AcceptInvitePage() {
+  const { t } = useTranslation("sharing");
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
 
@@ -22,18 +24,18 @@ export function AcceptInvitePage() {
   const accept = useMutation({
     mutationFn: () => acceptInvite(token),
     onSuccess: (result) => {
-      toast.success("You’ve joined the project.");
+      toast.success(t("accept.joined"));
       navigate(`/projects/${result.projectId}`);
     },
     onError: (e) =>
-      toast.error(e instanceof ApiError && e.message ? e.message : "Could not accept the invite."),
+      toast.error(e instanceof ApiError && e.message ? e.message : t("accept.acceptError")),
   });
 
   const decline = useMutation({
     mutationFn: () => declineInvite(token),
     onSuccess: () => navigate("/projects"),
     onError: (e) =>
-      toast.error(e instanceof ApiError && e.message ? e.message : "Could not decline the invite."),
+      toast.error(e instanceof ApiError && e.message ? e.message : t("accept.declineError")),
   });
 
   const gone = preview.error instanceof ApiError && preview.error.status === 410;
@@ -43,19 +45,19 @@ export function AcceptInvitePage() {
       <Card className="w-full max-w-md">
         {preview.isLoading && (
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Loading invitation…
+            {t("accept.loading")}
           </CardContent>
         )}
 
         {gone && (
           <>
             <CardHeader>
-              <CardTitle>Invitation unavailable</CardTitle>
-              <CardDescription>This invitation has expired or is no longer valid.</CardDescription>
+              <CardTitle>{t("accept.unavailableTitle")}</CardTitle>
+              <CardDescription>{t("accept.unavailableDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="outline" onClick={() => navigate("/projects")}>
-                Back to projects
+                {t("accept.backToProjects")}
               </Button>
             </CardContent>
           </>
@@ -63,29 +65,31 @@ export function AcceptInvitePage() {
 
         {preview.isError && !gone && (
           <CardContent className="py-10 text-center text-sm text-destructive" role="alert">
-            This invitation could not be found.
+            {t("accept.notFound")}
           </CardContent>
         )}
 
         {preview.data && (
           <>
             <CardHeader>
-              <CardTitle>You’re invited to {preview.data.projectName}</CardTitle>
+              <CardTitle>
+                {t("accept.invitedTo", { projectName: preview.data.projectName })}
+              </CardTitle>
               <CardDescription>
-                {preview.data.inviterName} invited you to join as{" "}
-                <strong>{preview.data.role}</strong>.
+                {t("accept.invitedBy", { inviterName: preview.data.inviterName })}
+                <strong>{t(`role.${preview.data.role}`)}</strong>.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex gap-2">
               <Button onClick={() => accept.mutate()} disabled={accept.isPending}>
-                Accept
+                {t("accept.accept")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => decline.mutate()}
                 disabled={decline.isPending}
               >
-                Decline
+                {t("accept.decline")}
               </Button>
             </CardContent>
           </>

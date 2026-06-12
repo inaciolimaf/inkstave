@@ -1,0 +1,81 @@
+const dict = {
+  pane: {
+    selectFile: "Select a file to start editing.",
+    loadingDocument: "Loading document",
+    documentGone: "This document no longer exists.",
+    loadFailed: "Couldn’t load this document.",
+    retry: "Retry",
+    binaryFile: "This is a binary file and can’t be edited here.",
+    noFileOpen: "No file open",
+    syncToPdf: "Sync to PDF",
+    syncToPdfTitle: "Jump to this line in the PDF",
+  },
+  toolbar: {
+    agent: "Agent",
+    history: "History",
+    share: "Share",
+    download: "Download",
+    openToJump: "Open {{file}} to jump there",
+    backToProjects: "Back to projects",
+  },
+  conflict: {
+    title: "This document changed on the server",
+    description:
+      "Someone (or another tab) saved a newer version since you opened it. Choose how to resolve the conflict.",
+    keepMine: "Keep my version",
+    reload: "Reload server version",
+  },
+  settings: {
+    trigger: "Editor settings",
+    title: "Editor settings",
+    fontSize: "Font size",
+    fontSizeUnit: "{{size}}px",
+    keymap: "Keymap",
+    keymapDefault: "Default",
+    keymapVim: "Vim",
+    keymapEmacs: "Emacs",
+    lineWrapping: "Line wrapping",
+  },
+  saveStatus: {
+    saved: "Saved",
+    unsaved: "Unsaved changes",
+    saving: "Saving…",
+    saveFailed: "Save failed — retrying",
+    offline: "Offline — changes will save when you reconnect",
+    conflict: "Conflict",
+    retry: "Retry",
+    savedJustNow: "Saved just now",
+    savedSecondsAgo: "Saved {{seconds}}s ago",
+    savedMinutesAgo: "Saved {{minutes}}m ago",
+    savedHoursAgo: "Saved {{hours}}h ago",
+  },
+  unsavedGuard: {
+    title: "Leave with unsaved changes?",
+    description: "Your latest edits haven’t finished saving. If you leave now they may be lost.",
+    stay: "Stay",
+    leave: "Leave",
+  },
+  cm: {
+    label: "LaTeX editor",
+  },
+  collab: {
+    connected: "Live",
+    connecting: "Connecting…",
+    reconnecting: "Reconnecting…",
+    offline: "Offline",
+    connection: "Connection: {{status}}",
+    loadingDocument: "Loading document…",
+    syncing: "syncing…",
+    viewOnly: "View only",
+  },
+  presence: {
+    you: "{{name}} (You)",
+    idle: "{{who}} — idle",
+    online: "{{who}} — online",
+    peopleOnline: "People online",
+    moreOnline: "{{count}} more online",
+  },
+};
+
+export default dict;
+export type Dict = typeof dict;

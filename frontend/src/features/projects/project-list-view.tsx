@@ -1,4 +1,5 @@
 import { FolderPlus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,8 +8,9 @@ import { ProjectCardGrid, ProjectTable } from "./project-table";
 import type { Project } from "./types";
 
 function ProjectListSkeleton() {
+  const { t } = useTranslation("projects");
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading projects">
+    <div className="space-y-3" aria-busy="true" aria-label={t("list.loadingLabel")}>
       {Array.from({ length: 6 }).map((_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
@@ -17,38 +19,41 @@ function ProjectListSkeleton() {
 }
 
 function ProjectListEmpty({ onCreate }: { onCreate: () => void }) {
+  const { t } = useTranslation("projects");
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-12 text-center">
       <FolderPlus className="size-10 text-muted-foreground" />
       <div>
-        <p className="font-medium">No projects yet</p>
-        <p className="text-sm text-muted-foreground">Create your first project to get started.</p>
+        <p className="font-medium">{t("list.emptyTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("list.emptyDescription")}</p>
       </div>
-      <Button onClick={onCreate}>Create your first project</Button>
+      <Button onClick={onCreate}>{t("list.createFirst")}</Button>
     </div>
   );
 }
 
 function ProjectListNoResults({ term, onClear }: { term: string; onClear: () => void }) {
+  const { t } = useTranslation("projects");
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-12 text-center">
-      <p className="text-sm text-muted-foreground">No projects match “{term}”.</p>
+      <p className="text-sm text-muted-foreground">{t("list.noResults", { term })}</p>
       <Button variant="outline" onClick={onClear}>
-        Clear search
+        {t("list.clearSearch")}
       </Button>
     </div>
   );
 }
 
 function ProjectListError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation("projects");
   return (
     <div
       role="alert"
       className="flex flex-col items-center gap-3 rounded-lg border border-destructive/40 p-12 text-center"
     >
-      <p className="text-sm text-destructive">We couldn’t load your projects.</p>
+      <p className="text-sm text-destructive">{t("list.loadError")}</p>
       <Button variant="outline" onClick={onRetry}>
-        Retry
+        {t("common:action.retry")}
       </Button>
     </div>
   );

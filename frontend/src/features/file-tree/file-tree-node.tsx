@@ -1,5 +1,6 @@
 import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ import type { TreeNode } from "./types";
 import { validateEntityName } from "./validate-name";
 
 function InlineRenameInput({ node }: { node: TreeNode }) {
+  const { t } = useTranslation("files");
   const ctx = useFileTreeContext();
   const [value, setValue] = useState(node.name);
   const error = validateEntityName(value);
@@ -37,7 +39,7 @@ function InlineRenameInput({ node }: { node: TreeNode }) {
     <span className="flex flex-1 items-center gap-1">
       <input
         autoFocus
-        aria-label="New name"
+        aria-label={t("newNameLabel")}
         aria-invalid={error ? true : undefined}
         className="h-6 w-full rounded border border-input bg-background px-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         value={value}
@@ -69,28 +71,29 @@ function NodeMenuItems({
   Item: typeof DropdownMenuItem | typeof ContextMenuItem;
   Separator: typeof DropdownMenuSeparator | typeof ContextMenuSeparator;
 }) {
+  const { t } = useTranslation("files");
   const ctx = useFileTreeContext();
   const isFolder = node.type === "folder";
   return (
     <>
       {isFolder && (
         <>
-          <Item onSelect={() => ctx.onMenuAction("new-doc", node)}>New file</Item>
-          <Item onSelect={() => ctx.onMenuAction("new-folder", node)}>New folder</Item>
-          <Item onSelect={() => ctx.onMenuAction("upload", node)}>Upload here</Item>
+          <Item onSelect={() => ctx.onMenuAction("new-doc", node)}>{t("action.newFile")}</Item>
+          <Item onSelect={() => ctx.onMenuAction("new-folder", node)}>{t("action.newFolder")}</Item>
+          <Item onSelect={() => ctx.onMenuAction("upload", node)}>{t("action.uploadHere")}</Item>
           <Separator />
         </>
       )}
-      <Item onSelect={() => ctx.onMenuAction("rename", node)}>Rename</Item>
+      <Item onSelect={() => ctx.onMenuAction("rename", node)}>{t("common:action.rename")}</Item>
       {node.parentId !== ctx.rootId && (
-        <Item onSelect={() => ctx.onMenuAction("move-root", node)}>Move to root</Item>
+        <Item onSelect={() => ctx.onMenuAction("move-root", node)}>{t("action.moveToRoot")}</Item>
       )}
       <Separator />
       <Item
         onSelect={() => ctx.onMenuAction("delete", node)}
         className="text-destructive focus:text-destructive"
       >
-        Delete
+        {t("common:action.delete")}
       </Item>
     </>
   );
@@ -109,6 +112,7 @@ export function FileTreeNode({
   index?: number;
   siblingCount?: number;
 }) {
+  const { t } = useTranslation("files");
   const ctx = useFileTreeContext();
   const isFolder = node.type === "folder";
   const expanded = ctx.expandedIds.has(node.id);
@@ -168,7 +172,7 @@ export function FileTreeNode({
             {isFolder ? (
               <button
                 type="button"
-                aria-label={expanded ? "Collapse folder" : "Expand folder"}
+                aria-label={expanded ? t("collapseFolder") : t("expandFolder")}
                 className="flex size-4 items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -202,7 +206,7 @@ export function FileTreeNode({
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`Actions for ${node.name}`}
+                  aria-label={t("actionsFor", { name: node.name })}
                   className="size-6 opacity-0 focus:opacity-100 group-hover:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 >

@@ -2,6 +2,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import i18n from "@/i18n/config";
+
 import { createSession, getSession, listSessions, runEventsUrl, startRun, stopRun } from "./api";
 import { applyEvent, historyToItems, initialRunState } from "./reducer";
 import type { AgentEvent, AgentRunState } from "./types";
@@ -54,7 +56,11 @@ export function useAgentChat(projectId: string, onBeforeSend?: () => Promise<voi
       es.onerror = () => {
         setRun((prev) =>
           ["starting", "streaming", "stopping"].includes(prev.phase)
-            ? applyEvent(prev, { type: "error", code: "transport", message: "Connection lost." })
+            ? applyEvent(prev, {
+                type: "error",
+                code: "transport",
+                message: i18n.t("agent:error.messages.connectionLost"),
+              })
             : prev,
         );
         closeStream();
@@ -141,7 +147,7 @@ export function useAgentChat(projectId: string, onBeforeSend?: () => Promise<voi
           applyEvent(prev, {
             type: "error",
             code: "internal",
-            message: "Failed to start the run.",
+            message: i18n.t("agent:error.messages.startFailed"),
           }),
         );
       }

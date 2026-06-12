@@ -4,6 +4,7 @@
  */
 import { AlertCircle, AlertTriangle, ChevronRight, Info } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -14,11 +15,11 @@ const SEVERITY_ORDER: ProblemSeverity[] = ["error", "warning", "info"];
 
 const SEVERITY_META: Record<
   ProblemSeverity,
-  { label: string; Icon: typeof AlertCircle; className: string }
+  { labelKey: string; Icon: typeof AlertCircle; className: string }
 > = {
-  error: { label: "Errors", Icon: AlertCircle, className: "text-destructive" },
-  warning: { label: "Warnings", Icon: AlertTriangle, className: "text-amber-500" },
-  info: { label: "Typesetting", Icon: Info, className: "text-sky-500" },
+  error: { labelKey: "problems.errors", Icon: AlertCircle, className: "text-destructive" },
+  warning: { labelKey: "problems.warnings", Icon: AlertTriangle, className: "text-amber-500" },
+  info: { labelKey: "problems.typesetting", Icon: Info, className: "text-sky-500" },
 };
 
 function ProblemRow({
@@ -28,6 +29,7 @@ function ProblemRow({
   problem: Problem;
   onJump?: (file: string, line: number) => void;
 }) {
+  const { t } = useTranslation("preview");
   const meta = SEVERITY_META[problem.severity];
   const locatable = problem.file != null && problem.line != null;
   const location = locatable ? `${problem.file}:${problem.line}` : null;
@@ -36,7 +38,11 @@ function ProblemRow({
       type="button"
       disabled={!locatable || !onJump}
       onClick={() => locatable && onJump?.(problem.file!, problem.line!)}
-      aria-label={`${problem.severity}: ${problem.message}${location ? ` (${location})` : ""}`}
+      aria-label={t("problems.rowLabel", {
+        severity: problem.severity,
+        message: problem.message,
+        location: location ? ` (${location})` : "",
+      })}
       className="flex w-full items-start gap-2 px-3 py-1 text-left text-xs hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
     >
       <meta.Icon className={cn("mt-0.5 size-3.5 shrink-0", meta.className)} aria-hidden="true" />
@@ -60,6 +66,7 @@ export function ProblemsPanel({
   stale?: boolean;
   onJump?: (file: string, line: number) => void;
 }) {
+  const { t } = useTranslation("preview");
   const total = problems?.problems.length ?? 0;
   const [expanded, setExpanded] = useState(true);
 
@@ -73,9 +80,9 @@ export function ProblemsPanel({
 
   let body: React.ReactNode;
   if (reason === "log_unavailable") {
-    body = <p className="px-3 py-2 text-xs text-muted-foreground">No log yet — run a compile.</p>;
+    body = <p className="px-3 py-2 text-xs text-muted-foreground">{t("problems.noLogYet")}</p>;
   } else if (total === 0) {
-    body = <p className="px-3 py-2 text-xs text-muted-foreground">No problems.</p>;
+    body = <p className="px-3 py-2 text-xs text-muted-foreground">{t("problems.noProblems")}</p>;
   } else {
     body = SEVERITY_ORDER.map((severity) => {
       const group = problems!.problems.filter((p) => p.severity === severity);
@@ -84,7 +91,7 @@ export function ProblemsPanel({
       return (
         <div key={severity}>
           <p className="px-3 pt-1.5 pb-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            {meta.label} ({group.length})
+            {t("problems.group", { label: t(meta.labelKey), count: group.length })}
           </p>
           {group.map((problem, i) => (
             <ProblemRow key={i} problem={problem} onJump={onJump} />
@@ -108,7 +115,7 @@ export function ProblemsPanel({
             className={cn("size-4 transition-transform", expanded && "rotate-90")}
             aria-hidden="true"
           />
-          Problems
+          {t("problems.title")}
         </button>
         {counts.map(([severity, count]) => {
           const meta = SEVERITY_META[severity];
@@ -116,7 +123,7 @@ export function ProblemsPanel({
             <span
               key={severity}
               className="flex items-center gap-0.5 text-xs text-muted-foreground"
-              aria-label={`${count} ${severity}`}
+              aria-label={t("problems.countSeverity", { count, severity })}
             >
               <meta.Icon className={cn("size-3.5", meta.className)} aria-hidden="true" />
               {count}
@@ -124,14 +131,16 @@ export function ProblemsPanel({
           );
         })}
         {(loading || stale) && (
-          <span className="text-xs text-muted-foreground">{stale ? "updating…" : "loading…"}</span>
+          <span className="text-xs text-muted-foreground">
+            {stale ? t("problems.updating") : t("problems.loading")}
+          </span>
         )}
       </div>
       {expanded && (
         <div
           id="problems-region"
           role="region"
-          aria-label="Compile problems"
+          aria-label={t("problems.region")}
           className="max-h-48 overflow-auto"
         >
           {body}

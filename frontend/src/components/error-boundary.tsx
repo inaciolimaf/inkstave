@@ -3,6 +3,9 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+// Use the i18n instance directly (not the useTranslation hook): the fallback may
+// render when the surrounding tree is unhealthy, so we avoid extra hook context.
+import i18n from "@/i18n/config";
 
 interface Props {
   children: ReactNode;
@@ -20,15 +23,13 @@ function DefaultFallback({ onReset }: { onReset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm" role="alert">
         <CardHeader>
-          <CardTitle className="text-xl">Something went wrong</CardTitle>
-          <CardDescription>
-            The page hit an unexpected error. You can try again, or reload if the problem persists.
-          </CardDescription>
+          <CardTitle className="text-xl">{i18n.t("common:errorBoundary.title")}</CardTitle>
+          <CardDescription>{i18n.t("common:errorBoundary.body")}</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
-          <Button onClick={onReset}>Try again</Button>
+          <Button onClick={onReset}>{i18n.t("common:errorBoundary.retry")}</Button>
           <Button variant="outline" onClick={() => window.location.reload()}>
-            Reload page
+            {i18n.t("common:errorBoundary.reload")}
           </Button>
         </CardContent>
       </Card>

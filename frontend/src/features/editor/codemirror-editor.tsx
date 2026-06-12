@@ -11,6 +11,7 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { latex } from "./latex-language";
 import { lintGutterExtension } from "./diagnostics";
@@ -25,14 +26,14 @@ function fontTheme(size: number): Extension {
   });
 }
 
-function editableExtension(editable: boolean): Extension {
+function editableExtension(editable: boolean, label: string): Extension {
   if (editable) {
-    return EditorView.contentAttributes.of({ "aria-label": "LaTeX editor" });
+    return EditorView.contentAttributes.of({ "aria-label": label });
   }
   return [
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
-    EditorView.contentAttributes.of({ "aria-label": "LaTeX editor", "aria-readonly": "true" }),
+    EditorView.contentAttributes.of({ "aria-label": label, "aria-readonly": "true" }),
   ];
 }
 
@@ -61,10 +62,14 @@ export function CodeMirrorEditor({
    */
   collabExtension?: Extension;
 }) {
+  const { t } = useTranslation("editor");
+  const editorLabel = t("cm.label");
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const callbacks = useRef({ onChange, onBlur, onView });
   callbacks.current = { onChange, onBlur, onView };
+  const labelRef = useRef(editorLabel);
+  labelRef.current = editorLabel;
   const compartments = useRef({
     theme: new Compartment(),
     font: new Compartment(),
@@ -101,7 +106,7 @@ export function CodeMirrorEditor({
             return false;
           },
         }),
-        c.editable.of(editableExtension(editable)),
+        c.editable.of(editableExtension(editable, labelRef.current)),
         c.keys.of(keymapExtension(settings.keymap)),
         c.font.of(fontTheme(settings.fontSize)),
         c.wrap.of(settings.lineWrapping ? EditorView.lineWrapping : []),
@@ -133,9 +138,9 @@ export function CodeMirrorEditor({
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: compartments.current.editable.reconfigure(editableExtension(editable)),
+      effects: compartments.current.editable.reconfigure(editableExtension(editable, editorLabel)),
     });
-  }, [editable]);
+  }, [editable, editorLabel]);
 
   useEffect(() => {
     viewRef.current?.dispatch({

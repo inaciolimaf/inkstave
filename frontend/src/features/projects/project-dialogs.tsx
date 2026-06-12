@@ -1,7 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { z } from "zod";
 
 import {
@@ -37,14 +39,16 @@ import { cn } from "@/lib/utils";
 import type { Project } from "./types";
 import { useCreateProject, useDeleteProject, useRenameProject } from "./use-projects";
 
-const nameSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Project name is required.")
-    .max(255, "Name must be at most 255 characters."),
-});
-type NameValues = z.infer<typeof nameSchema>;
+function makeNameSchema(t: TFunction<"projects">) {
+  return z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, t("form.nameRequired"))
+      .max(255, t("form.nameTooLong")),
+  });
+}
+type NameValues = z.infer<ReturnType<typeof makeNameSchema>>;
 
 export function CreateProjectDialog({
   open,
@@ -53,7 +57,9 @@ export function CreateProjectDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const { t } = useTranslation("projects");
   const create = useCreateProject();
+  const nameSchema = useMemo(() => makeNameSchema(t), [t]);
   const form = useForm<NameValues>({
     resolver: zodResolver(nameSchema),
     defaultValues: { name: "" },
@@ -77,8 +83,8 @@ export function CreateProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create project</DialogTitle>
-          <DialogDescription>Give your new project a name.</DialogDescription>
+          <DialogTitle>{t("create.title")}</DialogTitle>
+          <DialogDescription>{t("create.description")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -87,9 +93,9 @@ export function CreateProjectDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project name</FormLabel>
+                  <FormLabel>{t("form.nameLabel")}</FormLabel>
                   <FormControl>
-                    <Input autoFocus placeholder="My Paper" {...field} />
+                    <Input autoFocus placeholder={t("create.placeholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -101,7 +107,7 @@ export function CreateProjectDialog({
                 disabled={!form.watch("name").trim() || !form.formState.isValid || create.isPending}
               >
                 {create.isPending && <Loader2 className="animate-spin" />}
-                Create
+                {t("common:action.create")}
               </Button>
             </DialogFooter>
           </form>
@@ -120,7 +126,9 @@ export function RenameProjectDialog({
   onOpenChange: (v: boolean) => void;
   project: Project | null;
 }) {
+  const { t } = useTranslation("projects");
   const rename = useRenameProject();
+  const nameSchema = useMemo(() => makeNameSchema(t), [t]);
   const form = useForm<NameValues>({
     resolver: zodResolver(nameSchema),
     defaultValues: { name: project?.name ?? "" },
@@ -145,8 +153,8 @@ export function RenameProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename project</DialogTitle>
-          <DialogDescription>Choose a new name for this project.</DialogDescription>
+          <DialogTitle>{t("rename.title")}</DialogTitle>
+          <DialogDescription>{t("rename.description")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -155,7 +163,7 @@ export function RenameProjectDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project name</FormLabel>
+                  <FormLabel>{t("form.nameLabel")}</FormLabel>
                   <FormControl>
                     <Input autoFocus onFocus={(e) => e.target.select()} {...field} />
                   </FormControl>
@@ -169,7 +177,7 @@ export function RenameProjectDialog({
                 disabled={!form.watch("name").trim() || !form.formState.isValid || rename.isPending}
               >
                 {rename.isPending && <Loader2 className="animate-spin" />}
-                Save
+                {t("common:action.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -188,6 +196,7 @@ export function DeleteProjectDialog({
   onOpenChange: (v: boolean) => void;
   project: Project | null;
 }) {
+  const { t } = useTranslation("projects");
   const del = useDeleteProject();
 
   const onConfirm = async () => {
@@ -205,17 +214,17 @@ export function DeleteProjectDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete “{project?.name}”?</AlertDialogTitle>
-          <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          <AlertDialogTitle>{t("delete.title", { name: project?.name })}</AlertDialogTitle>
+          <AlertDialogDescription>{t("delete.description")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common:action.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className={cn(buttonVariants({ variant: "destructive" }))}
             onClick={onConfirm}
             disabled={del.isPending}
           >
-            Delete
+            {t("common:action.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

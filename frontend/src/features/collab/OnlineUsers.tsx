@@ -1,4 +1,7 @@
 /** "Online now" avatar stack for the editor toolbar (spec 32). */
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,9 +12,9 @@ import type { PresenceUser } from "./usePresence";
 
 const DEFAULT_MAX = 5;
 
-function describe(user: PresenceUser): string {
-  const who = user.isLocal ? `${user.name} (You)` : user.name;
-  return user.idle ? `${who} — idle` : `${who} — online`;
+function describe(user: PresenceUser, t: TFunction<"editor">): string {
+  const who = user.isLocal ? t("presence.you", { name: user.name }) : user.name;
+  return user.idle ? t("presence.idle", { who }) : t("presence.online", { who });
 }
 
 function PresenceAvatar({
@@ -21,6 +24,7 @@ function PresenceAvatar({
   user: PresenceUser;
   withTooltip?: boolean;
 }) {
+  const { t } = useTranslation("editor");
   const avatar = (
     // `user.idle` comes from the same `state.idle` awareness field that the
     // remote-cursor fade reads (see remote-cursors.ts), so an idle peer's avatar
@@ -31,7 +35,7 @@ function PresenceAvatar({
         user.idle && "opacity-50",
       )}
       style={{ borderColor: user.color }}
-      aria-label={describe(user)}
+      aria-label={describe(user, t)}
     >
       <AvatarFallback style={{ color: user.color }}>{initials(user.name)}</AvatarFallback>
     </Avatar>
@@ -44,19 +48,20 @@ function PresenceAvatar({
           {avatar}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{describe(user)}</TooltipContent>
+      <TooltipContent>{describe(user, t)}</TooltipContent>
     </Tooltip>
   );
 }
 
 export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[]; max?: number }) {
+  const { t } = useTranslation("editor");
   if (users.length === 0) return null;
   const visible = users.slice(0, max);
   const overflow = users.slice(max);
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex items-center -space-x-2" role="list" aria-label="People online">
+      <div className="flex items-center -space-x-2" role="list" aria-label={t("presence.peopleOnline")}>
         {visible.map((user) => (
           <div role="listitem" key={user.id}>
             <PresenceAvatar user={user} />
@@ -67,7 +72,7 @@ export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[
             <PopoverTrigger asChild>
               <button
                 type="button"
-                aria-label={`${overflow.length} more online`}
+                aria-label={t("presence.moreOnline", { count: overflow.length })}
                 className="flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium text-muted-foreground"
               >
                 +{overflow.length}
@@ -83,7 +88,7 @@ export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[
                       aria-hidden="true"
                     />
                     <span className={cn("truncate", user.idle && "text-muted-foreground")}>
-                      {describe(user)}
+                      {describe(user, t)}
                     </span>
                   </li>
                 ))}

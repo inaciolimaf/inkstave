@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/auth/auth-context";
@@ -18,26 +19,29 @@ function Centered({ children }: { children: ReactNode }) {
  * an already-set-up instance pays a single request once per session.
  */
 function UnauthenticatedRedirect() {
+  const { t } = useTranslation("common");
   const location = useLocation();
   const status = useSetupStatus();
-  if (status.isLoading) return <Centered>Loading…</Centered>;
+  if (status.isLoading) return <Centered>{t("state.loading")}</Centered>;
   const to = status.data?.needsSetup ? "/setup" : "/login";
   return <Navigate to={to} state={{ from: location }} replace />;
 }
 
 /** Gate protected routes: redirect unauthenticated users to setup or login. */
 export function RequireAuth() {
+  const { t } = useTranslation("common");
   const { isAuthenticated, isBootstrapping } = useAuth();
 
-  if (isBootstrapping) return <Centered>Loading…</Centered>;
+  if (isBootstrapping) return <Centered>{t("state.loading")}</Centered>;
   if (!isAuthenticated) return <UnauthenticatedRedirect />;
   return <Outlet />;
 }
 
 /** Public-only routes (login/register): redirect authenticated users home. */
 export function PublicOnly({ children }: { children: ReactNode }) {
+  const { t } = useTranslation("common");
   const { isAuthenticated, isBootstrapping } = useAuth();
-  if (isBootstrapping) return <Centered>Loading…</Centered>;
+  if (isBootstrapping) return <Centered>{t("state.loading")}</Centered>;
   if (isAuthenticated) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "@/auth/auth-context";
@@ -17,6 +18,7 @@ import { changeEmail } from "./api";
 import { errMessage } from "./errMessage";
 
 export function EmailSection() {
+  const { t } = useTranslation("settings");
   const { user, refreshUser } = useAuth();
   const [newEmail, setNewEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +34,7 @@ export function EmailSection() {
       setNewEmail("");
       setPassword("");
       await refreshUser();
-      toast.success("Confirmation sent.");
+      toast.success(t("email.success"));
     } catch (err) {
       toast.error(errMessage(err));
     } finally {
@@ -43,24 +45,27 @@ export function EmailSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Email</CardTitle>
+        <CardTitle>{t("email.title")}</CardTitle>
         <CardDescription>
-          Current: <span className="font-medium">{user?.email}</span>
+          {t("email.current")} <span className="font-medium">{user?.email}</span>
           {user?.pending_email && (
-            <span className="ml-1 text-amber-600">· pending: {user.pending_email}</span>
+            <span className="ml-1 text-amber-600">
+              {t("email.pending", { email: user.pending_email })}
+            </span>
           )}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {sentTo ? (
           <p role="status" className="text-sm text-muted-foreground">
-            We sent a confirmation link to <span className="font-medium">{sentTo}</span>. The change
-            takes effect once you confirm it.
+            {t("email.sentPrefix")}
+            <span className="font-medium">{sentTo}</span>
+            {t("email.sentSuffix")}
           </p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="new-email">New email</Label>
+              <Label htmlFor="new-email">{t("email.newEmail")}</Label>
               <Input
                 id="new-email"
                 type="email"
@@ -70,7 +75,7 @@ export function EmailSection() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="email-pw">Password</Label>
+              <Label htmlFor="email-pw">{t("email.password")}</Label>
               <Input
                 id="email-pw"
                 type="password"
@@ -80,7 +85,7 @@ export function EmailSection() {
               />
             </div>
             <Button type="submit" disabled={busy || !newEmail.trim() || !password}>
-              {busy ? "Sending…" : "Change email"}
+              {busy ? t("email.sending") : t("email.submit")}
             </Button>
           </form>
         )}
