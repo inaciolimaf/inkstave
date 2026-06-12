@@ -10,16 +10,17 @@ from __future__ import annotations
 
 import logging
 import sys
-from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
 from pythonjsonlogger.json import JsonFormatter
 
+from inkstave.observability.context import request_id_var as request_id_ctx
+
 if TYPE_CHECKING:
     from inkstave.config import Settings
 
-# Set per request by RequestIdMiddleware; None outside of a request context.
-request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
+# `request_id_ctx` is the shared observability context var (spec 51) so ids set here
+# and by the RequestContextMiddleware correlate through one source of truth.
 
 
 def get_request_id() -> str | None:

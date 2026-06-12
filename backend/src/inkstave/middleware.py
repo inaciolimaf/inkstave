@@ -3,6 +3,15 @@
 Implemented as pure ASGI (rather than ``BaseHTTPMiddleware``) so the request-id
 ``ContextVar`` set here remains visible to downstream endpoints, exception
 handlers and the access log without task-isolation surprises.
+
+.. deprecated:: spec-52
+    ``RequestIdMiddleware`` below is **superseded** and no longer wired into the
+    application. The active request-id middleware is
+    :class:`inkstave.observability.middleware.RequestContextMiddleware`, which is
+    functionally equivalent (same correlation-id ``ContextVar``, response-header
+    echo and per-request access log). This class is retained only as the spec-02
+    §5.2 reference implementation; ``create_app()`` does not import it. Do not add
+    new dependencies on it — use ``RequestContextMiddleware`` instead.
 """
 
 from __future__ import annotations

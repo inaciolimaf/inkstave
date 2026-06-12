@@ -94,12 +94,26 @@ class ConflictError(AppError):
     error_type = "conflict"
 
 
+class GoneError(AppError):
+    status_code = 410
+    error_type = "gone"
+
+
 class RateLimitError(AppError):
     status_code = 429
     error_type = "rate_limited"
 
-    def __init__(self, retry_after_seconds: int) -> None:
-        super().__init__(
-            "Too many requests.",
-            headers={"Retry-After": str(retry_after_seconds)},
-        )
+    def __init__(
+        self,
+        retry_after_seconds: int,
+        *,
+        limit: int | None = None,
+        remaining: int = 0,
+        reset: int | None = None,
+    ) -> None:
+        headers = {"Retry-After": str(retry_after_seconds), "X-RateLimit-Remaining": str(remaining)}
+        if limit is not None:
+            headers["X-RateLimit-Limit"] = str(limit)
+        if reset is not None:
+            headers["X-RateLimit-Reset"] = str(reset)
+        super().__init__("Too many requests.", headers=headers)
