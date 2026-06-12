@@ -21,7 +21,18 @@ dependencies = [
     "python-multipart>=0.0.18",
     "aioboto3>=13.0",
     "arq>=0.26",
+    "pycrdt>=0.13.1",
+    "aiosmtplib>=5.1.1",
+    "langgraph>=1.2.4",
+    "langchain-core>=1.4.3",
+    "openai>=2.41.0",
+    "prometheus-client>=0.25.0",
+    "psycopg2-binary>=2.9.12",
 ]
+
+[project.scripts]
+# Operations CLI (spec 57): `inkstave migrate|bootstrap-admin|seed|check-config`.
+inkstave = "inkstave.cli:main"
 
 [dependency-groups]
 # PEP 735 dependency groups. The testing foundation (spec 04) lives here.
@@ -36,6 +47,8 @@ dev = [
     "pytest-cov>=6.0",
     "httpx>=0.28",
     "fakeredis>=2.26",
+    "pytest-xdist>=3.8.0",
+    "pyyaml>=6.0.3",
 ]
 
 [tool.uv]
@@ -46,11 +59,18 @@ dev = [
 line-length = 100
 target-version = "py312"
 # Forward-looking: Alembic migrations (added in spec 03) are not linted.
-# `extend-exclude` keeps ruff's built-in excludes (.venv, .git, …) and adds ours.
+# Deliberately `extend-exclude` (not a plain `exclude`): plain `exclude` would
+# *replace* ruff's built-in default excludes (.venv, .git, __pycache__, …),
+# whereas `extend-exclude` preserves them and merely adds `migrations/` on top.
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+# The in-process ASGI WebSocket test client exposes idiomatic `timeout=` params
+# (mirroring Starlette's TestClient / the `websockets` API); ASYNC109 doesn't fit.
+"tests/collab_ws_harness.py" = ["ASYNC109"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's dependency-injection markers are designed to be call expressions in
@@ -78,12 +98,17 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-# Default (fast) run: unit + integration, excluding slow/e2e tiers.
-addopts = "-q --strict-markers -m 'not slow and not e2e'"
+# Default (fast) run: unit + integration, excluding slow/e2e tiers. `--durations`
+# surfaces the slowest tests (spec 53); `-n auto` (pytest-xdist) parallelises the
+# run so the default, `just test`, CI, and `run_timed.sh` all share the same
+# under-2-minute wall-clock budget. conftest provisions per-worker databases via
+# PYTEST_XDIST_WORKER, so parallel execution is isolation-safe.
+addopts = "-q --strict-markers -n auto --durations=15 -m 'not slow and not e2e and not live'"
 markers = [
     "slow: heavier tests excluded from the default fast run",
     "integration: tests requiring the test database / wired app",
     "e2e: end-to-end tests (Playwright-driven; run separately)",
+    "live: manual smoke hitting a real external service (needs a real key; never in CI)",
 ]
 
 [tool.coverage.run]
