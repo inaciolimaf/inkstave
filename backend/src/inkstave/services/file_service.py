@@ -16,6 +16,7 @@ from inkstave.config import get_settings
 from inkstave.db.models.file import File
 from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.errors import AppError, ConflictError, NotFoundError
+from inkstave.security.uploads import content_matches_extension, extension_allowed
 from inkstave.services import tree_service
 from inkstave.storage.base import ObjectNotFoundError, ObjectStore
 
@@ -124,9 +125,17 @@ async def upload_file(
     )
     key = _storage_key(project_id, entity.id)
 
+    # Extension allow-list (spec 52): reject before reading the body.
+    if not extension_allowed(name, settings.upload_allowed_extensions):
+        raise UnsupportedMediaTypeError()
+
     head = await read(chunk_size)
     content_type = sniff_content_type(head, declared_content_type)
     if content_type not in settings.allowed_upload_mime:
+        raise UnsupportedMediaTypeError()
+    # The sniffed content must be consistent with the claimed extension (spec 52):
+    # a `.png` whose bytes are really a PDF is rejected.
+    if not content_matches_extension(name, content_type):
         raise UnsupportedMediaTypeError()
 
     hasher = hashlib.sha256()

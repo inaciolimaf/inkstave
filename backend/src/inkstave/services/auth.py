@@ -103,6 +103,9 @@ async def refresh_tokens(
         # Replay of an already-used token -> revoke the entire family.
         await refresh_store.revoke_family(family_id)
         raise RefreshError(_REUSE_DETECTED)
+    # Per-user cutoff: a password change (spec 59) invalidates tokens issued before it.
+    if await refresh_store.is_user_revoked(record):
+        raise RefreshError(_INVALID_REFRESH)
 
     user = await session.get(User, UUID(claims["sub"]))
     if user is None:

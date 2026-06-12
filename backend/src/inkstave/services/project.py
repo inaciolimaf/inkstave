@@ -12,6 +12,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 
+from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
 from inkstave.db.models.project import Project
 from inkstave.errors import NotFoundError
 from inkstave.services.tree_service import ensure_root
@@ -35,6 +36,16 @@ async def create_project(session: AsyncSession, owner_id: UUID, name: str) -> Pr
     await session.flush()
     # Every project gets a file-tree root folder in the same transaction (spec 12).
     await ensure_root(session, project.id)
+    # The creator is the owner member — the source of truth for sharing (spec 33).
+    session.add(
+        ProjectMembership(
+            project_id=project.id,
+            user_id=owner_id,
+            role=MembershipRole.owner,
+            status=MembershipStatus.active,
+        )
+    )
+    await session.flush()
     await session.refresh(project)
     return project
 

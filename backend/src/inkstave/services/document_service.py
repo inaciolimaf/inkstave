@@ -119,3 +119,61 @@ async def replace_content(
         # Stale base_version (or it was raced) -> the row is unchanged.
         raise VersionConflictError(document.version, document.content)
     return document
+
+
+# --------------------------------------------------------------------------- #
+# Collaboration bridge seam (spec 28): read/write the canonical text directly,
+# bypassing optimistic-concurrency so the CRDT can keep spec-13 content in sync
+# without re-emitting a CRDT update (avoids a feedback loop).
+# --------------------------------------------------------------------------- #
+
+
+async def read_content_for_collab(session: AsyncSession, entity_id: UUID) -> str:
+    """Read a document's current content for the initial CRDT seed (``""`` if none)."""
+    content = (
+        await session.execute(select(Document.content).where(Document.entity_id == entity_id))
+    ).scalar_one_or_none()
+    return content or ""
+
+
+async def set_content_from_collab(session: AsyncSession, entity_id: UUID, content: str) -> bool:
+    """Write CRDT text into the spec-13 ``content`` column directly — no version
+    check, no CRDT round-trip. Idempotent (a no-op when unchanged); bumps
+    ``version`` only on a real change so REST optimistic-concurrency still works.
+    Returns whether the content changed. Creates the row if absent.
+    """
+    current = (
+        await session.execute(select(Document.content).where(Document.entity_id == entity_id))
+    ).scalar_one_or_none()
+    if current == content:
+        return False
+    size_bytes = len(content.encode("utf-8"))
+    if current is None:
+        entity = (
+            await session.execute(select(TreeEntity).where(TreeEntity.id == entity_id))
+        ).scalar_one_or_none()
+        if entity is None or entity.type is not TreeEntityType.doc:
+            return False
+        session.add(
+            Document(
+                entity_id=entity_id,
+                project_id=entity.project_id,
+                content=content,
+                version=1,
+                size_bytes=size_bytes,
+            )
+        )
+        await session.flush()
+        return True
+    await session.execute(
+        update(Document)
+        .where(Document.entity_id == entity_id)
+        .values(
+            content=content,
+            version=Document.version + 1,
+            size_bytes=size_bytes,
+            updated_at=func.clock_timestamp(),
+        )
+    )
+    await session.flush()
+    return True
