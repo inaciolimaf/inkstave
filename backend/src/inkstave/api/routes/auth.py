@@ -12,12 +12,16 @@ from inkstave.auth.refresh_store import RefreshStore
 from inkstave.auth.tokens import TokenService
 from inkstave.db.session import get_db_session
 from inkstave.dependencies import (
+    get_email_enqueuer,
     get_password_hasher,
     get_refresh_store,
+    get_settings_dep,
     get_token_service,
 )
 from inkstave.errors import ErrorEnvelope
+from inkstave.mailer.enqueuer import EmailEnqueuer
 from inkstave.schemas.auth import (
+    ForgotPasswordRequest,
     LoginRequest,
     LogoutRequest,
     MessageResponse,
@@ -26,10 +30,13 @@ from inkstave.schemas.auth import (
 )
 from inkstave.schemas.user import RegisterRequest, UserPublic
 from inkstave.services import auth as auth_service
-from inkstave.services.user import register_user
+from inkstave.services.sharing_common import generate_token
+from inkstave.services.user import get_user_by_email, register_user
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from inkstave.config import Settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -50,10 +57,49 @@ async def register(
     data: RegisterRequest,
     session: AsyncSession = Depends(get_db_session),
     hasher: PasswordHasher = Depends(get_password_hasher),
+    settings: Settings = Depends(get_settings_dep),
+    emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> UserPublic:
     """Create an account from an email, password and display name."""
     user = await register_user(session, hasher, data)
+    # Fire-and-forget account verification email (spec 103) — never blocks the
+    # response; the actual send happens in the ARQ send_email_job.
+    verify_url = f"{settings.frontend_url}/verify-email?token={generate_token()}"
+    await emails.enqueue_email(
+        template="email_verification",
+        to=user.email,
+        context={"user_name": user.display_name, "verify_url": verify_url},
+    )
     return UserPublic.model_validate(user)
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=MessageResponse,
+    summary="Request a password-reset email",
+    dependencies=[Depends(rate_limit("forgot_password"))],
+)
+async def forgot_password(
+    data: ForgotPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings_dep),
+    emails: EmailEnqueuer = Depends(get_email_enqueuer),
+) -> MessageResponse:
+    """Send a password-reset link — non-enumerating (same response either way).
+
+    Only enqueues the email when a matching user exists; the response is identical
+    whether or not the address is registered, so it can't be used to probe accounts.
+    """
+    user = await get_user_by_email(session, str(data.email))
+    if user is not None:
+        reset_url = f"{settings.frontend_url}/reset-password?token={generate_token()}"
+        await emails.enqueue_email(
+            template="password_reset",
+            to=user.email,
+            context={"user_name": user.display_name, "reset_url": reset_url},
+        )
+    return MessageResponse(detail="If that email is registered, a reset link is on its way.")
 
 
 @router.post(

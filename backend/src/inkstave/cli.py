@@ -5,6 +5,7 @@
     python -m inkstave.cli seed --demo       # demo user + project (never in prod)
     python -m inkstave.cli check-config      # validate env/secrets; exit non-zero on error
     python -m inkstave.cli doctor            # config + Postgres/Redis reachability (spec 62)
+    python -m inkstave.cli send-test-email --to you@example.com  # verify email wiring (spec 103)
 
 Stdlib argparse only — no extra dependency. Each command returns a process exit
 code so it doubles as a deploy/CI gate.
@@ -136,6 +137,49 @@ async def _unreachable() -> bool:
     return False
 
 
+def _test_email_context(base_url: str) -> dict[str, str]:
+    """Placeholder context covering every template's keys (extras are ignored)."""
+    return {
+        "user_name": "Test User",
+        "verify_url": f"{base_url}/verify-email?token=test-token",
+        "reset_url": f"{base_url}/reset-password?token=test-token",
+        "confirm_url": f"{base_url}/settings/confirm-email?token=test-token",
+        "accept_url": f"{base_url}/invite?token=test-token",
+        "project_name": "Test Project",
+        "inviter_name": "Test User",
+        "role": "editor",
+    }
+
+
+async def _cmd_send_test_email(*, to: str, template: str, sender: object | None = None) -> int:
+    """Render + send one test email through the configured backend (sync, manual).
+
+    The one place a send happens outside the ARQ worker — so a developer can verify
+    transport (Mailpit/Resend/SMTP) without a running worker. ``sender`` is
+    injectable so the fast test tier passes a fake and never opens a connection.
+    """
+    from inkstave.mailer.sender import OutgoingEmail, get_email_sender
+    from inkstave.mailer.templates import UnknownTemplateError, render_email
+
+    settings = get_settings()
+    active = sender if sender is not None else get_email_sender(settings)
+    try:
+        subject, text_body, html_body = render_email(
+            template, _test_email_context(settings.app_base_url)
+        )
+        await active.send(  # type: ignore[attr-defined]
+            OutgoingEmail(to=to, subject=subject, text_body=text_body, html_body=html_body)
+        )
+    except UnknownTemplateError as exc:
+        print(f"send-test-email: FAIL — {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:  # noqa: BLE001 — diagnostics never raise out (no traceback)
+        print(f"send-test-email: FAIL — {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    print(f"send-test-email: PASS — sent to {to} via {settings.email_backend}")
+    return 0
+
+
 def _resolve_admin_credentials() -> tuple[str, str] | None:
     """Read the admin email/password from env, prompting on a TTY (sync — no loop)."""
     email = os.environ.get("INKSTAVE_ADMIN_EMAIL")
@@ -204,6 +248,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     seed_parser.add_argument("--force", action="store_true", help="allow seeding in production")
     sub.add_parser("check-config", help="validate env/secrets; non-zero exit on error")
     sub.add_parser("doctor", help="config + Postgres/Redis reachability; non-zero on any failure")
+    mail_parser = sub.add_parser(
+        "send-test-email", help="send one test email via the configured backend"
+    )
+    mail_parser.add_argument("--to", required=True, help="recipient address")
+    mail_parser.add_argument(
+        "--template",
+        default="email_verification",
+        help="template name (default: email_verification)",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "migrate":
@@ -219,6 +272,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return asyncio.run(_cmd_bootstrap_admin(*creds))
     if args.command == "seed":
         return asyncio.run(_cmd_seed(demo=args.demo, force=args.force))
+    if args.command == "send-test-email":
+        return asyncio.run(_cmd_send_test_email(to=args.to, template=args.template))
     return 2  # pragma: no cover - argparse requires a subcommand
 
 

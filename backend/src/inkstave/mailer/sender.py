@@ -119,7 +119,84 @@ class SmtpEmailSender:
         )
 
 
+class ResendEmailSender:
+    """Sends via the Resend HTTP API. Raises on failure so the ARQ job retries.
+
+    Opens no connection at construction (cheap to build in DI / tests). Never logs
+    the API key; logs the Resend message id at DEBUG on success.
+    """
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        default_from: str,
+        base_url: str = "https://api.resend.com",
+        timeout_s: float = 10.0,
+        transport: object | None = None,
+    ) -> None:
+        self._api_key = api_key
+        self._default_from = default_from
+        self._base_url = base_url.rstrip("/")
+        self._timeout_s = timeout_s
+        # An injected httpx transport (e.g. httpx.MockTransport) keeps tests
+        # network-free; production leaves it None (a real connection).
+        self._transport = transport
+
+    async def send(self, email: OutgoingEmail) -> None:
+        import httpx
+
+        payload: dict[str, object] = {
+            "from": email.from_addr or self._default_from,
+            "to": [email.to],
+            "subject": email.subject,
+            "text": email.text_body,
+        }
+        if email.html_body is not None:
+            payload["html"] = email.html_body
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=self._timeout_s,
+                transport=self._transport,  # type: ignore[arg-type]
+            ) as client:
+                response = await client.post(
+                    f"{self._base_url}/emails",
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+        except httpx.HTTPError as exc:
+            # Transport error / timeout — log without the key, then propagate so ARQ retries.
+            logger.warning("email_resend_transport_error: to=%s error=%s", email.to, exc)
+            raise
+
+        if response.status_code >= 400:
+            # Surface the HTTP status + any error body (never the key) and raise to retry.
+            logger.warning(
+                "email_resend_http_error: to=%s status=%s body=%s",
+                email.to,
+                response.status_code,
+                response.text[:500],
+            )
+            response.raise_for_status()
+
+        message_id = ""
+        try:
+            message_id = str(response.json().get("id", ""))
+        except ValueError:  # non-JSON 2xx body — fine, just no id to log
+            pass
+        logger.debug("email_resend_sent: to=%s id=%s", email.to, message_id)
+
+
 def get_email_sender(settings: Settings) -> EmailSender:
+    if settings.email_backend == "resend":
+        return ResendEmailSender(
+            api_key=settings.resend_api_key,
+            default_from=settings.email_from,
+        )
     if settings.email_backend == "smtp":
         return SmtpEmailSender(
             host=settings.smtp_host,

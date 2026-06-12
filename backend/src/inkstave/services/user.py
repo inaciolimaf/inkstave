@@ -44,6 +44,12 @@ async def email_exists(session: AsyncSession, email: str) -> bool:
     return result.first() is not None
 
 
+async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
+    """Return the user with ``email`` (case-insensitive), or ``None``."""
+    result = await session.execute(select(User).where(User.email == normalise_email(email)))
+    return result.scalar_one_or_none()
+
+
 async def register_user(
     session: AsyncSession, hasher: PasswordHasher, data: RegisterRequest
 ) -> User:

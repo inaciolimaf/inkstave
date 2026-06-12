@@ -844,6 +844,21 @@
         "title": "FileRead",
         "type": "object"
       },
+      "ForgotPasswordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "type": "object"
+      },
       "ForwardResult": {
         "description": "code -> pdf: one source line may map to several PDF boxes.",
         "properties": {
@@ -2731,6 +2746,48 @@
         "summary": "Admin-only liveness ping (guards proof)",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "description": "Send a password-reset link \u2014 non-enumerating (same response either way).\n\nOnly enqueues the email when a matching user exists; the response is identical\nwhether or not the address is registered, so it can't be used to probe accounts.",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request a password-reset email",
+        "tags": [
+          "auth"
         ]
       }
     },

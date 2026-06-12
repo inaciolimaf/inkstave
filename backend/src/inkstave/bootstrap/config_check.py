@@ -108,4 +108,10 @@ def validate_config() -> list[str]:
                 "OPENROUTER_API_KEY: required in production for the AI agent "
                 "(set LLM_STUB=true only for tests, never production)"
             )
+
+    # Email-backend-gated secrets (spec 103): the selected backend must be usable.
+    if settings.email_backend == "resend" and not settings.resend_api_key.strip():
+        problems.append("RESEND_API_KEY: required when EMAIL_BACKEND=resend")
+    if settings.email_backend == "smtp" and not settings.smtp_host.strip():
+        problems.append("SMTP_HOST: required when EMAIL_BACKEND=smtp")
     return problems

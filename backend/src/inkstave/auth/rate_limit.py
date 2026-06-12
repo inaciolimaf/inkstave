@@ -30,6 +30,9 @@ _SCOPE_SETTING = {
     "login": "rate_limit_login",
     "register": "rate_limit_register",
     "refresh": "rate_limit_refresh",
+    # Sensitive public auth endpoints (spec 52/103): forgot-password reuses the
+    # per-user/IP change-password policy (default 5/hour).
+    "forgot_password": "rate_limit_auth_password",
 }
 
 

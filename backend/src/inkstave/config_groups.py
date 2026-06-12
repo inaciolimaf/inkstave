@@ -332,8 +332,10 @@ class CollaborationSettingsMixin:
     history_diff_max_bytes: int = 2_097_152  # max reconstructed text per side before 413
     history_versions_page_max: int = 200  # upper bound for the versions list `limit`
 
-    # Email + notifications (spec 39).
-    email_backend: Literal["smtp", "console", "file"] = "console"
+    # Email + notifications (spec 39; transport hardened in spec 103).
+    # ``resend`` selects the native Resend HTTP-API sender; ``smtp`` covers any SMTP
+    # provider (incl. Mailpit in dev and Resend-over-SMTP in prod).
+    email_backend: Literal["smtp", "console", "file", "resend"] = "console"
     email_from: str = "Inkstave <no-reply@inkstave.local>"
     email_file_dir: str = "./tmp/emails"
     smtp_host: str = "localhost"
@@ -341,6 +343,11 @@ class CollaborationSettingsMixin:
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
+    # Native Resend HTTP-API sender (spec 103); required only when EMAIL_BACKEND=resend.
+    resend_api_key: str = ""
     app_base_url: str = "http://localhost"  # base for accept_url / reset_url in emails
+    # Transactional-link lifetimes (spec 103).
+    password_reset_token_ttl: int = 3600  # password-reset link lifetime (seconds)
+    email_verification_token_ttl: int = 86400  # account-verification link lifetime
     notification_invite_ttl_days: int = 30
     notification_sweep_interval_s: int = 3600  # expiry sweep interval (mocked in tests)

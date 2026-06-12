@@ -68,10 +68,29 @@ def _email_change_confirmation(ctx: dict[str, Any]) -> tuple[str, str, str]:
     return subject, text, html
 
 
+def _email_verification(ctx: dict[str, Any]) -> tuple[str, str, str]:
+    name = ctx.get("user_name", "there")
+    verify_url = ctx["verify_url"]
+    subject = "Verify your Inkstave email"
+    text = (
+        f"Hi {name},\n\nWelcome to Inkstave! Please confirm this is your email "
+        f"address.\n\nVerify your email:\n{verify_url}\n\n"
+        "If you didn’t create an Inkstave account, you can ignore this email.\n"
+    )
+    html = (
+        f"<p>Hi {escape(str(name))},</p>"
+        "<p>Welcome to Inkstave! Please confirm this is your email address.</p>"
+        f'<p><a href="{escape(str(verify_url), quote=True)}">Verify your email</a></p>'
+        "<p>If you didn’t create an Inkstave account, you can ignore this email.</p>"
+    )
+    return subject, text, html
+
+
 _TEMPLATES = {
     "project_invite": _project_invite,
     "password_reset": _password_reset,
     "email_change_confirmation": _email_change_confirmation,
+    "email_verification": _email_verification,
 }
 
 

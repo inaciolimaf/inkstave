@@ -22,6 +22,10 @@ class LogoutRequest(StrictModel):
     refresh_token: str
 
 
+class ForgotPasswordRequest(StrictModel):
+    email: EmailStr
+
+
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.app import create_app
 from inkstave.db.session import get_db_session
-from inkstave.dependencies import get_redis
+from inkstave.dependencies import get_email_enqueuer, get_redis
 
 # --------------------------------------------------------------------------- #
 # Redis fake
@@ -64,6 +64,15 @@ async def app(db_engine: Any, db_session: AsyncSession, redis: Any) -> Any:
 
     application.dependency_overrides[get_db_session] = _override_get_db
     application.dependency_overrides[get_redis] = lambda: redis
+
+    # Default no-op email enqueuer so fire-and-forget sends (e.g. registration's
+    # verification email, spec 103) never reach a real ARQ pool/Redis. Tests that
+    # assert on email override this with a capturing fake (their override wins).
+    class _NoopEmailEnqueuer:
+        async def enqueue_email(self, *, template: str, to: str, context: Any) -> str | None:
+            return None
+
+    application.dependency_overrides[get_email_enqueuer] = lambda: _NoopEmailEnqueuer()
     return application
 
 

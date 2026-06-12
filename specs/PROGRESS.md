@@ -7,7 +7,7 @@ order, then tick it. Specs 01–100 are already implemented.
 
 - [x] 101-project-zip-import
 - [x] 102-project-zip-export
-- [ ] 103-email-delivery
+- [x] 103-email-delivery
 
 ## Done
 

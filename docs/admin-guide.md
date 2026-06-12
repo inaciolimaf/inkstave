@@ -208,15 +208,18 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `AGENT_MODEL_COST_TABLE` | No | `{"openai/gpt-4o-mini":{"input":0.00015,"output":0.0006}}` | per-model input/output token prices (USD per 1K tokens) for cost accounting | backend, worker |
 | `AGENT_AUDIT_RETENTION_DAYS` | No | `90` | 0 = keep forever | worker |
 | `AGENT_INJECTION_GUARD` | No | `on` | on \| off | backend, worker |
-| `EMAIL_BACKEND` | No | `console` | smtp \| console \| file  (console in dev/tests) | backend, worker |
+| `EMAIL_BACKEND` | No | `console` | smtp \| console \| file \| resend  (console in dev/tests) | backend, worker |
 | `EMAIL_FROM` | No | `Inkstave <no-reply@inkstave.local>` | default From header | backend, worker |
 | `EMAIL_FILE_DIR` | No | `./tmp/emails` | output dir for the FileEmailSender | backend, worker |
-| `SMTP_HOST` | No | `localhost` | SMTP server host | backend, worker |
-| `SMTP_PORT` | No | `587` | SMTP server port | backend, worker |
-| `SMTP_USER` | No | `—` | SMTP username (empty → no auth) | backend, worker |
-| `SMTP_PASSWORD` | No | `—` | SMTP password | backend, worker |
-| `SMTP_USE_TLS` | No | `true` | STARTTLS/TLS | backend, worker |
-| `APP_BASE_URL` | No | `http://localhost` | base for accept_url / reset_url in emails | backend, worker |
+| `SMTP_HOST` | No | `localhost` | SMTP host (Mailpit: mailpit; Resend: smtp.resend.com) | backend, worker |
+| `SMTP_PORT` | No | `587` | SMTP port (Mailpit: 1025; Resend: 587 or 465) | backend, worker |
+| `SMTP_USER` | No | `—` | SMTP username (Mailpit: empty; Resend: resend) | backend, worker |
+| `SMTP_PASSWORD` | No | `—` | SMTP password (Resend: your RESEND_API_KEY) | backend, worker |
+| `SMTP_USE_TLS` | No | `true` | STARTTLS/TLS (Mailpit: false; Resend: true) | backend, worker |
+| `RESEND_API_KEY` | No | `—` | Resend API key (re_...); required when `EMAIL_BACKEND=resend` | backend, worker |
+| `APP_BASE_URL` | No | `http://localhost` | base for accept_url / reset_url / verify_url in emails | backend, worker |
+| `PASSWORD_RESET_TOKEN_TTL` | No | `3600` | password-reset link lifetime (seconds) | backend |
+| `EMAIL_VERIFICATION_TOKEN_TTL` | No | `86400` | account email-verification link lifetime (seconds) | backend |
 | `NOTIFICATION_INVITE_TTL_DAYS` | No | `30` | TTL for invite notifications | backend |
 | `NOTIFICATION_SWEEP_INTERVAL_S` | No | `3600` | expiry sweep interval (mocked in tests) | worker |
 | `VITE_NOTIFICATIONS_POLL_INTERVAL_MS` | No | `60000` | frontend bell poll interval | frontend build |
@@ -326,6 +329,46 @@ Migrations are **forward-only** (never auto-downgrade). To upgrade:
    one-shot step before rolling the app.
 3. Restart services (`backend`, `worker`, `frontend`). With strict mode the new
    app verifies the DB is at head and refuses to start otherwise.
+
+## Email delivery (spec 103)
+
+All transactional emails (project invite, email-change confirmation, password
+reset, account verification) are rendered and sent **asynchronously** by the
+worker's `send_email_job`; request handlers only enqueue. The transport is
+chosen by `EMAIL_BACKEND`.
+
+**Local development — Mailpit.** `docker-compose.dev.yml` runs a `mailpit`
+service; the dev backend/worker are configured with `EMAIL_BACKEND=smtp`,
+`SMTP_HOST=host.docker.internal` (or `mailpit`), `SMTP_PORT=1025`, no TLS/auth.
+Trigger any email (register, invite, change-email, forgot-password) and view it
+at **http://localhost:8025** (or run `just mail`). Tests do **not** need Mailpit —
+they use a fake sender.
+
+**Production — Resend over SMTP (no code change).** Set
+`EMAIL_BACKEND=smtp`, `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=587` (or `465`),
+`SMTP_USER=resend`, `SMTP_PASSWORD=<RESEND_API_KEY>`, `SMTP_USE_TLS=true`.
+
+**Production — Resend native API.** Set `EMAIL_BACKEND=resend` and
+`RESEND_API_KEY=re_...`. `check-config`/`doctor` fail fast if the key is empty.
+
+**SPF / DKIM / domain verification.** For real deliverability (so mail is not
+flagged as spam), add your sending domain in the Resend dashboard and publish the
+DNS records it shows: an SPF `TXT`, the DKIM `CNAME`/`TXT` records, and a
+recommended DMARC `TXT` (`v=DMARC1; p=none; rua=...`). Wait for Resend to mark the
+domain *verified*, then set `EMAIL_FROM` to an address on that verified domain.
+This is configuration only — no code.
+
+**Verify end to end.** `python -m inkstave.cli send-test-email --to you@example.com`
+renders and sends one email through whatever `EMAIL_BACKEND` is configured
+(Mailpit in dev, Resend/SMTP in prod) and prints a PASS/FAIL line.
+
+**Secrets.** `RESEND_API_KEY` and the SMTP password come from the environment /
+secret store; never commit them (`.env` is git-ignored; `.env.example` carries
+empty placeholders). The senders never log the key.
+
+**Retries.** `send_email_job` is registered with `max_tries=3`; a failed send
+raises so ARQ retries with its default exponential backoff, then gives up and
+logs the failure (template + recipient + HTTP status for Resend — never the key).
 
 ## Troubleshooting
 

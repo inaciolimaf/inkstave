@@ -86,3 +86,9 @@ hooks:
 # Run the default suite, measure wall-clock, and enforce the < 2-minute budget gate.
 test-timed:
     scripts/run_timed.sh
+
+# Open the local Mailpit inbox (dev). Mailpit must be up
+# (docker compose -f docker-compose.dev.yml up).
+mail:
+    @echo "Mailpit inbox: http://localhost:8025"
+    -xdg-open http://localhost:8025 >/dev/null 2>&1 || true

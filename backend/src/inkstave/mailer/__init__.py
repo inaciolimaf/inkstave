@@ -5,6 +5,7 @@ from inkstave.mailer.sender import (
     EmailSender,
     FileEmailSender,
     OutgoingEmail,
+    ResendEmailSender,
     SmtpEmailSender,
     get_email_sender,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "EmailSender",
     "FileEmailSender",
     "OutgoingEmail",
+    "ResendEmailSender",
     "SmtpEmailSender",
     "get_email_sender",
     "render_email",
