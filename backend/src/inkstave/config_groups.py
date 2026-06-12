@@ -267,6 +267,16 @@ class ImportSettingsMixin:
     import_workdir_root: str = "/tmp/inkstave-imports"  # scratch dir for the bounded temp copy
 
 
+class ExportSettingsMixin:
+    """Project export as a ``.zip`` — size cap + async toggle (spec 102).
+
+    The stream chunk size reuses ``storage_stream_chunk_bytes`` (no separate knob).
+    """
+
+    export_max_total_bytes: int = 209_715_200  # 200 MiB — sum of doc + file bytes (sync path)
+    export_async_enabled: bool = False  # over-threshold → ARQ artifact instead of 413 (optional)
+
+
 class CollabSettingsMixin:
     """SyncTeX, log parsing, CRDT document model and the collab WebSocket (specs 26–29)."""
 

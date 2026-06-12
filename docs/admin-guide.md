@@ -232,6 +232,8 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `IMPORT_MAX_ENTRIES` | No | `2000` | max kept (folders+docs+files) entries per import | worker |
 | `IMPORT_ALLOWED_EXTENSIONS` | No | `.tex,.bib,.cls,.sty,.bst,.bbx,.cbx,.txt,.md,.csv,.tsv,.json,.yml,.yaml,.xml,.svg,.png,.jpg,.jpeg,.gif,.webp,.pdf,.eps` | extensions allowed inside an imported archive (text ∪ binary) | worker |
 | `IMPORT_WORKDIR_ROOT` | No | `/tmp/inkstave-imports` | scratch dir for the bounded temp zip copy | worker |
+| `EXPORT_MAX_TOTAL_BYTES` | No | `209715200` | max total (doc + file) bytes for the sync export stream; over this → 413 | backend |
+| `EXPORT_ASYNC_ENABLED` | No | `false` | when true, over-threshold projects export via an ARQ artifact instead of 413 (optional) | backend, worker |
 | `S3_ENDPOINT_URL` | No | `—` | custom endpoint for MinIO/S3-compatible | backend, worker |
 | `S3_REGION` | No | `us-east-1` | S3 region for the s3 storage backend | backend, worker |
 | `S3_BUCKET` | No | `—` | S3 bucket name for the s3 storage backend | backend, worker |

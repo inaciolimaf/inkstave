@@ -5,13 +5,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi.responses import StreamingResponse
 
 from inkstave.auth.dependencies import get_current_user
 from inkstave.authorization.capabilities import Capability, capabilities_for
 from inkstave.authorization.dependencies import require_capability
 from inkstave.authorization.service import role_for
 from inkstave.cache import RedisCache, project_meta_key
+from inkstave.collab.flush import flush_open_project_docs
 from inkstave.compile.output_repository import OutputRepository
 from inkstave.compile.outputs import OutputStore
 from inkstave.db.session import get_db_session
@@ -24,6 +26,7 @@ from inkstave.schemas.project import (
     ProjectRead,
     ProjectRename,
 )
+from inkstave.services import export_service
 from inkstave.services import project as project_service
 from inkstave.services.project import ProjectNotFoundError
 
@@ -43,6 +46,12 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {status.HTTP_404_NOT_FOUND: {"mode
 read_access = require_capability(Capability.PROJECT_READ)
 write_access = require_capability(Capability.PROJECT_WRITE)
 delete_access = require_capability(Capability.PROJECT_DELETE)
+download_access = require_capability(Capability.PROJECT_DOWNLOAD)
+
+_EXPORT_ERRORS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
+    status.HTTP_413_CONTENT_TOO_LARGE: {"model": ErrorEnvelope},
+}
 
 
 @router.post(
@@ -154,3 +163,33 @@ async def delete_project(
     # Soft-delete doesn't FK-cascade; sweep the project's compile-output bytes.
     output_store = OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
     await output_store.delete_for_project(project_id)
+
+
+@router.get(
+    "/{project_id}/export.zip",
+    summary="Download the whole project as a .zip",
+    responses=_EXPORT_ERRORS,
+)
+async def export_project_zip(
+    request: Request,
+    project: Project = Depends(download_access),
+    session: AsyncSession = Depends(get_db_session),
+    store: ObjectStore = Depends(get_object_store),
+    settings: Settings = Depends(get_settings_dep),
+) -> StreamingResponse:
+    # Flush live CRDT rooms so text docs export their current content (spec 28/31),
+    # exactly as the compile enqueue does.
+    await flush_open_project_docs(getattr(request.app.state, "collab", None), session, project.id)
+    # Build the deterministic plan (and enforce the size cap) BEFORE streaming so a
+    # 413 is returned cleanly rather than mid-stream.
+    plan = await export_service.build_export_plan(session, project.id, settings)
+    headers = {
+        "Content-Disposition": export_service.content_disposition(
+            export_service.zip_filename_for(project.name)
+        )
+    }
+    return StreamingResponse(
+        export_service.stream_project_zip(plan, store, session, settings),
+        media_type="application/zip",
+        headers=headers,
+    )

@@ -29,6 +29,7 @@ class Capability(enum.StrEnum):
     COLLAB_READ = "collab_read"  # join the WS room, receive sync/awareness
     COLLAB_WRITE = "collab_write"  # send Yjs updates
     COMPILE = "compile"
+    PROJECT_DOWNLOAD = "project_download"  # export the whole project as a .zip (spec 102)
 
 
 # Editor: everything except project-level admin (write/delete/share).
@@ -42,6 +43,7 @@ _EDITOR: frozenset[Capability] = frozenset(
         Capability.COLLAB_READ,
         Capability.COLLAB_WRITE,
         Capability.COMPILE,
+        Capability.PROJECT_DOWNLOAD,
     }
 )
 
@@ -53,6 +55,7 @@ _VIEWER: frozenset[Capability] = frozenset(
         Capability.FILE_READ,
         Capability.COLLAB_READ,
         Capability.COMPILE,
+        Capability.PROJECT_DOWNLOAD,
     }
 )
 
