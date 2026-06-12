@@ -154,7 +154,17 @@ same file the later one declares a prerequisite on the earlier (e.g. 93 after 92
 | 99 | `99-fixpack-query-efficiency` — kill a file-read N+1; bound unbounded tree fetches | 🔧 |
 | 100 | `100-fixpack-schema-validation` — fail-fast `Field`/`Literal` constraints on two schemas | 🔧 |
 
-**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100.**
+### Phase 10 — Portability & email (new features)
+Standalone feature specs added after the audit/fix-packs. Independent of the
+fix-packs; implement after the core system is green.
+
+| # | Spec | Type |
+| --- | --- | --- |
+| 101 | `101-project-zip-import` — upload a `.zip` from another platform → reconstruct a brand-new project (async, zip-slip/zip-bomb safe) | 🟢 |
+| 102 | `102-project-zip-export` — download the whole project as a streamed `.zip` (member-only, deterministic) | 🟢 |
+| 103 | `103-email-delivery` — Mailpit dev inbox + Resend production sender; wire all transactional emails | 🟢 |
+
+**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100 and feature specs 101–103.**
 
 > The roadmap can be extended later (the user may add requirements). New specs
 > continue the numbering and keep the every-5th refactor cadence.
