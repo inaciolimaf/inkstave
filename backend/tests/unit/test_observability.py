@@ -116,9 +116,9 @@ async def test_track_job_records_status_even_on_exception() -> None:
 
 
 def test_track_ws_gauge_returns_to_baseline_on_exception() -> None:
-    sample = lambda: REGISTRY.get_sample_value(  # noqa: E731
-        "inkstave_ws_connections_active", {"kind": "collab"}
-    ) or 0.0
+    sample = lambda: (  # noqa: E731
+        REGISTRY.get_sample_value("inkstave_ws_connections_active", {"kind": "collab"}) or 0.0
+    )
     before = sample()
     with pytest.raises(ValueError), track_ws("collab"):
         assert sample() == before + 1  # raised by 1 inside

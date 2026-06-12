@@ -33,9 +33,7 @@ async def _notify(db_session: AsyncSession, user_id: Any, **payload: Any) -> Any
     return n
 
 
-async def test_list_and_unread_count(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_list_and_unread_count(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user, headers = await _auth(db_session)
     await _notify(db_session, user.id, msg="a")
     await _notify(db_session, user.id, msg="b")

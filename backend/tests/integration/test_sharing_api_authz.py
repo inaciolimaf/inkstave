@@ -41,7 +41,8 @@ async def test_non_owner_owner_only_endpoints_403(
     # AC9: an editor member hits owner-only endpoints -> 403.
     assert (
         await async_client.post(
-            f"{PROJECTS}/{pid}/invites", json={"email": "x@example.com", "role": "viewer"},
+            f"{PROJECTS}/{pid}/invites",
+            json={"email": "x@example.com", "role": "viewer"},
             headers=bob_h,
         )
     ).status_code == 403
@@ -72,7 +73,8 @@ async def test_invite_already_member_409(
     await _add_member(async_client, db_session, owner_h, pid, "bob@example.com")
 
     r = await async_client.post(
-        f"{PROJECTS}/{pid}/invites", json={"email": "bob@example.com", "role": "viewer"},
+        f"{PROJECTS}/{pid}/invites",
+        json={"email": "bob@example.com", "role": "viewer"},
         headers=owner_h,
     )
     assert r.status_code == 409 and r.json()["error"]["type"] == "already_member"  # AC10
@@ -86,6 +88,4 @@ async def test_cross_project_isolation_404(
     pid_a = await _project(async_client, a_h)
     # B is a complete stranger to project A -> 404 (existence not leaked).
     assert (await async_client.get(f"{PROJECTS}/{pid_a}/members", headers=b_h)).status_code == 404
-    assert (
-        await async_client.get(f"{PROJECTS}/{pid_a}/invites", headers=b_h)
-    ).status_code == 404
+    assert (await async_client.get(f"{PROJECTS}/{pid_a}/invites", headers=b_h)).status_code == 404

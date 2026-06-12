@@ -30,9 +30,7 @@ logger = logging.getLogger("inkstave.agent.llm")
 class OpenRouterLLMClient:
     def __init__(self, settings: AgentSettings) -> None:
         if not settings.openrouter_api_key:
-            raise LLMError(
-                "OPENROUTER_API_KEY is required to construct the OpenRouter LLM client."
-            )
+            raise LLMError("OPENROUTER_API_KEY is required to construct the OpenRouter LLM client.")
         from openai import AsyncOpenAI
 
         self._model = settings.agent_model

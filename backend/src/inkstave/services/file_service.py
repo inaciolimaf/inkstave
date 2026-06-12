@@ -5,12 +5,14 @@ orphan blob or entity is left behind.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from inkstave.config import get_settings
 from inkstave.db.models.file import File
@@ -81,24 +83,23 @@ def _storage_key(project_id: UUID, file_id: UUID) -> str:
 
 
 async def _get_file_entity(session: AsyncSession, project_id: UUID, entity_id: UUID) -> TreeEntity:
-    entity = (
-        await session.execute(
-            select(TreeEntity).where(
-                TreeEntity.id == entity_id, TreeEntity.project_id == project_id
-            )
-        )
-    ).scalar_one_or_none()
-    if entity is None:
-        raise tree_service.EntityNotFoundError()
-    if entity.type is not TreeEntityType.file:
-        raise NotAFileError()
-    return entity
+    return await tree_service.get_entity(
+        session,
+        project_id,
+        entity_id,
+        expected_type=TreeEntityType.file,
+        wrong_type_error=NotAFileError,
+    )
 
 
 async def get_file(session: AsyncSession, project_id: UUID, entity_id: UUID) -> File:
     await _get_file_entity(session, project_id, entity_id)
+    # Eager-load the tree entity (spec 99 #6.1) so the route reads ``file_row.entity.name``
+    # with no extra per-file TreeEntity SELECT.
     file_row = (
-        await session.execute(select(File).where(File.entity_id == entity_id))
+        await session.execute(
+            select(File).where(File.entity_id == entity_id).options(joinedload(File.entity))
+        )
     ).scalar_one_or_none()
     if file_row is None:
         raise tree_service.EntityNotFoundError()
@@ -147,24 +148,30 @@ async def upload_file(
             total["size"] += len(chunk)
             if total["size"] > settings.max_upload_bytes:
                 raise FileTooLargeError()
-            hasher.update(chunk)
+            # SHA-256 over each chunk is CPU-bound — run it off the loop while
+            # keeping the streaming (no whole-file buffering) semantics.
+            await asyncio.to_thread(hasher.update, chunk)
             yield chunk
             chunk = await read(chunk_size)
 
     try:
         await store.put(key, body(), content_type=content_type)
+        checksum_sha256 = await asyncio.to_thread(hasher.hexdigest)
         file_row = File(
             entity_id=entity.id,
             project_id=project_id,
             storage_key=key,
             content_type=content_type,
             size_bytes=total["size"],
-            checksum_sha256=hasher.hexdigest(),
+            checksum_sha256=checksum_sha256,
             original_filename=original_filename[:255] if original_filename else None,
         )
         session.add(file_row)
         await session.flush()
         await session.refresh(file_row)
+        # Attach the just-created entity (already loaded — no query) so the route's
+        # _read can use file_row.entity.name without a standalone SELECT (spec 99 #6.1).
+        file_row.entity = entity
     except BaseException:
         # The DB transaction rolls back the entity; clean up any stored blob.
         await store.delete(key)

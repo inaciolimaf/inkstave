@@ -101,10 +101,17 @@ async def test_diff_proposed_event_and_listing(
     row = await diff_repo.get(db_session, UUID(event["diff_id"]))
     assert row is not None and str(row.doc_id) == str(seed.main_id)
 
-    listed = await async_client.get(
-        f"{API}/{seed.project.id}/agent/sessions/{session.id}/diffs", headers=seed.headers
-    )
+    base = f"{API}/{seed.project.id}/agent/sessions/{session.id}/diffs"
+    listed = await async_client.get(base, headers=seed.headers)
     assert any(d["id"] == event["diff_id"] for d in listed.json())
+
+    # spec 100: an invalid ?status= fails fast at the schema boundary (422), not a
+    # silent empty 200; a valid status returns the matching rows.
+    bogus = await async_client.get(f"{base}?status=bogus", headers=seed.headers)
+    assert bogus.status_code == 422
+    proposed = await async_client.get(f"{base}?status=proposed", headers=seed.headers)
+    assert proposed.status_code == 200
+    assert any(d["id"] == event["diff_id"] for d in proposed.json())
 
 
 async def test_cancellation(seed: SimpleNamespace, db_session: AsyncSession, redis: Any) -> None:

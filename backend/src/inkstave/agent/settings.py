@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,9 +61,11 @@ class AgentSettings(BaseSettings):
     agent_max_cost_per_run_usd: float = 0.50
     agent_max_tokens_per_day_per_project: int = 2000000
     agent_max_cost_per_day_per_user_usd: float = 10.00
-    agent_model_cost_table: dict[str, dict[str, float]] = {
-        "openai/gpt-4o-mini": {"input": 0.00015, "output": 0.0006}
-    }
+    agent_model_cost_table: dict[str, dict[str, float]] = Field(
+        default_factory=lambda: {
+            "openai/gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+        }
+    )
     agent_audit_retention_days: int = 90
     agent_injection_guard: str = "on"  # on | off
 

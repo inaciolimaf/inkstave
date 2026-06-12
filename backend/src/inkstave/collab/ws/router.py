@@ -17,12 +17,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Query, WebSocket
 
-from inkstave.auth.dependencies import authenticate_ws_token
+from inkstave.auth.dependencies import NotAuthenticatedError, authenticate_ws_token
 from inkstave.auth.tokens import build_token_service
 from inkstave.collab.protocol import encode_awareness, encode_sync_step1
 from inkstave.collab.ws.connection import (
@@ -44,6 +45,8 @@ from inkstave.observability.metrics import track_ws
 
 if TYPE_CHECKING:
     from inkstave.collab.ws.components import CollabComponents
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "_authorize",
@@ -81,7 +84,13 @@ async def collab_ws(
     async with components.session_factory() as session:
         try:
             user = await authenticate_ws_token(token, token_service, session)
-        except Exception:
+        except NotAuthenticatedError:
+            # Non-sensitive context only — never the token. A non-auth error (e.g. a
+            # DB failure) deliberately propagates instead of masquerading as 4401.
+            logger.warning(
+                "collab ws auth failed",
+                extra={"project_id": str(project_id), "document_id": str(document_id)},
+            )
             await websocket.close(code=CLOSE_UNAUTHORIZED)
             return
         deny_code, can_write = await _authorize(session, user, project_id, document_id)

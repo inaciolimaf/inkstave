@@ -39,16 +39,25 @@ async def seed(db_session: AsyncSession) -> SimpleNamespace:
 
 def _edit(doc_id: str, mode: str, new_text: str, start=None, end=None) -> StagedEdit:
     return StagedEdit(
-        edit_id="e", doc_id=doc_id, path="main.tex", base_version="0", mode=EditMode(mode),
-        new_text=new_text, start_line=start, end_line=end,
+        edit_id="e",
+        doc_id=doc_id,
+        path="main.tex",
+        base_version="0",
+        mode=EditMode(mode),
+        new_text=new_text,
+        start_line=start,
+        end_line=end,
     )
 
 
 async def _materialize(db, seed, edits, **settings_over):
     state = {"staged_edits": edits}
     return await materialize_diffs(
-        state=state, settings=AgentSettings(**settings_over), db=db,
-        session=seed.session, message_id=None,
+        state=state,
+        settings=AgentSettings(**settings_over),
+        db=db,
+        session=seed.session,
+        message_id=None,
     )
 
 
@@ -74,9 +83,7 @@ async def test_full_edit_diff(seed: SimpleNamespace, db_session: AsyncSession) -
     assert len(diffs) == 1 and diffs[0].stats["hunk_count"] >= 1  # AC2
 
 
-async def test_superseding_prior_proposal(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_superseding_prior_proposal(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     await _materialize(db_session, seed, [_edit(str(seed.main_id), "range", "A", start=0, end=1)])
     await _materialize(db_session, seed, [_edit(str(seed.main_id), "range", "B", start=0, end=1)])
 
@@ -85,17 +92,13 @@ async def test_superseding_prior_proposal(
     assert statuses == ["proposed", "superseded"]  # AC7
 
 
-async def test_oversized_doc_is_skipped(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_oversized_doc_is_skipped(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     edit = _edit(str(seed.main_id), "full", "x" * 100)
     diffs = await _materialize(db_session, seed, [edit], agent_diff_max_doc_chars=5)
     assert diffs == []  # AC9: no row for an oversized doc
 
 
-async def test_overlapping_ranges_rejected(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_overlapping_ranges_rejected(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     edits = [
         _edit(str(seed.main_id), "range", "X", start=1, end=3),
         _edit(str(seed.main_id), "range", "Y", start=2, end=4),
@@ -106,9 +109,7 @@ async def test_overlapping_ranges_rejected(
     assert after == _CONTENT  # no mutation
 
 
-async def test_noop_edit_creates_no_row(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_noop_edit_creates_no_row(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     # Replace line 1 ("line1") with its exact current content → no change.
     edit = _edit(str(seed.main_id), "range", "line1", start=1, end=2)
     diffs = await _materialize(db_session, seed, [edit])

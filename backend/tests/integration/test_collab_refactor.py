@@ -270,7 +270,12 @@ async def test_compaction_boundary_load_is_exact(db_session: AsyncSession) -> No
     partial = YDocument()
     for u in ups[:2]:
         partial.apply_update(u)
-    await store.snapshot(doc_id, partial.get_state(), partial.get_state_vector(), ids[1])
+    await store.snapshot(
+        document_id=doc_id,
+        state=partial.get_state(),
+        state_vector=partial.get_state_vector(),
+        upto_update_id=ids[1],
+    )
 
     state, _seq = await store.load(doc_id)
     assert state is not None

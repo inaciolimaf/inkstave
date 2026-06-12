@@ -45,9 +45,7 @@ def build_graph(deps: AgentDeps) -> CompiledStateGraph:
     builder.add_node("respond", make_respond(deps))
 
     builder.add_edge(START, "plan")
-    builder.add_conditional_edges(
-        "plan", _make_router(deps), {"act": "act", "respond": "respond"}
-    )
+    builder.add_conditional_edges("plan", _make_router(deps), {"act": "act", "respond": "respond"})
     builder.add_edge("act", "observe")
     builder.add_edge("observe", "plan")
     builder.add_edge("respond", END)

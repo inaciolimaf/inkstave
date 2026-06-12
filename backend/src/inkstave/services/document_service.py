@@ -16,7 +16,7 @@ from inkstave.config import get_settings
 from inkstave.db.models.document import Document
 from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.errors import AppError, ConflictError
-from inkstave.services.tree_service import EntityNotFoundError
+from inkstave.services.tree_service import get_entity
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,18 +48,13 @@ class ContentTooLargeError(AppError):
 
 
 async def _get_doc_entity(session: AsyncSession, project_id: UUID, entity_id: UUID) -> TreeEntity:
-    entity = (
-        await session.execute(
-            select(TreeEntity).where(
-                TreeEntity.id == entity_id, TreeEntity.project_id == project_id
-            )
-        )
-    ).scalar_one_or_none()
-    if entity is None:
-        raise EntityNotFoundError()
-    if entity.type is not TreeEntityType.doc:
-        raise NotADocumentError()
-    return entity
+    return await get_entity(
+        session,
+        project_id,
+        entity_id,
+        expected_type=TreeEntityType.doc,
+        wrong_type_error=NotADocumentError,
+    )
 
 
 async def ensure_document(session: AsyncSession, entity: TreeEntity) -> Document:

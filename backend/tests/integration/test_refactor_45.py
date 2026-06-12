@@ -67,9 +67,7 @@ async def test_capped_turn_does_not_duplicate_assistant(
         finish_reason="tool_calls",
     )
     deps = _deps([response], agent_max_iterations=1)
-    result = await run_turn(
-        session=seed.session, user_message="hi", deps=deps, db=db_session
-    )
+    result = await run_turn(session=seed.session, user_message="hi", deps=deps, db=db_session)
 
     rows = await agent_repo.list_messages(db_session, seed.session.id)
     assistants = [r for r in rows if r.role == "assistant"]
@@ -116,7 +114,9 @@ async def test_read_file_windowed_respects_cap(
     await set_content_from_collab(db_session, big.id, "\n".join(f"line {i}" for i in range(1000)))
     await db_session.flush()
     ctx = ToolContext(
-        db=db_session, project_id=str(seed.project.id), user_id=str(seed.owner.id),
+        db=db_session,
+        project_id=str(seed.project.id),
+        user_id=str(seed.owner.id),
         settings=AgentSettings(agent_tool_read_max_chars=50),
     )
     # A window spanning the whole doc must still be capped (no cap bypass).
@@ -145,9 +145,10 @@ async def test_adversarial_document_does_not_auto_apply(
     deps = _deps(
         [
             _tool_call("read_file", {"doc_id": str(seed.main_id)}),
-            _tool_call("propose_edit", {
-                "doc_id": str(seed.main_id), "mode": "full", "new_text": "agent rewrite\n"
-            }),
+            _tool_call(
+                "propose_edit",
+                {"doc_id": str(seed.main_id), "mode": "full", "new_text": "agent rewrite\n"},
+            ),
         ]
     )
     result = await run_turn(

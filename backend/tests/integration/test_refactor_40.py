@@ -76,9 +76,7 @@ async def _doc(db_session: AsyncSession) -> tuple[UUID, UUID]:
 # --- flush-on-shutdown (data-loss fix) ------------------------------------- #
 
 
-async def test_flush_all_persists_buffered_updates(
-    db_session: AsyncSession, tmp_path: Any
-) -> None:
+async def test_flush_all_persists_buffered_updates(db_session: AsyncSession, tmp_path: Any) -> None:
     pid, doc_id = await _doc(db_session)
     svc = HistoryCaptureService(
         lambda: _SessionCtx(db_session), LocalObjectStore(tmp_path, 65536), _settings(tmp_path)
@@ -103,9 +101,7 @@ async def test_flush_all_persists_buffered_updates(
 # --- payload/blob XOR DB constraint ---------------------------------------- #
 
 
-async def test_payload_xor_check_rejects_bad_row(
-    db_session: AsyncSession, tmp_path: Any
-) -> None:
+async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_path: Any) -> None:
     pid, doc_id = await _doc(db_session)
     svc = HistoryCaptureService(
         lambda: _SessionCtx(db_session), LocalObjectStore(tmp_path, 65536), _settings(tmp_path)

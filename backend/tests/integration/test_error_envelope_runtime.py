@@ -97,9 +97,7 @@ async def test_422_envelope_has_details(async_client: AsyncClient) -> None:
     assert isinstance(body["error"]["details"], list) and body["error"]["details"]
 
 
-async def test_413_service_error_envelope(
-    app: Any, async_client: AsyncClient
-) -> None:
+async def test_413_service_error_envelope(app: Any, async_client: AsyncClient) -> None:
     # Service-level 413s (ContentTooLargeError/FileTooLargeError) flow through the
     # AppError handler and DO carry the uniform envelope (the history *diff* 413 is
     # the documented exception — covered separately in test_history_api.py).
@@ -115,9 +113,7 @@ async def test_413_service_error_envelope(
     _assert_envelope(r.json(), expect_type="content_too_large")
 
 
-async def test_500_envelope_does_not_leak_internals(
-    app: Any, async_client: AsyncClient
-) -> None:
+async def test_500_envelope_does_not_leak_internals(app: Any, async_client: AsyncClient) -> None:
     router = APIRouter()
 
     @router.get("/__test__/boom")

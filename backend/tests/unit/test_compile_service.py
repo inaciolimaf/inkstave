@@ -219,8 +219,9 @@ async def test_traversal_path_is_system_error(tmp_path: Path) -> None:
 
 
 async def test_missing_main_file_falls_back_to_first_tex(tmp_path: Path) -> None:
-    # No main.tex, but the project has a .tex: compile it instead of failing.
-    runner = FakeRunner(ok_outcome())
+    # No main.tex, but the project has a .tex: compile it instead of failing. The
+    # runner must emit a PDF for the result to be SUCCESS (exit 0 alone is not enough).
+    runner = FakeRunner(ok_outcome(), {"other.pdf": b"%PDF-1.7"})
     service = build_service(tmp_path, runner, [("other.tex", "x")])
     result = await service.compile(CompileOptions(project_id=uuid4(), main_file="main.tex"))
     assert result.status is CompileStatus.SUCCESS

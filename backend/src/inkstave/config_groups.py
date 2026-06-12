@@ -87,7 +87,7 @@ class AuthSettingsMixin:
     # app fails fast if it is unset. jwt_secret_previous holds retired secrets
     # accepted for verification only, enabling zero-downtime secret rotation.
     jwt_secret: str
-    jwt_secret_previous: Annotated[list[str], NoDecode] = []
+    jwt_secret_previous: Annotated[list[str], NoDecode] = Field(default_factory=list)
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "inkstave"
     access_token_ttl_seconds: int = 900
@@ -126,22 +126,24 @@ class SecuritySettingsMixin:
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     )
     max_request_body_bytes: int = 1_048_576  # 1 MiB global JSON cap
-    upload_allowed_extensions: Annotated[list[str], NoDecode] = [
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".webp",
-        ".pdf",
-        ".bib",
-        ".tex",
-        ".cls",
-        ".sty",
-        ".svg",
-        ".eps",
-        ".csv",
-        ".txt",
-    ]
+    upload_allowed_extensions: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".pdf",
+            ".bib",
+            ".tex",
+            ".cls",
+            ".sty",
+            ".svg",
+            ".eps",
+            ".csv",
+            ".txt",
+        ]
+    )
     # WebSocket close code for an unauthorized connection (contract for spec 29).
     ws_auth_close_code: int = 4401
 
@@ -155,17 +157,19 @@ class StorageSettingsMixin:
     file_storage_backend: Literal["local", "s3"] = "local"
     file_storage_local_path: str = "./data/files"
     max_upload_bytes: int = 52_428_800  # 50 MB
-    allowed_upload_mime: Annotated[list[str], NoDecode] = [
-        "image/png",
-        "image/jpeg",
-        "image/gif",
-        "image/webp",
-        "image/svg+xml",
-        "application/pdf",
-        "text/plain",
-        "application/x-bibtex",
-        "text/x-bibtex",
-    ]
+    allowed_upload_mime: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+            "application/pdf",
+            "text/plain",
+            "application/x-bibtex",
+            "text/x-bibtex",
+        ]
+    )
     storage_stream_chunk_bytes: int = 65_536
     s3_endpoint_url: str = ""
     s3_region: str = "us-east-1"
@@ -194,6 +198,9 @@ class CompileSettingsMixin:
     tectonic_compile_timeout_s: int = 60
     compile_max_input_files: int = 2000
     compile_max_input_bytes: int = 104_857_600  # 100 MiB
+    # Safety cap on tree nodes materialised per read (spec 99); generous so normal
+    # projects are unaffected. get_tree raises TreeTooLargeError past it.
+    tree_max_nodes: int = 50_000
     compile_max_output_bytes: int = 104_857_600  # 100 MiB
     compile_max_log_bytes: int = 2_097_152  # 2 MiB
     compile_max_stdout_bytes: int = 262_144  # 256 KiB

@@ -21,9 +21,7 @@ async def create_session(
     model: str,
     title: str | None = None,
 ) -> AgentSession:
-    session = AgentSession(
-        project_id=project_id, user_id=user_id, model=model, title=title
-    )
+    session = AgentSession(project_id=project_id, user_id=user_id, model=model, title=title)
     db.add(session)
     await db.flush()
     return session
@@ -33,9 +31,7 @@ async def get_session(db: AsyncSession, session_id: UUID) -> AgentSession | None
     return await db.get(AgentSession, session_id)
 
 
-async def list_sessions(
-    db: AsyncSession, *, project_id: UUID, user_id: UUID
-) -> list[AgentSession]:
+async def list_sessions(db: AsyncSession, *, project_id: UUID, user_id: UUID) -> list[AgentSession]:
     rows = await db.execute(
         select(AgentSession)
         .where(AgentSession.project_id == project_id, AgentSession.user_id == user_id)
@@ -46,9 +42,7 @@ async def list_sessions(
 
 async def list_messages(db: AsyncSession, session_id: UUID) -> list[AgentMessage]:
     rows = await db.execute(
-        select(AgentMessage)
-        .where(AgentMessage.session_id == session_id)
-        .order_by(AgentMessage.seq)
+        select(AgentMessage).where(AgentMessage.session_id == session_id).order_by(AgentMessage.seq)
     )
     return list(rows.scalars())
 

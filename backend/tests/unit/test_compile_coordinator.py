@@ -215,9 +215,7 @@ async def test_repo_count_active_for_user_scope(db_session: AsyncSession) -> Non
     other_project = await create_project(db_session, user.id, "Other")
     repo = CompileRepository(db_session)
     await repo.create(project_id=project.id, requested_by=user.id, main_file="main.tex")
-    one = await repo.create(
-        project_id=other_project.id, requested_by=user.id, main_file="main.tex"
-    )
+    one = await repo.create(project_id=other_project.id, requested_by=user.id, main_file="main.tex")
     assert await repo.count_active_for_user(user.id) == 2
     await repo.update(one, status=CompileJobStatus.SUCCESS.value)
     assert await repo.count_active_for_user(user.id) == 1

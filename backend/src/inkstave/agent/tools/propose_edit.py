@@ -28,9 +28,7 @@ class ProposeEditArgs(BaseModel):
 
 class ProposeEditTool(Tool):
     name = "propose_edit"
-    description = (
-        "Stage a proposed change to a document for the user to review. Does not apply it."
-    )
+    description = "Stage a proposed change to a document for the user to review. Does not apply it."
     Args = ProposeEditArgs
 
     async def run(self, args: ProposeEditArgs, ctx: ToolContext) -> ToolResult:  # type: ignore[override]
@@ -50,9 +48,7 @@ class ProposeEditTool(Tool):
             start, end = args.start_line, args.end_line
             assert start is not None and end is not None  # guaranteed by the validator
             if start > end or end > line_count:
-                return ToolResult.failure(
-                    "invalid_args", "range is outside the document's bounds."
-                )
+                return ToolResult.failure("invalid_args", "range is outside the document's bounds.")
 
         base_version = str(document.version)
         staged = StagedEdit(

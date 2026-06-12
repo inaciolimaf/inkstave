@@ -57,7 +57,10 @@ async def test_duplicate_name_is_case_insensitive_conflict(
     assert dup["json"]["error"]["type"] == "name_conflict"  # type: ignore[index]
 
 
-@pytest.mark.parametrize("name", ["..", "a/b", "a\\b", "con", "with\x00nul", ""])
+# "" (empty) and "x"*256 (over-long) now fail fast at the schema (spec 100); the
+# rest are length-valid but rejected by the service-layer validate_name_segment —
+# proving that guard is still wired in.
+@pytest.mark.parametrize("name", ["..", "a/b", "a\\b", "con", "with\x00nul", "", "x" * 256])
 async def test_invalid_names_rejected(
     async_client: AsyncClient, db_session: AsyncSession, name: str
 ) -> None:
@@ -126,3 +129,22 @@ async def test_rename(async_client: AsyncClient, db_session: AsyncSession) -> No
         f"{_tree(pid)}/entities/{eid}/rename", json={"name": ".."}, headers=headers
     )
     assert invalid.status_code == 422
+
+    # Fail-fast schema guards (spec 100): empty and over-long names → 422.
+    for bad in ("", "x" * 256):
+        bad_resp = await async_client.patch(
+            f"{_tree(pid)}/entities/{eid}/rename", json={"name": bad}, headers=headers
+        )
+        assert bad_resp.status_code == 422
+
+
+async def test_create_accepts_max_length_name(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    # A 255-char name (== MAX_TREE_ENTITY_NAME_LENGTH) is still accepted (spec 100).
+    headers = await _auth(db_session)
+    pid = await _project(async_client, headers)
+    name = "x" * 255
+    result = await _create(async_client, pid, headers, type_="doc", name=name)
+    assert result["status"] == 201
+    assert result["json"]["name"] == name  # type: ignore[index]

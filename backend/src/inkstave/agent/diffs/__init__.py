@@ -98,9 +98,16 @@ async def materialize_diffs(
             await repo.mark_superseded(db, session_id=session.id, doc_id=doc_id)
             created.append(
                 await repo.create(
-                    db, session_id=session.id, message_id=message_id,
-                    project_id=session.project_id, doc_id=doc_id, path=path,
-                    base_version=base_version, base_hash=base, diff_text="", hunks=[],
+                    db,
+                    session_id=session.id,
+                    message_id=message_id,
+                    project_id=session.project_id,
+                    doc_id=doc_id,
+                    path=path,
+                    base_version=base_version,
+                    base_hash=base,
+                    diff_text="",
+                    hunks=[],
                     stats={"additions": 0, "deletions": 0, "hunk_count": 0},
                     status=ProposedDiffStatus.rejected.value,
                     rationale=f"Conflicting edits could not be combined: {exc}",
@@ -122,10 +129,18 @@ async def materialize_diffs(
         await repo.mark_superseded(db, session_id=session.id, doc_id=doc_id)
         created.append(
             await repo.create(
-                db, session_id=session.id, message_id=message_id,
-                project_id=session.project_id, doc_id=doc_id, path=path,
-                base_version=base_version, base_hash=base, diff_text=diff_text,
-                hunks=hunks, stats=stats, status=ProposedDiffStatus.proposed.value,
+                db,
+                session_id=session.id,
+                message_id=message_id,
+                project_id=session.project_id,
+                doc_id=doc_id,
+                path=path,
+                base_version=base_version,
+                base_hash=base,
+                diff_text=diff_text,
+                hunks=hunks,
+                stats=stats,
+                status=ProposedDiffStatus.proposed.value,
                 rationale=rationale,
             )
         )

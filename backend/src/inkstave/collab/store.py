@@ -62,6 +62,7 @@ class CrdtStore:
 
     async def snapshot(
         self,
+        *,
         document_id: UUID,
         state: bytes,
         state_vector: bytes,

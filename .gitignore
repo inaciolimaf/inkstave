@@ -1,4 +1,6 @@
 # --- Environment / secrets ---
+# Never commit real secrets; .env.example holds placeholders only.
+# Keep the !.env.example re-include AFTER *.env or it would be ignored too.
 .env
 *.env
 !.env.example

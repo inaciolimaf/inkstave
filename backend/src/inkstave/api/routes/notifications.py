@@ -72,9 +72,7 @@ async def mark_all_read(
     return MarkAllResult(updated=await NotificationService(session).mark_all_read(user_id=user.id))
 
 
-@router.delete(
-    "/{notification_id}", status_code=status.HTTP_204_NO_CONTENT, responses=_NOT_FOUND
-)
+@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT, responses=_NOT_FOUND)
 async def dismiss(
     notification_id: UUID,
     user: User = Depends(get_current_user),

@@ -13,9 +13,7 @@ class EmailEnqueuer:
         self._pool = pool
         self._queue_name = queue_name
 
-    async def enqueue_email(
-        self, *, template: str, to: str, context: dict[str, Any]
-    ) -> str | None:
+    async def enqueue_email(self, *, template: str, to: str, context: dict[str, Any]) -> str | None:
         job = await self._pool.enqueue_job(
             "send_email_job",
             template=template,

@@ -71,6 +71,8 @@ async def _identity(request: Request, scope: str, settings: Settings) -> str:
             body = await request.json()
             email = str(body.get("email", "")).strip().lower()
         except Exception:
+            # Degraded to IP-only identity — surface it (scope only, never the body).
+            logger.debug("rate-limit identity: body parse failed, using ip only (scope=%s)", scope)
             email = ""
         if email:
             return f"{ip}:{email}"

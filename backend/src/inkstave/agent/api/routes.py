@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -275,7 +275,10 @@ async def run_events(
 async def list_diffs(
     project_id: UUID,
     session_id: UUID,
-    status_filter: str | None = Query(None, alias="status"),
+    status_filter: Literal[
+        "proposed", "applied", "partially_applied", "rejected", "stale", "superseded"
+    ]
+    | None = Query(None, alias="status"),
     include: str | None = Query(None),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),

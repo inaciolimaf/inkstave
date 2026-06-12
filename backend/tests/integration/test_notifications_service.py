@@ -66,11 +66,15 @@ async def test_dedupe_invite_notifications(db_session: AsyncSession) -> None:
     user = await _user(db_session)
     svc = NotificationService(db_session)
     await svc.create(
-        user_id=user.id, type="project_invite", payload={"invite_id": "i1", "role": "editor"},
+        user_id=user.id,
+        type="project_invite",
+        payload={"invite_id": "i1", "role": "editor"},
         dedupe_on=("invite_id", "i1"),
     )
     await svc.create(
-        user_id=user.id, type="project_invite", payload={"invite_id": "i1", "role": "viewer"},
+        user_id=user.id,
+        type="project_invite",
+        payload={"invite_id": "i1", "role": "viewer"},
         dedupe_on=("invite_id", "i1"),
     )
     items = await svc.list_active(user_id=user.id)
@@ -83,13 +87,17 @@ async def test_dedupe_refresh_resurfaces_notification(db_session: AsyncSession) 
     user = await _user(db_session)
     svc = NotificationService(db_session)
     await svc.create(
-        user_id=user.id, type="project_invite", payload={"invite_id": "i1"},
+        user_id=user.id,
+        type="project_invite",
+        payload={"invite_id": "i1"},
         dedupe_on=("invite_id", "i1"),
     )
     await svc.create(user_id=user.id, type="generic", payload={"msg": "newer"})
     # Re-issue the invite; it must move ahead of the later 'generic' row.
     await svc.create(
-        user_id=user.id, type="project_invite", payload={"invite_id": "i1"},
+        user_id=user.id,
+        type="project_invite",
+        payload={"invite_id": "i1"},
         dedupe_on=("invite_id", "i1"),
     )
     items = await svc.list_active(user_id=user.id)

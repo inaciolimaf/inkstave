@@ -6,9 +6,10 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from inkstave.schemas.base import StrictModel
+from inkstave.services.safe_path import MAX_TREE_ENTITY_NAME_LENGTH
 
 TreeEntityTypeLiteral = Literal["folder", "doc", "file"]
 
@@ -16,12 +17,14 @@ TreeEntityTypeLiteral = Literal["folder", "doc", "file"]
 class CreateEntityIn(StrictModel):
     # "file" entities are created by spec 14's upload, not here.
     type: Literal["folder", "doc"]
-    name: str
+    # Fail-fast length guard (spec 100); validate_name_segment still enforces the
+    # character/reserved-name rules the service-layer check covers.
+    name: str = Field(min_length=1, max_length=MAX_TREE_ENTITY_NAME_LENGTH)
     parent_id: UUID | None = None
 
 
 class RenameEntityIn(StrictModel):
-    name: str
+    name: str = Field(min_length=1, max_length=MAX_TREE_ENTITY_NAME_LENGTH)
 
 
 class MoveEntityIn(StrictModel):

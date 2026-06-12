@@ -18,8 +18,14 @@ from inkstave.agent.edits import EditMode, StagedEdit
 
 def _edit(mode: str, new_text: str, start: int | None = None, end: int | None = None) -> StagedEdit:
     return StagedEdit(
-        edit_id="e", doc_id="d", path="f.tex", base_version="1", mode=EditMode(mode),
-        new_text=new_text, start_line=start, end_line=end,
+        edit_id="e",
+        doc_id="d",
+        path="f.tex",
+        base_version="1",
+        mode=EditMode(mode),
+        new_text=new_text,
+        start_line=start,
+        end_line=end,
     )
 
 

@@ -21,6 +21,10 @@ def _prod(**over: Any) -> dict[str, Any]:
         jwt_secret=_STRONG_SECRET,
         cors_origins=["https://app.example.com"],
         database_url="postgresql+asyncpg://u:p@db:5432/inkstave",
+        # An explicit, non-default REDIS_URL: production rejects the localhost
+        # default, so the helper must supply a real one to stay hermetic regardless
+        # of the ambient environment.
+        redis_url="redis://cache:6379/0",
     )
     base.update(over)
     return base

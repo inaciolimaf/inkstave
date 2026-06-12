@@ -23,7 +23,11 @@ from inkstave.db.engine import normalize_async_dsn
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False so running migrations in-process (e.g. during
+    # tests, or a CLI `migrate` in the same interpreter as the app) does not silence
+    # the application's own `inkstave.*` loggers — fileConfig disables every logger
+    # absent from alembic.ini by default, which otherwise persists for the process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

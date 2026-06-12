@@ -66,9 +66,7 @@ async def check_rate_limit(
     return RateDecision(True)
 
 
-async def acquire_run(
-    redis: Redis, *, user_id: UUID, project_id: UUID, now: float
-) -> None:
+async def acquire_run(redis: Redis, *, user_id: UUID, project_id: UUID, now: float) -> None:
     """Record a started run: bump the per-minute windows + the concurrency counter."""
     window = _window(now)
     for key in (_user_key(user_id, window), _project_key(project_id, window)):

@@ -204,7 +204,10 @@ async def _seal_open_tail(
 
     base_state = await reconstruct_state(session, store, doc_id, open_chunk.end_version)
     snapshot, blob_key = await _store(
-        store, base_state, settings.history_blob_prefix, len(base_state) > settings.history_inline_max_bytes
+        store,
+        base_state,
+        settings.history_blob_prefix,
+        len(base_state) > settings.history_inline_max_bytes,
     )
     session.add(
         HistoryChunk(

@@ -42,13 +42,17 @@ async def flush_open_project_docs(
     if not active:
         return
     rows = (
-        await session.execute(
-            select(Document.entity_id).where(
-                Document.entity_id.in_(active),
-                Document.project_id == project_id,
+        (
+            await session.execute(
+                select(Document.entity_id).where(
+                    Document.entity_id.in_(active),
+                    Document.project_id == project_id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for doc_id in rows:
         try:
             await collab.manager.flush(doc_id)

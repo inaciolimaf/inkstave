@@ -20,3 +20,30 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
+
+  # Secret hygiene (spec 91). Dependency-free local guards — no external scanner
+  # to pull, so they run offline. They block (a) API-key-shaped tokens in staged
+  # content and (b) committing any real `.env` file (only `.env.example` is ok).
+  - repo: local
+    hooks:
+      - id: block-secret-tokens
+        name: block-secret-tokens
+        description: Reject staged content containing API-key-shaped secrets.
+        language: pygrep
+        # OpenRouter (sk-or-v1-…) and generic OpenAI-style (sk-…) keys.
+        entry: '(sk-or-v1-[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})'
+        types: [text]
+        # specs/ documents the very patterns this hook matches; the config file
+        # carries the regex literally. Both are intentional, not leaked secrets.
+        exclude: '(^specs/|^\.pre-commit-config\.yaml$)'
+      - id: block-dotenv-files
+        name: block-dotenv-files
+        description: Refuse to stage any .env/*.env file (only .env.example is allowed).
+        language: fail
+        entry: >-
+          Refusing to commit a .env file — secrets must never be committed;
+          keep them in your local gitignored .env and use .env.example for placeholders.
+        # Matches `.env`, `.env.<anything>`, and `*.env` (e.g. local.env), but
+        # not `.env.example` (see exclude). Mirrors .gitignore's `.env` / `*.env`.
+        files: '(^|/)(\.env(\..+)?|[^/]*\.env)$'
+        exclude: '(^|/)\.env\.example$'

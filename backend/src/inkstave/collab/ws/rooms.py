@@ -58,7 +58,7 @@ class Connection:
         try:
             await asyncio.wait_for(self.send_queue.put(payload), timeout=timeout_ms / 1000)
             return True
-        except (TimeoutError, asyncio.TimeoutError):
+        except TimeoutError:
             return False
 
 

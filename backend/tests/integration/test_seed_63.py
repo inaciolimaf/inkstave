@@ -42,9 +42,7 @@ async def test_seed_creates_multifile_project(db_session: AsyncSession) -> None:
     created = await seed_demo(db_session, _hasher(), settings=get_settings())
     assert created is True
 
-    user = await db_session.scalar(
-        select(User).where(User.email == normalise_email(DEMO_EMAIL))
-    )
+    user = await db_session.scalar(select(User).where(User.email == normalise_email(DEMO_EMAIL)))
     assert user is not None
     project = await db_session.scalar(select(Project).where(Project.owner_id == user.id))
     assert project is not None
@@ -76,16 +74,12 @@ async def test_seed_is_idempotent_with_stable_counts(db_session: AsyncSession) -
 
 async def test_main_references_included_file(db_session: AsyncSession) -> None:  # AC3
     await seed_demo(db_session, _hasher(), settings=get_settings())
-    user = await db_session.scalar(
-        select(User).where(User.email == normalise_email(DEMO_EMAIL))
-    )
+    user = await db_session.scalar(select(User).where(User.email == normalise_email(DEMO_EMAIL)))
     assert user is not None
     project = await db_session.scalar(select(Project).where(Project.owner_id == user.id))
     assert project is not None
     main = await db_session.scalar(
-        select(TreeEntity).where(
-            TreeEntity.project_id == project.id, TreeEntity.name == "main.tex"
-        )
+        select(TreeEntity).where(TreeEntity.project_id == project.id, TreeEntity.name == "main.tex")
     )
     assert main is not None
     content = await read_content_for_collab(db_session, main.id)

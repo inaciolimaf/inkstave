@@ -25,18 +25,14 @@ async def _session(db: AsyncSession):
     user = await UserFactory.create(db)
     project = await create_project(db, user.id, "Paper")
     await db.flush()
-    return await repo.create_session(
-        db, project_id=project.id, user_id=user.id, model="fake/model"
-    )
+    return await repo.create_session(db, project_id=project.id, user_id=user.id, model="fake/model")
 
 
 async def test_run_turn_persists_user_and_assistant_with_usage(db_session: AsyncSession) -> None:
     session = await _session(db_session)
     deps = _deps(FakeLLM.respond_text("Hello there", prompt=3, completion=4))
 
-    result = await run_turn(
-        session=session, user_message="Help me", deps=deps, db=db_session
-    )
+    result = await run_turn(session=session, user_message="Help me", deps=deps, db=db_session)
 
     assert result.final_response == "Hello there"  # AC3
     assert result.messages_added == 2 and result.iterations == 1
@@ -91,6 +87,4 @@ async def test_duplicate_seq_rejected(db_session: AsyncSession) -> None:
     session = await _session(db_session)
     await repo.add_message(db_session, session_id=session.id, seq=0, role="user", content="a")
     with pytest.raises(IntegrityError):  # add_message flushes, surfacing the unique violation
-        await repo.add_message(
-            db_session, session_id=session.id, seq=0, role="user", content="dup"
-        )
+        await repo.add_message(db_session, session_id=session.id, seq=0, role="user", content="dup")

@@ -29,9 +29,7 @@ class InsufficientRoleError(ForbiddenError):
         super().__init__("Your role does not permit this action.")
 
 
-async def role_for(
-    session: AsyncSession, user_id: UUID, project_id: UUID
-) -> MembershipRole | None:
+async def role_for(session: AsyncSession, user_id: UUID, project_id: UUID) -> MembershipRole | None:
     """The user's effective role on a *live* project, or ``None`` (non-member).
 
     A soft-deleted or missing project also yields ``None`` so callers report 404.

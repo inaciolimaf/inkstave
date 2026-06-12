@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 
 _DEFAULT_RATE = {"input": 0.00015, "output": 0.0006}  # USD per 1K tokens
 
+_SECONDS_PER_DAY = 86_400  # day-bucket granularity for per-day usage counters
+# Daily counters live one extra day past their bucket so late roll-ups still land.
+_BUDGET_KEY_TTL_SECONDS = 2 * _SECONDS_PER_DAY  # == 172_800 (2-day grace TTL)
+
 
 def model_rates(settings: AgentSettings, model: str) -> dict[str, float]:
     table = settings.agent_model_cost_table
@@ -22,10 +26,9 @@ def model_rates(settings: AgentSettings, model: str) -> dict[str, float]:
 
 def cost_for(settings: AgentSettings, model: str, prompt: int, completion: int) -> Decimal:
     rates = model_rates(settings, model)
-    return (
-        Decimal(prompt) / 1000 * Decimal(str(rates["input"]))
-        + Decimal(completion) / 1000 * Decimal(str(rates["output"]))
-    )
+    return Decimal(prompt) / 1000 * Decimal(str(rates["input"])) + Decimal(
+        completion
+    ) / 1000 * Decimal(str(rates["output"]))
 
 
 def avg_rate_per_1k(settings: AgentSettings, model: str) -> float:
@@ -50,7 +53,7 @@ class BudgetDecision:
 
 
 def _day(now: float) -> int:
-    return int(now) // 86400
+    return int(now) // _SECONDS_PER_DAY
 
 
 def _proj_tokens_key(project_id: UUID, day: int) -> str:
@@ -94,7 +97,7 @@ async def record_usage(
     day = _day(now)
     tkey = _proj_tokens_key(project_id, day)
     await redis.incrby(tkey, tokens)
-    await redis.expire(tkey, 172800)
+    await redis.expire(tkey, _BUDGET_KEY_TTL_SECONDS)
     ckey = _user_cost_key(user_id, day)
     await redis.incrby(ckey, int(cost * 1_000_000))
-    await redis.expire(ckey, 172800)
+    await redis.expire(ckey, _BUDGET_KEY_TTL_SECONDS)

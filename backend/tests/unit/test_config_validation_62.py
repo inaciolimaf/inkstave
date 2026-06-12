@@ -64,9 +64,7 @@ def test_malformed_redis_url_is_named() -> None:  # AC3
 
 
 def test_all_missing_are_listed() -> None:  # AC4
-    problems = validate_required_runtime(
-        _env(JWT_SECRET=None, DATABASE_URL=None, REDIS_URL=None)
-    )
+    problems = validate_required_runtime(_env(JWT_SECRET=None, DATABASE_URL=None, REDIS_URL=None))
     assert len(problems) == 3
     starts = {p.split(":", 1)[0] for p in problems}
     assert starts == {"JWT_SECRET", "DATABASE_URL", "REDIS_URL"}

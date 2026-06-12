@@ -27,7 +27,6 @@ from inkstave.dependencies import (
 )
 from inkstave.errors import ErrorEnvelope, RateLimitError
 from inkstave.mailer.enqueuer import EmailEnqueuer
-from inkstave.security.rate_limit import check_rate_limit, policy_from_setting
 from inkstave.schemas.auth import MessageResponse
 from inkstave.schemas.user import (
     ChangeEmailRequest,
@@ -38,6 +37,7 @@ from inkstave.schemas.user import (
     UpdateProfileRequest,
     UserMe,
 )
+from inkstave.security.rate_limit import check_rate_limit, policy_from_setting
 from inkstave.services import account
 
 router = APIRouter(prefix="/users", tags=["users"])

@@ -69,9 +69,7 @@ async def test_diff_binary_document(
 ) -> None:
     # A separate doc whose captured text contains a NUL byte (binary). Build it via the
     # capture service directly — the spec-13 content bridge cannot store NUL.
-    entity = await create_entity(
-        db_session, UUID(hist.pid), TreeEntityType.doc, "bin.tex", None
-    )
+    entity = await create_entity(db_session, UUID(hist.pid), TreeEntityType.doc, "bin.tex", None)
     await set_content_from_collab(db_session, entity.id, "")
     await db_session.commit()
     svc = HistoryCaptureService(
@@ -96,9 +94,7 @@ async def test_diff_binary_document(
     assert body["binary"] is True and body["hunks"] == []  # AC5
 
 
-async def test_diff_missing_version_404(
-    hist: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_diff_missing_version_404(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     # §5.2.3: 404 if either version is not captured. Version 999 does not exist.
     r = await async_client.get(
         _hist_url(hist.pid, hist.doc_id, "diff?from=999&to=current"), headers=hist.viewer_h

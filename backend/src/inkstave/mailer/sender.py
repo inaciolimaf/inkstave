@@ -7,6 +7,7 @@ is the SMTP backend actually sending.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -58,21 +59,21 @@ class FileEmailSender:
         self._default_from = default_from
 
     async def send(self, email: OutgoingEmail) -> None:
-        self._dir.mkdir(parents=True, exist_ok=True)
-        path = self._dir / f"{uuid.uuid4().hex}.json"
-        path.write_text(
-            json.dumps(
-                {
-                    "from": email.from_addr or self._default_from,
-                    "to": email.to,
-                    "subject": email.subject,
-                    "text_body": email.text_body,
-                    "html_body": email.html_body,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        # Serialise in-memory (cheap) on the loop, then offload the blocking
+        # filesystem I/O so it never stalls the event loop (spec 93).
+        payload = json.dumps(
+            {
+                "from": email.from_addr or self._default_from,
+                "to": email.to,
+                "subject": email.subject,
+                "text_body": email.text_body,
+                "html_body": email.html_body,
+            },
+            indent=2,
         )
+        path = self._dir / f"{uuid.uuid4().hex}.json"
+        await asyncio.to_thread(self._dir.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(path.write_text, payload, encoding="utf-8")
 
 
 class SmtpEmailSender:

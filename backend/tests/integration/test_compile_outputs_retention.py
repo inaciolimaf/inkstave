@@ -63,9 +63,7 @@ async def test_retention_batch_bound_binds(db_session: AsyncSession) -> None:
     assert len(pruned) == 3  # LIMIT :batch binds even though 5 are eligible
 
 
-async def test_cleanup_compile_outputs_job_evicts(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_cleanup_compile_outputs_job_evicts(db_session: AsyncSession, tmp_path: Path) -> None:
     """AC10 end-to-end: invoke ``cleanup_compile_outputs(ctx)`` itself (not just
     the repo helper) and assert evicted compiles lose both their storage objects
     and their ``compile_outputs`` rows, while retained compiles keep theirs."""
@@ -79,9 +77,7 @@ async def test_cleanup_compile_outputs_job_evicts(
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
 
     def make_store(session: AsyncSession) -> OutputStore:
-        return OutputStore(
-            storage=backend, repo=OutputRepository(session), settings=settings
-        )
+        return OutputStore(storage=backend, repo=OutputRepository(session), settings=settings)
 
     # Two recent compiles to keep, two aged-out compiles to evict.
     keep = [

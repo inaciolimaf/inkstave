@@ -174,9 +174,7 @@ async def test_chunk_seals_at_threshold(db_session: AsyncSession, tmp_path: Path
     assert len(open_chunks) == 1 and open_chunks[0].base_version == 3  # exactly one open
 
 
-async def test_oversized_payload_offloads_to_blob(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_oversized_payload_offloads_to_blob(db_session: AsyncSession, tmp_path: Path) -> None:
     _u, project_id, doc_id = await _make_doc(db_session)
     svc = _service(db_session, tmp_path, history_inline_max_bytes=10)
     ed, updates = _editor()

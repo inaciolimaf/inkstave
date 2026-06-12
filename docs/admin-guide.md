@@ -122,6 +122,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `TECTONIC_COMPILE_TIMEOUT_S` | No | `60` | wall-clock timeout per compile | worker |
 | `COMPILE_MAX_INPUT_FILES` | No | `2000` | assembly file-count cap | worker |
 | `COMPILE_MAX_INPUT_BYTES` | No | `104857600` | assembly total-size cap (100 MiB) | worker |
+| `TREE_MAX_NODES` | No | `50000` | safety cap on tree nodes materialised per read | api |
 | `COMPILE_MAX_OUTPUT_BYTES` | No | `104857600` | output total-size cap (100 MiB) | worker |
 | `COMPILE_MAX_LOG_BYTES` | No | `2097152` | captured .log truncation cap (2 MiB) | worker |
 | `COMPILE_MAX_STDOUT_BYTES` | No | `262144` | stdout/stderr capture cap (256 KiB) | worker |

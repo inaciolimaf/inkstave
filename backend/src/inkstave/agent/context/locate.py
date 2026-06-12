@@ -26,11 +26,27 @@ _SYNONYMS: dict[str, str] = {
 }
 
 _ORDINALS: dict[str, int] = {
-    "first": 1, "1st": 1, "second": 2, "2nd": 2, "third": 3, "3rd": 3,
-    "fourth": 4, "4th": 4, "fifth": 5, "5th": 5,
+    "first": 1,
+    "1st": 1,
+    "second": 2,
+    "2nd": 2,
+    "third": 3,
+    "3rd": 3,
+    "fourth": 4,
+    "4th": 4,
+    "fifth": 5,
+    "5th": 5,
 }
 
 _SECTION_WORDS = "part|chapter|section|subsection|subsubsection|paragraph|subparagraph"
+
+# Section-match score tiers, strongest → weakest. Higher wins on ties (exact title
+# is the self-evident 1.0 sentinel above these).
+_SCORE_LABEL_MATCH = 0.95  # exact \label{...} match — near-certain intent
+_SCORE_ORDINAL = 0.92  # positional match e.g. "section 2" / "first subsection"
+_SCORE_SYNONYM = 0.9  # a known synonym concept appears in the title
+_SCORE_SUBSTRING = 0.7  # query is a substring of the title (or vice-versa)
+_SCORE_TOKEN_OVERLAP = 0.6  # multiplier on the shared-token fraction (fuzzy fallback)
 
 
 def _normalize(text: str) -> str:
@@ -70,7 +86,7 @@ def _ordinal_match(query: str, sections: list[StructureNode]) -> SectionMatch | 
         word, num = m.group(2), _ORDINALS[m.group(1)]
     matching = [n for n in sections if n.command == word]
     if 1 <= num <= len(matching):
-        return SectionMatch(node=matching[num - 1], score=0.92, reason=f"{word} #{num}")
+        return SectionMatch(node=matching[num - 1], score=_SCORE_ORDINAL, reason=f"{word} #{num}")
     return None
 
 
@@ -95,15 +111,15 @@ def locate_section(project_map: ProjectMap, query: str) -> list[SectionMatch]:
         if title and q == title:
             score, reason = 1.0, "exact title"
         elif label and q == label:
-            score, reason = 0.95, "label"
+            score, reason = _SCORE_LABEL_MATCH, "label"
         elif concepts and title and any(c in title for c in concepts):
-            score, reason = 0.9, "synonym"
+            score, reason = _SCORE_SYNONYM, "synonym"
         elif title and (q in title or title in q):
-            score, reason = 0.7, "substring"
+            score, reason = _SCORE_SUBSTRING, "substring"
         elif title:
             overlap = len(q_tokens & set(title.split())) / max(1, len(q_tokens))
             if overlap:
-                score, reason = round(overlap * 0.6, 3), "token overlap"
+                score, reason = round(overlap * _SCORE_TOKEN_OVERLAP, 3), "token overlap"
         if score > 0:
             matches.append(SectionMatch(node=node, score=score, reason=reason))
 

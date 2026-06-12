@@ -64,9 +64,7 @@ async def test_remove_member(
     assert all(m["user_id"] != str(bob.id) for m in members)
 
 
-async def test_owner_cannot_leave(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_owner_cannot_leave(async_client: AsyncClient, db_session: AsyncSession) -> None:
     owner, owner_h = await _auth(db_session)
     pid = await _project(async_client, owner_h)
     r = await async_client.delete(f"{PROJECTS}/{pid}/members/{owner.id}", headers=owner_h)

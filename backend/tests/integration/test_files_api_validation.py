@@ -90,8 +90,13 @@ async def test_upload_content_extension_mismatch_is_415(
     headers = await _auth(db_session)
     pid = await _project(client, headers)
     resp = await _upload(
-        client, pid, headers, filename="fake.png", content=b"%PDF-1.7 not a png",
-        content_type="image/png", name="fake.png",
+        client,
+        pid,
+        headers,
+        filename="fake.png",
+        content=b"%PDF-1.7 not a png",
+        content_type="image/png",
+        name="fake.png",
     )
     assert resp.status_code == 415
 

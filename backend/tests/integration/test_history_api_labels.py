@@ -26,9 +26,7 @@ __all__ = ["hist"]
 # --- labels ---------------------------------------------------------------- #
 
 
-async def test_labels_crud_and_duplicate(
-    hist: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_labels_crud_and_duplicate(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     url = _hist_url(hist.pid, hist.doc_id, "labels")
     created = await async_client.post(
         url, json={"version": 2, "name": "submitted"}, headers=hist.editor_h
@@ -66,7 +64,8 @@ async def test_viewer_cannot_label_or_restore(
     hist: SimpleNamespace, async_client: AsyncClient
 ) -> None:
     label = await async_client.post(
-        _hist_url(hist.pid, hist.doc_id, "labels"), json={"version": 1, "name": "x"},
+        _hist_url(hist.pid, hist.doc_id, "labels"),
+        json={"version": 1, "name": "x"},
         headers=hist.viewer_h,
     )
     assert label.status_code == 403  # AC8 viewer denied
@@ -83,9 +82,7 @@ async def test_non_member_gets_404(hist: SimpleNamespace, async_client: AsyncCli
     assert r.status_code == 404  # AC8 non-member, no existence leak
 
 
-async def test_delete_missing_label_404(
-    hist: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_delete_missing_label_404(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     from uuid import uuid4
 
     r = await async_client.delete(
@@ -101,9 +98,7 @@ async def test_delete_cross_project_label_404(
     # token authorized on A, must 404 (cross-project access, not just not-found).
     owner_b, owner_b_h = await _user(db_session)
     project_b = await create_project(db_session, owner_b.id, "B")
-    entity_b = await create_entity(
-        db_session, project_b.id, TreeEntityType.doc, "main.tex", None
-    )
+    entity_b = await create_entity(db_session, project_b.id, TreeEntityType.doc, "main.tex", None)
     await set_content_from_collab(db_session, entity_b.id, "")
     await db_session.commit()
 

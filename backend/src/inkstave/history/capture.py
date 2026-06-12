@@ -42,6 +42,11 @@ if TYPE_CHECKING:
 FlushReason = Literal["idle", "shutdown", "threshold", "manual"]
 
 
+def _sha256_digest(data: bytes) -> bytes:
+    """SHA-256 raw digest, isolated so it can run via ``asyncio.to_thread``."""
+    return hashlib.sha256(data).digest()
+
+
 @dataclass
 class _DocBuffer:
     updates: list[bytes] = field(default_factory=list)
@@ -83,7 +88,7 @@ class HistoryCaptureService:
     ) -> None:
         """Buffer one raw server-applied update; returns without any DB write."""
         async with self._lock(doc_id):
-            digest = hashlib.sha256(update).digest()
+            digest = await asyncio.to_thread(_sha256_digest, update)
             if self._last_hash.get(doc_id) == digest:
                 return  # de-dupe an immediately-repeated raw update (reconnect replay)
             self._last_hash[doc_id] = digest

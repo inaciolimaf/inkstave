@@ -101,7 +101,10 @@ class DocumentManager:
             if seed:
                 ydoc.replace_text(seed)
                 entry.seq = await self._store.snapshot(
-                    document_id, ydoc.get_state(), ydoc.get_state_vector(), None
+                    document_id=document_id,
+                    state=ydoc.get_state(),
+                    state_vector=ydoc.get_state_vector(),
+                    upto_update_id=None,
                 )
                 entry.last_snapshot_at = monotonic()
         return entry
@@ -116,7 +119,7 @@ class DocumentManager:
                 return
 
         # Refcount hit zero: flush text + snapshot, then schedule idle eviction.
-        await self._do_flush_text(document_id, force=True)
+        await self.flush_text_now(document_id)
         async with self._lock(document_id):
             entry = self._entries.get(document_id)
             if entry is None or entry.refcount > 0:
@@ -235,6 +238,14 @@ class DocumentManager:
             return
         await self._do_flush_text(document_id, force=False)
 
+    async def flush_text_now(self, document_id: UUID) -> None:
+        """Flush pending text to the spec-13 bridge unconditionally."""
+        await self._do_flush_text(document_id, force=True)
+
+    async def flush_text_if_dirty(self, document_id: UUID) -> None:
+        """Flush only if the document has unsynced text edits (debounced path)."""
+        await self.flush_text_if_dirty(document_id)
+
     async def _do_flush_text(self, document_id: UUID, *, force: bool) -> None:
         async with self._lock(document_id):
             entry = self._entries.get(document_id)
@@ -260,17 +271,17 @@ class DocumentManager:
     async def _compact(self, document_id: UUID, entry: _Entry) -> None:
         """Snapshot the current state and truncate the log up to the high-water id."""
         entry.seq = await self._store.snapshot(
-            document_id,
-            entry.ydoc.get_state(),
-            entry.ydoc.get_state_vector(),
-            entry.last_update_id,
+            document_id=document_id,
+            state=entry.ydoc.get_state(),
+            state_vector=entry.ydoc.get_state_vector(),
+            upto_update_id=entry.last_update_id,
         )
         entry.updates_since_snapshot = 0
         entry.last_snapshot_at = monotonic()
 
     async def flush(self, document_id: UUID) -> None:
         """Force the text bridge now, and compact if the log has grown."""
-        await self._do_flush_text(document_id, force=True)
+        await self.flush_text_now(document_id)
         async with self._lock(document_id):
             entry = self._entries.get(document_id)
             if entry is not None and entry.updates_since_snapshot > 0:

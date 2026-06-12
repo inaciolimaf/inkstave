@@ -49,9 +49,7 @@ async def _add_member(db_session: AsyncSession, project_id: str, user_id: UUID, 
 
 
 @pytest.fixture
-async def actors(
-    app: Any, async_client: AsyncClient, db_session: AsyncSession
-) -> SimpleNamespace:
+async def actors(app: Any, async_client: AsyncClient, db_session: AsyncSession) -> SimpleNamespace:
     # Stub the ARQ enqueuers so sharing/compile routes don't touch real Redis.
     app.dependency_overrides[get_compile_enqueuer] = lambda: _FakeEnqueuer()
     app.dependency_overrides[get_email_enqueuer] = lambda: _FakeEnqueuer()
@@ -163,16 +161,12 @@ async def test_share_is_owner_only(actors: SimpleNamespace, async_client: AsyncC
 # --- compile: members (incl. viewer) allowed, non-member denied ------------ #
 
 
-async def test_compile_allows_members(
-    actors: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_compile_allows_members(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}/compile"
     for hdr in (actors.owner, actors.editor, actors.viewer):  # AC9 + viewer-compile default
         resp = await async_client.post(url, json={}, headers=hdr)
         assert resp.status_code == 202, (hdr, resp.text)
-    assert (
-        await async_client.post(url, json={}, headers=actors.outsider)
-    ).status_code == 404
+    assert (await async_client.post(url, json={}, headers=actors.outsider)).status_code == 404
 
 
 # --- /permissions ---------------------------------------------------------- #

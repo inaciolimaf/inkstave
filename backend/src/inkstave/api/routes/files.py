@@ -7,11 +7,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
 
 from inkstave.authorization.capabilities import Capability
 from inkstave.authorization.dependencies import require_capability
-from inkstave.db.models.tree_entity import TreeEntity
 from inkstave.db.session import get_db_session
 from inkstave.dependencies import get_object_store
 from inkstave.errors import ErrorEnvelope
@@ -41,17 +39,13 @@ read_access = require_capability(Capability.FILE_READ)
 write_access = require_capability(Capability.FILE_WRITE)
 
 
-async def _entity_name(session: AsyncSession, entity_id: UUID) -> str:
-    return (
-        await session.execute(select(TreeEntity.name).where(TreeEntity.id == entity_id))
-    ).scalar_one()
-
-
 async def _read(session: AsyncSession, file_row: File) -> FileRead:
+    # ``file_row.entity`` is eager-loaded by the file_service fetch (spec 99 #6.1),
+    # so reading the name issues no standalone TreeEntity SELECT.
     return FileRead(
         entity_id=file_row.entity_id,
         project_id=file_row.project_id,
-        name=await _entity_name(session, file_row.entity_id),
+        name=file_row.entity.name,
         content_type=file_row.content_type,
         size_bytes=file_row.size_bytes,
         checksum_sha256=file_row.checksum_sha256,
@@ -126,7 +120,7 @@ async def download_file(
     store: ObjectStore = Depends(get_object_store),
 ) -> StreamingResponse:
     file_row, stream = await file_service.open_file_content(session, store, project.id, entity_id)
-    filename = _sanitize_header_filename(await _entity_name(session, file_row.entity_id))
+    filename = _sanitize_header_filename(file_row.entity.name)
     headers = {
         "Content-Length": str(file_row.size_bytes),
         "Content-Disposition": f'inline; filename="{filename}"',

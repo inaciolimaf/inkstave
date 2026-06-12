@@ -31,6 +31,14 @@ class ParentNotAFolderError(AppError):
         super().__init__("Parent must be a folder.")
 
 
+class TreeTooLargeError(AppError):
+    status_code = 422
+    error_type = "tree_too_large"
+
+    def __init__(self) -> None:
+        super().__init__("Project tree exceeds the maximum number of nodes.")
+
+
 class NameConflictError(ConflictError):
     error_type = "name_conflict"
 

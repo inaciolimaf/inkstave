@@ -143,9 +143,7 @@ async def test_compaction_offloads_oversized(db_session: AsyncSession, tmp_path:
     assert inline_left == 0  # all update payloads offloaded
 
 
-async def test_sweep_finds_docs_over_min_updates(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_sweep_finds_docs_over_min_updates(db_session: AsyncSession, tmp_path: Path) -> None:
     project_id, doc_id = await _make_doc(db_session)
     store = LocalObjectStore(tmp_path, 65536)
     await _build_sealed_chunk(db_session, store, project_id, doc_id)  # 3 updates

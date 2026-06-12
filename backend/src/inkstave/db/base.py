@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, MetaData, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 
 # Registered on the metadata so generated constraints are deterministically
 # named (important for stable Alembic autogenerate diffs).
@@ -41,6 +42,15 @@ class UUIDPrimaryKeyMixin:
 
 class TimestampMixin:
     """Adds timezone-aware ``created_at`` / ``updated_at`` columns."""
+
+    @declared_attr.directive
+    def __mapper_args__(cls) -> dict[str, Any]:
+        # ``updated_at`` carries a server-side ``onupdate``: after an UPDATE the ORM
+        # expires the attribute and would refresh it lazily on next access. Under the
+        # async engine that lazy SELECT raises ``MissingGreenlet``. ``eager_defaults``
+        # makes INSERT/UPDATE fetch server-generated values back via RETURNING, so the
+        # timestamps stay loaded and serialising the row never triggers blocking IO.
+        return {"eager_defaults": True}
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

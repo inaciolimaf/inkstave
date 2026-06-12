@@ -60,7 +60,12 @@ async def test_load_rebuilds_snapshot_then_ordered_log(db_session: AsyncSession)
 
     base = YDocument()
     base.replace_text("A")
-    await store.snapshot(doc_id, base.get_state(), base.get_state_vector(), None)
+    await store.snapshot(
+        document_id=doc_id,
+        state=base.get_state(),
+        state_vector=base.get_state_vector(),
+        upto_update_id=None,
+    )
     for update in _updates(base.get_state(), ["AB", "ABC", "ABCD"]):
         await store.append_update(doc_id, update, None)
 
@@ -91,7 +96,12 @@ async def test_compaction_truncates_log_and_preserves_text(db_session: AsyncSess
     for update in collected:
         last_id = await store.append_update(doc_id, update, None)
 
-    new_seq = await store.snapshot(doc_id, editor.get_state(), editor.get_state_vector(), last_id)
+    new_seq = await store.snapshot(
+        document_id=doc_id,
+        state=editor.get_state(),
+        state_vector=editor.get_state_vector(),
+        upto_update_id=last_id,
+    )
     assert new_seq >= 1
 
     remaining = await db_session.scalar(

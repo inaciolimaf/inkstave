@@ -55,8 +55,7 @@ async def notify_invite(
                 "invite_id": str(invite.id),
                 "accept_url": accept_url,
             },
-            expires_at=datetime.now(UTC)
-            + timedelta(days=settings.notification_invite_ttl_days),
+            expires_at=datetime.now(UTC) + timedelta(days=settings.notification_invite_ttl_days),
             dedupe_on=("invite_id", str(invite.id)),
         )
 

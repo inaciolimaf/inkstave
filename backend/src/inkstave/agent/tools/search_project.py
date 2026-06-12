@@ -50,15 +50,29 @@ class SearchProjectTool(Tool):
         matches: list[dict[str, object]] = []
         for entity, path in docs:
             if needle in path.lower():
-                matches.append({"doc_id": str(entity.id), "path": path, "line": 0,
-                                "snippet": path[:_SNIPPET_MAX], "kind": "path"})
+                matches.append(
+                    {
+                        "doc_id": str(entity.id),
+                        "path": path,
+                        "line": 0,
+                        "snippet": path[:_SNIPPET_MAX],
+                        "kind": "path",
+                    }
+                )
             content = await read_content_for_collab(ctx.db, entity.id)
             section_lines = {h.line for h in scan_headings(content) if needle in h.title.lower()}
             for i, line in enumerate(content.splitlines()):
                 if needle in line.lower():
                     kind = "section" if i in section_lines else "content"
-                    matches.append({"doc_id": str(entity.id), "path": path, "line": i,
-                                    "snippet": line.strip()[:_SNIPPET_MAX], "kind": kind})
+                    matches.append(
+                        {
+                            "doc_id": str(entity.id),
+                            "path": path,
+                            "line": i,
+                            "snippet": line.strip()[:_SNIPPET_MAX],
+                            "kind": kind,
+                        }
+                    )
 
         matches.sort(key=lambda m: _KIND_RANK.get(str(m["kind"]), 9))
         truncated = len(matches) > cap

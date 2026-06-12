@@ -53,9 +53,7 @@ async def test_versions_pagination_and_gaps(
         )
     )
     await db_session.commit()
-    r2 = await async_client.get(
-        _hist_url(hist.pid, hist.doc_id, "versions"), headers=hist.owner_h
-    )
+    r2 = await async_client.get(_hist_url(hist.pid, hist.doc_id, "versions"), headers=hist.owner_h)
     assert [v["version"] for v in r2.json()["versions"]] == [3, 1]  # gap tolerated (AC2)
 
 

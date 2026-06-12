@@ -65,9 +65,7 @@ class AgentSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(16), nullable=False, server_default=AgentSessionStatus.active.value
     )
     model: Mapped[str] = mapped_column(Text, nullable=False)
-    active_run_id: Mapped[uuid.UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=True
-    )
+    active_run_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     run_state: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=AgentRunState.idle.value
     )

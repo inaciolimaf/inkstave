@@ -4,6 +4,8 @@ and logout. Routers stay thin; all token/credential logic lives here.
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -29,6 +31,8 @@ _DUMMY_HASH = (
     "$argon2id$v=19$m=65536,t=3,p=4$cF5MiWJGhHDA671dONGDCQ$"
     "YQw+PB8wiO1F5J5FKpXwV2abCar+N5OwX9W6/SmiqmE"
 )
+
+logger = logging.getLogger(__name__)
 
 _INVALID_CREDENTIALS = "Invalid email or password."
 _INVALID_REFRESH = "Invalid or expired refresh token."
@@ -57,9 +61,10 @@ async def authenticate_user(
 
     if user is None:
         # Spend comparable time so a missing user is not faster than a wrong one.
-        hasher.verify(password, _DUMMY_HASH)
+        # Offloaded so the (deliberately slow) Argon2 verify never blocks the loop.
+        await asyncio.to_thread(hasher.verify, password, _DUMMY_HASH)
         return None
-    if not hasher.verify(password, user.hashed_password):
+    if not await asyncio.to_thread(hasher.verify, password, user.hashed_password):
         return None
     return user
 
@@ -73,12 +78,15 @@ async def login(
 ) -> TokenPair:
     user = await authenticate_user(session, hasher, data.email, data.password)
     if user is None:
+        # Event only — never the attempted email or password.
+        logger.warning("auth login failed: invalid credentials")
         raise InvalidCredentialsError()
 
     family_id = uuid4()
     access_token, expires_in = token_service.create_access_token(user)
     refresh_token, jti = token_service.create_refresh_token(user.id, family_id)
-    await refresh_store.store_refresh(jti, user.id, family_id)
+    await refresh_store.store_refresh(jti=jti, user_id=user.id, family_id=family_id)
+    logger.info("auth login ok", extra={"user_id": user.id})
     return TokenPair(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
 
 
@@ -98,23 +106,33 @@ async def refresh_tokens(
 
     record = await refresh_store.get_refresh(jti)
     if record is None or await refresh_store.is_family_revoked(family_id):
+        logger.warning(
+            "auth refresh rejected: missing or family-revoked", extra={"user_id": claims["sub"]}
+        )
         raise RefreshError(_INVALID_REFRESH)
     if record.rotated:
-        # Replay of an already-used token -> revoke the entire family.
+        # Replay of an already-used token -> revoke the entire family. This is the
+        # high-value signal: a rotated token resurfacing means a stolen-token replay.
+        logger.warning(
+            "refresh token reuse detected; revoking family", extra={"user_id": record.user_id}
+        )
         await refresh_store.revoke_family(family_id)
         raise RefreshError(_REUSE_DETECTED)
     # Per-user cutoff: a password change (spec 59) invalidates tokens issued before it.
     if await refresh_store.is_user_revoked(record):
+        logger.warning("auth refresh rejected: user revoked", extra={"user_id": record.user_id})
         raise RefreshError(_INVALID_REFRESH)
 
     user = await session.get(User, UUID(claims["sub"]))
     if user is None:
+        logger.warning("auth refresh rejected: unknown user", extra={"user_id": claims["sub"]})
         raise RefreshError(_INVALID_REFRESH)
 
     await refresh_store.rotate_refresh(jti)
     access_token, expires_in = token_service.create_access_token(user)
     new_refresh, new_jti = token_service.create_refresh_token(user.id, UUID(family_id))
-    await refresh_store.store_refresh(new_jti, user.id, UUID(family_id))
+    await refresh_store.store_refresh(jti=new_jti, user_id=user.id, family_id=UUID(family_id))
+    logger.info("auth refresh rotated", extra={"user_id": user.id})
     return TokenPair(access_token=access_token, refresh_token=new_refresh, expires_in=expires_in)
 
 
@@ -127,3 +145,4 @@ async def logout(
     except TokenError:
         return
     await refresh_store.revoke_family(claims["family_id"])
+    logger.info("auth logout", extra={"user_id": claims["sub"]})

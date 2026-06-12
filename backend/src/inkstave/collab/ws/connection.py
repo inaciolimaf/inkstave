@@ -12,8 +12,6 @@ import contextlib
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import select
-
 from inkstave.authorization.capabilities import Capability, capabilities_for
 from inkstave.authorization.service import role_for
 from inkstave.collab.protocol import encode_awareness
@@ -25,7 +23,8 @@ from inkstave.collab.ws.rooms import (
     Connection,
 )
 from inkstave.db.models.project import Project
-from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.db.models.tree_entity import TreeEntityType
+from inkstave.services.tree_service import EntityNotFoundError, get_entity
 
 if TYPE_CHECKING:
     from inkstave.collab.ws.components import CollabComponents
@@ -49,16 +48,16 @@ async def _authorize(
     role = await role_for(session, user.id, project_id)  # type: ignore[arg-type]
     if role is None:
         return CLOSE_FORBIDDEN, False  # authenticated non-member
-    entity = (
-        await session.execute(  # type: ignore[attr-defined]
-            select(TreeEntity).where(
-                TreeEntity.id == document_id,
-                TreeEntity.project_id == project_id,
-                TreeEntity.type == TreeEntityType.doc,
-            )
+    # Join check (not a raising path): a missing or non-doc id maps to 4404. The
+    # helper raises EntityNotFoundError for both (no wrong_type_error supplied).
+    try:
+        await get_entity(
+            session,  # type: ignore[arg-type]
+            project_id,
+            document_id,
+            expected_type=TreeEntityType.doc,
         )
-    ).scalar_one_or_none()
-    if entity is None:
+    except EntityNotFoundError:
         return CLOSE_NOT_FOUND, False
     can_write = Capability.COLLAB_WRITE in capabilities_for(role)
     return None, can_write

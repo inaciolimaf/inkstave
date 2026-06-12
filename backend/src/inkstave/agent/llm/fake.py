@@ -85,9 +85,7 @@ class FakeLLM:
         response = self._next(messages)
         for piece in _split(response.content or "", self._stream_chunks):
             yield LLMStreamChunk(delta=piece)
-        yield LLMStreamChunk(
-            usage=response.usage, finish_reason=response.finish_reason or "stop"
-        )
+        yield LLMStreamChunk(usage=response.usage, finish_reason=response.finish_reason or "stop")
 
     # --- ergonomics --------------------------------------------------------- #
 

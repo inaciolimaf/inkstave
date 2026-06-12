@@ -18,6 +18,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 
+from inkstave.config import get_settings
 from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.services.safe_path import validate_name_segment
 from inkstave.services.tree_builder import build_tree, compute_path
@@ -28,9 +29,12 @@ from inkstave.services.tree_errors import (
     ParentNotFoundError,
     RootImmutableError,
     TreeCycleError,
+    TreeTooLargeError,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.storage.base import ObjectStore
@@ -42,11 +46,13 @@ __all__ = [
     "ParentNotFoundError",
     "RootImmutableError",
     "TreeCycleError",
+    "TreeTooLargeError",
     "build_tree",
     "compute_path",
     "create_entity",
     "delete_entity",
     "ensure_root",
+    "get_entity",
     "get_tree",
     "is_descendant",
     "move_entity",
@@ -59,9 +65,23 @@ __all__ = [
 # --------------------------------------------------------------------------- #
 
 
-async def get_tree(session: AsyncSession, project_id: UUID) -> list[TreeEntity]:
-    rows = await session.execute(select(TreeEntity).where(TreeEntity.project_id == project_id))
-    return list(rows.scalars())
+async def get_tree(
+    session: AsyncSession, project_id: UUID, *, max_nodes: int | None = None
+) -> list[TreeEntity]:
+    """Return every TreeEntity for a project, bounded by ``tree_max_nodes`` (spec 99).
+
+    Fetches at most ``cap + 1`` rows so an over-limit tree is detected without
+    materialising a pathological project, then raises ``TreeTooLargeError``. Normal
+    projects (≤ cap) return exactly the same rows as before.
+    """
+    cap = max_nodes if max_nodes is not None else get_settings().tree_max_nodes
+    rows = await session.execute(
+        select(TreeEntity).where(TreeEntity.project_id == project_id).limit(cap + 1)
+    )
+    entities = list(rows.scalars())
+    if len(entities) > cap:
+        raise TreeTooLargeError()
+    return entities
 
 
 async def ensure_root(session: AsyncSession, project_id: UUID) -> TreeEntity:
@@ -88,7 +108,23 @@ async def ensure_root(session: AsyncSession, project_id: UUID) -> TreeEntity:
     return root
 
 
-async def _get_entity(session: AsyncSession, project_id: UUID, entity_id: UUID) -> TreeEntity:
+async def get_entity(
+    session: AsyncSession,
+    project_id: UUID,
+    entity_id: UUID,
+    *,
+    expected_type: TreeEntityType | None = None,
+    wrong_type_error: Callable[[], Exception] | None = None,
+) -> TreeEntity:
+    """Fetch a project-scoped ``TreeEntity`` — the single source of this lookup.
+
+    Raises :class:`EntityNotFoundError` when the row is missing. When
+    ``expected_type`` is given and the row's type differs, raises
+    ``wrong_type_error()`` if supplied (the type-specific error the caller owns,
+    e.g. ``NotADocumentError``/``NotAFileError``), else ``EntityNotFoundError``.
+    The factory keeps this helper free of import cycles with the service modules
+    that define those errors.
+    """
     entity = (
         await session.execute(
             select(TreeEntity).where(
@@ -98,7 +134,13 @@ async def _get_entity(session: AsyncSession, project_id: UUID, entity_id: UUID) 
     ).scalar_one_or_none()
     if entity is None:
         raise EntityNotFoundError()
+    if expected_type is not None and entity.type is not expected_type:
+        raise (wrong_type_error or EntityNotFoundError)()
     return entity
+
+
+# Internal alias kept so existing tree-service call sites stay untouched.
+_get_entity = get_entity
 
 
 async def _sibling_exists(

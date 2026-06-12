@@ -22,6 +22,12 @@ if TYPE_CHECKING:
 
 _AUX_SUFFIXES = (".aux", ".fls", ".fdb_latexmk", ".out", ".toc", ".bbl", ".blg")
 
+
+def _sha256_hex(data: bytes) -> str:
+    """SHA-256 hex digest, isolated so it can run via ``asyncio.to_thread``."""
+    return hashlib.sha256(data).hexdigest()
+
+
 # Module-level logger (spec 23 §5.2.2 default). A caller may inject its own bound
 # logger via ``OutputStore(logger=...)``; existing call sites get this default.
 logger = logging.getLogger("inkstave.compile.outputs")
@@ -120,7 +126,7 @@ class OutputStore:
         rows: list[CompileOutput] = []
         for artifact in result.artifacts:
             data = await asyncio.to_thread(artifact.abs_path.read_bytes)
-            etag = hashlib.sha256(data).hexdigest()
+            etag = await asyncio.to_thread(_sha256_hex, data)
             key = self._key(project_id, compile_id, artifact.name)
             await self._storage.put(key, data, content_type=artifact.content_type)
             row = await self._repo.upsert(

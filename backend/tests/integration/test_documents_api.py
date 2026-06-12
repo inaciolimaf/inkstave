@@ -148,9 +148,7 @@ async def test_non_doc_entity_is_conflict(
     assert resp.json()["error"]["type"] == "not_a_document"
 
 
-async def test_file_entity_is_conflict(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_file_entity_is_conflict(async_client: AsyncClient, db_session: AsyncSession) -> None:
     """AC6: GET and PUT content on a ``file`` entity both return 409 not_a_document.
 
     The tree-create route only accepts ``folder``/``doc``; ``file`` entities are

@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
+
+from inkstave.time import SYSTEM_CLOCK, Clock
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -58,7 +60,9 @@ class RefreshStore:
     def _user_revoked_key(user_id: str) -> str:
         return f"{_USER_REVOKED_AT_PREFIX}{user_id}"
 
-    async def store_refresh(self, jti: str, user_id: UUID, family_id: UUID) -> None:
+    async def store_refresh(
+        self, *, jti: str, user_id: UUID, family_id: UUID, clock: Clock = SYSTEM_CLOCK
+    ) -> None:
         """Persist a refresh record keyed by ``jti``.
 
         The record's expiry is derived from settings (``self._ttl``, the refresh
@@ -68,7 +72,7 @@ class RefreshStore:
         ``expires_at``); a caller-supplied ``expires_at`` would be redundant and
         could contradict the key TTL.
         """
-        now = datetime.now(UTC)
+        now = clock.now()
         record = {
             "user_id": str(user_id),
             "family_id": str(family_id),
@@ -102,7 +106,7 @@ class RefreshStore:
     async def is_family_revoked(self, family_id: str) -> bool:
         return bool(await self._redis.exists(self._family_key(family_id)))
 
-    async def revoke_user(self, user_id: UUID) -> None:
+    async def revoke_user(self, user_id: UUID, *, clock: Clock = SYSTEM_CLOCK) -> None:
         """Invalidate every existing refresh token for a user (spec 59).
 
         Records the cutoff = now; any token created at/before it is rejected. The
@@ -111,7 +115,7 @@ class RefreshStore:
         cutoff would survive, but the current callers do not mint one.
         """
         await self._redis.set(
-            self._user_revoked_key(str(user_id)), datetime.now(UTC).isoformat(), ex=self._ttl
+            self._user_revoked_key(str(user_id)), clock.now().isoformat(), ex=self._ttl
         )
 
     async def _user_revoked_at(self, user_id: str) -> datetime | None:

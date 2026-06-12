@@ -16,7 +16,7 @@ from sqlalchemy import select
 from inkstave.db.models.document import Document
 from inkstave.db.models.file import File
 from inkstave.db.models.tree_entity import TreeEntity
-from inkstave.services.tree_service import compute_path
+from inkstave.services.tree_service import compute_path, get_tree
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,10 +25,11 @@ if TYPE_CHECKING:
 
 
 async def _entities_by_id(session: AsyncSession, project_id: UUID) -> dict[UUID, TreeEntity]:
-    rows = (
-        await session.execute(select(TreeEntity).where(TreeEntity.project_id == project_id))
-    ).scalars()
-    return {e.id: e for e in rows}
+    # Route the tree load through the single bounded source (spec 99 #6.3): get_tree
+    # enforces tree_max_nodes. The doc/file iterators below stay whole-project (a
+    # compile needs every doc/file) but can only match entities within this capped
+    # tree, and compile_max_input_files/bytes (spec 21) cap the input size downstream.
+    return {e.id: e for e in await get_tree(session, project_id)}
 
 
 class DbDocumentSource:

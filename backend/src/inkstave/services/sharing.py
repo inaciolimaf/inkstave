@@ -18,8 +18,6 @@ from __future__ import annotations
 
 from inkstave.services.sharing_common import (
     MemberInfo,
-    _active_project,
-    _now,
     generate_token,
     hash_token,
     membership_of,
@@ -39,7 +37,6 @@ from inkstave.services.sharing_errors import (
     OwnerCannotLeaveError,
 )
 from inkstave.services.sharing_invites import (
-    _invite_by_token,
     accept_invite,
     create_invite,
     decline_invite,
@@ -87,7 +84,3 @@ __all__ = [
     "list_invites",
     "revoke_invite",
 ]
-
-# Re-exported private helpers retained for backwards-compatible access via the
-# ``sharing`` module path (used by tests and internal callers).
-_ = (_active_project, _now, _invite_by_token)

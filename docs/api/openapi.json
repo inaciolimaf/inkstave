@@ -485,6 +485,8 @@
         "additionalProperties": false,
         "properties": {
           "name": {
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Name",
             "type": "string"
           },
@@ -1766,6 +1768,8 @@
         "additionalProperties": false,
         "properties": {
           "name": {
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Name",
             "type": "string"
           }
@@ -3744,6 +3748,14 @@
             "schema": {
               "anyOf": [
                 {
+                  "enum": [
+                    "proposed",
+                    "applied",
+                    "partially_applied",
+                    "rejected",
+                    "stale",
+                    "superseded"
+                  ],
                   "type": "string"
                 },
                 {

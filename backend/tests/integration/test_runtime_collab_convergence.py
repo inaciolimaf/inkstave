@@ -65,7 +65,13 @@ async def test_concurrent_edits_converge(app: Any, db_session: AsyncSession, red
 
         server_text = await mgr.current_text(doc_id)
         assert a.text == b.text == server_text  # AC1 — convergence
-        assert a.get_state_vector() == b.get_state_vector()  # AC1 — equal state vectors
+        # AC1 — equal logical state. Raw state-vector *bytes* are not comparable: the
+        # (client, clock) map has no canonical encoding order, so two converged docs
+        # can serialise their vectors differently. Assert instead that neither client
+        # is missing anything from the other — both cross-diffs are the empty update.
+        _EMPTY_UPDATE = b"\x00\x00"
+        assert a.diff(b.get_state_vector()) == _EMPTY_UPDATE
+        assert b.diff(a.get_state_vector()) == _EMPTY_UPDATE
         assert a.text.count("Hello ") == 1  # AC2 — no loss / no dup
         assert a.text.count("World") == 1
 

@@ -59,9 +59,7 @@ def _has_capability_guard(route: APIRoute) -> bool:
 
 def test_every_project_scoped_route_is_guarded() -> None:
     app = create_app()
-    project_routes = [
-        r for r in app.routes if isinstance(r, APIRoute) and "{project_id}" in r.path
-    ]
+    project_routes = [r for r in app.routes if isinstance(r, APIRoute) and "{project_id}" in r.path]
     # Sanity: the audit actually covers the surface, not an empty set.
     assert len(project_routes) >= 15, len(project_routes)
 

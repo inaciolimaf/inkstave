@@ -8,11 +8,13 @@ the current ``jwt_secret`` and verifies against the current secret *and* any
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 import jwt
+
+from inkstave.time import SYSTEM_CLOCK, Clock
 
 if TYPE_CHECKING:
     from inkstave.config import Settings
@@ -39,9 +41,9 @@ class TokenService:
     def _encode(self, claims: dict[str, Any]) -> str:
         return jwt.encode(claims, self._secret, algorithm=self._algorithm)
 
-    def create_access_token(self, user: User) -> tuple[str, int]:
+    def create_access_token(self, user: User, *, clock: Clock = SYSTEM_CLOCK) -> tuple[str, int]:
         """Return ``(token, expires_in_seconds)`` for the user's access token."""
-        now = datetime.now(UTC)
+        now = clock.now()
         claims = {
             "sub": str(user.id),
             "type": "access",
@@ -53,9 +55,11 @@ class TokenService:
         }
         return self._encode(claims), self._access_ttl
 
-    def create_refresh_token(self, user_id: UUID, family_id: UUID) -> tuple[str, str]:
+    def create_refresh_token(
+        self, user_id: UUID, family_id: UUID, *, clock: Clock = SYSTEM_CLOCK
+    ) -> tuple[str, str]:
         """Return ``(token, jti)`` for a refresh token in the given family."""
-        now = datetime.now(UTC)
+        now = clock.now()
         jti = uuid4().hex
         claims = {
             "sub": str(user_id),

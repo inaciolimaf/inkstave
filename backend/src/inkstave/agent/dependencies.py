@@ -21,6 +21,4 @@ def get_llm_client() -> LLMClient:
 
 def get_agent_deps() -> AgentDeps:
     settings = get_agent_settings()
-    return AgentDeps(
-        llm=OpenRouterLLMClient(settings), settings=settings, tools=default_registry()
-    )
+    return AgentDeps(llm=OpenRouterLLMClient(settings), settings=settings, tools=default_registry())

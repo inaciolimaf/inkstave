@@ -173,7 +173,7 @@ async def _cmd_bootstrap_admin(email: str, password: str) -> int:
         await engine.dispose()
 
 
-async def _cmd_seed(demo: bool, force: bool) -> int:
+async def _cmd_seed(*, demo: bool, force: bool) -> int:
     if not demo:
         print("nothing to seed (pass --demo)", file=sys.stderr)
         return 2
@@ -218,7 +218,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
         return asyncio.run(_cmd_bootstrap_admin(*creds))
     if args.command == "seed":
-        return asyncio.run(_cmd_seed(args.demo, args.force))
+        return asyncio.run(_cmd_seed(demo=args.demo, force=args.force))
     return 2  # pragma: no cover - argparse requires a subcommand
 
 
