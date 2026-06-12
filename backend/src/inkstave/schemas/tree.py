@@ -8,21 +8,23 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from inkstave.schemas.base import StrictModel
+
 TreeEntityTypeLiteral = Literal["folder", "doc", "file"]
 
 
-class CreateEntityIn(BaseModel):
+class CreateEntityIn(StrictModel):
     # "file" entities are created by spec 14's upload, not here.
     type: Literal["folder", "doc"]
     name: str
     parent_id: UUID | None = None
 
 
-class RenameEntityIn(BaseModel):
+class RenameEntityIn(StrictModel):
     name: str
 
 
-class MoveEntityIn(BaseModel):
+class MoveEntityIn(StrictModel):
     new_parent_id: UUID
 
 

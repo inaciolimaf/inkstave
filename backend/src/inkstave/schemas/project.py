@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from inkstave.schemas.base import StrictModel
+
 NAME_MAX_LENGTH = 255
 
 
@@ -17,13 +19,13 @@ def _validate_name(value: str) -> str:
     return stripped
 
 
-class ProjectCreate(BaseModel):
+class ProjectCreate(StrictModel):
     name: str = Field(min_length=1, max_length=NAME_MAX_LENGTH)
 
     _trim_name = field_validator("name")(_validate_name)
 
 
-class ProjectRename(BaseModel):
+class ProjectRename(StrictModel):
     name: str = Field(min_length=1, max_length=NAME_MAX_LENGTH)
 
     _trim_name = field_validator("name")(_validate_name)
@@ -45,3 +47,10 @@ class ProjectRead(BaseModel):
 class ProjectList(BaseModel):
     items: list[ProjectRead]
     total: int
+
+
+class PermissionsRead(BaseModel):
+    """The caller's effective role + capability codes on a project (spec 34)."""
+
+    role: str
+    capabilities: list[str]

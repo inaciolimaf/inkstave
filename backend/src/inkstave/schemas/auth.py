@@ -6,17 +6,19 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr
 
+from inkstave.schemas.base import StrictModel
 
-class LoginRequest(BaseModel):
+
+class LoginRequest(StrictModel):
     email: EmailStr
     password: str
 
 
-class RefreshRequest(BaseModel):
+class RefreshRequest(StrictModel):
     refresh_token: str
 
 
-class LogoutRequest(BaseModel):
+class LogoutRequest(StrictModel):
     refresh_token: str
 
 

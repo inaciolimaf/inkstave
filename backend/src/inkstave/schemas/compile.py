@@ -8,8 +8,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from inkstave.schemas.base import StrictModel
 
-class CompileRequest(BaseModel):
+
+class CompileRequest(StrictModel):
     main_file: str | None = None
     force: bool = False
 

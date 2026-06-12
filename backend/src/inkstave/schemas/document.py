@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from inkstave.schemas.base import StrictModel
+
 
 class DocumentContentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -19,7 +21,7 @@ class DocumentContentRead(BaseModel):
     updated_at: datetime
 
 
-class DocumentContentReplace(BaseModel):
+class DocumentContentReplace(StrictModel):
     content: str
     # The version the client edited from; must match the server's current version.
     base_version: int = Field(ge=0)
