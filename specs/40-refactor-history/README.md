@@ -1,6 +1,6 @@
 # Spec 40 — Refactor: History & Notifications
 
-**Type:** 🔧 refactor  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

@@ -1,6 +1,6 @@
 # Spec 58 — Project Documentation
 
-**Type:** 🟢 feature  ·  **Phase:** Phase 7 — Hardening, packaging & docs  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Phase 7 — Hardening, packaging & docs  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

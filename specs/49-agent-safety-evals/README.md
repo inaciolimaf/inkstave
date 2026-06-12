@@ -1,6 +1,6 @@
 # Spec 49 — Agent Safety & Evals
 
-**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

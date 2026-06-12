@@ -1,6 +1,6 @@
 # Spec 34 — Access control (centralized authorization)
 
-**Type:** 🟢 feature  ·  **Phase:** Real-time collaboration  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Real-time collaboration  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

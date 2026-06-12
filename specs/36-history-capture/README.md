@@ -1,6 +1,6 @@
 # Spec 36 — History Capture from the CRDT Stream
 
-**Type:** 🟢 feature  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

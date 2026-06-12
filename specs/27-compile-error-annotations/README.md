@@ -1,6 +1,6 @@
 # Spec 27 — Compile error & warning annotations
 
-**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

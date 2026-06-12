@@ -1,6 +1,6 @@
 # Spec 60 — Final Refactor & Release-Readiness Pass
 
-**Type:** 🔧 refactor  ·  **Phase:** Phase 7 — Hardening, packaging & docs  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Phase 7 — Hardening, packaging & docs  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

@@ -1,6 +1,6 @@
 # Spec 45 — Refactor: Agent Core
 
-**Type:** 🔧 refactor  ·  **Phase:** AI writing agent  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** AI writing agent  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

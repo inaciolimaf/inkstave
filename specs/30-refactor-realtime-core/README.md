@@ -1,6 +1,6 @@
 # Spec 30 — Refactor pass over the real-time core (CRDT backend + WebSocket)
 
-**Type:** 🔧 refactor  ·  **Phase:** Real-time collaboration  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Real-time collaboration  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

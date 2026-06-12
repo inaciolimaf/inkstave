@@ -1,6 +1,6 @@
 # Spec 42 — Agent Tools (search / read / list / locate / propose)
 
-**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

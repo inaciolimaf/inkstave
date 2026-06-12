@@ -1,6 +1,6 @@
 # Spec 29 — Collaboration WebSocket (JWT-authed rooms + Redis fan-out)
 
-**Type:** 🟢 feature  ·  **Phase:** Real-time collaboration  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Real-time collaboration  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

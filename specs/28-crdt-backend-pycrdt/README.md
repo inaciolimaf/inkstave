@@ -1,6 +1,6 @@
 # Spec 28 — Server-side CRDT document model (pycrdt)
 
-**Type:** 🟢 feature  ·  **Phase:** Real-time collaboration  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Real-time collaboration  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

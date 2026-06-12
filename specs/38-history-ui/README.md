@@ -1,6 +1,6 @@
 # Spec 38 — History UI (timeline, diff viewer, restore)
 
-**Type:** 🟢 feature  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

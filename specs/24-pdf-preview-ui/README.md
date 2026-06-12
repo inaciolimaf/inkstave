@@ -1,6 +1,6 @@
 # Spec 24 — PDF Preview UI (PDF.js)
 
-**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

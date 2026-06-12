@@ -1,6 +1,6 @@
 # Spec 26 — SyncTeX source ↔ PDF synchronisation
 
-**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

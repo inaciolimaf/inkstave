@@ -1,6 +1,6 @@
 # Spec 51 — Observability
 
-**Type:** 🟢 feature  ·  **Phase:** Hardening, packaging & docs  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Hardening, packaging & docs  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

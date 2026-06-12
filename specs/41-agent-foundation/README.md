@@ -1,6 +1,6 @@
 # Spec 41 — Agent Foundation (LangGraph + OpenRouter-via-DI)
 
-**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

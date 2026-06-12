@@ -1,6 +1,6 @@
 # Spec 50 — Refactor: Full AI Agent
 
-**Type:** 🔧 refactor  ·  **Phase:** Phase 6 — AI writing agent  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Phase 6 — AI writing agent  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

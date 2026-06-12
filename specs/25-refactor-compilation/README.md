@@ -1,6 +1,6 @@
 # Spec 25 — Refactor: Compilation
 
-**Type:** 🔧 refactor  ·  **Phase:** Compilation  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Compilation  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

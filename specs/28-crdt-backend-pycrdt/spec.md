@@ -30,7 +30,7 @@ only** — no HTTP or WebSocket (those are spec 29).
   - **spec 31/32** (frontend binding, presence) — consume the same protocol.
   - **spec 36/37** (history) — the persisted update log is the substrate for
     snapshots/diffs.
-- **Affected areas:** backend (`backend/app/collab/` library + Alembic
+- **Affected areas:** backend (`backend/src/inkstave/collab/` library + Alembic
   migration), docs (ADR). No frontend.
 
 ## 3. Goals
@@ -106,9 +106,9 @@ same transaction that writes the new `state`/`state_vector`/`seq`.
 
 ### 5.2 Backend / API (library contracts — no HTTP)
 
-All under `backend/app/collab/`.
+All under `backend/src/inkstave/collab/`.
 
-#### 5.2.1 Protocol encoding — `backend/app/collab/protocol.py`
+#### 5.2.1 Protocol encoding — `backend/src/inkstave/collab/protocol.py`
 
 Implement the standard **y-protocols** message framing so browser `y-websocket`/
 `y-protocols` clients interoperate (spec 31 uses them). Messages are length/var-
@@ -134,7 +134,7 @@ def encode_awareness(awareness_update: bytes) -> bytes
 AwarenessMessage | UnknownMessage`). Unknown tags decode to `UnknownMessage`
 (ignored by callers, never raise).
 
-#### 5.2.2 Document wrapper — `backend/app/collab/ydocument.py`
+#### 5.2.2 Document wrapper — `backend/src/inkstave/collab/ydocument.py`
 
 ```python
 class YDocument:
@@ -162,7 +162,7 @@ class YDocument:
 `apply_update`/local mutations must emit updates via the observer so the manager
 can both **persist** (append to `crdt_update`) and **relay** (return to spec 29).
 
-#### 5.2.3 Persistence — `backend/app/collab/store.py`
+#### 5.2.3 Persistence — `backend/src/inkstave/collab/store.py`
 
 ```python
 class CrdtStore:
@@ -185,7 +185,7 @@ class CrdtStore:
 Loading order is authoritative: **snapshot state first, then ordered updates**.
 The append path must be O(1) and not read the whole log.
 
-#### 5.2.4 Awareness — `backend/app/collab/awareness.py`
+#### 5.2.4 Awareness — `backend/src/inkstave/collab/awareness.py`
 
 In-memory only. Wrap pycrdt's `Awareness` (or an equivalent) per document:
 ```python
@@ -201,7 +201,7 @@ class AwarenessRegistry:
 No persistence; cleared when the last connection for a document leaves (spec 29
 calls `remove_client`).
 
-#### 5.2.5 Document manager — `backend/app/collab/manager.py`
+#### 5.2.5 Document manager — `backend/src/inkstave/collab/manager.py`
 
 The single object spec 29 drives. Owns in-memory `YDocument`s keyed by
 `document_id`, with reference counting of open connections.
@@ -243,7 +243,7 @@ Behaviour requirements:
   and drop the in-memory doc to bound memory (no unbounded room growth — spec 30
   will stress this).
 
-#### 5.2.6 Content bridge — `backend/app/collab/content_bridge.py`
+#### 5.2.6 Content bridge — `backend/src/inkstave/collab/content_bridge.py`
 
 ```python
 class ContentBridge:

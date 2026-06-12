@@ -1,6 +1,6 @@
 # Spec 47 — Diff Review UI
 
-**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** AI writing agent  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

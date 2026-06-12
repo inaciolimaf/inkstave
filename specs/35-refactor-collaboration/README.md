@@ -1,6 +1,6 @@
 # Spec 35 — Refactor: collaboration
 
-**Type:** 🔧 refactor  ·  **Phase:** Real-time collaboration  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Real-time collaboration  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

@@ -129,7 +129,32 @@ Legend: 🟢 feature · 🔧 refactor
 | 59 | `59-user-settings-profile` — preferences, profile, account management | 🟢 |
 | 60 | `60-refactor-final` — final refactor & release-readiness pass | 🔧 |
 
-**Total: 60 specs (48 feature 🟢 + 12 refactor 🔧).**
+### Phase 8 — Runtime & validated fix-packs
+Specs 61–90 (`runtime-*` and `fixpack-*`) extend the roadmap with runtime-error
+surfaces and a series of disjoint, parallel-applicable fix-packs closing
+two-reviewer-validated issues across specs 01–59. See each folder's `README.md`.
+
+### Phase 9 — Code-smell audit fix-packs
+Each closes one cluster of findings from a 15-dimension code-smell audit
+(magic numbers, missing logging, blocking the event loop, DRY, etc.). Unlike the
+68–90 packs these are **sequential**, not disjoint: where two packs touch the
+same file the later one declares a prerequisite on the earlier (e.g. 93 after 92,
+94 after 92/93, 96 after 94, 99 after 95).
+
+| # | Spec | Type |
+| --- | --- | --- |
+| 91 | `91-fixpack-secret-hygiene` — rotate exposed key, pre-commit secret/`.env` guard | 🔧 |
+| 92 | `92-fixpack-auth-logging` — log auth security events; stop swallowing WS-auth errors | 🔧 |
+| 93 | `93-fixpack-async-offload` — Argon2/SHA-256/file-I/O off the event loop via `to_thread` | 🔧 |
+| 94 | `94-fixpack-clock-injection` — injectable `Clock` for testable token/expiry logic | 🔧 |
+| 95 | `95-fixpack-tree-entity-dry` — one shared TreeEntity-fetch helper; drop dead re-export | 🔧 |
+| 96 | `96-fixpack-keyword-only-signatures` — keyword-only params; split control-couple flag | 🔧 |
+| 97 | `97-fixpack-magic-numbers` — name budget TTL & section-locate score constants | 🔧 |
+| 98 | `98-fixpack-pydantic-defaults` — `Field(default_factory=...)` for mutable settings defaults | 🔧 |
+| 99 | `99-fixpack-query-efficiency` — kill a file-read N+1; bound unbounded tree fetches | 🔧 |
+| 100 | `100-fixpack-schema-validation` — fail-fast `Field`/`Literal` constraints on two schemas | 🔧 |
+
+**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100.**
 
 > The roadmap can be extended later (the user may add requirements). New specs
 > continue the numbering and keep the every-5th refactor cadence.

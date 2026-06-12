@@ -1,6 +1,6 @@
 # Spec 55 — Refactor: hardening
 
-**Type:** 🔧 refactor  ·  **Phase:** Hardening, packaging & docs  ·  **Status:** ☐ not started
+**Type:** 🔧 refactor  ·  **Phase:** Hardening, packaging & docs  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

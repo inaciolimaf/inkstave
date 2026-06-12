@@ -1,6 +1,6 @@
 # Spec 57 — CI/CD & First-Run Bootstrap
 
-**Type:** 🟢 feature  ·  **Phase:** Phase 7 — Hardening, packaging & docs  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Phase 7 — Hardening, packaging & docs  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

@@ -1,6 +1,6 @@
 # Spec 23 — Compile Output Storage & Retrieval
 
-**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Compilation  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

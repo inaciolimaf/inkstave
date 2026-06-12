@@ -1,6 +1,6 @@
 # Spec 54 — End-to-End Suite
 
-**Type:** 🟢 feature  ·  **Phase:** Hardening, packaging & docs  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Hardening, packaging & docs  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 

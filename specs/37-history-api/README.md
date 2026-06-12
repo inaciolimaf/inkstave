@@ -1,6 +1,6 @@
 # Spec 37 — History API (list, diff, restore, labels)
 
-**Type:** 🟢 feature  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☐ not started
+**Type:** 🟢 feature  ·  **Phase:** Phase 5 — Version history  ·  **Status:** ☑ done
 
 ## Prompt for the implementing agent
 
