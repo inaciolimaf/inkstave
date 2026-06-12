@@ -1,0 +1,122 @@
+# Production stack (spec 56) — small, single-process Alpine images orchestrated
+# behind an nginx reverse proxy. Build the two images from the repo root, then:
+#
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Only the frontend (nginx) publishes a host port; backend/worker are reachable
+# only on the internal network. Secrets and tunables come from `.env` (never baked
+# into an image); the inter-service connection strings are derived below from the
+# same `.env` values but with the compose service hostnames. Put TLS in front of
+# the published :80. The collab WebSocket is served by the FastAPI app, so there
+# is no separate `collab` service and `/ws` routes to `backend` (see docs/adr/0056).
+
+name: inkstave-prod
+
+x-backend-env: &backend-env
+  ENVIRONMENT: prod
+  LOG_JSON: "true"
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  REDIS_URL: redis://redis:6379/0
+  FILE_STORAGE_BACKEND: local
+  FILE_STORAGE_LOCAL_PATH: /data/files
+  TECTONIC_CACHE_DIR: /var/cache/tectonic
+  COMPILE_WORKDIR_ROOT: /tmp/inkstave-compiles
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Broker/cache/pub-sub only — persistence is OFF (queued ARQ jobs are
+    # best-effort across restarts; see docs/adr/0056 §volumes).
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: inkstave-backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    command: ["uvicorn", "inkstave.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads:/data/files
+      - tectonic-cache:/var/cache/tectonic
+      - ./infra/tectonic/packages.toml:/app/infra/tectonic/packages.toml:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  worker:
+    image: inkstave-backend
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    command: ["arq", "inkstave.compile.worker.WorkerSettings"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads:/data/files
+      - tectonic-cache:/var/cache/tectonic
+      - ./infra/tectonic/packages.toml:/app/infra/tectonic/packages.toml:ro
+    healthcheck:
+      test: ["CMD", "arq", "inkstave.compile.worker.WorkerSettings", "--check"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  frontend:
+    image: inkstave-frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    # The ONLY host-published service. Put real TLS in front of this :80.
+    ports:
+      - "${PUBLIC_HTTP_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
+  uploads:
+  tectonic-cache:

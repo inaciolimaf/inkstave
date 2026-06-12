@@ -1,0 +1,172 @@
+# Development stack — everything in Docker WITH hot reload (no production build).
+#
+#   docker compose -f docker-compose.dev.yml up --build      # or: make up
+#
+# Unlike docker-compose.prod.yml (which bakes an optimized static bundle + runs
+# uvicorn without reload), this mounts the source into the containers and runs the
+# dev servers:
+#   * backend  → uvicorn --reload         (FastAPI + in-app collab WS) on :8000
+#   * worker   → arq --watch              (recompiles jobs on change)
+#   * frontend → vite dev server (HMR)    on :5173
+#   * postgres + redis
+#
+# The backend/worker reuse the `inkstave-backend` image (built once — it carries
+# the Python deps + Tectonic); only the source is mounted, so code edits reload in
+# place without a rebuild. The frontend runs straight from a node image with the
+# repo mounted and its own node_modules in a named volume (musl, not the host's).
+#
+# Browser: http://localhost:5173 (the SPA). It calls the API at http://localhost:8000
+# (the frontend's default base) — backend runs ENVIRONMENT=dev so CORS allows :5173.
+
+name: inkstave-dev
+
+# Shared backend/worker environment.
+#
+# NOTE: DATABASE_URL/REDIS_URL deliberately reach Postgres/Redis via
+# `host.docker.internal` + the published host ports instead of the compose
+# service names (`postgres`/`redis`). This host runs systemd-resolved + Tailscale
+# (resolv.conf stub 127.0.0.53), which makes Docker's embedded DNS flaky for
+# inter-container name resolution (intermittent EAI_AGAIN). Routing via the host
+# gateway (added to /etc/hosts through `extra_hosts` below) needs no DNS at all,
+# so it is reliable. On a host with healthy Docker DNS you could switch these back
+# to `@postgres:5432` / `redis://redis:6379` — see the daemon-DNS fix in the README.
+x-backend-env: &backend-env
+  ENVIRONMENT: dev
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+  REDIS_URL: redis://host.docker.internal:${REDIS_PORT:-6379}/0
+  MIGRATE_ON_START: "true"
+  FILE_STORAGE_BACKEND: local
+  FILE_STORAGE_LOCAL_PATH: /data/files
+  TECTONIC_CACHE_DIR: /var/cache/tectonic
+  COMPILE_WORKDIR_ROOT: /tmp/inkstave-compiles
+
+# Source mounts shared by backend + worker (live code → reload).
+x-backend-volumes: &backend-volumes
+  - ./backend/src:/app/src
+  - ./backend/migrations:/app/migrations
+  - ./backend/alembic.ini:/app/alembic.ini:ro
+  - ./infra/tectonic/packages.toml:/app/infra/tectonic/packages.toml:ro
+  - uploads:/data/files
+  # No tectonic-cache volume: the LaTeX format/bundle is baked into the image at
+  # build time (see backend/Dockerfile), so the container uses that directly and a
+  # stale volume can't mask it. Any extra packages a compile pulls live in the
+  # container layer (re-fetched after a recreate — cheap vs. the baked format).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: inkstave-backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # Auto-recover from a transient startup hiccup (e.g. a brief DNS race while the
+    # frontend is busy installing deps on first boot — the migration step would
+    # otherwise fail hard and exit).
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Resolve EXTERNAL names (Tectonic's LaTeX bundle download, the OpenRouter API)
+    # via public resolvers — the host's systemd-resolved/Tailscale stub makes the
+    # Docker embedded DNS unreliable. Postgres/Redis need no DNS (see extra_hosts).
+    dns:
+      - "1.1.1.1"
+      - "8.8.8.8"
+    # --app-dir puts the mounted /app/src first on sys.path; --reload watches it.
+    command:
+      - uvicorn
+      - inkstave.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --app-dir
+      - /app/src
+      - --reload
+      - --reload-dir
+      - /app/src
+    ports:
+      - "8000:8000"
+    volumes: *backend-volumes
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: inkstave-backend
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # See backend: public resolvers for external names; host.docker.internal for DB/Redis.
+    dns:
+      - "1.1.1.1"
+      - "8.8.8.8"
+    # arq --watch reloads the worker when files under the path change.
+    command: ["arq", "inkstave.compile.worker.WorkerSettings", "--watch", "/app/src"]
+    volumes: *backend-volumes
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app/frontend
+    # pnpm pinned to the lockfile's version; install into the container's
+    # node_modules volumes (musl binaries), then run Vite with HMR.
+    command:
+      - sh
+      - -c
+      - >
+        corepack enable &&
+        corepack prepare pnpm@9.15.4 --activate &&
+        pnpm install --frozen-lockfile &&
+        pnpm dev --host 0.0.0.0 --port 5173
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./:/app
+      # Keep container-installed (Alpine/musl) modules out of the host tree.
+      - dev-root-node-modules:/app/node_modules
+      - dev-frontend-node-modules:/app/frontend/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:
+  dev-root-node-modules:
+  dev-frontend-node-modules:

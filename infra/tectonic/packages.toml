@@ -49,3 +49,21 @@ prewarm = [
 # When false (recommended for hardened/offline deployments), only prewarmed and
 # previously-cached packages are available; a missing package fails the compile.
 allow_network_fetch = true
+
+# -------------------------------------------------------------------------------
+# How to add a package
+# -------------------------------------------------------------------------------
+# No application-code change is ever required — only this file.
+#
+#   1. Add the package name to the [packages] `prewarm` list above (it is fetched
+#      into the Tectonic cache so it works offline and first compiles are fast).
+#   2. Apply it:
+#        - if packages.toml is MOUNTED (the default prod compose mounts it
+#          read-only): restart the `backend` and `worker` services
+#          (`docker compose -f docker-compose.prod.yml restart backend worker`); or
+#        - if it is BAKED into the image: rebuild `inkstave-backend`.
+#   3. Tectonic still resolves transitive dependencies automatically, so you only
+#      list the top-level package you `\usepackage{...}`.
+#
+# To keep an offline/hardened deployment strict, set `allow_network_fetch = false`
+# above; then ONLY the prewarmed + already-cached packages are available.

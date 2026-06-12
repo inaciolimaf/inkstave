@@ -1,0 +1,42 @@
+# Ephemeral infrastructure for the e2e suite (spec 54).
+#
+# Brings up a throwaway PostgreSQL + Redis on **dedicated ports** (5433 / 6380)
+# so an e2e run never collides with — or pollutes — the developer's dev stack
+# (`docker-compose.yml`, ports 5432 / 6379). Both use `tmpfs`, so the data lives
+# in RAM and the DB starts clean every run with no volumes to clean up.
+#
+# Bring up:   docker compose -f docker-compose.test.yml up -d
+# Tear down:  docker compose -f docker-compose.test.yml down
+#
+# The Playwright `webServer` (frontend/playwright.config.ts) starts the backend,
+# the ARQ worker and the frontend against these; see docs/e2e-strategy.md.
+
+name: inkstave-e2e
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inkstave
+      POSTGRES_PASSWORD: inkstave
+      POSTGRES_DB: inkstave_e2e
+    ports:
+      - "${E2E_POSTGRES_PORT:-5433}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inkstave"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${E2E_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
