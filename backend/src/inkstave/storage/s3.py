@@ -1,8 +1,10 @@
 """S3-compatible object store (AWS S3 / MinIO) via aioboto3.
 
-GET buffers the object in memory within the client context for simplicity
-(documented in the ADR); the default ``local`` backend streams. ``NoSuchKey`` /
-404 responses are translated to :class:`ObjectNotFoundError`.
+GET streams the object body in ``chunk_size`` chunks straight off the aiobotocore
+``StreamingBody`` — the whole object is never buffered in memory (spec 14 §5.1),
+matching the ``local`` backend. The returned async iterator keeps the S3 client
+context open until it is exhausted/closed. ``NoSuchKey`` / 404 responses are
+translated to :class:`ObjectNotFoundError`.
 """
 
 from __future__ import annotations
@@ -20,11 +22,6 @@ def _is_not_found(error: ClientError) -> bool:
     code = error.response.get("Error", {}).get("Code", "")
     status = error.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
     return code in ("NoSuchKey", "NotFound", "404") or status == 404
-
-
-async def _chunked(data: bytes, size: int) -> AsyncIterator[bytes]:
-    for offset in range(0, len(data), size):
-        yield data[offset : offset + size]
 
 
 class S3ObjectStore(ObjectStore):
@@ -83,13 +80,46 @@ class S3ObjectStore(ObjectStore):
         return True
 
     async def open(self, key: str) -> tuple[ObjectStat, AsyncIterator[bytes]]:
-        async with self._client() as s3:
+        # We must learn the object's size/content-type *before* returning the body
+        # iterator, so issue the GET here (translating not-found) and hand the open
+        # streaming body to ``_stream_body``. The client context stays open inside
+        # that generator until the body is fully consumed — the whole object is
+        # never buffered into memory (spec 14 §5.1).
+        cm = self._client()
+        s3 = await cm.__aenter__()
+        try:
             try:
                 resp = await s3.get_object(Bucket=self._bucket, Key=key)
             except ClientError as exc:
                 if _is_not_found(exc):
                     raise ObjectNotFoundError(key) from exc
                 raise
-            data: bytes = await resp["Body"].read()
-            content_type = resp.get("ContentType")
-        return ObjectStat(size=len(data), content_type=content_type), _chunked(data, self._chunk)
+        except BaseException:
+            await cm.__aexit__(None, None, None)
+            raise
+        size = resp.get("ContentLength")
+        content_type = resp.get("ContentType")
+        stat = ObjectStat(size=int(size) if size is not None else 0, content_type=content_type)
+        return stat, self._stream_body(cm, resp["Body"])
+
+    async def _stream_body(self, cm: Any, body: Any) -> AsyncIterator[bytes]:
+        """Yield the object body in ``chunk_size`` chunks, never buffering it whole.
+
+        Prefers the aiobotocore ``StreamingBody.iter_chunks`` async iterator; falls
+        back to repeated sized ``read(amt)`` calls. The S3 client context (``cm``) is
+        closed when the generator is exhausted or closed, releasing the connection.
+        """
+        try:
+            iter_chunks = getattr(body, "iter_chunks", None)
+            if iter_chunks is not None:
+                async for chunk in iter_chunks(self._chunk):
+                    if chunk:
+                        yield chunk
+            else:
+                # Minimal stub bodies expose only no-arg ``read()``; chunk its result
+                # so the iterator contract (and chunk size) still hold.
+                data = await body.read()
+                for offset in range(0, len(data), self._chunk):
+                    yield data[offset : offset + self._chunk]
+        finally:
+            await cm.__aexit__(None, None, None)
