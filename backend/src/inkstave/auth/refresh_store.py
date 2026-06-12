@@ -20,7 +20,14 @@ if TYPE_CHECKING:
     from inkstave.config import Settings
 
 _RECORD_PREFIX = "refresh:"
+# Intentional, clearer rename of spec 07 §5.1's ``refresh_family:`` marker —
+# identical semantics (marks an entire refresh lineage as revoked). Kept as-is
+# rather than renamed live (renaming a deployed Redis key prefix is riskier than
+# the nit it resolves); the divergence is recorded here as a decision.
 _FAMILY_REVOKED_PREFIX = "refresh_family_revoked:"
+# A per-user cutoff: any refresh token created at/before this instant is invalid.
+# Used to sign out all of a user's sessions on a password change (spec 59).
+_USER_REVOKED_AT_PREFIX = "refresh_user_revoked_at:"
 
 
 @dataclass(frozen=True)
@@ -47,7 +54,20 @@ class RefreshStore:
     def _family_key(family_id: str) -> str:
         return f"{_FAMILY_REVOKED_PREFIX}{family_id}"
 
+    @staticmethod
+    def _user_revoked_key(user_id: str) -> str:
+        return f"{_USER_REVOKED_AT_PREFIX}{user_id}"
+
     async def store_refresh(self, jti: str, user_id: UUID, family_id: UUID) -> None:
+        """Persist a refresh record keyed by ``jti``.
+
+        The record's expiry is derived from settings (``self._ttl``, the refresh
+        lifetime) rather than passed in. This intentionally diverges from spec 07
+        §5.3's ``store_refresh(jti, user_id, family_id, expires_at)`` signature so
+        the TTL has a single source of truth (the Redis key TTL == the record's
+        ``expires_at``); a caller-supplied ``expires_at`` would be redundant and
+        could contradict the key TTL.
+        """
         now = datetime.now(UTC)
         record = {
             "user_id": str(user_id),
@@ -82,11 +102,36 @@ class RefreshStore:
     async def is_family_revoked(self, family_id: str) -> bool:
         return bool(await self._redis.exists(self._family_key(family_id)))
 
+    async def revoke_user(self, user_id: UUID) -> None:
+        """Invalidate every existing refresh token for a user (spec 59).
+
+        Records the cutoff = now; any token created at/before it is rejected. The
+        change-password flow uses this to sign out *all* sessions (including the
+        actor's), who then re-authenticates. A token minted strictly after the
+        cutoff would survive, but the current callers do not mint one.
+        """
+        await self._redis.set(
+            self._user_revoked_key(str(user_id)), datetime.now(UTC).isoformat(), ex=self._ttl
+        )
+
+    async def _user_revoked_at(self, user_id: str) -> datetime | None:
+        raw = await self._redis.get(self._user_revoked_key(user_id))
+        return (
+            datetime.fromisoformat(raw.decode() if isinstance(raw, bytes) else raw) if raw else None
+        )
+
+    async def is_user_revoked(self, record: RefreshRecord) -> bool:
+        """True if the record predates a per-user revocation cutoff (spec 59)."""
+        cutoff = await self._user_revoked_at(record.user_id)
+        return bool(cutoff and datetime.fromisoformat(record.created_at) <= cutoff)
+
     async def is_member_valid(self, jti: str) -> bool:
         record = await self.get_refresh(jti)
         if record is None or record.rotated:
             return False
-        return not await self.is_family_revoked(record.family_id)
+        if await self.is_family_revoked(record.family_id):
+            return False
+        return not await self.is_user_revoked(record)
 
 
 def build_refresh_store(redis: Redis, settings: Settings) -> RefreshStore:

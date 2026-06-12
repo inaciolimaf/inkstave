@@ -9,6 +9,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from argon2 import (
+    DEFAULT_MEMORY_COST,
+    DEFAULT_PARALLELISM,
+    DEFAULT_TIME_COST,
+)
 from argon2 import PasswordHasher as _Argon2Hasher
 
 if TYPE_CHECKING:
@@ -50,3 +55,24 @@ def build_password_hasher(settings: Settings) -> PasswordHasher:
         memory_cost=settings.argon2_memory_cost,
         parallelism=settings.argon2_parallelism,
     )
+
+
+# Module-level shims satisfying the spec-06 §5.2.1 named contract. The
+# :class:`PasswordHasher` is the chosen design (ADR-0005); these thin functions
+# delegate to a single default instance built with argon2-cffi's defaults so the
+# `hash_password` / `verify_password` names exist with identical behaviour.
+_default_hasher = PasswordHasher(
+    time_cost=DEFAULT_TIME_COST,
+    memory_cost=DEFAULT_MEMORY_COST,
+    parallelism=DEFAULT_PARALLELISM,
+)
+
+
+def hash_password(plain: str) -> str:
+    """Return an argon2id PHC string for ``plain`` (delegates to default hasher)."""
+    return _default_hasher.hash(plain)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    """Return whether ``plain`` matches ``hashed``; never raises (default hasher)."""
+    return _default_hasher.verify(plain, hashed)

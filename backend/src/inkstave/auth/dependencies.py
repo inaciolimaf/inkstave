@@ -23,6 +23,7 @@ from inkstave.db.models.user import User
 from inkstave.db.session import get_db_session
 from inkstave.dependencies import get_token_service
 from inkstave.errors import ForbiddenError, UnauthorizedError
+from inkstave.observability.context import bind_context
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +56,9 @@ async def _resolve_user(token: str, token_service: TokenService, session: AsyncS
     user = await session.get(User, UUID(claims["sub"]))
     if user is None:
         raise NotAuthenticatedError()
+    # Bind the resolved user to the request context so all later logs carry user_id
+    # without the call site threading it (spec 51 §5.2.2).
+    bind_context(user_id=str(user.id))
     return user
 
 
