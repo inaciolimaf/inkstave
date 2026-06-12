@@ -10,12 +10,33 @@ describe("SaveStatusIndicator", () => {
     ["clean", "Saved"],
     ["dirty", "Unsaved changes"],
     ["saving", "Saving…"],
-    ["error", "Save failed"],
-    ["offline", "Offline"],
+    ["error", "Save failed — retrying"],
+    ["offline", "Offline — changes will save when you reconnect"],
     ["conflict", "Conflict"],
   ])("renders %s as “%s”", (status, label) => {
     render(<SaveStatusIndicator status={status} onRetry={vi.fn()} />);
     expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
+  it("renders a relative timestamp for the clean state when lastSavedAt is set", () => {
+    render(<SaveStatusIndicator status="clean" onRetry={vi.fn()} lastSavedAt={Date.now()} />);
+    expect(screen.getByText("Saved just now")).toBeInTheDocument();
+  });
+
+  it("renders an older relative phrase for an earlier lastSavedAt", () => {
+    render(
+      <SaveStatusIndicator
+        status="clean"
+        onRetry={vi.fn()}
+        lastSavedAt={Date.now() - 90_000}
+      />,
+    );
+    expect(screen.getByText(/Saved \d+m ago/)).toBeInTheDocument();
+  });
+
+  it("falls back to the static Saved label when lastSavedAt is null", () => {
+    render(<SaveStatusIndicator status="clean" onRetry={vi.fn()} lastSavedAt={null} />);
+    expect(screen.getByText("Saved")).toBeInTheDocument();
   });
 
   it("exposes an aria-live region", () => {

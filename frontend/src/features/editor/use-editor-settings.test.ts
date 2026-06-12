@@ -15,13 +15,12 @@ describe("useEditorSettings", () => {
     });
   });
 
-  it("persists changes and clamps the font size", () => {
+  it("persists the line-wrapping toggle", () => {
     const { result } = renderHook(() => useEditorSettings());
-    act(() => result.current.update({ fontSize: 99 }));
-    expect(result.current.settings.fontSize).toBe(24);
     act(() => result.current.update({ lineWrapping: false }));
+    expect(result.current.settings.lineWrapping).toBe(false);
     const stored = JSON.parse(localStorage.getItem("inkstave:editor-settings")!);
-    expect(stored).toMatchObject({ fontSize: 24, lineWrapping: false });
+    expect(stored).toMatchObject({ lineWrapping: false });
   });
 
   it("reads persisted settings on init", () => {

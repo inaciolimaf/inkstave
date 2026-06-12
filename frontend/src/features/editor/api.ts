@@ -10,6 +10,10 @@ interface DocumentWire {
   size_bytes: number;
   content: string;
   updated_at: string;
+  // The backend `DocumentContentRead` wire currently omits `name` (spec 73
+  // reports this gap to the pack that owns the document schema). Mapped through
+  // when present so the frontend contract matches spec 18 §5.1.
+  name?: string;
 }
 
 export interface ConflictInfo {
@@ -29,7 +33,7 @@ export async function getDocument(projectId: string, docId: string): Promise<Doc
   const wire = await apiClient.get<DocumentWire>(
     `/api/v1/projects/${projectId}/documents/${docId}`,
   );
-  return { id: wire.entity_id, content: wire.content, version: wire.version };
+  return { id: wire.entity_id, name: wire.name, content: wire.content, version: wire.version };
 }
 
 /**

@@ -1,9 +1,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import type { EditorView } from "@codemirror/view";
+import { FileText, LocateFixed } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CollabEditor } from "@/features/collab/CollabEditor";
+import { useCollabDoc } from "@/features/collab/useCollabDoc";
 import { ApiError } from "@/lib/api-client";
 import type { TreeEntity } from "@/features/file-tree/types";
 
@@ -14,8 +17,7 @@ import { ConflictDialog } from "./conflict-dialog";
 import { EditorSettingsPopover } from "./editor-settings-popover";
 import { SaveStatusIndicator } from "./save-status-indicator";
 import { documentKey } from "./use-document";
-import { useEditorSettings } from "./use-editor-settings";
-import { useIsDark } from "./use-is-dark";
+import { useEditorPreferences } from "./use-editor-preferences";
 
 function EmptyState() {
   return (
@@ -64,14 +66,37 @@ export function EditorPane({
   selected,
   onClearSelection,
   onDirtyChange,
+  onEditorView,
+  onSyncToPdf,
+  onDocumentLoaded,
+  syncEnabled = false,
+  collabEnabled = false,
+  getToken,
+  currentUser = null,
+  readOnly = false,
 }: {
   projectId: string;
   selected: TreeEntity | null;
   onClearSelection: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** Exposes the CodeMirror view for SyncTeX reveal (spec 26). */
+  onEditorView?: (view: EditorView | null) => void;
+  /** "Sync to PDF" (forward sync) clicked for the open document. */
+  onSyncToPdf?: () => void;
+  /** Fires when the open document's content has loaded (for deferred reveal). */
+  onDocumentLoaded?: (entity: TreeEntity) => void;
+  /** Whether forward sync is available (a successful compile exists). */
+  syncEnabled?: boolean;
+  /** Use the live CRDT editor (spec 31) instead of REST autosave for documents. */
+  collabEnabled?: boolean;
+  /** Access-token getter for the collab WebSocket (required when collabEnabled). */
+  getToken?: () => string | Promise<string>;
+  /** Local user identity for presence (spec 32). */
+  currentUser?: { id: string; name: string } | null;
+  /** Viewer role → mount the collab editor read-only (spec 34). */
+  readOnly?: boolean;
 }) {
-  const { settings, update } = useEditorSettings();
-  const dark = useIsDark();
+  const { settings, dark, update } = useEditorPreferences();
 
   // Folders are ignored: keep the last opened doc/file as the active entity.
   const [openEntity, setOpenEntity] = useState<TreeEntity | null>(null);
@@ -88,12 +113,21 @@ export function EditorPane({
   });
 
   const isDoc = openEntity?.type === "doc";
+  const collabActive = collabEnabled && isDoc;
+  const collabSession = useCollabDoc({
+    projectId,
+    documentId: collabActive ? docId : null,
+    getToken: getToken ?? (() => ""),
+    enabled: collabActive,
+    readOnly,
+  });
   const loaded = isDoc && query.data ? query.data : null;
   const {
     status,
     displayText,
     hasUnsaved,
     conflict,
+    lastSavedAt,
     onLocalChange,
     saveNow,
     resolveReload,
@@ -112,6 +146,12 @@ export function EditorPane({
     onDirtyChange?.(hasUnsaved);
   }, [hasUnsaved, onDirtyChange]);
 
+  // Notify when the open document's content is ready (deferred SyncTeX reveal).
+  useEffect(() => {
+    if (loaded && openEntity?.type === "doc") onDocumentLoaded?.(openEntity);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded?.id]);
+
   // Ctrl/Cmd+S forces an immediate flush and suppresses the browser save dialog.
   useEffect(() => {
     if (!isDoc) return;
@@ -128,6 +168,19 @@ export function EditorPane({
   let body: React.ReactNode;
   if (!openEntity) body = <EmptyState />;
   else if (openEntity.type === "file") body = <BinaryNotice />;
+  else if (collabActive)
+    // Live CRDT editing (spec 31): content + sync come from the WebSocket, not REST.
+    body = collabSession ? (
+      <CollabEditor
+        session={collabSession}
+        settings={settings}
+        dark={dark}
+        onView={onEditorView}
+        currentUser={currentUser}
+      />
+    ) : (
+      <LoadingState />
+    );
   else if (query.isError)
     body = <ErrorState onRetry={() => void query.refetch()} notFound={notFound} />;
   else if (query.isLoading || !query.data) body = <LoadingState />;
@@ -140,6 +193,7 @@ export function EditorPane({
         editable
         onChange={onLocalChange}
         onBlur={saveNow}
+        onView={onEditorView}
       />
     );
 
@@ -149,7 +203,22 @@ export function EditorPane({
         <span className="mr-auto truncate text-sm font-medium">
           {openEntity?.name ?? "No file open"}
         </span>
-        {isDoc && <SaveStatusIndicator status={status} onRetry={saveNow} />}
+        {isDoc && !collabActive && (
+          <SaveStatusIndicator status={status} onRetry={saveNow} lastSavedAt={lastSavedAt} />
+        )}
+        {isDoc && onSyncToPdf && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            aria-label="Sync to PDF"
+            title="Jump to this line in the PDF"
+            disabled={!syncEnabled}
+            onClick={onSyncToPdf}
+          >
+            <LocateFixed aria-hidden="true" />
+          </Button>
+        )}
         <EditorSettingsPopover settings={settings} onUpdate={update} />
       </div>
       <div className="min-h-0 flex-1">{body}</div>

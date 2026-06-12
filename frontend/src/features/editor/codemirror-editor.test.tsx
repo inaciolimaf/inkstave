@@ -56,8 +56,24 @@ describe("CodeMirrorEditor", () => {
     const { container } = render(<Harness />);
     const before = container.querySelector(".cm-editor");
     await userEvent.click(screen.getByText("grow"));
-    const after = container.querySelector(".cm-editor");
+    const after = container.querySelector(".cm-editor") as HTMLElement;
     expect(after).toBe(before); // same DOM node ⇒ the EditorView was not recreated
     expect(container.querySelector(".cm-content")?.textContent).toContain("hello world");
+
+    // Issue 249: assert the new font size is actually reflected, not just that
+    // the DOM node was reused. CodeMirror applies the theme as a generated class
+    // rule (font-size on the .cm-editor root). Prefer the computed style; if
+    // jsdom doesn't resolve the generated rule, fall back to asserting the
+    // reconfigured theme stylesheet carries the new 22px size.
+    const computed = getComputedStyle(after).fontSize;
+    if (computed === "22px") {
+      expect(computed).toBe("22px");
+    } else {
+      const injected = Array.from(document.querySelectorAll("style"))
+        .map((s) => s.textContent ?? "")
+        .join("\n");
+      expect(injected).toContain("22px");
+      expect(injected).not.toContain("14px");
+    }
   });
 });

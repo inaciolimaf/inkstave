@@ -10,6 +10,12 @@ import { EditorPane } from "./editor-pane";
 expect.extend(toHaveNoViolations);
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+const auth = vi.hoisted(() => ({
+  user: { id: "u1", editor_preferences: { theme: "system", font_size: 14, keymap: "default" } },
+  applyUser: vi.fn(),
+}));
+vi.mock("@/auth/auth-context", () => ({ useAuth: () => auth }));
+
 const DOC: TreeEntity = {
   id: "d1",
   name: "main.tex",

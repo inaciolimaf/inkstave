@@ -11,9 +11,19 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
+import type { EditorKeymap } from "@/types";
+
 import type { EditorSettings } from "./types";
 
-const FONT_SIZES = [10, 12, 14, 16, 18, 20, 22, 24];
+// Keep in sync with the settings page + the server clamp (10–28, spec 59) so a
+// font size chosen in Settings always has a matching option here.
+const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28];
+
+const KEYMAPS: { value: EditorKeymap; label: string }[] = [
+  { value: "default", label: "Default" },
+  { value: "vim", label: "Vim" },
+  { value: "emacs", label: "Emacs" },
+];
 
 export function EditorSettingsPopover({
   settings,
@@ -46,6 +56,26 @@ export function EditorSettingsPopover({
               {FONT_SIZES.map((size) => (
                 <SelectItem key={size} value={String(size)}>
                   {size}px
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor="editor-keymap" className="text-sm">
+            Keymap
+          </label>
+          <Select
+            value={settings.keymap}
+            onValueChange={(v) => onUpdate({ keymap: v as EditorKeymap })}
+          >
+            <SelectTrigger id="editor-keymap" aria-label="Keymap" className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KEYMAPS.map((km) => (
+                <SelectItem key={km.value} value={km.value}>
+                  {km.label}
                 </SelectItem>
               ))}
             </SelectContent>
