@@ -9,12 +9,15 @@ from fastapi import APIRouter, Depends, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
-from inkstave.api.routes.tree import owned_project
+from inkstave.authorization.capabilities import Capability
+from inkstave.authorization.dependencies import require_capability
 from inkstave.db.models.tree_entity import TreeEntity
 from inkstave.db.session import get_db_session
 from inkstave.dependencies import get_object_store
 from inkstave.errors import ErrorEnvelope
 from inkstave.schemas.file import FileRead
+from inkstave.security.rate_limit import rate_limit_named
+from inkstave.security.uploads import sanitize_filename
 from inkstave.services import file_service
 
 if TYPE_CHECKING:
@@ -33,6 +36,9 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"model": ErrorEnvelope},
     status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorEnvelope},
 }
+
+read_access = require_capability(Capability.FILE_READ)
+write_access = require_capability(Capability.FILE_WRITE)
 
 
 async def _entity_name(session: AsyncSession, entity_id: UUID) -> str:
@@ -65,16 +71,21 @@ def _sanitize_header_filename(name: str) -> str:
     response_model=FileRead,
     summary="Upload a binary file",
     responses=_ERRORS,
+    dependencies=[Depends(rate_limit_named("upload"))],
 )
 async def upload_file(
     file: UploadFile,
     parent_id: Annotated[UUID | None, Form()] = None,
     name: Annotated[str | None, Form()] = None,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
     store: ObjectStore = Depends(get_object_store),
 ) -> FileRead:
-    effective_name = name or file.filename or "file"
+    # Per spec 52 §5.2.5, traversal/path components (e.g. ``../evil``) are *stripped*
+    # to a safe basename here, not rejected with 422 as the original spec-14 AC5 asked.
+    # A sanitized name that no longer carries an allowed extension is then rejected
+    # downstream (415), and nothing is ever written to storage for it.
+    effective_name = sanitize_filename(name or file.filename or "file")
     file_row = await file_service.upload_file(
         session,
         store,
@@ -96,7 +107,7 @@ async def upload_file(
 )
 async def get_file(
     entity_id: UUID,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(read_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> FileRead:
     file_row = await file_service.get_file(session, project.id, entity_id)
@@ -110,7 +121,7 @@ async def get_file(
 )
 async def download_file(
     entity_id: UUID,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(read_access),
     session: AsyncSession = Depends(get_db_session),
     store: ObjectStore = Depends(get_object_store),
 ) -> StreamingResponse:
@@ -131,7 +142,7 @@ async def download_file(
 )
 async def delete_file(
     entity_id: UUID,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
     store: ObjectStore = Depends(get_object_store),
 ) -> None:

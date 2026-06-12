@@ -11,7 +11,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.auth.dependencies import get_current_user
+from inkstave.authorization.capabilities import Capability
+from inkstave.authorization.dependencies import require_capability
 from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.db.session import get_db_session
 from inkstave.dependencies import get_object_store
@@ -25,13 +26,11 @@ from inkstave.schemas.tree import (
     TreeRead,
 )
 from inkstave.services import tree_service
-from inkstave.services.project import get_owned_project
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.db.models.project import Project
-    from inkstave.db.models.user import User
     from inkstave.storage.base import ObjectStore
 
 router = APIRouter(prefix="/projects/{project_id}/tree", tags=["tree"])
@@ -43,13 +42,9 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 
-async def owned_project(
-    project_id: UUID,
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
-) -> Project:
-    """Resolve the owned project or raise 404 (existence is not leaked)."""
-    return await get_owned_project(session, user.id, project_id)
+# Central authorization (spec 34): reads need DOC_READ, mutations DOC_WRITE.
+read_access = require_capability(Capability.DOC_READ)
+write_access = require_capability(Capability.DOC_WRITE)
 
 
 async def _read(session: AsyncSession, project_id: UUID, entity: TreeEntity) -> TreeEntityRead:
@@ -70,7 +65,7 @@ async def _read(session: AsyncSession, project_id: UUID, entity: TreeEntity) -> 
 
 @router.get("", response_model=TreeRead, summary="List the project's file tree")
 async def get_tree(
-    project: Project = Depends(owned_project),
+    project: Project = Depends(read_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> TreeRead:
     entities = await tree_service.get_tree(session, project.id)
@@ -86,7 +81,7 @@ async def get_tree(
 )
 async def create_entity(
     data: CreateEntityIn,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> TreeEntityRead:
     entity = await tree_service.create_entity(
@@ -104,7 +99,7 @@ async def create_entity(
 async def rename_entity(
     entity_id: UUID,
     data: RenameEntityIn,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> TreeEntityRead:
     entity = await tree_service.rename_entity(session, project.id, entity_id, data.name)
@@ -120,7 +115,7 @@ async def rename_entity(
 async def move_entity(
     entity_id: UUID,
     data: MoveEntityIn,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> TreeEntityRead:
     entity = await tree_service.move_entity(session, project.id, entity_id, data.new_parent_id)
@@ -135,7 +130,7 @@ async def move_entity(
 )
 async def delete_entity(
     entity_id: UUID,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
     store: ObjectStore = Depends(get_object_store),
 ) -> None:

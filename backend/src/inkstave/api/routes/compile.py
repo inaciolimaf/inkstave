@@ -6,35 +6,37 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPAuthorizationCredentials
 
-from inkstave.auth.dependencies import (
-    NotAuthenticatedError,
-    _resolve_user,
-    bearer_scheme,
-    get_current_user,
+from inkstave.api.routes.compile_helpers import (
+    _ERRORS,
+    CompileNotFoundError,
+    _pdf_headers,
+    _require_compile,
+    _sse_user,
+    get_output_store,
 )
-from inkstave.auth.tokens import TokenService
+from inkstave.auth.dependencies import get_current_user
+from inkstave.authorization.capabilities import Capability
+from inkstave.authorization.dependencies import require_capability
+from inkstave.authorization.service import role_for
+from inkstave.collab.flush import flush_open_project_docs
 from inkstave.compile.coordinator import CompileCoordinator, CompileEnqueuer
 from inkstave.compile.jobs import status_payload
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import ByteRange, OutputStore, RangeResult, StoredObject, parse_range
+from inkstave.compile.outputs import ByteRange, OutputStore, RangeResult, parse_range
 from inkstave.compile.repository import CompileRepository
 from inkstave.compile.stream import publish_status, request_cancel, sse_stream
 from inkstave.db.models.compile import CompileJobStatus, is_terminal
 from inkstave.db.session import get_db_session
 from inkstave.dependencies import (
     get_compile_enqueuer,
-    get_object_store,
     get_redis,
     get_settings_dep,
-    get_token_service,
 )
-from inkstave.errors import ErrorEnvelope, NotFoundError
 from inkstave.schemas.compile import CompileRequest, CompileStatusResponse, OutputSummary
-from inkstave.services.project import get_owned_project
+from inkstave.security.rate_limit import rate_limit_named
+from inkstave.services.project import ProjectNotFoundError
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -44,30 +46,12 @@ if TYPE_CHECKING:
     from inkstave.db.models.compile import Compile
     from inkstave.db.models.project import Project
     from inkstave.db.models.user import User
-    from inkstave.storage.base import ObjectStore
 
 router = APIRouter(prefix="/projects/{project_id}/compile", tags=["compile"])
 
-_ERRORS: dict[int | str, dict[str, Any]] = {
-    status.HTTP_401_UNAUTHORIZED: {"model": ErrorEnvelope},
-    status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
-    status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorEnvelope},
-}
 
-
-class CompileNotFoundError(NotFoundError):
-    error_type = "compile_not_found"
-
-    def __init__(self) -> None:
-        super().__init__("Compile not found.")
-
-
-async def owned_project(
-    project_id: UUID,
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
-) -> Project:
-    return await get_owned_project(session, user.id, project_id)
+# Compile is allowed for every active member (viewers included by default, spec 34).
+owned_project = require_capability(Capability.COMPILE)
 
 
 @router.post(
@@ -76,15 +60,20 @@ async def owned_project(
     response_model=CompileStatusResponse,
     summary="Enqueue a compile",
     responses=_ERRORS,
+    dependencies=[Depends(rate_limit_named("compile"))],
 )
 async def enqueue_compile(
     data: CompileRequest,
+    request: Request,
     project: Project = Depends(owned_project),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dep),
     enqueuer: CompileEnqueuer = Depends(get_compile_enqueuer),
 ) -> CompileStatusResponse:
+    # Materialise open CRDT rooms so the worker compiles the current text, not the
+    # debounced-stale documents.content column (spec 28).
+    await flush_open_project_docs(getattr(request.app.state, "collab", None), session, project.id)
     coordinator = CompileCoordinator(
         settings=settings, repo=CompileRepository(session), enqueuer=enqueuer
     )
@@ -167,19 +156,6 @@ async def cancel_compile(
 # --------------------------------------------------------------------------- #
 
 
-def get_output_store(
-    session: AsyncSession = Depends(get_db_session),
-    store: ObjectStore = Depends(get_object_store),
-    settings: Settings = Depends(get_settings_dep),
-) -> OutputStore:
-    return OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
-
-
-async def _require_compile(session: AsyncSession, project_id: UUID, compile_id: UUID) -> None:
-    if await CompileRepository(session).get(project_id, compile_id) is None:
-        raise CompileNotFoundError()
-
-
 @router.get(
     "/{compile_id}/outputs",
     response_model=list[OutputSummary],
@@ -195,15 +171,6 @@ async def list_outputs(
     await _require_compile(session, project.id, compile_id)
     rows = await outputs.list_outputs(compile_id)
     return [OutputSummary.model_validate(r) for r in rows]
-
-
-def _pdf_headers(obj: StoredObject, settings: Settings) -> dict[str, str]:
-    return {
-        "Accept-Ranges": "bytes",
-        "ETag": obj.etag,
-        "Cache-Control": f"private, max-age={settings.compile_pdf_cache_max_age_s}",
-        "Content-Disposition": 'inline; filename="output.pdf"',
-    }
 
 
 @router.get(
@@ -275,19 +242,6 @@ async def get_output_log(
     )
 
 
-async def _sse_user(
-    access_token: str | None = Query(None),
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    token_service: TokenService = Depends(get_token_service),
-    session: AsyncSession = Depends(get_db_session),
-) -> User:
-    """SSE auth: token via the Authorization header **or** an ``?access_token=`` query."""
-    token = (credentials.credentials if credentials else None) or access_token
-    if not token:
-        raise NotAuthenticatedError()
-    return await _resolve_user(token, token_service, session)
-
-
 @router.get(
     "/{compile_id}/events",
     summary="Live compile status (Server-Sent Events)",
@@ -301,13 +255,16 @@ async def compile_events(
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
-    project = await get_owned_project(session, user.id, project_id)
+    # SSE uses a query-param token (EventSource can't set headers), so authorize
+    # inline: any active member may read compile events (COMPILE capability).
+    if await role_for(session, user.id, project_id) is None:
+        raise ProjectNotFoundError()  # 404 — non-member / missing project
     repo = CompileRepository(session)
-    if await repo.get(project.id, compile_id) is None:
+    if await repo.get(project_id, compile_id) is None:
         raise CompileNotFoundError()
 
     async def snapshot() -> dict[str, Any] | None:
-        row: Compile | None = await repo.get(project.id, compile_id)
+        row: Compile | None = await repo.get(project_id, compile_id)
         return status_payload(row) if row is not None else None
 
     return StreamingResponse(

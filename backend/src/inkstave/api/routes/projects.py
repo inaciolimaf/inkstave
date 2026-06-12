@@ -8,24 +8,41 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from inkstave.auth.dependencies import get_current_user
+from inkstave.authorization.capabilities import Capability, capabilities_for
+from inkstave.authorization.dependencies import require_capability
+from inkstave.authorization.service import role_for
+from inkstave.cache import RedisCache, project_meta_key
 from inkstave.compile.output_repository import OutputRepository
 from inkstave.compile.outputs import OutputStore
 from inkstave.db.session import get_db_session
-from inkstave.dependencies import get_object_store, get_settings_dep
+from inkstave.dependencies import get_object_store, get_redis, get_settings_dep
 from inkstave.errors import ErrorEnvelope
-from inkstave.schemas.project import ProjectCreate, ProjectList, ProjectRead, ProjectRename
+from inkstave.schemas.project import (
+    PermissionsRead,
+    ProjectCreate,
+    ProjectList,
+    ProjectRead,
+    ProjectRename,
+)
 from inkstave.services import project as project_service
+from inkstave.services.project import ProjectNotFoundError
 
 if TYPE_CHECKING:
+    from redis.asyncio import Redis
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.config import Settings
+    from inkstave.db.models.project import Project
     from inkstave.db.models.user import User
     from inkstave.storage.base import ObjectStore
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope}}
+
+read_access = require_capability(Capability.PROJECT_READ)
+write_access = require_capability(Capability.PROJECT_WRITE)
+delete_access = require_capability(Capability.PROJECT_DELETE)
 
 
 @router.post(
@@ -61,12 +78,40 @@ async def list_projects(
     responses=_NOT_FOUND,
 )
 async def get_project(
+    project: Project = Depends(read_access),
+    redis: Redis = Depends(get_redis),
+    settings: Settings = Depends(get_settings_dep),
+) -> ProjectRead:
+    # Any active member may read (spec 34); the dependency authorizes + loads it.
+    # Post-authz project metadata is cached with a short TTL (spec 53); reads served
+    # from Redis on a hit, invalidated on rename/delete below.
+    cache = RedisCache(redis, settings)
+    key = project_meta_key(project.id)
+    cached = await cache.get_json(key)
+    if cached is not None:
+        return ProjectRead.model_validate(cached)
+    out = ProjectRead.model_validate(project)
+    await cache.set_json(key, out.model_dump(mode="json"))
+    return out
+
+
+@router.get(
+    "/{project_id}/permissions",
+    response_model=PermissionsRead,
+    summary="The caller's role + capabilities on a project",
+    responses=_NOT_FOUND,
+)
+async def get_permissions(
     project_id: UUID,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
-) -> ProjectRead:
-    project = await project_service.get_owned_project(session, user.id, project_id)
-    return ProjectRead.model_validate(project)
+    settings: Settings = Depends(get_settings_dep),
+) -> PermissionsRead:
+    role = await role_for(session, user.id, project_id)
+    if role is None:
+        raise ProjectNotFoundError()  # 404 — non-member / missing
+    caps = capabilities_for(role, compile_for_viewers=settings.compile_allowed_for_viewers)
+    return PermissionsRead(role=role, capabilities=sorted(c.value for c in caps))
 
 
 @router.patch(
@@ -78,10 +123,14 @@ async def get_project(
 async def rename_project(
     project_id: UUID,
     data: ProjectRename,
+    _project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    redis: Redis = Depends(get_redis),
+    settings: Settings = Depends(get_settings_dep),
 ) -> ProjectRead:
     project = await project_service.rename_project(session, user.id, project_id, data.name)
+    await RedisCache(redis, settings).invalidate(project_meta_key(project_id))
     return ProjectRead.model_validate(project)
 
 
@@ -93,12 +142,15 @@ async def rename_project(
 )
 async def delete_project(
     project_id: UUID,
+    _project: Project = Depends(delete_access),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     store: ObjectStore = Depends(get_object_store),
     settings: Settings = Depends(get_settings_dep),
+    redis: Redis = Depends(get_redis),
 ) -> None:
     await project_service.soft_delete_project(session, user.id, project_id)
+    await RedisCache(redis, settings).invalidate(project_meta_key(project_id))
     # Soft-delete doesn't FK-cascade; sweep the project's compile-output bytes.
     output_store = OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
     await output_store.delete_for_project(project_id)

@@ -7,7 +7,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.api.routes.tree import owned_project
+from inkstave.authorization.capabilities import Capability
+from inkstave.authorization.dependencies import require_capability
 from inkstave.db.session import get_db_session
 from inkstave.errors import ErrorEnvelope
 from inkstave.schemas.document import DocumentContentRead, DocumentContentReplace
@@ -26,6 +27,9 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_413_CONTENT_TOO_LARGE: {"model": ErrorEnvelope},
 }
 
+read_access = require_capability(Capability.DOC_READ)
+write_access = require_capability(Capability.DOC_WRITE)
+
 
 @router.get(
     "/{entity_id}",
@@ -35,7 +39,7 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
 )
 async def get_content(
     entity_id: UUID,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(read_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> DocumentContentRead:
     document = await document_service.get_document(session, project.id, entity_id)
@@ -51,7 +55,7 @@ async def get_content(
 async def replace_content(
     entity_id: UUID,
     data: DocumentContentReplace,
-    project: Project = Depends(owned_project),
+    project: Project = Depends(write_access),
     session: AsyncSession = Depends(get_db_session),
 ) -> DocumentContentRead:
     document = await document_service.replace_content(
