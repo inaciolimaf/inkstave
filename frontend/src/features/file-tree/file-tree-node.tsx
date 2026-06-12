@@ -96,7 +96,19 @@ function NodeMenuItems({
   );
 }
 
-export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
+export function FileTreeNode({
+  node,
+  depth,
+  index = 0,
+  siblingCount = 1,
+}: {
+  node: TreeNode;
+  depth: number;
+  // Position among siblings, for `aria-posinset`/`aria-setsize` (spec §5.3.8).
+  // Optional so render sites that don't (yet) thread them keep working.
+  index?: number;
+  siblingCount?: number;
+}) {
   const ctx = useFileTreeContext();
   const isFolder = node.type === "folder";
   const expanded = ctx.expandedIds.has(node.id);
@@ -126,6 +138,8 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
       aria-level={depth + 1}
       aria-selected={selected}
       aria-expanded={isFolder ? expanded : undefined}
+      aria-posinset={index + 1}
+      aria-setsize={siblingCount}
       tabIndex={focused ? 0 : -1}
       ref={(el) => ctx.registerRow(node.id, el)}
       className="outline-none"
@@ -170,7 +184,18 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
             {renaming ? (
               <InlineRenameInput node={node} />
             ) : (
-              <span className="flex-1 truncate">{node.name}</span>
+              <span
+                className="flex-1 truncate"
+                // Slow double-click on the label starts inline rename (spec
+                // §5.3.5). Scoped to the label and stop-propagated so the
+                // row-level double-click still activates (folder toggle / open).
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  ctx.onMenuAction("rename", node);
+                }}
+              >
+                {node.name}
+              </span>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -201,8 +226,14 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
 
       {isFolder && expanded && node.children.length > 0 && (
         <ul role="group">
-          {sortNodes(node.children).map((child) => (
-            <FileTreeNode key={child.id} node={child} depth={depth + 1} />
+          {sortNodes(node.children).map((child, i, siblings) => (
+            <FileTreeNode
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              index={i}
+              siblingCount={siblings.length}
+            />
           ))}
         </ul>
       )}
