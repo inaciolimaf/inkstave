@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Tiers run as independent, parallel jobs; the workflow fails if any tier fails.
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: inkstave
+          POSTGRES_PASSWORD: inkstave
+          POSTGRES_DB: inkstave
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U inkstave"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Redis is faked in tests, so no Redis service is needed.
+      TEST_DATABASE_URL: postgresql+asyncpg://inkstave:inkstave@localhost:5432/inkstave_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync backend dependencies
+        run: uv sync --project backend
+      - name: Run fast test tier with coverage
+        run: >-
+          uv run --project backend pytest backend/tests
+          --cov=inkstave --cov-config=backend/pyproject.toml --cov-report=xml
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm -C frontend typecheck
+      - name: Run Vitest
+        run: pnpm -C frontend test
+
+  e2e:
+    name: E2E (Playwright smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browser
+        run: pnpm -C frontend exec playwright install --with-deps chromium
+      - name: Run Playwright smoke (stub target)
+        run: pnpm -C frontend exec playwright test

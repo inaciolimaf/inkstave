@@ -1,0 +1,46 @@
+# Build context = repo root for both images (the backend needs infra/tectonic,
+# the frontend needs infra/nginx). Keep the context lean and never leak secrets.
+
+# Secrets — must never enter an image layer.
+.env
+.env.*
+!.env.example
+
+# VCS / tooling / CI
+.git
+.gitignore
+.github
+.pre-commit-config.yaml
+.editorconfig
+.claude
+
+# Docs, specs, ADRs, reference repos — not needed at runtime.
+docs
+specs
+*.md
+!backend/README.md
+
+# Python caches / virtualenvs / tests
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+backend/tests
+backend/htmlcov
+**/.coverage
+coverage.xml
+
+# Node / frontend build artefacts and tests
+**/node_modules
+frontend/dist
+frontend/e2e
+frontend/playwright-report
+frontend/test-results
+frontend/coverage
+
+# Local data / scratch
+data
+**/.DS_Store
+docker-compose*.yml

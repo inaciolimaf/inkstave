@@ -1,0 +1,43 @@
+# Base infrastructure for local development.
+#
+# At spec 01 this runs only the infrastructure services every later spec needs:
+# PostgreSQL and Redis. Application services (backend, frontend, worker) are
+# added by later specs. Compose v2 — no top-level `version:` key.
+#
+# Values come from the developer's `.env` (copy `.env.example` first).
+
+name: inkstave
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    # Ephemeral by default — persistence is not needed at this stage.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    env_file: .env
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

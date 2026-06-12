@@ -1,0 +1,51 @@
+# infra/tectonic/packages.toml
+#
+# Inkstave LaTeX package configuration for the Tectonic engine.
+#
+# Tectonic fetches the LaTeX packages a document needs on demand from a
+# "bundle" and caches them in TECTONIC_CACHE_DIR. You normally do NOT list every
+# package by hand — Tectonic resolves dependencies automatically. This file lets
+# a deployer: (a) pin the bundle, (b) declare a lightweight default set to
+# pre-warm the cache so first compiles are fast and work offline, and
+# (c) add extra packages without editing any source code.
+
+[bundle]
+# Empty url => use Tectonic's built-in default bundle for the pinned format.
+# Pin this in production for reproducible builds.
+url = ""                 # overrides TECTONIC_BUNDLE_URL when non-empty
+format = "latex"         # tectonic output format / TeX format
+
+[cache]
+# Where downloaded packages live. Empty => use TECTONIC_CACHE_DIR env var.
+dir = ""
+# If true, a build step pre-fetches the `prewarm` set into the cache so the
+# image ships with them and offline compiles work.
+prewarm_on_build = true
+
+[packages]
+# The lightweight default set pre-warmed into the cache. These are the packages
+# a typical document uses; extend this list to make more packages available
+# offline. Adding here does NOT require code changes — only re-running the
+# prewarm/build step.
+prewarm = [
+  "amsmath",
+  "amsfonts",
+  "amssymb",
+  "geometry",
+  "graphicx",
+  "hyperref",
+  "babel",
+  "inputenc",
+  "fontenc",
+  "xcolor",
+  "booktabs",
+  "caption",
+  "enumitem",
+  "listings",
+]
+
+[policy]
+# When true, compiles may reach the network to fetch packages not yet cached.
+# When false (recommended for hardened/offline deployments), only prewarmed and
+# previously-cached packages are available; a missing package fails the compile.
+allow_network_fetch = true

@@ -1,0 +1,51 @@
+# --- Environment / secrets ---
+.env
+*.env
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# --- Node / frontend ---
+node_modules/
+dist/
+build/
+.pnpm-store/
+
+# --- Local object storage (spec 14 default backend) ---
+data/
+
+# --- Test/coverage artifacts ---
+coverage.xml
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+# e2e auth state (fresh per run; contains tokens — never commit)
+frontend/e2e/.auth/
+
+# --- Logs ---
+*.log
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+
+# --- Claude Code harness runtime state (not project config) ---
+.claude/scheduled_tasks.lock
+.claude/validation/
+
+# --- test run artifacts ---
+test-junit.xml
+test-timing.json
+
+# NOTE: lockfiles are committed — do NOT ignore uv.lock or pnpm-lock.yaml.

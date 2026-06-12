@@ -1,0 +1,103 @@
+[project]
+name = "inkstave-backend"
+version = "0.0.0"
+description = "Inkstave backend — FastAPI app (scaffolded in spec 01, built up by later specs)."
+requires-python = ">=3.12"
+# Runtime dependencies. SQLAlchemy/Alembic arrive in spec 03; auth libs in
+# 06-08; ARQ in spec 22. Only the FastAPI substrate + Redis client live here.
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.2",
+    "redis>=5",
+    "python-json-logger>=3.1",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "argon2-cffi>=23.1",
+    "email-validator>=2.2",
+    "pyjwt>=2.10",
+    "python-multipart>=0.0.18",
+    "aioboto3>=13.0",
+    "arq>=0.26",
+]
+
+[dependency-groups]
+# PEP 735 dependency groups. The testing foundation (spec 04) lives here.
+# Factories are hand-rolled (see tests/factories/) rather than using
+# factory_boy, to keep async creation explicit and dependency-light.
+dev = [
+    "ruff>=0.9.0",
+    "mypy>=1.14",
+    "pre-commit>=4.0",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "httpx>=0.28",
+    "fakeredis>=2.26",
+]
+
+[tool.uv]
+# uv is the package/dependency manager (see docs/adr/0001-tooling-choices.md).
+# A uv.lock is committed alongside this file.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Forward-looking: Alembic migrations (added in spec 03) are not linted.
+# `extend-exclude` keeps ruff's built-in excludes (.venv, .git, …) and adds ours.
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection markers are designed to be call expressions in
+# parameter defaults; they are effectively immutable, so B008 does not apply.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Header", "fastapi.Cookie", "fastapi.Body", "fastapi.Form", "fastapi.Security"]
+
+[tool.ruff.format]
+# Defaults.
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+# The pydantic plugin teaches mypy that BaseSettings fields are populated from
+# the environment (so they are not required __init__ args).
+plugins = ["pydantic.mypy"]
+files = ["src"]
+
+[[tool.mypy.overrides]]
+# These ship no complete type stubs.
+module = ["pythonjsonlogger.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+# Default (fast) run: unit + integration, excluding slow/e2e tiers.
+addopts = "-q --strict-markers -m 'not slow and not e2e'"
+markers = [
+    "slow: heavier tests excluded from the default fast run",
+    "integration: tests requiring the test database / wired app",
+    "e2e: end-to-end tests (Playwright-driven; run separately)",
+]
+
+[tool.coverage.run]
+source = ["inkstave"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# Non-aspirational gate satisfied by the current code; raised as coverage grows.
+fail_under = 80
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/inkstave"]
