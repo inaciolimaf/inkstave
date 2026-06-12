@@ -65,10 +65,17 @@ CI add it.
 
 ### 6. CI
 
-`.github/workflows/ci.yml` runs three **parallel** jobs — `backend` (Postgres 16
-service; `uv sync`; fast tier + coverage), `frontend` (pnpm install, typecheck,
-Vitest), `e2e` (Playwright chromium, smoke). Any failing tier fails the
-workflow.
+`.github/workflows/ci.yml` runs a **staged** job graph rather than three flat
+parallel jobs. `lint` and `typecheck` run independently (no shared artifact, so
+in parallel). The three test stages — `unit` (pytest unit subset + Vitest),
+`integration` (Postgres 16 service; pytest integration subset + coverage), and
+`e2e` (Playwright chromium smoke against docker-compose.test.yml) — each depend
+only on `typecheck`, so they fan out and run concurrently. Finally the `budget`
+gate depends on `[unit, integration, e2e]` and fails the build if their combined
+wall-clock exceeds the 120 s budget (reusing `scripts/check_test_budget.py`,
+which also scans the per-test JUnit durations the test stages upload). All pytest
+stages run under `-n auto` (pytest-xdist) to hold that budget. Any failing
+job fails the workflow.
 
 ## How the < 2-minute budget is maintained
 
@@ -91,6 +98,13 @@ workflow.
 | E2E (Playwright smoke) | 1 | ~2 s |
 
 Total well under the 2-minute budget, with ample headroom for feature tests.
+
+> **Note — this is a point-in-time spec-04 baseline** (37 backend tests), captured
+> at the moment the testing foundation was accepted. The suite has since grown by
+> orders of magnitude (hundreds of tests). The **current** suite size, per-tier
+> timings, and the pytest-xdist (`-n auto`) parallelisation strategy that keeps it
+> under budget are tracked in **ADR 0053 — Performance & test speed** (spec 53),
+> not here. The figures above are kept for history; do not read them as current.
 
 ## Consequences
 

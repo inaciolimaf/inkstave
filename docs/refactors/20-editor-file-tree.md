@@ -27,8 +27,8 @@ bug was found.
 | --- | --- | --- | --- | --- |
 | F-001 | `file-tree/tree-utils.ts` | dead code | **fixed** | Removed unused `listFolders` (+ its test) — left over from a "Move to…" picker that shipped as the "Move to root" action instead. |
 | F-002 | dashboard / tree / editor | accessibility | **fixed (test)** | Added `jest-axe` assertions: `ProjectsPage`, `FileTreePanel` (+ ARIA-tree check), and `EditorPane` (with a doc open, LaTeX-editor region) report **no serious/critical violations** (AC4). |
-| F-003 | dashboard rename, tree delete | correctness (test) | **fixed (test)** | Added optimistic-**rollback** regression tests: a failed rename reverts the name + error toast; a failed delete restores the node + error toast. (Surfaced the jsdom nuance that an open Radix dialog `aria-hidden`s the background — assert after closing it.) |
-| F-004 | autosave, DnD | correctness (test) | **fixed (test)** | Added: autosave flushes on `visibilitychange → hidden`; a folder dropped **onto itself** issues no move. |
+| F-003 | dashboard rename, tree delete | missing tests | **fixed (test)** | Closed a missing-tests gap with optimistic-**rollback** regression tests: a failed rename reverts the name + error toast; a failed delete restores the node + error toast. (Surfaced the jsdom nuance that an open Radix dialog `aria-hidden`s the background — assert after closing it.) |
+| F-004 | autosave, DnD | missing tests | **fixed (test)** | Closed a missing-tests gap: autosave flushes on `visibilitychange → hidden`; a folder dropped **onto itself** issues no move. |
 | F-005 | `FileTreeNode` re-renders | performance | **skipped** | Nodes consume context, so a context change re-renders all of them; `React.memo` wouldn't help and the cost is negligible for realistic project trees. Over-memoizing rejected per the spec. |
 | F-006 | `sortNodes` per render | performance | **skipped** | Re-sorting a folder's children each render is cheap; memoizing adds complexity for little value. |
 | F-007 | `autosave.lastSavedAt` | dead-ish | **skipped** | Returned but not yet shown (no "Saved 2m ago" UI). Kept: it's part of spec-19's documented `DocAutosaveState` and is harmless; a future indicator can use it. |
@@ -44,6 +44,10 @@ bug was found.
   file-tree delete-rollback + drop-onto-self; autosave visibility-flush.
 - **Dev dependency:** `jest-axe` (MIT) — runs only in the fast Vitest tier; no
   measurable budget impact.
+- **Dropped dev dependency:** `@axe-core/playwright` was listed in
+  `devDependencies` but never imported or used (no `AxeBuilder`/`@axe-core/playwright`
+  references in `e2e/` or `src/`). Accessibility checks run via `jest-axe` in the
+  Vitest tier (F-002), so the unused Playwright axe binding was removed.
 
 ## After
 

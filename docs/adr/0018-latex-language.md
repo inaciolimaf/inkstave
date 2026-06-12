@@ -52,11 +52,14 @@ Spec 19 flips these through the same configuration. The content region carries
 ### 4. Settings & theme
 
 Settings (`fontSize` 10–24 clamped, `lineWrapping`, `keymap`) persist in
-`localStorage` (app-wide). Only the **default** keymap ships this spec
-(`defaultKeymap` + `historyKeymap`); vim/emacs are intentionally omitted to avoid
-extra dependencies — the settings popover exposes **font size** and **line
-wrapping** (the live, user-facing ones). Dark mode follows the `dark` class on
-`<html>` (Tailwind convention) via a `MutationObserver`.
+`localStorage` (app-wide). The baseline keymap is the **default**
+(`defaultKeymap` + `historyKeymap`), and **vim and emacs keymaps also ship**:
+`features/editor/keymap-extension.ts` maps the user's `keymap` preference to the
+`@replit/codemirror-vim` / `@replit/codemirror-emacs` extensions (both MIT),
+layered ahead of the base keymap so they capture keys first. The settings popover
+exposes **font size** and **line wrapping** (the live, user-facing ones). Dark
+mode follows the `dark` class on `<html>` (Tailwind convention) via a
+`MutationObserver`.
 
 ### 5. IDE shell
 
@@ -69,7 +72,8 @@ persisting sizes. On narrow viewports the group switches to a **vertical
 
 - New deps (all MIT, pinned): `@codemirror/{state,view,language,commands}`,
   `@lezer/highlight`, `@codemirror/theme-one-dark`, `react-resizable-panels`,
-  `@radix-ui/react-popover`, `@radix-ui/react-switch`.
+  `@radix-ui/react-popover`, `@radix-ui/react-switch`,
+  `@replit/codemirror-vim`, `@replit/codemirror-emacs` (the vim/emacs keymaps).
 - Spec 19 makes the editor editable + wires autosave using the captured
   `version`; spec 24 fills the preview pane.
 - Tests: CM6 runs in jsdom (with small `Range`/`ResizeObserver`/`matchMedia`

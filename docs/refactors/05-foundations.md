@@ -24,22 +24,22 @@ Tooling run as part of analysis:
 
 ## Findings catalogue
 
-| id | area | category | severity | effort | risk_of_fix | decision | rationale |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F-001 | `app.py` lifespan | bug | low | low | low | **applied** | Redis pool leaked if DB wiring raised during startup; wrapped startup in try/finally so the pool is always disposed. |
-| F-002 | `app.py` lifespan | missing-test | med | low | low | **applied** | Lifespan open/dispose path was uncovered; added integration test (fake Redis + real test DB) incl. dispose-on-failure guard for F-001. |
-| F-003 | `db/session.py` | missing-test | med | low | low | **applied** | The real `get_db_session` was only exercised via a copied override; added tests driving the real dependency's commit/rollback/unavailable paths. |
-| F-004 | `db/engine.py` | missing-test | low | low | low | **applied** | `create_engine_and_sessionmaker` (incl. the missing-DSN `ValueError`) was uncovered; added a unit test. |
-| F-005 | `dependencies.py` | missing-test | low | low | low | **applied** | `get_redis` present/missing paths uncovered; added a unit test. |
-| F-006 | `exception_handlers.py` | missing-test | med | low | low | **applied** | The `DEBUG` branch (appends exception class to the 500 message) is security-relevant and was untested; added a test asserting the class name appears but the raised message text still never leaks. |
-| F-007 | `config.py` | missing-test | low | low | low | **applied** | Empty `CORS_ORIGINS` → `[]` branch was uncovered; added a unit test. |
-| F-008 | exceptions (`session.py`, `dependencies.py`) | smell | low | low | low | **skipped** | Ad-hoc `EM101`/`TRY003`/`TRY300` (string literal in `raise`, long message, `else`-after-`return`). Opinionated rules deliberately not enabled; the messages are short and idiomatic. Enabling them would add boilerplate locals for no real gain. |
-| F-009 | `app.py` CORS | security | low | med | med | **skipped** | `allow_methods/headers=["*"]` with `allow_credentials=True`. Origins are an explicit allowlist (not `*`), so Starlette echoes safely — not a vulnerability. Broader security-header hardening is owned by spec 52. |
-| F-010 | backend `src` | dead-code | — | — | — | **none found** | `mypy --warn-unreachable` and `ruff` unused-symbol rules reported nothing. |
-| F-011 | runtime deps | security | — | — | — | **none found** | `pip-audit` reported no known vulnerabilities. |
-| F-012 | `main.py` | missing-test | low | low | low | **skipped** | The uvicorn entrypoint (`app = create_app()`) is trivial and already exercised by the uvicorn smoke; a dedicated test adds noise, not value. |
-| F-013 | `middleware.py` | missing-test | low | low | low | **skipped** | The non-HTTP scope passthrough (lines 34–35) only matters for WebSockets/lifespan scopes, which arrive with the realtime specs (28+). Deferred to when there is a real WebSocket to exercise it. |
-| F-014 | repo root | security | low | low | low | **no action** | Confirmed `.env` is git-ignored and not tracked; no hard-coded secrets in `src`. |
+| id | area | category | severity | effort | risk_of_fix | commit | decision | rationale |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| F-001 | `app.py` lifespan | bug | low | low | low | — | **applied** | Redis pool leaked if DB wiring raised during startup; wrapped startup in try/finally so the pool is always disposed. |
+| F-002 | `app.py` lifespan | missing-test | med | low | low | — | **applied** | Lifespan open/dispose path was uncovered; added integration test (fake Redis + real test DB) incl. dispose-on-failure guard for F-001. |
+| F-003 | `db/session.py` | missing-test | med | low | low | — | **applied** | The real `get_db_session` was only exercised via a copied override; added tests driving the real dependency's commit/rollback/unavailable paths. |
+| F-004 | `db/engine.py` | missing-test | low | low | low | — | **applied** | `create_engine_and_sessionmaker` (incl. the missing-DSN `ValueError`) was uncovered; added a unit test. |
+| F-005 | `dependencies.py` | missing-test | low | low | low | — | **applied** | `get_redis` present/missing paths uncovered; added a unit test. |
+| F-006 | `exception_handlers.py` | missing-test | med | low | low | — | **applied** | The `DEBUG` branch (appends exception class to the 500 message) is security-relevant and was untested; added a test asserting the class name appears but the raised message text still never leaks. |
+| F-007 | `config.py` | missing-test | low | low | low | — | **applied** | Empty `CORS_ORIGINS` → `[]` branch was uncovered; added a unit test. |
+| F-008 | exceptions (`session.py`, `dependencies.py`) | smell | low | low | low | — | **skipped** | Ad-hoc `EM101`/`TRY003`/`TRY300` (string literal in `raise`, long message, `else`-after-`return`). Opinionated rules deliberately not enabled; the messages are short and idiomatic. Enabling them would add boilerplate locals for no real gain. |
+| F-009 | `app.py` CORS | security | low | med | med | — | **skipped** | `allow_methods/headers=["*"]` with `allow_credentials=True`. Origins are an explicit allowlist (not `*`), so Starlette echoes safely — not a vulnerability. Broader security-header hardening is owned by spec 52. |
+| F-010 | backend `src` | dead-code | — | — | — | — | **none found** | `mypy --warn-unreachable` and `ruff` unused-symbol rules reported nothing. |
+| F-011 | runtime deps | security | — | — | — | — | **none found** | `pip-audit` reported no known vulnerabilities. |
+| F-012 | `main.py` | missing-test | low | low | low | — | **skipped** | The uvicorn entrypoint (`app = create_app()`) is trivial and already exercised by the uvicorn smoke; a dedicated test adds noise, not value. |
+| F-013 | `middleware.py` | missing-test | low | low | low | — | **skipped** | The non-HTTP scope passthrough (lines 34–35) only matters for WebSockets/lifespan scopes, which arrive with the realtime specs (28+). Deferred to when there is a real WebSocket to exercise it. |
+| F-014 | repo root | security | low | low | low | — | **no action** | Confirmed `.env` is git-ignored and not tracked; no hard-coded secrets in `src`. |
 
 ## Applied fixes — before/after
 
