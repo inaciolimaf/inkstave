@@ -11,6 +11,11 @@ proto.setPointerCapture ??= () => {};
 proto.releasePointerCapture ??= () => {};
 proto.scrollIntoView ??= () => {};
 
+// jsdom has no canvas 2d context; the PDF.js viewer guards on a null context,
+// but jsdom's getContext throws + logs. Return null quietly instead.
+const canvasProto = window.HTMLCanvasElement.prototype as unknown as Record<string, unknown>;
+canvasProto.getContext = () => null;
+
 // jsdom lacks Range geometry that CodeMirror's measuring touches.
 const rangeProto = window.Range.prototype as unknown as Record<string, unknown>;
 rangeProto.getClientRects = () => ({ length: 0, item: () => null }) as unknown as DOMRectList;
