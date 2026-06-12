@@ -1,51 +1,48 @@
+/**
+ * Journey 1 — Auth (spec 54 §5.3). Real-stack: register a brand-new user through
+ * the UI, land authenticated, log out, log back in; protected routes require auth.
+ *
+ * This is the one spec that drives register/login through the UI, so it starts
+ * from a clean (unauthenticated) browser rather than the shared storage-state.
+ */
+// Uses the *base* test (no auto-auth fixture): the auth journey must start from a
+// clean, unauthenticated browser and drive register/login through the UI itself.
 import { expect, test } from "@playwright/test";
 
-const USER = {
-  id: "u1",
-  email: "e2e@example.com",
-  display_name: "E2E User",
-  is_admin: false,
-  email_confirmed: false,
-  created_at: "2026-01-01T00:00:00Z",
-};
-const PAIR = { access_token: "AT", refresh_token: "RT", token_type: "bearer", expires_in: 900 };
+import { uniqueId } from "./support/api";
+import { E2E_PASSWORD } from "./support/env";
+import { DashboardPage, LoginPage } from "./support/pages";
 
-function json(body: unknown, status = 200) {
-  return { status, contentType: "application/json", body: JSON.stringify(body) };
-}
+test("register → land authenticated → log out → log back in @smoke", async ({ page }) => {
+  const email = `${uniqueId("auth")}@example.com`;
+  const login = new LoginPage(page);
+  const dashboard = new DashboardPage(page);
 
-test("register, log in, see home, and log out", async ({ page }) => {
-  await page.route("**/api/v1/auth/register", (route) => route.fulfill(json(USER, 201)));
-  await page.route("**/api/v1/auth/login", (route) => route.fulfill(json(PAIR)));
-  await page.route("**/api/v1/users/me", (route) => route.fulfill(json(USER)));
-  await page.route("**/api/v1/auth/logout", (route) =>
-    route.fulfill(json({ detail: "Logged out." })),
-  );
-  await page.route("**/api/v1/projects**", (route) => route.fulfill(json({ items: [], total: 0 })));
-
-  // Unauthenticated visit to "/" is bounced to /login.
+  // Protected route bounces to /login when unauthenticated.
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
 
-  // Register.
-  await page.getByRole("link", { name: /create one/i }).click();
+  // Register via the UI → redirected to login with a confirmation.
+  await login.gotoRegister();
   await expect(page).toHaveURL(/\/register$/);
-  await page.getByLabel("Display name").fill("E2E User");
-  await page.getByLabel("Email").fill("e2e@example.com");
-  await page.getByLabel("Password", { exact: true }).fill("secret123");
-  await page.getByLabel("Confirm password").fill("secret123");
-  await page.getByRole("button", { name: /create account/i }).click();
+  await login.register("E2E User", email, E2E_PASSWORD);
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByText(/account created/i)).toBeVisible();
 
-  // Log in -> land on the protected projects dashboard.
-  await page.getByLabel("Email").fill("e2e@example.com");
-  await page.getByLabel("Password", { exact: true }).fill("secret123");
-  await page.getByRole("button", { name: /sign in/i }).click();
+  // Log in → the protected dashboard.
+  await login.login(email, E2E_PASSWORD);
   await expect(page).toHaveURL(/\/projects$/);
-  await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
+  await expect(dashboard.heading()).toBeVisible();
 
-  // Log out -> back to /login.
-  await page.getByRole("button", { name: /log out/i }).click();
+  // Log out → back to the public login page.
+  await dashboard.logout();
   await expect(page).toHaveURL(/\/login$/);
+
+  // Protected route still requires auth after logout.
+  await page.goto("/projects");
+  await expect(page).toHaveURL(/\/login$/);
+
+  // Log back in → dashboard again.
+  await login.login(email, E2E_PASSWORD);
+  await expect(dashboard.heading()).toBeVisible();
 });

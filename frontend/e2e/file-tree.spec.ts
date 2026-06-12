@@ -1,201 +1,82 @@
-import { expect, test } from "@playwright/test";
+/**
+ * File-tree flow (spec 17 §8). Exactly one Playwright spec covering the full
+ * file-tree journey against the seeded project:
+ *   create folder → create a doc inside it → rename the doc → move it to root →
+ *   upload a small binary file → delete the folder.
+ * The tree state is asserted after each step.
+ *
+ * Notes:
+ *  - The tree uses native HTML5 drag-and-drop, which Playwright's synthetic
+ *    pointer events drive unreliably (the browser's DnD threshold + dataTransfer
+ *    are not simulated). The "Move to root" row action invokes the *same*
+ *    `doMove(node, root)` code path a drop-on-root triggers, so we exercise the
+ *    move-to-root behaviour through it for a stable assertion.
+ *  - The upload uses a tiny in-memory binary via `setInputFiles` so it stays fast.
+ */
+import { test, expect } from "./support/fixtures";
+import { EditorPage } from "./support/pages";
 
-const USER = {
-  id: "u1",
-  email: "e2e@example.com",
-  display_name: "E2E User",
-  is_admin: false,
-  email_confirmed: false,
-  created_at: "2026-01-01T00:00:00Z",
-};
-const PAIR = { access_token: "AT", refresh_token: "RT", token_type: "bearer", expires_in: 900 };
+test("create folder, add+rename a doc, move it to root, upload a binary, delete the folder @smoke", async ({
+  page,
+  seedProject,
+}) => {
+  const { projectId } = await seedProject();
+  const editor = new EditorPage(page);
+  await editor.open(projectId);
 
-interface WE {
-  id: string;
-  project_id: string;
-  parent_id: string | null;
-  type: "folder" | "doc" | "file";
-  name: string;
-  is_root: boolean;
-  path: string;
-}
+  const tree = page.getByRole("tree", { name: "Project files" });
+  await expect(tree).toBeVisible();
 
-function json(body: unknown, status = 200) {
-  return { status, contentType: "application/json", body: JSON.stringify(body) };
-}
-
-function buildTree(entities: WE[]): unknown {
-  const build = (n: WE): unknown => ({
-    ...n,
-    children: entities.filter((e) => e.parent_id === n.id).map(build),
-  });
-  return build(entities.find((e) => e.is_root)!);
-}
-
-test("file tree: create folder + doc, rename, move, upload, delete", async ({ page }) => {
-  let entities: WE[] = [
-    {
-      id: "root",
-      project_id: "p1",
-      parent_id: null,
-      type: "folder",
-      name: "root",
-      is_root: true,
-      path: "",
-    },
-    {
-      id: "main",
-      project_id: "p1",
-      parent_id: "root",
-      type: "doc",
-      name: "main.tex",
-      is_root: false,
-      path: "main.tex",
-    },
-  ];
-  let counter = 0;
-
-  await page.route("**/api/v1/auth/login", (r) => r.fulfill(json(PAIR)));
-  await page.route("**/api/v1/users/me", (r) => r.fulfill(json(USER)));
-
-  await page.route("**/api/v1/projects**", async (route) => {
-    const req = route.request();
-    const method = req.method();
-    const path = new URL(req.url()).pathname;
-
-    if (path === "/api/v1/projects" && method === "GET") {
-      return route.fulfill(
-        json({
-          items: [
-            {
-              id: "p1",
-              name: "Paper",
-              owner_id: "u1",
-              root_doc_id: null,
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-01T00:00:00Z",
-            },
-          ],
-          total: 1,
-        }),
-      );
-    }
-    if (path === "/api/v1/projects/p1" && method === "GET") {
-      return route.fulfill(
-        json({
-          id: "p1",
-          name: "Paper",
-          owner_id: "u1",
-          root_doc_id: null,
-          created_at: "2026-01-01T00:00:00Z",
-          updated_at: "2026-01-01T00:00:00Z",
-        }),
-      );
-    }
-    if (path === "/api/v1/projects/p1/tree" && method === "GET") {
-      return route.fulfill(json({ root: buildTree(entities) }));
-    }
-    if (path === "/api/v1/projects/p1/tree/entities" && method === "POST") {
-      const body = req.postDataJSON() as {
-        type: WE["type"];
-        name: string;
-        parent_id: string | null;
-      };
-      const ent: WE = {
-        id: `e${++counter}`,
-        project_id: "p1",
-        parent_id: body.parent_id ?? "root",
-        type: body.type,
-        name: body.name,
-        is_root: false,
-        path: body.name,
-      };
-      entities.push(ent);
-      return route.fulfill(json(ent, 201));
-    }
-    const rn = path.match(/\/tree\/entities\/([^/]+)\/rename$/);
-    if (rn && method === "PATCH") {
-      const body = req.postDataJSON() as { name: string };
-      entities = entities.map((e) => (e.id === rn[1] ? { ...e, name: body.name } : e));
-      return route.fulfill(json(entities.find((e) => e.id === rn[1])));
-    }
-    const mv = path.match(/\/tree\/entities\/([^/]+)\/move$/);
-    if (mv && method === "PATCH") {
-      const body = req.postDataJSON() as { new_parent_id: string };
-      entities = entities.map((e) =>
-        e.id === mv[1] ? { ...e, parent_id: body.new_parent_id } : e,
-      );
-      return route.fulfill(json(entities.find((e) => e.id === mv[1])));
-    }
-    if (path === "/api/v1/projects/p1/files" && method === "POST") {
-      const ent: WE = {
-        id: `f${++counter}`,
-        project_id: "p1",
-        parent_id: "root",
-        type: "file",
-        name: "pic.png",
-        is_root: false,
-        path: "pic.png",
-      };
-      entities.push(ent);
-      return route.fulfill(json(ent, 201));
-    }
-    const del = path.match(/\/tree\/entities\/([^/]+)$/);
-    if (del && method === "DELETE") {
-      entities = entities.filter((e) => e.id !== del[1] && e.parent_id !== del[1]);
-      return route.fulfill({ status: 204, body: "" });
-    }
-    return route.fulfill(json({ detail: "nf" }, 404));
-  });
-
-  // Log in and open the project.
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("e2e@example.com");
-  await page.getByLabel("Password", { exact: true }).fill("secret123");
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await page.getByRole("link", { name: "Paper" }).click();
-  await expect(page).toHaveURL(/\/projects\/p1$/);
-  await expect(page.getByRole("treeitem", { name: /main\.tex/ })).toBeVisible();
-
-  // Create a folder.
+  // 1) Create a folder.
   await page.getByRole("button", { name: "New folder" }).click();
-  await page.getByLabel("Name").fill("chapters");
-  await page.getByRole("button", { name: "Create" }).click();
-  const folderRow = page.getByRole("treeitem", { name: /chapters/ });
-  await expect(folderRow).toBeVisible();
+  const newFolderDialog = page.getByRole("dialog");
+  await newFolderDialog.getByLabel("Name").fill("chapters");
+  await newFolderDialog.getByRole("button", { name: "Create" }).click();
+  await expect(tree.getByText("chapters", { exact: true })).toBeVisible();
 
-  // Create a doc inside the folder via its row menu.
-  await folderRow.getByRole("button", { name: "Actions for chapters" }).click();
-  await page.getByRole("menuitem", { name: "New file" }).click();
-  await page.getByLabel("Name").fill("intro.tex");
-  await page.getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("treeitem", { name: /intro\.tex/ })).toBeVisible();
+  // 2) Create a doc *inside* that folder (select the folder first so it's the parent).
+  await tree.getByText("chapters", { exact: true }).click();
+  await page.getByRole("button", { name: "New file" }).first().click();
+  const newFileDialog = page.getByRole("dialog");
+  await newFileDialog.getByLabel("Name").fill("intro.tex");
+  await newFileDialog.getByRole("button", { name: "Create" }).click();
+  await expect(tree.getByText("intro.tex", { exact: true })).toBeVisible();
 
-  // Rename it.
-  const docRow = page.getByRole("treeitem", { name: /intro\.tex/ });
-  await docRow.getByRole("button", { name: "Actions for intro.tex" }).click();
+  // 3) Rename the doc via its row actions menu → inline input → Enter.
+  await tree.getByRole("button", { name: "Actions for intro.tex" }).click();
   await page.getByRole("menuitem", { name: "Rename" }).click();
-  await page.getByLabel("New name").fill("introduction.tex");
-  await page.getByLabel("New name").press("Enter");
-  await expect(page.getByRole("treeitem", { name: /introduction\.tex/ })).toBeVisible();
+  const renameInput = page.getByLabel("New name");
+  await renameInput.fill("chapter1.tex");
+  await renameInput.press("Enter");
+  await expect(tree.getByText("chapter1.tex", { exact: true })).toBeVisible();
+  await expect(tree.getByText("intro.tex", { exact: true })).toHaveCount(0);
 
-  // Move it to root.
-  const renamed = page.getByRole("treeitem", { name: /introduction\.tex/ });
-  await renamed.getByRole("button", { name: "Actions for introduction.tex" }).click();
+  // 4) Move the doc to the root (same code path as drag-to-root; see file header).
+  await tree.getByRole("button", { name: "Actions for chapter1.tex" }).click();
   await page.getByRole("menuitem", { name: "Move to root" }).click();
-  await expect(page.getByText("Moved")).toBeVisible();
+  // It now sits at the root: its row is no longer nested under the "chapters" group.
+  const movedRow = tree.getByRole("treeitem").filter({ hasText: "chapter1.tex" });
+  await expect(movedRow).toHaveAttribute("aria-level", "1");
 
-  // Upload a small binary into the tree.
+  // 5) Upload a small binary file via the hidden file input.
+  const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01]);
   await page.locator('input[type="file"]').setInputFiles({
-    name: "pic.png",
+    name: "logo.png",
     mimeType: "image/png",
-    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    buffer: pngBytes,
   });
-  await expect(page.getByRole("treeitem", { name: /pic\.png/ })).toBeVisible();
+  await expect(page.getByText("Done", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(tree.getByText("logo.png", { exact: true })).toBeVisible();
 
-  // Delete the folder.
-  await folderRow.getByRole("button", { name: "Actions for chapters" }).click();
+  // 6) Delete the (now-empty) folder and confirm.
+  await tree.getByRole("button", { name: "Actions for chapters" }).click();
   await page.getByRole("menuitem", { name: "Delete" }).click();
-  await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("treeitem", { name: /chapters/ })).toHaveCount(0);
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toContainText("chapters");
+  await confirm.getByRole("button", { name: "Delete" }).click();
+  await expect(tree.getByText("chapters", { exact: true })).toHaveCount(0);
+
+  // The moved doc and uploaded file remain at the root.
+  await expect(tree.getByText("chapter1.tex", { exact: true })).toBeVisible();
+  await expect(tree.getByText("logo.png", { exact: true })).toBeVisible();
 });

@@ -1,97 +1,129 @@
-import { expect, test } from "@playwright/test";
+/**
+ * Journey 3 — Files & editing (spec 54 §5.3). Open a project, create a new
+ * `.tex` file in the tree, open it, type LaTeX, and confirm it persists across a
+ * reload. The editor runs in live-CRDT mode (collab enabled), so persistence is
+ * asserted by reload rather than a REST "Saved" badge.
+ */
+import { ApiClient } from "./support/api";
+import { injectAuth } from "./support/auth";
+import { test, expect } from "./support/fixtures";
+import { EditorPage } from "./support/pages";
 
-const USER = {
-  id: "u1",
-  email: "e2e@example.com",
-  display_name: "E2E User",
-  is_admin: false,
-  email_confirmed: false,
-  created_at: "2026-01-01T00:00:00Z",
-};
-const PAIR = { access_token: "AT", refresh_token: "RT", token_type: "bearer", expires_in: 900 };
-const PROJECT = {
-  id: "p1",
-  name: "Paper",
-  owner_id: "u1",
-  root_doc_id: null,
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
-};
-const TREE = {
-  root: {
-    id: "root",
-    project_id: "p1",
-    parent_id: null,
-    type: "folder",
-    name: "root",
-    is_root: true,
-    path: "",
-    children: [
-      {
-        id: "main",
-        project_id: "p1",
-        parent_id: "root",
-        type: "doc",
-        name: "main.tex",
-        is_root: false,
-        path: "main.tex",
-        children: null,
-      },
-    ],
-  },
-};
-const CONTENT = "\\documentclass{article}\n\\begin{document}\nHello world\n\\end{document}";
+test("create a .tex file, edit it, and the content survives a reload @smoke", async ({
+  page,
+  seedProject,
+}) => {
+  const { projectId } = await seedProject();
+  const editor = new EditorPage(page);
+  await editor.open(projectId);
 
-function json(body: unknown, status = 200) {
-  return { status, contentType: "application/json", body: JSON.stringify(body) };
-}
+  // Create a new file via the tree; it appears in the tree.
+  await editor.createFile("chapter.tex");
+  await expect(page.getByText("chapter.tex", { exact: true })).toBeVisible();
 
-test("editor: open a doc, see highlighting, read-only, change font size", async ({ page }) => {
-  await page.route("**/api/v1/auth/login", (r) => r.fulfill(json(PAIR)));
-  await page.route("**/api/v1/users/me", (r) => r.fulfill(json(USER)));
-  await page.route("**/api/v1/projects**", (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === "/api/v1/projects") return route.fulfill(json({ items: [PROJECT], total: 1 }));
-    if (path === "/api/v1/projects/p1") return route.fulfill(json(PROJECT));
-    if (path === "/api/v1/projects/p1/tree") return route.fulfill(json(TREE));
-    if (path === "/api/v1/projects/p1/documents/main") {
-      return route.fulfill(
-        json({
-          entity_id: "main",
-          project_id: "p1",
-          version: 1,
-          size_bytes: CONTENT.length,
-          content: CONTENT,
-          updated_at: "2026-01-01T00:00:00Z",
-        }),
-      );
-    }
-    return route.fulfill(json({ detail: "nf" }, 404));
-  });
+  // Open it and wait for the live editor to become editable, then type.
+  await editor.openFile("chapter.tex");
+  await editor.waitEditable();
+  await editor.type("\\section{Methods}");
+  await expect(editor.content()).toContainText("\\section{Methods}");
 
-  // Log in and open the project.
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("e2e@example.com");
-  await page.getByLabel("Password", { exact: true }).fill("secret123");
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await page.getByRole("link", { name: "Paper" }).click();
+  // Reload → reopen the file → the edit persisted (CRDT state durable server-side).
+  await page.reload();
+  await editor.openFile("chapter.tex");
+  await expect(editor.content()).toContainText("\\section{Methods}");
+});
 
-  // Open main.tex in the editor.
-  await page.getByText("main.tex").click();
-  const content = page.locator(".cm-content");
-  await expect(content).toContainText("documentclass");
-  await expect(page.locator(".cm-gutters")).toBeVisible();
-  await expect(page.locator(".cm-lineNumbers")).toContainText("1");
-  // Highlighting: at least one token span rendered.
-  expect(await page.locator(".cm-line span").count()).toBeGreaterThan(0);
-  // The editor is editable (spec 19); a save-status badge is shown.
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+/**
+ * Spec 18 §8 — read-only viewing + in-editor font size. A viewer opens a seeded
+ * document: line numbers and syntax highlighting render, typing does NOT change
+ * the content (read-only), and increasing the font size in the in-editor settings
+ * popover changes the editor's computed font-size.
+ */
+test("read-only viewer sees highlighting + line numbers and can resize the font @smoke", async ({
+  browser,
+  apiA,
+  runContext,
+  seedProject,
+}) => {
+  const { projectId } = await seedProject();
+  // Share the project with User B as a VIEWER so the editor mounts read-only.
+  const viewer = new ApiClient();
+  await viewer.login(runContext.userB.email);
+  const invite = await apiA.invite(projectId, runContext.userB.email, "viewer");
+  await viewer.acceptInvite(invite.token);
 
-  // Change the font size; it applies live to the editor.
-  await page.getByRole("button", { name: "Editor settings" }).click();
-  await page.getByRole("combobox", { name: "Font size" }).click();
-  await page.getByRole("option", { name: "20px" }).click();
+  const ctx = await browser.newContext();
+  await injectAuth(ctx, runContext.userB.email);
+  const page = await ctx.newPage();
+  const editor = new EditorPage(page);
+  await editor.open(projectId);
+  await editor.openFile("main.tex");
+
+  // The viewer's editor mounts read-only: content is not contenteditable.
+  const readOnlyContent = page.locator(".cm-content[contenteditable='false']");
+  await expect(readOnlyContent).toBeVisible({ timeout: 20_000 });
+  await expect(editor.content()).toContainText("\\section{Introduction}");
+
+  // Line numbers (lineNumbers gutter) and syntax-highlight token spans both render.
+  expect(await editor.lineNumbers().count()).toBeGreaterThan(0);
+  expect(await editor.tokenSpans().count()).toBeGreaterThan(0);
+
+  // Typing into a read-only editor does not change its content.
+  const before = await editor.content().innerText();
+  await editor.content().click();
+  await page.keyboard.type("SHOULD-NOT-APPEAR");
+  await expect(editor.content()).not.toContainText("SHOULD-NOT-APPEAR");
+  expect(await editor.content().innerText()).toBe(before);
+
+  // Increase the font size via the in-editor settings popover → computed font-size grows.
+  const fontBefore = await editor
+    .editorRoot()
+    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  await editor.openSettings();
+  await editor.setFontSize(24);
   await expect
-    .poll(() => page.locator(".cm-editor").evaluate((el) => getComputedStyle(el).fontSize))
-    .toBe("20px");
+    .poll(() => editor.editorRoot().evaluate((el) => parseFloat(getComputedStyle(el).fontSize)))
+    .toBe(24);
+  expect(24).toBeGreaterThan(fontBefore);
+
+  await ctx.close();
+});
+
+/**
+ * Spec 19 §8 — REST autosave: edit a seeded doc, see "Saving…" then "Saved", reload,
+ * and the edit persisted. The REST save-status badge (`SaveStatusIndicator`) only
+ * mounts when live collaboration is OFF for the document; the e2e bundle is built
+ * with collab enabled (so docs use the CRDT editor and persist by reload, covered
+ * above). This test exercises the REST autosave path when it is available, so it
+ * stays meaningful in a collab-disabled build and is skipped otherwise.
+ */
+test("REST autosave shows Saving… then Saved and the edit survives a reload @smoke", async ({
+  page,
+  seedProject,
+}) => {
+  const { projectId } = await seedProject();
+  const editor = new EditorPage(page);
+  await editor.open(projectId);
+  await editor.openFile("main.tex");
+
+  // The REST save-status region only renders in non-collab/REST mode.
+  const restMode = await editor
+    .saveStatus()
+    .isVisible()
+    .catch(() => false);
+  test.skip(
+    !restMode,
+    "REST autosave badge is only mounted when live collaboration is disabled (the e2e bundle builds with collab enabled).",
+  );
+
+  // Edit → the autosave badge transitions Saving… → Saved. The "clean" badge can
+  // read "Saved" or a relative "Saved Xs ago", so assert on the save-status region.
+  await editor.type("\\section{REST Autosave}");
+  await expect(editor.savingBadge()).toBeVisible({ timeout: 10_000 });
+  await expect(editor.saveStatus()).toContainText(/Saved/, { timeout: 15_000 });
+
+  // Reload → reopen → the REST-saved edit persisted.
+  await page.reload();
+  await editor.openFile("main.tex");
+  await expect(editor.content()).toContainText("\\section{REST Autosave}");
 });
