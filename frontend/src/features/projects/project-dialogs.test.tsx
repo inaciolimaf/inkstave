@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithProviders } from "@/test/utils";
 
-import { CreateProjectDialog, DeleteProjectDialog } from "./project-dialogs";
+import { CreateProjectDialog, DeleteProjectDialog, RenameProjectDialog } from "./project-dialogs";
 import type { Project } from "./types";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
@@ -56,6 +56,31 @@ describe("CreateProjectDialog", () => {
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Hello" });
     expect(toast.success).toHaveBeenCalledWith("Project created");
+  });
+});
+
+describe("RenameProjectDialog", () => {
+  it("pre-fills the input with the current project name on open", async () => {
+    renderWithProviders(<RenameProjectDialog open onOpenChange={vi.fn()} project={project} />);
+    expect(await screen.findByDisplayValue("Existing")).toBeInTheDocument();
+  });
+
+  it("cancels on Esc without renaming", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const onOpenChange = vi.fn();
+    renderWithProviders(<RenameProjectDialog open onOpenChange={onOpenChange} project={project} />);
+
+    await screen.findByDisplayValue("Existing");
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("uses the rename title and a Save confirm button", async () => {
+    renderWithProviders(<RenameProjectDialog open onOpenChange={vi.fn()} project={project} />);
+    expect(await screen.findByRole("heading", { name: "Rename project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 });
 

@@ -204,4 +204,29 @@ describe("ProjectsPage", () => {
     await hasLink("Alpha");
     expect(screen.queryAllByRole("link", { name: "Renamed" })).toHaveLength(0);
   });
+
+  it("rolls back an optimistic delete when the request fails", async () => {
+    // GET succeeds (stable), DELETE fails -> the project must reappear.
+    const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const path = new URL(String(input), "http://localhost").pathname;
+      const method = init?.method ?? "GET";
+      if (path === "/api/v1/projects" && method === "GET") {
+        return json({ items: [wire("1", "Alpha"), wire("2", "Beta")], total: 2 }, 200);
+      }
+      if (method === "DELETE") return json({ error: { type: "server_error" } }, 500);
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderPage();
+    await hasLink("Alpha");
+
+    await openRowMenu("Alpha");
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    // An error toast is requested and the optimistically-removed project reappears.
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Could not delete project"));
+    await hasLink("Alpha");
+    await hasLink("Beta");
+  });
 });
