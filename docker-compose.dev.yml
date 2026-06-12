@@ -39,6 +39,16 @@ x-backend-env: &backend-env
   FILE_STORAGE_LOCAL_PATH: /data/files
   TECTONIC_CACHE_DIR: /var/cache/tectonic
   COMPILE_WORKDIR_ROOT: /tmp/inkstave-compiles
+  # Email → Mailpit (captured locally; view every outgoing email at http://localhost:8025).
+  # Reaches Mailpit via host.docker.internal + its published 1025 port, consistent
+  # with the DB/Redis DNS-avoidance above. On a host with healthy Docker DNS you can
+  # switch SMTP_HOST to `mailpit` (the service name).
+  EMAIL_BACKEND: smtp
+  SMTP_HOST: host.docker.internal
+  SMTP_PORT: "1025"
+  SMTP_USER: ""
+  SMTP_PASSWORD: ""
+  SMTP_USE_TLS: "false"
 
 # Source mounts shared by backend + worker (live code → reload).
 x-backend-volumes: &backend-volumes
@@ -81,11 +91,32 @@ services:
       timeout: 5s
       retries: 10
 
+  # Local email inbox (dev only — never in docker-compose.prod.yml). Captures every
+  # email the worker sends over SMTP; browse them at http://localhost:8025 (`just mail`).
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI  → http://localhost:8025
+      - "1025:1025" # SMTP    → senders deliver here
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   backend:
     image: inkstave-backend
     build:
       context: .
       dockerfile: backend/Dockerfile
+      # Build on the host network so the Tectonic cache-warmup step can reach its
+      # IPv6-advertising CDN — the default build bridge has no IPv6 route and the
+      # warmup would abort with "couldn't get it from the internet".
+      network: host
     # Auto-recover from a transient startup hiccup (e.g. a brief DNS race while the
     # frontend is busy installing deps on first boot — the migration step would
     # otherwise fail hard and exit).
@@ -121,6 +152,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   worker:
     image: inkstave-backend
@@ -141,6 +174,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   frontend:
     image: node:20-alpine

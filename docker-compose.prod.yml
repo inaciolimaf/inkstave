@@ -56,6 +56,10 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      # Build on the host network so the Tectonic cache-warmup step can reach its
+      # IPv6-advertising CDN — the default build bridge has no IPv6 route and the
+      # warmup would abort with "couldn't get it from the internet".
+      network: host
     restart: unless-stopped
     env_file: .env
     environment: *backend-env
