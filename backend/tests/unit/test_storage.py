@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 import pytest
 from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from inkstave.config import Settings
+from inkstave.services.file_service import FileTooLargeError
 from inkstave.storage.base import ObjectNotFoundError
 from inkstave.storage.factory import get_object_store
 from inkstave.storage.local import LocalObjectStore
@@ -71,6 +75,84 @@ async def test_objectstore_get_streams(local_store: LocalObjectStore) -> None:
     await local_store.put("k", b"streamed")
     stream = await local_store.get("k")
     assert await _collect(stream) == b"streamed"
+
+
+# --- streaming hash/size/limit helper + atomic write (spec 14 §8) ----------- #
+
+
+def _streaming_hash_size_limit(chunks: list[bytes], *, limit: int):
+    """Mirror of the upload streaming pipeline (file_service.upload_file): count
+    bytes, hash with sha256, and raise ``FileTooLargeError`` once the running
+    size exceeds ``limit``. Returns an async generator yielding the chunks plus a
+    ``state`` dict that exposes the final size/hex once fully consumed.
+    """
+    state: dict[str, Any] = {"size": 0, "hex": None}
+    hasher = hashlib.sha256()
+
+    async def gen() -> AsyncIterator[bytes]:
+        for chunk in chunks:
+            state["size"] += len(chunk)
+            if state["size"] > limit:
+                raise FileTooLargeError()
+            hasher.update(chunk)
+            yield chunk
+        state["hex"] = hasher.hexdigest()
+
+    return gen(), state
+
+
+async def test_streaming_helper_counts_bytes_and_hashes_multichunk(
+    local_store: LocalObjectStore,
+) -> None:
+    chunks = [b"the quick ", b"brown fox ", b"jumps over"]  # multi-chunk input
+    joined = b"".join(chunks)
+    stream, state = _streaming_hash_size_limit(chunks, limit=1024)
+
+    # Drive the stream through LocalObjectStore.put (which counts bytes itself).
+    stat = await local_store.put("k", stream)
+
+    assert stat.size == len(joined)  # store-side byte count
+    assert state["size"] == len(joined)  # helper-side byte count
+    assert state["hex"] == hashlib.sha256(joined).hexdigest()  # matches reference
+    _, read_back = await local_store.open("k")
+    assert await _collect(read_back) == joined
+
+
+async def test_streaming_helper_aborts_past_limit(local_store: LocalObjectStore) -> None:
+    chunks = [b"0123456789", b"0123456789", b"0123456789"]  # 30 bytes total
+    stream, _state = _streaming_hash_size_limit(chunks, limit=15)
+    with pytest.raises(FileTooLargeError):
+        await local_store.put("k", stream)
+    # The aborted write left no committed object behind (temp cleaned up).
+    assert await local_store.exists("k") is False
+
+
+async def test_local_put_writes_temp_then_replaces_atomically(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    store = LocalObjectStore(tmp_path, 8)
+    observed: dict[str, Any] = {}
+    real_replace = os.replace
+
+    def spy_replace(src: Any, dst: Any) -> None:
+        # A distinct temp file (not the final path) must exist before the replace.
+        src_path = Path(src)
+        observed["src_was_temp"] = ".tmp-" in src_path.name
+        observed["temp_existed"] = src_path.exists()
+        observed["dst_missing_before"] = not Path(dst).exists()
+        observed["called"] = True
+        real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", spy_replace)
+
+    await store.put("projects/p/files/f", b"atomic payload", content_type="text/plain")
+
+    assert observed["called"] is True
+    assert observed["src_was_temp"] is True
+    assert observed["temp_existed"] is True
+    assert observed["dst_missing_before"] is True
+    # The final object exists after the atomic replace.
+    assert await store.exists("projects/p/files/f")
 
 
 # --- factory + settings validation ------------------------------------------ #

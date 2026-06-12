@@ -24,11 +24,18 @@ def test_parse_rate_limit() -> None:
     assert parse_rate_limit("10/300") == (10, 300)
 
 
-def test_client_ip_prefers_trusted_proxy_header() -> None:
-    settings = _settings()
-    req = _request(headers={"X-Forwarded-For": "9.9.9.9, 1.1.1.1"})
-    assert client_ip(req, settings) == "9.9.9.9"
-    assert client_ip(_request(host="5.5.5.5"), settings) == "5.5.5.5"
+def test_client_ip_uses_proxy_header_only_when_trusted() -> None:
+    # Spec 55: the forwarded header is honoured ONLY when trust_proxy_headers is on.
+    # Otherwise a client could spoof X-Forwarded-For to dodge the per-IP limit; the
+    # earlier test asserted that (insecure) behaviour and is corrected here.
+    spoofed = _request(host="1.2.3.4", headers={"X-Forwarded-For": "9.9.9.9, 1.1.1.1"})
+
+    untrusted = _settings()  # trust_proxy_headers defaults to False
+    assert client_ip(spoofed, untrusted) == "1.2.3.4"  # header ignored → real peer
+
+    trusted = _settings(trust_proxy_headers=True)
+    assert client_ip(spoofed, trusted) == "9.9.9.9"  # first hop honoured
+    assert client_ip(_request(host="5.5.5.5"), trusted) == "5.5.5.5"
 
 
 async def test_limiter_blocks_after_limit(redis: Any) -> None:

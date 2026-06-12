@@ -38,6 +38,23 @@ async def test_get_current_user_with_empty_token_raises_401() -> None:
         await get_current_user(credentials=creds, token_service=None, session=None)  # type: ignore[arg-type]
 
 
+async def test_get_current_user_with_non_bearer_scheme_raises_401() -> None:
+    """A non-Bearer Authorization header (e.g. ``Authorization: Basic xxx``) → 401.
+
+    ``HTTPBearer(auto_error=False)`` returns ``None`` for any non-Bearer scheme,
+    so the ``bearer_scheme`` dependency feeds ``None`` into ``get_current_user``.
+    We assert the guard maps that to a 401 ``NotAuthenticatedError``.
+    """
+    # What FastAPI's HTTPBearer hands the guard for a non-Bearer header.
+    non_bearer_resolved = None
+    with pytest.raises(NotAuthenticatedError):
+        await get_current_user(
+            credentials=non_bearer_resolved,  # type: ignore[arg-type]
+            token_service=None,  # type: ignore[arg-type]
+            session=None,  # type: ignore[arg-type]
+        )
+
+
 def test_not_authenticated_error_carries_www_authenticate() -> None:
     err = NotAuthenticatedError()
     assert err.status_code == 401

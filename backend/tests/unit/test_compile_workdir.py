@@ -57,6 +57,36 @@ class FakeFiles:
             yield path, stream()
 
 
+class _RecordingStream:
+    """A byte stream that records whether it was ``aclose``-d (spec 25 FD-leak guard)."""
+
+    def __init__(self, chunks: list[bytes]) -> None:
+        self._chunks = list(chunks)
+        self.aclosed = False
+
+    def __aiter__(self) -> _RecordingStream:
+        return self
+
+    async def __anext__(self) -> bytes:
+        if not self._chunks:
+            raise StopAsyncIteration
+        return self._chunks.pop(0)
+
+    async def aclose(self) -> None:
+        self.aclosed = True
+
+
+class _RecordingFiles:
+    def __init__(self, streams: list[tuple[str, _RecordingStream]]) -> None:
+        self._streams = streams
+
+    async def iter_files(
+        self, project_id: object
+    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+        for path, stream in self._streams:
+            yield path, stream  # type: ignore[misc]
+
+
 # --- safe_join ------------------------------------------------------------- #
 
 
@@ -151,6 +181,33 @@ def test_collect_outputs_classifies(tmp_path: Path) -> None:
     assert artifacts["main.pdf"].content_type == "application/pdf"
     assert artifacts["main.log"].content_type == "text/plain"
     assert artifacts["main.synctex.gz"].content_type == "application/gzip"
+
+
+async def test_assemble_closes_file_stream(tmp_path: Path) -> None:
+    """A fully-consumed binary stream is closed so it does not leak a handle."""
+    workdir = await create_workdir(tmp_path, uuid4())
+    stream = _RecordingStream([b"\x89PNG", b"more"])
+    files = _RecordingFiles([("img/logo.png", stream)])
+    await assemble_inputs(
+        workdir=workdir, project_id=uuid4(), docs=FakeDocs([]), files=files, limits=_limits()
+    )
+    assert stream.aclosed is True
+
+
+async def test_assemble_closes_file_stream_on_limit_error(tmp_path: Path) -> None:
+    """An early InputLimitError mid-stream still closes the source stream."""
+    workdir = await create_workdir(tmp_path, uuid4())
+    stream = _RecordingStream([b"x" * 10, b"y" * 10])
+    files = _RecordingFiles([("big.bin", stream)])
+    with pytest.raises(InputLimitError):
+        await assemble_inputs(
+            workdir=workdir,
+            project_id=uuid4(),
+            docs=FakeDocs([]),
+            files=files,
+            limits=_limits(max_input_bytes=5),
+        )
+    assert stream.aclosed is True
 
 
 async def test_cleanup_removes_workdir(tmp_path: Path) -> None:

@@ -60,3 +60,21 @@ def test_parse_range_unsatisfiable(header: str) -> None:
 
 def test_parse_range_malformed_falls_back_to_full() -> None:
     assert parse_range("megabytes=0-1", 1000) is RangeResult.FULL
+
+
+def test_parse_range_exact_last_byte() -> None:
+    r = parse_range("bytes=999-999", 1000)
+    assert isinstance(r, ByteRange)
+    assert (r.start, r.end, r.length) == (999, 999, 1)
+
+
+def test_parse_range_whole_object_explicit() -> None:
+    r = parse_range("bytes=0-999", 1000)
+    assert isinstance(r, ByteRange)
+    assert (r.start, r.end, r.length) == (0, 999, 1000)
+
+
+@pytest.mark.parametrize("header", ["bytes=0-0", "bytes=0-", "bytes=-1"])
+def test_parse_range_on_zero_length_object_is_unsatisfiable(header: str) -> None:
+    # Any byte range against an empty object cannot be satisfied.
+    assert parse_range(header, 0) is RangeResult.UNSATISFIABLE

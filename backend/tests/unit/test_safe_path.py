@@ -35,6 +35,7 @@ def test_valid_names(name: str) -> None:
         "a\\b",
         "with\x00nul",
         "ctrl\x1fchar",
+        "del\x7fchar",  # DEL (0x7f) is rejected as an ASCII control char
         "trailingdot.",
         "x" * 256,
         "con",

@@ -6,6 +6,8 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 from inkstave.compile.limits import CancelToken
 from inkstave.compile.packages import load_package_config
 from inkstave.compile.result import CompileStatus, RunOutcome
@@ -39,9 +41,11 @@ class FakeRunner:
         self._outcome = outcome
         self._writes = writes or {}
         self.calls = 0
+        self.main_file: object = None
 
     async def run(self, *, output_dir: Path, **_kw: object) -> RunOutcome:
         self.calls += 1
+        self.main_file = _kw.get("main_file")
         for rel, data in self._writes.items():
             dest = output_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -114,11 +118,74 @@ async def test_cancelled_before_run(tmp_path: Path) -> None:
     assert runner.calls == 0
 
 
+async def test_cancelled_while_running_maps_to_cancelled(tmp_path: Path) -> None:
+    # AC4 / spec 68 #75: a token cancelled *while the runner is running* (the runner
+    # is actually invoked and returns RunOutcome(cancelled=True)) must map to
+    # CANCELLED via _build_result — distinct from test_cancelled_before_run, which
+    # short-circuits with runner.calls == 0.
+    outcome = RunOutcome(
+        exit_code=None, stdout="", stderr="", timed_out=False, cancelled=True, duration_ms=7
+    )
+    runner = FakeRunner(outcome)
+    service = build_service(tmp_path, runner, [("main.tex", "hi")])
+    result = await service.compile(CompileOptions(project_id=uuid4()))
+    assert runner.calls == 1  # the runner ran (not a pre-run short-circuit)
+    assert result.status is CompileStatus.CANCELLED
+
+
 async def test_cleanup_default_removes_workdir(tmp_path: Path) -> None:
     runner = FakeRunner(ok_outcome(), {"main.pdf": b"%PDF"})
     cid = uuid4()
     service = build_service(tmp_path, runner, [("main.tex", "hi")])
     await service.compile(CompileOptions(project_id=uuid4(), compile_id=cid))
+    assert not (tmp_path / str(cid)).exists()
+
+
+@pytest.mark.parametrize(
+    ("outcome", "expected"),
+    [
+        (
+            RunOutcome(
+                exit_code=1, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=3
+            ),
+            CompileStatus.FAILURE,
+        ),
+        (
+            RunOutcome(
+                exit_code=None, stdout="", stderr="", timed_out=True, cancelled=False, duration_ms=3
+            ),
+            CompileStatus.TIMEOUT,
+        ),
+        (
+            RunOutcome(
+                exit_code=None, stdout="", stderr="", timed_out=False, cancelled=True, duration_ms=3
+            ),
+            CompileStatus.CANCELLED,
+        ),
+    ],
+)
+async def test_cleanup_removes_workdir_on_non_success(
+    tmp_path: Path, outcome: RunOutcome, expected: CompileStatus
+) -> None:
+    # AC5 / spec 68 #76: for *any* terminal outcome, with keep_workdir=False, the
+    # finally-block cleanup leaves no workdir on disk — not only the success path.
+    runner = FakeRunner(outcome)
+    cid = uuid4()
+    service = build_service(tmp_path, runner, [("main.tex", "hi")])
+    result = await service.compile(CompileOptions(project_id=uuid4(), compile_id=cid))
+    assert result.status is expected
+    assert not (tmp_path / str(cid)).exists()
+
+
+async def test_cleanup_removes_workdir_on_system_error(tmp_path: Path) -> None:
+    # SYSTEM_ERROR path (spec 68 #76): the workdir is created before assemble fails,
+    # and the finally block must still remove it.
+    runner = FakeRunner(ok_outcome())
+    cid = uuid4()
+    service = build_service(tmp_path, runner, [("../../etc/passwd", "x")])
+    result = await service.compile(CompileOptions(project_id=uuid4(), compile_id=cid))
+    assert result.status is CompileStatus.SYSTEM_ERROR
+    assert runner.calls == 0
     assert not (tmp_path / str(cid)).exists()
 
 
@@ -151,12 +218,35 @@ async def test_traversal_path_is_system_error(tmp_path: Path) -> None:
     assert runner.calls == 0
 
 
-async def test_missing_main_file_is_failure(tmp_path: Path) -> None:
+async def test_missing_main_file_falls_back_to_first_tex(tmp_path: Path) -> None:
+    # No main.tex, but the project has a .tex: compile it instead of failing.
     runner = FakeRunner(ok_outcome())
     service = build_service(tmp_path, runner, [("other.tex", "x")])
     result = await service.compile(CompileOptions(project_id=uuid4(), main_file="main.tex"))
+    assert result.status is CompileStatus.SUCCESS
+    assert runner.calls == 1
+    assert runner.main_file == "other.tex"
+
+
+async def test_fallback_prefers_documentclass_root(tmp_path: Path) -> None:
+    # Among several .tex files, prefer the one declaring \documentclass.
+    runner = FakeRunner(ok_outcome())
+    service = build_service(
+        tmp_path,
+        runner,
+        [("aaa.tex", "% just notes"), ("paper.tex", "\\documentclass{article}\n\\end{document}")],
+    )
+    await service.compile(CompileOptions(project_id=uuid4(), main_file="main.tex"))
+    assert runner.main_file == "paper.tex"
+
+
+async def test_no_tex_file_is_failure(tmp_path: Path) -> None:
+    # Nothing to compile at all → a clear failure, runner never invoked.
+    runner = FakeRunner(ok_outcome())
+    service = build_service(tmp_path, runner, [("notes.txt", "hello")])
+    result = await service.compile(CompileOptions(project_id=uuid4(), main_file="main.tex"))
     assert result.status is CompileStatus.FAILURE
-    assert "root document not found" in result.log_text
+    assert "no .tex file" in result.log_text
     assert runner.calls == 0
 
 
