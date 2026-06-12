@@ -127,6 +127,11 @@ describe("apiClient", () => {
     });
   });
 
+  it("propagates a fetch rejection (network/timeout) as a catchable error (spec 61 AC8)", async () => {
+    setFetch(() => Promise.reject(new Error("timeout")));
+    await expect(apiClient.get("/api/v1/users/me", { auth: false })).rejects.toThrow("timeout");
+  });
+
   it("parses a generic error message into ApiError.detail", async () => {
     setFetch(async () =>
       mockResponse(409, { error: { type: "conflict", message: "Already exists." } }),

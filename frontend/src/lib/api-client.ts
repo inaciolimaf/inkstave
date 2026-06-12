@@ -110,7 +110,16 @@ async function parseBody<T>(res: Response): Promise<T> {
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-async function request<T>(path: string, options: RequestOptions, isRetry = false): Promise<T> {
+/**
+ * Run an authed request with transparent refresh-on-401, returning the raw
+ * (ok-checked) {@link Response}. JSON callers go through {@link request}; binary
+ * (`getBytes`) and text (`getText`) callers consume the body themselves.
+ */
+async function requestRaw(
+  path: string,
+  options: RequestOptions,
+  isRetry = false,
+): Promise<Response> {
   const auth = options.auth ?? true;
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
@@ -126,11 +135,16 @@ async function request<T>(path: string, options: RequestOptions, isRetry = false
   const isRefreshCall = path.endsWith("/auth/refresh");
   if (res.status === 401 && auth && !isRetry && !isRefreshCall) {
     const refreshed = await refreshTokens();
-    if (refreshed) return request<T>(path, options, true);
+    if (refreshed) return requestRaw(path, options, true);
     throw await toApiError(res);
   }
 
   if (!res.ok) throw await toApiError(res);
+  return res;
+}
+
+async function request<T>(path: string, options: RequestOptions, isRetry = false): Promise<T> {
+  const res = await requestRaw(path, options, isRetry);
   return parseBody<T>(res);
 }
 
@@ -145,6 +159,12 @@ export const apiClient = {
     request<T>(path, { ...options, method: "PUT", body }),
   patch: <T>(path: string, body?: unknown, options: BodylessOptions = {}) =>
     request<T>(path, { ...options, method: "PATCH", body }),
-  delete: <T>(path: string, options: BodylessOptions = {}) =>
-    request<T>(path, { ...options, method: "DELETE" }),
+  delete: <T>(path: string, body?: unknown, options: BodylessOptions = {}) =>
+    request<T>(path, { ...options, method: "DELETE", body }),
+  /** Fetch a text body (e.g. the compile log) with the same auth/refresh path. */
+  getText: (path: string, options: BodylessOptions = {}) =>
+    requestRaw(path, { ...options, method: "GET" }).then((res) => res.text()),
+  /** Fetch a binary body as an `ArrayBuffer` (e.g. the compiled PDF). */
+  getBytes: (path: string, options: BodylessOptions = {}) =>
+    requestRaw(path, { ...options, method: "GET" }).then((res) => res.arrayBuffer()),
 };
