@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,6 +87,8 @@ async def test_ownership_is_existence(async_client: AsyncClient, db_session: Asy
         resp = await call
         assert resp.status_code == 404
         assert "A's project" not in resp.text
+        # AC7: cross-user access is reported as not-found, never authz-leaking.
+        assert resp.json()["error"]["type"] == "project_not_found"
 
 
 @pytest.mark.parametrize(
@@ -96,9 +96,10 @@ async def test_ownership_is_existence(async_client: AsyncClient, db_session: Asy
     [
         ("post", PROJECTS, {"name": "x"}),
         ("get", PROJECTS, None),
-        ("get", f"{PROJECTS}/{uuid4()}", None),
-        ("patch", f"{PROJECTS}/{uuid4()}", {"name": "x"}),
-        ("delete", f"{PROJECTS}/{uuid4()}", None),
+        # Fixed ids (not uuid4()) so parametrize collection is deterministic under xdist.
+        ("get", f"{PROJECTS}/00000000-0000-0000-0000-0000000000a1", None),
+        ("patch", f"{PROJECTS}/00000000-0000-0000-0000-0000000000a2", {"name": "x"}),
+        ("delete", f"{PROJECTS}/00000000-0000-0000-0000-0000000000a3", None),
     ],
 )
 async def test_requires_auth(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -10,9 +11,45 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.auth.tokens import build_token_service
 from inkstave.config import get_settings
+from inkstave.dependencies import get_object_store
+from inkstave.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
+
+
+class _InMemoryStore(ObjectStore):
+    """Minimal in-memory object store (no filesystem/network) for upload-backed tests."""
+
+    def __init__(self) -> None:
+        self._d: dict[str, tuple[bytes, str | None]] = {}
+
+    async def put(self, key: str, data: PutData, *, content_type: str | None = None) -> ObjectStat:
+        body = data if isinstance(data, bytes) else b"".join([c async for c in data])
+        self._d[key] = (body, content_type)
+        return ObjectStat(size=len(body), content_type=content_type)
+
+    async def stat(self, key: str) -> ObjectStat:
+        if key not in self._d:
+            raise ObjectNotFoundError(key)
+        body, ct = self._d[key]
+        return ObjectStat(size=len(body), content_type=ct)
+
+    async def delete(self, key: str) -> None:
+        self._d.pop(key, None)
+
+    async def exists(self, key: str) -> bool:
+        return key in self._d
+
+    async def open(self, key: str) -> tuple[ObjectStat, AsyncIterator[bytes]]:
+        if key not in self._d:
+            raise ObjectNotFoundError(key)
+        body, ct = self._d[key]
+
+        async def stream() -> AsyncIterator[bytes]:
+            yield body
+
+        return ObjectStat(size=len(body), content_type=ct), stream()
 
 
 async def _auth(db_session: AsyncSession) -> dict[str, str]:
@@ -82,6 +119,30 @@ async def test_document_get_is_few_queries(
     resp = await async_client.get(f"/api/v1/projects/{pid}/documents/{eid}", headers=headers)
     assert resp.status_code == 200
     assert query_counter["count"] <= 5
+
+
+async def test_file_get_is_few_queries(
+    app: Any, async_client: AsyncClient, db_session: AsyncSession, query_counter: dict[str, int]
+) -> None:
+    # Inject an in-memory object store so the upload needs no real filesystem/network.
+    app.dependency_overrides[get_object_store] = lambda: _InMemoryStore()
+    try:
+        headers = await _auth(db_session)
+        pid = await _project(async_client, headers)
+        files = {"file": ("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, "image/png")}
+        upload = await async_client.post(
+            f"/api/v1/projects/{pid}/files", files=files, headers=headers
+        )
+        assert upload.status_code == 201
+        eid = upload.json()["entity_id"]
+
+        query_counter["count"] = 0
+        resp = await async_client.get(f"/api/v1/projects/{pid}/files/{eid}", headers=headers)
+        assert resp.status_code == 200
+        # Metadata + name come from a bounded set of queries; count does not scale (no N+1).
+        assert query_counter["count"] <= 5
+    finally:
+        app.dependency_overrides.pop(get_object_store, None)
 
 
 # --- Unique-constraint race maps to 409, not 500 (AC6) --------------------- #

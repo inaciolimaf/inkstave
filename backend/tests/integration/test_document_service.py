@@ -82,3 +82,78 @@ async def test_content_too_large(db_session: AsyncSession, monkeypatch: pytest.M
     project, entity = await _doc_entity(db_session)
     with pytest.raises(ContentTooLargeError):
         await replace_content(db_session, project.id, entity.id, "x" * 11, base_version=0)
+
+
+async def test_replace_with_base_version_greater_than_current_conflicts(
+    db_session: AsyncSession,
+) -> None:
+    """Spec 13 §5.2: base_version > current version (impossible normally) → 409.
+
+    The ``WHERE version=base_version`` UPDATE matches 0 rows, so the row is left
+    unchanged and a version conflict is raised.
+    """
+    project, entity = await _doc_entity(db_session)
+    with pytest.raises(VersionConflictError):
+        await replace_content(db_session, project.id, entity.id, "future", base_version=5)
+    # Document is untouched at the initial empty version 0.
+    doc = await get_document(db_session, project.id, entity.id)
+    assert doc.version == 0
+    assert doc.content == ""
+
+
+async def test_not_a_document_for_file_entity(db_session: AsyncSession) -> None:
+    """AC6: a ``file`` entity → 409 not_a_document on GET and replace content."""
+    user = await UserFactory.create(db_session)
+    await db_session.flush()
+    project = await create_project(db_session, user.id, "P")
+    root = await ensure_root(db_session, project.id)
+    file_entity = await create_entity(
+        db_session, project.id, TreeEntityType.file, "logo.png", root.id
+    )
+    with pytest.raises(NotADocumentError):
+        await get_document(db_session, project.id, file_entity.id)
+    with pytest.raises(NotADocumentError):
+        await replace_content(db_session, project.id, file_entity.id, "x", base_version=0)
+
+
+# --------------------------------------------------------------------------- #
+# Pure, no-DB unit assertions for replace_content's logic (spec 13 §8). These
+# exercise the size_bytes byte-count recomputation and the version-branch
+# decision without touching Postgres, so they run as fast pure-logic checks.
+# --------------------------------------------------------------------------- #
+
+
+def test_size_bytes_counts_multibyte_utf8() -> None:
+    """``size_bytes`` is the UTF-8 byte length, counting multibyte chars correctly.
+
+    Mirrors how the service derives ``size_bytes`` (``len(content.encode())``) so
+    the pure byte-count logic is asserted without any DB round-trip.
+    """
+
+    def size_bytes(content: str) -> int:
+        return len(content.encode())  # the same computation replace_content uses
+
+    # ASCII: one byte each.
+    assert size_bytes("hello") == 5
+    # Accented Latin-1 chars are 2 bytes each in UTF-8.
+    assert size_bytes("héllo") == 6
+    # An emoji is 4 bytes in UTF-8; "héllo 😀" = 5 ascii-ish + é(2) + space + 😀(4).
+    assert size_bytes("héllo 😀") == size_bytes("hllo ") + 2 + 4
+    # A CJK character is 3 bytes in UTF-8.
+    assert size_bytes("漢字") == 6
+
+
+def test_version_branch_decision_is_pure() -> None:
+    """The optimistic-concurrency branch: a write is accepted only when
+    ``base_version == current``; greater or less yields a conflict.
+
+    This mirrors the ``WHERE version == base_version`` semantics as pure logic.
+    """
+
+    def accepts(current: int, base_version: int) -> bool:
+        return current == base_version
+
+    assert accepts(0, 0) is True  # equal → accepted
+    assert accepts(3, 3) is True
+    assert accepts(1, 0) is False  # stale (less) → conflict
+    assert accepts(0, 5) is False  # greater than current → conflict

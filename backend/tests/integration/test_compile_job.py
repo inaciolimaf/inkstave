@@ -1,8 +1,13 @@
-"""Integration tests for the run_compile ARQ job with a stubbed service (spec 22)."""
+"""Integration tests for the run_compile ARQ job with a stubbed service (spec 22).
+
+Core run-result tests (metrics/context, success/manifest, failure, error) plus
+the no-auto-retry registration check. Workdir-cleanup and cancellation tests live
+in the ``test_compile_job_workdir.py`` / ``test_compile_job_cancel.py`` siblings;
+shared fakes/helpers live in ``_compile_job_support.py``.
+"""
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 from uuid import UUID
 
@@ -10,109 +15,47 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.compile.jobs import run_compile
-from inkstave.compile.limits import CancelToken
 from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileArtifact, CompileResult, CompileStatus
-from inkstave.compile.stream import request_cancel
-from inkstave.config import Settings
-from inkstave.services.project import create_project
-from tests.factories import UserFactory
+from inkstave.compile.result import CompileResult, CompileStatus
+from tests.integration._compile_job_support import (
+    ContextCapturingService,
+    StubService,
+    _ctx,
+    _new_compile,
+    _success,
+)
 
 pytestmark = pytest.mark.integration
 
 
-class _SessionCtx:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+async def test_compile_job_records_metrics_and_binds_context(
+    db_session: AsyncSession, redis: Any
+) -> None:
+    from prometheus_client import REGISTRY
 
-    async def __aenter__(self) -> AsyncSession:
-        return self._session
+    cid = await _new_compile(db_session)
 
-    async def __aexit__(self, *_exc: object) -> bool:
-        return False
+    async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None:
+        pass
 
+    def count() -> float:
+        return REGISTRY.get_sample_value("inkstave_compile_total", {"status": "success"}) or 0.0
 
-class StubService:
-    def __init__(
-        self, result: CompileResult | None = None, *, raises: Exception | None = None
-    ) -> None:
-        self._result = result
-        self._raises = raises
-        self.cancel_seen = False
+    before = count()
+    service = ContextCapturingService(_success())
+    await run_compile(_ctx(db_session, redis, service, persist), str(cid), request_id="req-trace-1")
 
-    async def compile(self, opts: Any, cancel: CancelToken) -> CompileResult:
-        if self._raises is not None:
-            raise self._raises
-        assert self._result is not None
-        return self._result
-
-
-class CancelAwareService:
-    def __init__(self) -> None:
-        self.cancel_seen = False
-
-    async def compile(self, opts: Any, cancel: CancelToken) -> CompileResult:
-        for _ in range(200):
-            if cancel.is_cancelled:
-                self.cancel_seen = True
-                return CompileResult(
-                    status=CompileStatus.CANCELLED,
-                    pdf=None,
-                    log_text="",
-                    stdout="",
-                    stderr="",
-                    exit_code=None,
-                    duration_ms=1,
-                )
-            await asyncio.sleep(0.01)
-        return CompileResult(
-            status=CompileStatus.SUCCESS,
-            pdf=None,
-            log_text="",
-            stdout="",
-            stderr="",
-            exit_code=0,
-            duration_ms=1,
+    assert count() == before + 1  # AC7: inkstave_compile_total{status="success"}
+    assert (
+        REGISTRY.get_sample_value(
+            "inkstave_compile_duration_seconds_count", {"engine": "tectonic", "status": "success"}
         )
-
-
-def _ctx(db_session: AsyncSession, redis: Any, service: Any, persist: Any) -> dict[str, Any]:
-    return {
-        "settings": Settings(_env_file=None),  # type: ignore[call-arg]
-        "redis": redis,
-        "session_factory": lambda: _SessionCtx(db_session),
-        "make_compile_service": lambda _session: service,
-        "persist_hook": persist,
-    }
-
-
-async def _new_compile(db_session: AsyncSession) -> UUID:
-    user = await UserFactory.create(db_session)
-    await db_session.flush()
-    project = await create_project(db_session, user.id, "P")
-    row = await CompileRepository(db_session).create(
-        project_id=project.id, requested_by=user.id, main_file="main.tex"
+        is not None
     )
-    return row.id
-
-
-def _success() -> CompileResult:
-    return CompileResult(
-        status=CompileStatus.SUCCESS,
-        pdf=CompileArtifact(
-            "output.pdf", "output.pdf", __import__("pathlib").Path("/x"), 10, "application/pdf"
-        ),
-        log_text="the log",
-        stdout="",
-        stderr="",
-        exit_code=0,
-        duration_ms=42,
-        artifacts=[
-            CompileArtifact(
-                "output.pdf", "output.pdf", __import__("pathlib").Path("/x"), 10, "application/pdf"
-            )
-        ],
-    )
+    # The job's context carries job_name + the chained request_id of the enqueuer.
+    assert service.context["job_name"] == "run_compile"
+    assert service.context["request_id"] == "req-trace-1"
+    assert "job_id" in service.context
 
 
 async def test_success_updates_row_and_manifest(db_session: AsyncSession, redis: Any) -> None:
@@ -169,32 +112,12 @@ async def test_unexpected_exception_is_error_status(db_session: AsyncSession, re
     assert "boom" in (row.error_message or "")
 
 
-async def test_precancelled_exits_without_compiling(db_session: AsyncSession, redis: Any) -> None:
-    cid = await _new_compile(db_session)
-    await request_cancel(redis, cid, 300)
-    service = StubService(_success())
+def test_run_compile_job_does_not_auto_retry() -> None:
+    # AC4 / spec 68 #80: the registered run_compile job must not auto-retry on a
+    # transient error — max_tries == 1.
+    from inkstave.compile.worker import WorkerSettings
 
-    async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None:
-        raise AssertionError("persist must not run for a cancelled compile")
-
-    await run_compile(_ctx(db_session, redis, service, persist), str(cid))
-    row = await CompileRepository(db_session).get_by_id(cid)
-    assert row is not None
-    assert row.status == "cancelled"
-
-
-async def test_cancel_during_run_trips_token(db_session: AsyncSession, redis: Any) -> None:
-    cid = await _new_compile(db_session)
-    service = CancelAwareService()
-
-    async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None: ...
-
-    task = asyncio.create_task(run_compile(_ctx(db_session, redis, service, persist), str(cid)))
-    await asyncio.sleep(0.05)
-    await request_cancel(redis, cid, 300)
-    await task
-
-    assert service.cancel_seen is True
-    row = await CompileRepository(db_session).get_by_id(cid)
-    assert row is not None
-    assert row.status == "cancelled"
+    run_compile_func = next(
+        f for f in WorkerSettings.functions if getattr(f, "name", None) == "run_compile"
+    )
+    assert run_compile_func.max_tries == 1

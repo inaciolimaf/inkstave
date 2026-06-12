@@ -196,6 +196,64 @@ async def test_revoked_family_cannot_mint_access(
 # --- rate limiting ------------------------------------------------------- #
 
 
+async def test_login_rate_limit_fails_open_when_redis_errors(
+    async_client: AsyncClient,
+    redis: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec 08 AC8: a Redis outage must not lock anyone out — the auth limiter
+    fails open over HTTP, so login proceeds to normal auth handling (not 429)."""
+    import logging
+
+    from inkstave.auth import rate_limit as auth_rate_limit
+
+    get_settings.cache_clear()
+    # A limit so low that a *working* limiter would 429 on the second request.
+    monkeypatch.setenv("RATE_LIMIT_LOGIN", "1/300")
+
+    # Make ONLY the operations the auth limiter performs (eval/incr) raise, so we
+    # simulate a Redis outage *for the limiter* without breaking the rest of the
+    # app (the refresh store still uses get/set/ttl on the same client).
+    async def _down(*_a: Any, **_k: Any) -> Any:
+        raise ConnectionError("redis down")
+
+    monkeypatch.setattr(redis, "eval", _down)
+    monkeypatch.setattr(redis, "incr", _down)
+
+    # Capture the limiter's own warning directly on its logger. ``caplog`` relies
+    # on root propagation, which is unreliable for records emitted inside the ASGI
+    # request task here, so attach a dedicated handler instead. We also force the
+    # logger enabled at WARNING: an earlier test's ``dictConfig`` may have left it
+    # ``disabled`` (which would silently drop the record).
+    records: list[logging.LogRecord] = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Collector(level=logging.WARNING)
+    limiter_logger = auth_rate_limit.logger
+    was_disabled = limiter_logger.disabled
+    prev_level = limiter_logger.level
+    limiter_logger.disabled = False
+    limiter_logger.setLevel(logging.WARNING)
+    limiter_logger.addHandler(handler)
+    try:
+        payload = {"email": "open@example.com", "password": "whatever1"}
+        first = await async_client.post(LOGIN, json=payload)
+        second = await async_client.post(LOGIN, json=payload)
+    finally:
+        limiter_logger.removeHandler(handler)
+        limiter_logger.setLevel(prev_level)
+        limiter_logger.disabled = was_disabled
+
+    # Fail-open: the limiter never 429s; both reach normal (failed) auth -> 401.
+    assert first.status_code == 401
+    assert second.status_code == 401
+    # The outage is surfaced as a warning (fail-open, not silent).
+    assert any("Rate limiter unavailable" in r.getMessage() for r in records)
+
+
 async def test_login_rate_limit_returns_429(
     async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

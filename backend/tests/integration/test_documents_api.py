@@ -148,6 +148,57 @@ async def test_non_doc_entity_is_conflict(
     assert resp.json()["error"]["type"] == "not_a_document"
 
 
+async def test_file_entity_is_conflict(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """AC6: GET and PUT content on a ``file`` entity both return 409 not_a_document.
+
+    The tree-create route only accepts ``folder``/``doc``; ``file`` entities are
+    created by the upload service, so we insert one directly to exercise the guard.
+    """
+    from uuid import UUID as _UUID
+
+    from inkstave.db.models.tree_entity import TreeEntityType
+    from inkstave.services.tree_service import create_entity, ensure_root
+
+    headers = await _auth(db_session)
+    pid = await _project(async_client, headers)
+    root = await ensure_root(db_session, _UUID(pid))
+    file_entity = await create_entity(
+        db_session, _UUID(pid), TreeEntityType.file, "logo.png", root.id
+    )
+    await db_session.commit()
+    file_eid = str(file_entity.id)
+    get_resp = await async_client.get(_doc_url(pid, file_eid), headers=headers)
+    assert get_resp.status_code == 409
+    assert get_resp.json()["error"]["type"] == "not_a_document"
+    put_resp = await async_client.put(
+        _doc_url(pid, file_eid), json={"content": "x", "base_version": 0}, headers=headers
+    )
+    assert put_resp.status_code == 409
+    assert put_resp.json()["error"]["type"] == "not_a_document"
+
+
+async def test_base_version_greater_than_current_conflicts(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Spec 13 §5.2: base_version > current version → 409 version_conflict."""
+    headers = await _auth(db_session)
+    pid = await _project(async_client, headers)
+    eid = await _entity(async_client, pid, headers, "doc", "main.tex")
+    resp = await async_client.put(
+        _doc_url(pid, eid), json={"content": "future", "base_version": 5}, headers=headers
+    )
+    assert resp.status_code == 409
+    body = resp.json()
+    assert body["error"]["type"] == "version_conflict"
+    assert body["error"]["details"][0]["current_version"] == 0
+    # Document is untouched at the initial empty version 0.
+    fetched = (await async_client.get(_doc_url(pid, eid), headers=headers)).json()
+    assert fetched["version"] == 0
+    assert fetched["content"] == ""
+
+
 async def test_missing_entity_is_404(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)

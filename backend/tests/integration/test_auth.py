@@ -181,6 +181,30 @@ async def test_logout_is_idempotent_and_revokes(async_client: AsyncClient) -> No
     assert second.status_code == 200
 
 
+async def test_logout_revokes_whole_token_family(async_client: AsyncClient) -> None:  # AC7
+    # Rotate once so the family has two members, then log out using the rotated
+    # (current) token. Both the rotated token and the prior family member must be
+    # rejected with 401 on a subsequent refresh.
+    email, password = await _register(async_client)
+    pair1 = await _login(async_client, email, password)
+
+    rotated = (
+        await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
+    ).json()
+    assert rotated["refresh_token"] != pair1["refresh_token"]  # same family, new member
+
+    out = await async_client.post(LOGOUT, json={"refresh_token": rotated["refresh_token"]})
+    assert out.status_code == 200
+
+    # The current (rotated) token is rejected after logout.
+    current = await async_client.post(REFRESH, json={"refresh_token": rotated["refresh_token"]})
+    assert current.status_code == 401
+
+    # A prior member of the same family is also rejected — the whole family is revoked.
+    prior = await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
+    assert prior.status_code == 401
+
+
 @pytest.mark.parametrize(
     ("url", "payload"),
     [

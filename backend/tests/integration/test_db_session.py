@@ -7,6 +7,7 @@ wired endpoint, and (b) that the rollback-per-test strategy isolates state.
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -61,6 +62,38 @@ async def test_factory_creates_distinct_persisted_pings(db_session: AsyncSession
     assert first.id != second.id
     assert first.note != second.note
     assert await _count_pings(db_session) == 2
+
+
+async def test_ping_roundtrip_has_tz_aware_timestamps_and_bumps_updated_at(
+    db_session: AsyncSession,
+) -> None:
+    """AC7/§8: after a DB roundtrip a Ping has tz-aware created_at/updated_at, and
+    updating ``updated_at`` strictly advances it (persisted as a tz-aware value).
+
+    Note: every test runs inside a single transaction, and Postgres ``now()``
+    (the column's server default / onupdate) is transaction-stable, so we drive the
+    bump with an explicit later timestamp to assert strict advance deterministically.
+    """
+    ping = await PingFactory.create(db_session)
+    await db_session.flush()
+    await db_session.refresh(ping)  # server defaults materialise on roundtrip
+
+    assert isinstance(ping.id, uuid.UUID)
+    assert ping.created_at is not None and ping.created_at.tzinfo is not None
+    assert ping.updated_at is not None and ping.updated_at.tzinfo is not None
+    created_at = ping.created_at
+    updated_at = ping.updated_at
+
+    # Update the row with a strictly-later updated_at and flush; the bumped tz-aware
+    # value must round-trip from the database.
+    ping.note = ping.note + " (edited)"
+    ping.updated_at = updated_at + timedelta(seconds=1)
+    await db_session.flush()
+    await db_session.refresh(ping)
+
+    assert ping.updated_at.tzinfo is not None  # still timezone-aware after roundtrip
+    assert ping.updated_at > updated_at  # strictly advances on update
+    assert ping.created_at == created_at  # created_at is stable across the update
 
 
 async def test_rollback_isolation(db_session: AsyncSession) -> None:

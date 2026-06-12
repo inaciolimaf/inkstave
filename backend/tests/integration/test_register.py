@@ -70,6 +70,9 @@ async def test_register_duplicate_is_conflict(
         {"email": "not-an-email", "password": "secret123", "display_name": "X"},
         {"email": "weak@ex.com", "password": "short1", "display_name": "X"},  # too short
         {"email": "weak@ex.com", "password": "abcdefgh", "display_name": "X"},  # no digit
+        {"email": "weak@ex.com", "password": "12345678", "display_name": "X"},  # no letter
+        {"email": "weak@ex.com", "password": "a1" + "x" * 80, "display_name": "X"},  # >72 chars
+        {"email": "weak@ex.com", "password": "weak1234", "display_name": "X"},  # local-part in pwd
         {"email": "weak@ex.com", "password": "secret123", "display_name": "   "},  # empty name
     ],
 )
