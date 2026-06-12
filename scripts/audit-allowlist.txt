@@ -1,0 +1,2 @@
+# Audit allowlist (spec 52): one advisory id per line + reason + expiry.
+# Format: GHSA-xxxx-yyyy-zzzz  # reason — expires YYYY-MM-DD
