@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/auth/auth-context";
 import { tokenStore } from "@/lib/token-store";
 
+import { LoginPage } from "./login";
 import { RegisterPage } from "./register";
 
 function mockResponse(status: number, body?: unknown) {
@@ -46,7 +47,40 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+function renderRegisterWithLogin() {
+  return render(
+    <MemoryRouter initialEntries={["/register"]}>
+      <AuthProvider>
+        <Routes>
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("RegisterPage", () => {
+  it("registers, redirects to /login, and shows the success message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        mockResponse(201, {
+          id: "u1",
+          email: "alice@example.com",
+          display_name: "Alice",
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderRegisterWithLogin();
+    await fillValid(user);
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    // Navigated to /login (the real LoginPage renders) with the justRegistered state.
+    expect(await screen.findByText("Account created — please sign in.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+  });
+
   it("blocks submission and shows an error when passwords do not match", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

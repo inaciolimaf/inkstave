@@ -1,4 +1,11 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 import { apiClient, refreshTokens } from "@/lib/api-client";
 import { tokenStore } from "@/lib/token-store";
@@ -17,6 +24,12 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<UserPublic>;
   logout: () => Promise<void>;
+  /** Replace the cached user (e.g. after a settings update, spec 59). */
+  applyUser: (user: UserPublic) => void;
+  /** Re-fetch the current user from the server. */
+  refreshUser: () => Promise<void>;
+  /** Use a persisted refresh token to restore the session (auto-run on mount). */
+  bootstrap: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -32,26 +45,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // On load, use a persisted refresh token to obtain an access token + user.
-  useEffect(() => {
-    let active = true;
-    void (async () => {
+  // Use a persisted refresh token to obtain an access token + user. Exposed so
+  // callers can re-run it imperatively; also auto-run once on mount below.
+  const bootstrap = useCallback(async (): Promise<void> => {
+    setIsBootstrapping(true);
+    try {
       if (tokenStore.getRefreshToken()) {
-        try {
-          if (await refreshTokens()) {
-            const me = await apiClient.get<UserPublic>("/api/v1/users/me");
-            if (active) setUser(me);
-          }
-        } catch {
-          // Ignore: stay unauthenticated.
+        if (await refreshTokens()) {
+          const me = await apiClient.get<UserPublic>("/api/v1/users/me");
+          setUser(me);
         }
       }
-      if (active) setIsBootstrapping(false);
-    })();
-    return () => {
-      active = false;
-    };
+    } catch {
+      // Ignore: stay unauthenticated.
+    } finally {
+      setIsBootstrapping(false);
+    }
   }, []);
+
+  // On load, restore the session from a persisted refresh token.
+  useEffect(() => {
+    void bootstrap();
+  }, [bootstrap]);
 
   const login = async (email: string, password: string): Promise<void> => {
     const pair = await apiClient.post<TokenPair>(
@@ -80,9 +95,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const applyUser = (next: UserPublic): void => setUser(next);
+
+  const refreshUser = async (): Promise<void> => {
+    const me = await apiClient.get<UserPublic>("/api/v1/users/me");
+    setUser(me);
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, isBootstrapping, login, register, logout }}
+      value={{
+        user,
+        isAuthenticated: user !== null,
+        isBootstrapping,
+        login,
+        register,
+        logout,
+        applyUser,
+        refreshUser,
+        bootstrap,
+      }}
     >
       {children}
     </AuthContext.Provider>

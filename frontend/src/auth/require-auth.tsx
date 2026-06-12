@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/auth/auth-context";
+import { useSetupStatus } from "@/features/setup/useSetupStatus";
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -11,13 +12,25 @@ function Centered({ children }: { children: ReactNode }) {
   );
 }
 
-/** Gate protected routes: redirect to /login when unauthenticated. */
+/**
+ * Where an unauthenticated visitor goes: `/setup` on a brand-new deployment
+ * (no admin yet), otherwise `/login`. The status call is cheap and cached, so
+ * an already-set-up instance pays a single request once per session.
+ */
+function UnauthenticatedRedirect() {
+  const location = useLocation();
+  const status = useSetupStatus();
+  if (status.isLoading) return <Centered>Loading…</Centered>;
+  const to = status.data?.needsSetup ? "/setup" : "/login";
+  return <Navigate to={to} state={{ from: location }} replace />;
+}
+
+/** Gate protected routes: redirect unauthenticated users to setup or login. */
 export function RequireAuth() {
   const { isAuthenticated, isBootstrapping } = useAuth();
-  const location = useLocation();
 
   if (isBootstrapping) return <Centered>Loading…</Centered>;
-  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!isAuthenticated) return <UnauthenticatedRedirect />;
   return <Outlet />;
 }
 
