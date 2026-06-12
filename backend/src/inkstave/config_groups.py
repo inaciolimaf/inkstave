@@ -226,6 +226,47 @@ class CompileSettingsMixin:
     compile_cancel_flag_ttl_s: int = 300
 
 
+class ImportSettingsMixin:
+    """Project import from a ``.zip`` archive — bounds + allow-list (spec 101).
+
+    Defaults are safe and keep tests cheap; the unzip work is bounded entirely by
+    these limits (zip-bomb defence) before any byte is decompressed.
+    """
+
+    import_max_zip_bytes: int = 52_428_800  # 50 MiB — max compressed upload (streamed guard)
+    import_max_uncompressed_bytes: int = 314_572_800  # 300 MiB — max total kept uncompressed
+    import_max_file_bytes: int = 52_428_800  # 50 MiB — max uncompressed size of any one entry
+    import_max_entries: int = 2_000  # max kept (folders+docs+files) entries
+    import_allowed_extensions: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            ".tex",
+            ".bib",
+            ".cls",
+            ".sty",
+            ".bst",
+            ".bbx",
+            ".cbx",
+            ".txt",
+            ".md",
+            ".csv",
+            ".tsv",
+            ".json",
+            ".yml",
+            ".yaml",
+            ".xml",
+            ".svg",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".pdf",
+            ".eps",
+        ]
+    )
+    import_workdir_root: str = "/tmp/inkstave-imports"  # scratch dir for the bounded temp copy
+
+
 class CollabSettingsMixin:
     """SyncTeX, log parsing, CRDT document model and the collab WebSocket (specs 26–29)."""
 

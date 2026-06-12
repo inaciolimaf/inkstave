@@ -33,6 +33,7 @@ from inkstave.mailer.jobs import send_email_job
 from inkstave.mailer.sender import get_email_sender
 from inkstave.notifications.jobs import sweep_notifications
 from inkstave.redis_client import create_redis_pool
+from inkstave.services.import_jobs import import_project_zip
 from inkstave.storage.factory import get_object_store
 
 _settings = get_settings()
@@ -129,6 +130,7 @@ class WorkerSettings:
         func(sweep_notifications, name="sweep_notifications", max_tries=2),
         func(run_agent_turn, name="run_agent_turn", max_tries=1),
         func(agent_audit_cleanup, name="agent_audit_cleanup", max_tries=1),
+        func(import_project_zip, name="import_project_zip", max_tries=1),
     ]
     cron_jobs = [
         # Retention sweep driven by COMPILE_RETENTION_SWEEP_S (default 3600 → hourly).

@@ -19,6 +19,7 @@ from inkstave.compile.enqueuer import ArqEnqueuer
 from inkstave.config import Settings, get_settings
 from inkstave.errors import AppError
 from inkstave.mailer.enqueuer import EmailEnqueuer
+from inkstave.services.import_enqueuer import ImportEnqueuer
 from inkstave.storage.base import ObjectStore
 from inkstave.storage.factory import get_object_store as build_object_store
 
@@ -119,3 +120,20 @@ async def get_agent_enqueuer(
         pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         request.app.state.arq_pool = pool
     return AgentEnqueuer(pool, settings.compile_queue_name)
+
+
+async def get_import_enqueuer(
+    request: Request, settings: Settings = Depends(get_settings_dep)
+) -> ImportEnqueuer:
+    """Dependency providing the ARQ project-import enqueuer (faked in tests).
+
+    Shares the single ARQ pool / queue with the other jobs (one worker, spec 101).
+    """
+    pool = getattr(request.app.state, "arq_pool", None)
+    if pool is None:
+        from arq import create_pool
+        from arq.connections import RedisSettings
+
+        pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+        request.app.state.arq_pool = pool
+    return ImportEnqueuer(pool, settings.compile_queue_name)

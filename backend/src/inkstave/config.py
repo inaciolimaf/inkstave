@@ -25,6 +25,7 @@ from inkstave.config_groups import (
     CollabSettingsMixin,
     CompileSettingsMixin,
     CoreSettingsMixin,
+    ImportSettingsMixin,
     SecuritySettingsMixin,
     StorageSettingsMixin,
 )
@@ -38,6 +39,7 @@ class Settings(
     CollaborationSettingsMixin,
     CollabSettingsMixin,
     CompileSettingsMixin,
+    ImportSettingsMixin,
     StorageSettingsMixin,
     SecuritySettingsMixin,
     AuthSettingsMixin,
@@ -78,6 +80,7 @@ class Settings(
         "jwt_secret_previous",
         "allowed_upload_mime",
         "upload_allowed_extensions",
+        "import_allowed_extensions",
         mode="before",
     )
     @classmethod

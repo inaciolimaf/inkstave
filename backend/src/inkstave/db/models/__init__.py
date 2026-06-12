@@ -24,6 +24,7 @@ from inkstave.db.models.membership import MembershipRole, MembershipStatus, Proj
 from inkstave.db.models.notification import Notification, NotificationType
 from inkstave.db.models.ping import Ping
 from inkstave.db.models.project import Project
+from inkstave.db.models.project_import import ProjectImport, ProjectImportStatus
 from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.db.models.user import User
 
@@ -58,6 +59,8 @@ __all__ = [
     "NotificationType",
     "Ping",
     "Project",
+    "ProjectImport",
+    "ProjectImportStatus",
     "TreeEntity",
     "TreeEntityType",
     "User",

@@ -18,6 +18,7 @@ from inkstave.api.routes import (
     files,
     history,
     notifications,
+    project_import,
     projects,
     sharing,
     tree,
@@ -31,6 +32,7 @@ api_v1.include_router(auth.router)
 api_v1.include_router(users.router)
 api_v1.include_router(admin.router)
 api_v1.include_router(projects.router)
+api_v1.include_router(project_import.router)
 api_v1.include_router(sharing.router)
 api_v1.include_router(sharing.invites_router)
 api_v1.include_router(tree.router)

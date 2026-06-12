@@ -226,6 +226,12 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `MAX_UPLOAD_BYTES` | No | `52428800` | per-file upload limit (50 MB) | backend |
 | `ALLOWED_UPLOAD_MIME` | No | `image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,text/plain,application/x-bibtex,text/x-bibtex` | comma-separated MIME allow-list for uploads | backend |
 | `STORAGE_STREAM_CHUNK_BYTES` | No | `65536` | streaming chunk size | backend, worker |
+| `IMPORT_MAX_ZIP_BYTES` | No | `52428800` | max compressed `.zip` upload size for project import (50 MiB) | backend, worker |
+| `IMPORT_MAX_UNCOMPRESSED_BYTES` | No | `314572800` | max total uncompressed bytes across kept entries (300 MiB) | worker |
+| `IMPORT_MAX_FILE_BYTES` | No | `52428800` | max uncompressed size of any single archive entry (50 MiB) | worker |
+| `IMPORT_MAX_ENTRIES` | No | `2000` | max kept (folders+docs+files) entries per import | worker |
+| `IMPORT_ALLOWED_EXTENSIONS` | No | `.tex,.bib,.cls,.sty,.bst,.bbx,.cbx,.txt,.md,.csv,.tsv,.json,.yml,.yaml,.xml,.svg,.png,.jpg,.jpeg,.gif,.webp,.pdf,.eps` | extensions allowed inside an imported archive (text ∪ binary) | worker |
+| `IMPORT_WORKDIR_ROOT` | No | `/tmp/inkstave-imports` | scratch dir for the bounded temp zip copy | worker |
 | `S3_ENDPOINT_URL` | No | `—` | custom endpoint for MinIO/S3-compatible | backend, worker |
 | `S3_REGION` | No | `us-east-1` | S3 region for the s3 storage backend | backend, worker |
 | `S3_BUCKET` | No | `—` | S3 bucket name for the s3 storage backend | backend, worker |

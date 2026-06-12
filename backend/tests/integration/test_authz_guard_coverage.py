@@ -35,6 +35,8 @@ _HANDLER_GUARDED: frozenset[str] = frozenset(
         "/api/v1/projects/{project_id}/invites/{invite_id}",
         "/api/v1/projects/{project_id}/permissions",
         "/api/v1/projects/{project_id}/compile/{compile_id}/events",
+        # The import SSE /events route uses a query-param token (spec 101), like compile.
+        "/api/v1/projects/{project_id}/import/{import_id}/events",
         f"{_AGENT}/sessions",
         f"{_AGENT}/sessions/{{session_id}}",
         f"{_AGENT}/sessions/{{session_id}}/messages",
