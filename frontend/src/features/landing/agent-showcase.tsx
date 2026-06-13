@@ -65,7 +65,11 @@ export function AgentShowcase() {
         </div>
 
         {/* Static multi-hunk review card. */}
-        <div ref={right} className="reveal min-w-0" style={{ "--reveal-delay": "120ms" } as CSSProperties}>
+        <div
+          ref={right}
+          className="reveal min-w-0"
+          style={{ "--reveal-delay": "120ms" } as CSSProperties}
+        >
           <ReviewCard />
         </div>
       </div>
