@@ -39,6 +39,14 @@ _ERROR_CLOSINGS = {
     ),
 }
 
+# Shown (and streamed) when the turn is cut off by the iteration/token budget while the
+# model still had work queued — so a partial result is not mistaken for a finished one.
+_CAPPED_NOTE = (
+    "⚠️ I stopped before finishing because this turn reached its size limit, so the "
+    "result may be partial. Any edits proposed above are ready to review — ask me to "
+    "continue, ideally one file or section at a time."
+)
+
 
 def _frame_for_llm(messages: list[LLMMessage]) -> list[LLMMessage]:
     """Wrap tool-role content in untrusted framing before it reaches the model (spec 49).
@@ -262,16 +270,18 @@ def make_respond(deps: AgentDeps) -> Any:
                 "final_response": text,
             }
 
-        # Capped without error: reuse the last assistant content if present (do NOT
-        # duplicate it into a second row); only synthesize a closing message when the
-        # transcript has no usable assistant content (e.g. a tool-only loop).
+        # Capped without error: the iteration/token budget cut the turn off mid-work.
+        # Stream a clear early-stop note so a partial result is not mistaken for a
+        # finished one, then reuse the last assistant content as the final answer when
+        # present — without duplicating it into a second row (spec 50).
         last = _last_assistant_content(state.get("messages", []))
+        if deps.events is not None:
+            await deps.events.emit("token", text=f"\n\n{_CAPPED_NOTE}" if last else _CAPPED_NOTE)
         if last is not None:
             return {"final_response": last}
-        closing = "I reached my step limit for this turn before finishing."
         return {
-            "messages": [LLMMessage(role="assistant", content=closing)],
-            "final_response": closing,
+            "messages": [LLMMessage(role="assistant", content=_CAPPED_NOTE)],
+            "final_response": _CAPPED_NOTE,
         }
 
     return respond
