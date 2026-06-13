@@ -48,6 +48,22 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Create the first admin via the first-run setup gate, taking the app past
+   * setup so `needs_setup` is false (unauthenticated users redirect to /login,
+   * not /setup). Idempotent for e2e: a 409 means an admin already exists.
+   */
+  async bootstrapAdmin(email: string, displayName: string, password = E2E_PASSWORD): Promise<void> {
+    const res = await fetch(`${this.base}/api/setup/admin`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, display_name: displayName, password }),
+    });
+    if (!res.ok && res.status !== 409) {
+      throw new Error(`POST /api/setup/admin -> ${res.status}: ${await res.text()}`);
+    }
+  }
+
   async login(email: string, password = E2E_PASSWORD): Promise<TokenPair> {
     const pair = await this.request<TokenPair>("POST", "/api/v1/auth/login", { email, password });
     this.accessToken = pair.access_token;

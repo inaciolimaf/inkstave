@@ -68,7 +68,8 @@ test("request a reset, set a new password from the link, then sign in @smoke", a
 
   // Set a new password from the link.
   await page.goto(`/reset-password?token=${token}`);
-  await page.getByLabel("New password").fill(newPassword);
+  // "New password" is a substring of "Confirm new password"; match exactly.
+  await page.getByLabel("New password", { exact: true }).fill(newPassword);
   await page.getByLabel("Confirm new password").fill(newPassword);
   await page.getByRole("button", { name: /update password/i }).click();
   await expect(page.getByText(/password updated/i)).toBeVisible();

@@ -196,8 +196,14 @@ export class PreviewPanel {
     return this.page.getByLabel("Page 1");
   }
 
+  /** Compile output is a tabbed region (spec 27): select the "Log" tab. */
   async openLog(): Promise<void> {
-    await this.page.getByRole("button", { name: /log/i }).click();
+    await this.page.getByRole("tab", { name: /log/i }).click();
+  }
+
+  /** Select the "Problems" tab of the compile-output region. */
+  async openProblems(): Promise<void> {
+    await this.page.getByRole("tab", { name: /problems/i }).click();
   }
 
   logRegion(): Locator {

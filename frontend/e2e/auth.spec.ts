@@ -18,8 +18,9 @@ test("register → land authenticated → log out → log back in @smoke", async
   const login = new LoginPage(page);
   const dashboard = new DashboardPage(page);
 
-  // Protected route bounces to /login when unauthenticated.
-  await page.goto("/");
+  // Protected route bounces to /login when unauthenticated. ("/" is now the
+  // public landing page, so probe a genuinely protected route instead.)
+  await page.goto("/projects");
   await expect(page).toHaveURL(/\/login$/);
 
   // Register via the UI → redirected to login with a confirmation.

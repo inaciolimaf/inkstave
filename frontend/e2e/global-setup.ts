@@ -9,7 +9,7 @@
  */
 import { mkdir, writeFile } from "node:fs/promises";
 
-import { registerUser, uniqueId } from "./support/api";
+import { ApiClient, registerUser, uniqueId } from "./support/api";
 import { e2e, RUN_CONTEXT_FILE, type RunContext } from "./support/env";
 
 async function waitForBackend(timeoutMs = 60_000): Promise<void> {
@@ -30,6 +30,12 @@ async function waitForBackend(timeoutMs = 60_000): Promise<void> {
 export default async function globalSetup(): Promise<void> {
   await waitForBackend();
   await mkdir("e2e/.auth", { recursive: true });
+
+  // Take the app past first-run setup: create the first admin so `needs_setup`
+  // is false and unauthenticated users are redirected to /login (not /setup).
+  // This is a dedicated admin account; the journey users (A/B) below stay regular
+  // collaborators so per-role specs keep their semantics.
+  await new ApiClient().bootstrapAdmin(`${uniqueId("admin")}@example.com`, "E2E Admin");
 
   const emailA = `${uniqueId("alice")}@example.com`;
   const emailB = `${uniqueId("bob")}@example.com`;

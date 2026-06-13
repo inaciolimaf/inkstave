@@ -42,9 +42,11 @@ test("agent streams, shows tool activity, and applies a reviewed diff @smoke", a
     { timeout: 20_000 },
   );
 
-  // (182b) At least one tool-activity row appears (search/read/propose_edit).
+  // (182b) At least one tool-activity row appears (the stub runs the full
+  // search → read → propose_edit sequence, so several rows match — assert the
+  // first to avoid a strict-mode multiple-match).
   await expect(
-    transcript.getByText(/Searched the project|Read a file|Proposed an edit/),
+    transcript.getByText(/Searched the project|Read a file|Proposed an edit/).first(),
   ).toBeVisible({
     timeout: 20_000,
   });
@@ -69,7 +71,9 @@ test("agent streams, shows tool activity, and applies a reviewed diff @smoke", a
   await expect(acceptSwitch).not.toBeChecked();
 
   await dialog.getByRole("button", { name: "Preview" }).first().click();
-  const preview = dialog.locator("pre").first();
+  // The preview is a read-only CodeMirror editor (#192), not a <pre>; assert on
+  // its rendered content region.
+  const preview = dialog.getByTestId("preview-editor");
   await expect(preview).toContainText("original introduction");
   await expect(preview).not.toContainText(APPLIED_MARKER);
 
