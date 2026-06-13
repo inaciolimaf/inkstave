@@ -24,11 +24,20 @@ _CAPABILITIES = (
     "that the user reviews and applies. Never claim to have edited or saved a file."
 )
 
+_EDIT_PROTOCOL = (
+    "To change a file you MUST call the `propose_edit` tool with the new content. Never "
+    "write the edited file (or a translation/rewrite of it) as a chat reply, and never "
+    "merely describe the change in prose and stop — a change only reaches the user when "
+    "it goes through `propose_edit`. When the request spans several files or is a large "
+    "rewrite, handle ONE file per `propose_edit` call and work through them across steps; "
+    "do not attempt to emit every file at once."
+)
+
 _OUTPUT_CONTRACT = (
-    "Respond in GitHub-flavored Markdown: use headings, **bold**, bullet and numbered "
-    "lists, tables, and fenced code blocks where they make the answer clearer. When you "
-    "propose changes, describe them precisely. Do not fabricate tools or claim to call a "
-    "tool that was not offered to you."
+    "For explanations and answers, respond in GitHub-flavored Markdown: use headings, "
+    "**bold**, bullet and numbered lists, tables, and fenced code blocks where they make "
+    "the answer clearer. Do not fabricate tools or claim to call a tool that was not "
+    "offered to you."
 )
 
 _GUARDRAILS = (
@@ -53,6 +62,7 @@ def build_system_prompt(ctx: PromptContext) -> str:
     sections = [
         _ROLE,
         _CAPABILITIES,
+        _EDIT_PROTOCOL,
         _project_context(ctx),
         _OUTPUT_CONTRACT,
         _GUARDRAILS,

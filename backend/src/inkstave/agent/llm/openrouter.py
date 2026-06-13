@@ -129,6 +129,21 @@ class OpenRouterLLMClient:
 
         choice = resp.choices[0]
         tool_calls, had_error = self._parse_tool_calls(choice.message.tool_calls)
+        if choice.finish_reason == "tool_calls" and not tool_calls:
+            # The provider signalled a tool call but none survived parsing — e.g. some
+            # providers (seen with DeepSeek via SiliconFlow) return the call in a shape
+            # the SDK does not surface as ``message.tool_calls``. Without this the turn
+            # would silently end as a plain-text answer with no proposed edit and no
+            # error. Mark it as an error and log the raw message so we can diagnose.
+            logger.warning(
+                "openrouter: finish_reason=tool_calls but no parseable tool_calls "
+                "(model=%s); raw message=%r",
+                self._model,
+                choice.message,
+            )
+            had_error = True
+        elif had_error:
+            logger.warning("openrouter: malformed tool-call arguments (model=%s)", self._model)
         usage = LLMUsage(
             prompt=getattr(resp.usage, "prompt_tokens", 0) or 0,
             completion=getattr(resp.usage, "completion_tokens", 0) or 0,

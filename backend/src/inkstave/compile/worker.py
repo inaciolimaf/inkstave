@@ -32,6 +32,7 @@ from inkstave.history.jobs import compact_history
 from inkstave.mailer.jobs import send_email_job
 from inkstave.mailer.sender import get_email_sender
 from inkstave.notifications.jobs import sweep_notifications
+from inkstave.observability.log import configure_logging
 from inkstave.redis_client import create_redis_pool
 from inkstave.services.import_jobs import import_project_zip
 from inkstave.storage.factory import get_object_store
@@ -57,6 +58,9 @@ def _sweep_minutes(sweep_s: int) -> set[int]:
 
 async def startup(ctx: dict[str, Any]) -> None:
     settings = get_settings()
+    # Route inkstave.* logs (incl. the agent run progress) to stdout at the configured
+    # level — without this the worker only shows arq's own job start/stop lines.
+    configure_logging(settings)
     engine, sessionmaker = create_engine_and_sessionmaker(settings)
     store = get_object_store(settings)
     packages = load_package_config(_PACKAGES_TOML, settings)

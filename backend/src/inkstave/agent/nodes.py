@@ -25,12 +25,18 @@ logger = logging.getLogger("inkstave.agent")
 # Sentinel error values (spec 44 / 49).
 CANCELLED = "cancelled"
 BUDGET_EXCEEDED = "budget_exceeded"
+# The provider returned a tool call the LLM client could not parse (see openrouter.py).
+TOOL_CALL_UNPARSED = "tool_call_unparsed"
 
 # User-facing closing text for a terminal error — the raw sentinel / exception string
 # is never persisted into the chat transcript (spec 50 refactor).
 _ERROR_CLOSINGS = {
     CANCELLED: "Run cancelled.",
     BUDGET_EXCEEDED: "This run reached its token or cost budget.",
+    TOOL_CALL_UNPARSED: (
+        "I tried to edit a file but the response could not be read. Please try again, "
+        "or ask for a smaller change (one file or section at a time)."
+    ),
 }
 
 
@@ -89,6 +95,8 @@ def make_plan(deps: AgentDeps) -> Any:
             return {"error": BUDGET_EXCEEDED, "pending_tool_calls": []}
 
         messages = _frame_for_llm(state["messages"]) if deps.injection_guard else state["messages"]
+        iteration = state.get("iterations", 0) + 1
+        logger.info("agent plan: iteration=%d calling LLM (%d messages)", iteration, len(messages))
         # Deliberate deviation from spec 44 §5.4.1 (which calls for `LLMClient.stream`):
         # we use `complete()` because the full response is needed for `tool_calls`/`usage`
         # and to keep tool flows correct and tests deterministic; the prose is re-chunked
@@ -106,6 +114,19 @@ def make_plan(deps: AgentDeps) -> Any:
         except Exception as exc:  # never crash the graph
             logger.exception("plan node failed")
             return {"error": f"agent error: {exc}", "pending_tool_calls": []}
+
+        logger.info(
+            "agent plan: iteration=%d LLM finish=%s tool_calls=%d tokens=%d",
+            iteration,
+            response.finish_reason,
+            len(response.tool_calls or []),
+            response.usage.total,
+        )
+        # The provider signalled a tool call the client could not parse (finish_reason
+        # forced to "error" with no usable calls). Ending the turn now as a plain answer
+        # would drop the intended edit silently, so fail loudly instead (spec 41 §4).
+        if not response.tool_calls and response.finish_reason == "error":
+            return {"error": TOOL_CALL_UNPARSED, "pending_tool_calls": []}
 
         # Stream the assistant's prose as `token` events (spec 44).
         if deps.events is not None and response.content:
@@ -145,6 +166,7 @@ def make_act(deps: AgentDeps) -> Any:
         before = len(ctx.staged_edits) if ctx is not None else 0
 
         for call in state.get("pending_tool_calls", []):
+            logger.info("agent act: running tool=%s", call.name)
             if deps.events is not None:
                 await deps.events.emit(
                     "tool_call", tool_call_id=call.id, name=call.name, arguments=call.arguments
@@ -195,6 +217,9 @@ def make_act(deps: AgentDeps) -> Any:
                             "detail": {"reason": "override_pattern_in_content"},
                         }
                     )
+            logger.info(
+                "agent act: tool=%s ok=%s → %s", call.name, result.ok, _result_summary(result)
+            )
             if deps.events is not None:
                 await deps.events.emit(
                     "tool_result",

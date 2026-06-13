@@ -99,6 +99,13 @@ async def _run_agent_turn(
         user_id = session.user_id
         project_id = session.project_id
         now = clock()
+        logger.info(
+            "agent run %s start: session=%s project=%s msg_chars=%d",
+            run_id,
+            session_id,
+            project_id,
+            len(user_message),
+        )
 
         async def finalize(state_value: str) -> None:
             session.run_state = state_value
@@ -186,6 +193,15 @@ async def _run_agent_turn(
             )
 
             final_state = await emit_terminal(sink=sink, result=result, run_id=run_id)
+            logger.info(
+                "agent run %s done: state=%s iterations=%d diffs=%d tokens=%d error=%s",
+                run_id,
+                final_state,
+                result.iterations,
+                len(result.proposed_diffs),
+                result.usage.total,
+                result.error or "-",
+            )
             if result.error == BUDGET_EXCEEDED:
                 await audit_budget_block_midrun(
                     db=db,
