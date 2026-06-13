@@ -21,7 +21,7 @@ class AgentSettings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     agent_model: str = "openai/gpt-4o-mini"
     agent_temperature: float = 0.2
-    agent_max_iterations: int = 8
+    agent_max_iterations: int = 15
     agent_max_total_tokens: int = 60000
     # Output cap per LLM call. Must be large enough for a propose_edit whose
     # new_text is a whole document — too small truncates the tool-call JSON, which
