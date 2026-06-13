@@ -46,7 +46,8 @@ const dict = {
       budget_exceeded: "This run would exceed the token budget.",
       llm_error: "The AI service is temporarily unavailable.",
       internal: "The agent run failed. Please try again.",
-      timeout: "The run took too long and was stopped. Try a smaller task — e.g. one file or section at a time.",
+      timeout:
+        "The run took too long and was stopped. Try a smaller task — e.g. one file or section at a time.",
       generic: "Something went wrong.",
       connectionLost: "Connection lost.",
       startFailed: "Failed to start the run.",
