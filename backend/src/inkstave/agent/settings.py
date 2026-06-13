@@ -27,7 +27,11 @@ class AgentSettings(BaseSettings):
     # new_text is a whole document — too small truncates the tool-call JSON, which
     # then fails to parse (the "_raw" fallback) and the edit is rejected.
     agent_max_tokens_per_call: int = 32000
-    agent_request_timeout_s: int = 60
+    agent_request_timeout_s: int = 120
+    # Whole-turn ceiling enforced by ARQ (api/jobs.py runs inside this). Must comfortably
+    # exceed a worst-case multi-iteration turn; on overrun the worker cancels the job and
+    # the turn is settled as a `timeout` error (never a wedged "running" session).
+    agent_job_timeout_s: int = 600
     agent_http_referer: str = "https://inkstave.local"
     agent_app_title: str = "Inkstave"
 

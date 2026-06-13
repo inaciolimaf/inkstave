@@ -21,6 +21,7 @@ const FRIENDLY_ERROR_CODES = new Set([
   "budget_exceeded",
   "llm_error",
   "internal",
+  "timeout",
 ]);
 
 function friendlyError(code: string, message: string): string {
@@ -35,6 +36,7 @@ const RETRYABLE = new Set([
   "rate_limited",
   "agent_rate_limited",
   "transport",
+  "timeout",
 ]);
 
 function openAssistant(items: TranscriptItem[]): number {

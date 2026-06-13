@@ -97,6 +97,7 @@ const FRIENDLY_TITLE_KEYS: Record<string, string> = {
   budget_exceeded: "error.titles.budget_exceeded",
   agent_budget_exceeded: "error.titles.agent_budget_exceeded",
   cancelled: "error.titles.cancelled",
+  timeout: "error.titles.timeout",
 };
 
 export function AgentErrorState({

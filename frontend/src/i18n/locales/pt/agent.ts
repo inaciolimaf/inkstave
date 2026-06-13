@@ -39,6 +39,7 @@ const dict: Dict = {
       budget_exceeded: "Orçamento excedido",
       agent_budget_exceeded: "Orçamento atingido",
       cancelled: "Execução cancelada",
+      timeout: "Tempo esgotado",
     },
     messages: {
       cancelled: "Execução cancelada.",
@@ -48,6 +49,7 @@ const dict: Dict = {
       budget_exceeded: "Esta execução excederia o orçamento de tokens.",
       llm_error: "O serviço de IA está temporariamente indisponível.",
       internal: "A execução do agente falhou. Tente novamente.",
+      timeout: "A execução demorou demais e foi interrompida. Tente uma tarefa menor — por exemplo, um arquivo ou seção por vez.",
       generic: "Algo deu errado.",
       connectionLost: "Conexão perdida.",
       startFailed: "Não foi possível iniciar a execução.",

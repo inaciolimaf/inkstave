@@ -128,7 +128,12 @@ class WorkerSettings:
         func(send_email_job, name="send_email_job", max_tries=3),
         func(compact_history, name="compact_history", max_tries=2),
         func(sweep_notifications, name="sweep_notifications", max_tries=2),
-        func(run_agent_turn, name="run_agent_turn", max_tries=1),
+        func(
+            run_agent_turn,
+            name="run_agent_turn",
+            max_tries=1,
+            timeout=get_agent_settings().agent_job_timeout_s,
+        ),
         func(agent_audit_cleanup, name="agent_audit_cleanup", max_tries=1),
         func(import_project_zip, name="import_project_zip", max_tries=1),
     ]

@@ -13,6 +13,7 @@ registration path is unchanged.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -104,6 +105,26 @@ async def _run_agent_turn(
             session.active_run_id = None
             await db.commit()
 
+        async def settle_error(*, code: str, message: str) -> None:
+            """Roll back, stream a terminal error, and free the session (no wedged run)."""
+            await db.rollback()
+            inc_agent_request("error")
+            await sink.emit("error", code=code, message=message)
+            failed = await db.get(AgentSession, sid)
+            if failed is not None:
+                failed.run_state = AgentRunState.error.value
+                failed.active_run_id = None
+            await audit(
+                db,
+                AgentAuditAction.error,
+                user_id=user_id,
+                project_id=project_id,
+                session_id=sid,
+                run_id=run_uuid,
+                outcome="error",
+            )
+            await db.commit()
+
         if not await precheck_run(
             db=db,
             redis=redis,
@@ -190,24 +211,18 @@ async def _run_agent_turn(
             session.run_state = final_state
             session.active_run_id = None
             await db.commit()
+        except asyncio.CancelledError:
+            # ARQ enforces the per-job timeout (agent_job_timeout_s) by cancelling the
+            # task with CancelledError — a BaseException, so the ``except Exception``
+            # below never sees it. Without this branch the session would wedge in
+            # ``running`` with no terminal event and the diffs would never commit.
+            # Settle it as a ``timeout`` error (shielded so the cleanup survives the
+            # cancellation), then re-raise so the task still terminates as cancelled.
+            logger.warning("run_agent_turn timed out / cancelled for run %s", run_id)
+            await asyncio.shield(settle_error(code="timeout", message="The agent run timed out."))
+            raise
         except Exception:
             logger.exception("run_agent_turn failed for run %s", run_id)
-            await db.rollback()
-            inc_agent_request("error")
-            await sink.emit("error", code="internal", message="The agent run failed.")
-            session = await db.get(AgentSession, sid)
-            if session is not None:
-                session.run_state = AgentRunState.error.value
-                session.active_run_id = None
-            await audit(
-                db,
-                AgentAuditAction.error,
-                user_id=user_id,
-                project_id=project_id,
-                session_id=sid,
-                run_id=run_uuid,
-                outcome="error",
-            )
-            await db.commit()
+            await settle_error(code="internal", message="The agent run failed.")
         finally:
             await release_run(redis, user_id=user_id)
