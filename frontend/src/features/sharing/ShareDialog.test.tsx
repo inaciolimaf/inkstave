@@ -95,14 +95,16 @@ describe("ShareDialog (owner)", () => {
     expect(toast.success).toHaveBeenCalled();
   });
 
-  it("toasts an error when the invite is rejected", async () => {
+  it("shows an inline error when the invite is rejected", async () => {
     const { ApiError } = await import("@/lib/api-client");
     api.createInvite.mockRejectedValue(new ApiError(409, "Already a member."));
     open();
     await screen.findByText("Bob");
     await userEvent.type(screen.getByLabelText("Invite by email"), "bob@x.com");
     await userEvent.click(screen.getByRole("button", { name: "Invite" }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Already a member."));
+    // Server invite errors surface inline under the field (role="alert"), not as a toast.
+    expect(await screen.findByRole("alert")).toHaveTextContent("Already a member.");
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("confirms before removing a member (AC11)", async () => {
