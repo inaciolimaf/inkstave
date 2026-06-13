@@ -42,6 +42,8 @@ export function PublicOnly({ children }: { children: ReactNode }) {
   const { t } = useTranslation("common");
   const { isAuthenticated, isBootstrapping } = useAuth();
   if (isBootstrapping) return <Centered>{t("state.loading")}</Centered>;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  // Signed-in users skip public auth pages and go to the app dashboard — NOT "/"
+  // which is the public marketing landing, not the signed-in home.
+  if (isAuthenticated) return <Navigate to="/projects" replace />;
   return <>{children}</>;
 }

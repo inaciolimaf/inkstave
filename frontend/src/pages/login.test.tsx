@@ -35,7 +35,7 @@ function renderLogin() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<div>home page</div>} />
+          <Route path="/projects" element={<div>home page</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,

@@ -45,7 +45,9 @@ export function LoginPage() {
     setFormError(null);
     try {
       await login(values.email, values.password);
-      navigate(state.from?.pathname ?? "/", { replace: true });
+      // After login go to where the user was headed, else the app dashboard.
+      // NOT "/" — that is the public marketing landing, not the signed-in home.
+      navigate(state.from?.pathname ?? "/projects", { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status === 401) setFormError(t("login.invalidCredentials"));
