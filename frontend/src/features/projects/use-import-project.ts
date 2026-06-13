@@ -1,12 +1,7 @@
 /** Import state machine: idle → uploading(progress) → processing → done | failed (spec 101). */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  ImportUploadError,
-  getImportStatus,
-  importProjectZip,
-  type ProjectImport,
-} from "./api";
+import { ImportUploadError, getImportStatus, importProjectZip, type ProjectImport } from "./api";
 
 export type ImportPhase = "idle" | "uploading" | "processing" | "done" | "failed";
 

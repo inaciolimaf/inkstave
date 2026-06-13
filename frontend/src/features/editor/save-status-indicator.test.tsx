@@ -25,11 +25,7 @@ describe("SaveStatusIndicator", () => {
 
   it("renders an older relative phrase for an earlier lastSavedAt", () => {
     render(
-      <SaveStatusIndicator
-        status="clean"
-        onRetry={vi.fn()}
-        lastSavedAt={Date.now() - 90_000}
-      />,
+      <SaveStatusIndicator status="clean" onRetry={vi.fn()} lastSavedAt={Date.now() - 90_000} />,
     );
     expect(screen.getByText(/Saved \d+m ago/)).toBeInTheDocument();
   });

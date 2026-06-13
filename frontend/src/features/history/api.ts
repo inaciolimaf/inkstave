@@ -130,10 +130,7 @@ function toLabel(w: LabelWire): HistoryLabel {
   };
 }
 
-export async function listLabels(
-  projectId: string,
-  docId: string,
-): Promise<HistoryLabel[]> {
+export async function listLabels(projectId: string, docId: string): Promise<HistoryLabel[]> {
   const wire = await apiClient.get<LabelWire[]>(`${base(projectId, docId)}/labels`);
   return wire.map(toLabel);
 }

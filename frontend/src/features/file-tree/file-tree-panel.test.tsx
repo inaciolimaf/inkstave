@@ -86,8 +86,6 @@ describe("FileTreePanel", () => {
     await screen.findByText("main.tex");
     expect(screen.queryByRole("button", { name: "New file" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New folder" })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Actions for main.tex" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Actions for main.tex" })).not.toBeInTheDocument();
   });
 });

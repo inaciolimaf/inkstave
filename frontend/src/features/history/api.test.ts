@@ -122,9 +122,7 @@ describe("listLabels", () => {
       ]),
     );
     const labels = await listLabels("p1", "d1");
-    expect(fetchMock.mock.calls[0][0]).toContain(
-      "/api/v1/projects/p1/docs/d1/history/labels",
-    );
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/v1/projects/p1/docs/d1/history/labels");
     expect(labels).toEqual([
       {
         id: "l1",

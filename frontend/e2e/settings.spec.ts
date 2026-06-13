@@ -54,7 +54,9 @@ test("editor reflects the chosen font size @smoke", async ({ page, seedProject }
   await editor.open(projectId);
   await editor.openFile(docName);
   await editor.waitEditable();
-  const fontSize = await page.locator(".cm-content").evaluate((el) => getComputedStyle(el).fontSize);
+  const fontSize = await page
+    .locator(".cm-content")
+    .evaluate((el) => getComputedStyle(el).fontSize);
   expect(fontSize).toBe("28px");
 });
 

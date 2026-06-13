@@ -42,11 +42,7 @@ export function HunkView({
           const newLabel = line.type === "del" ? "" : String(newNo++);
           const marker = line.type === "add" ? "+" : line.type === "del" ? "-" : " ";
           const sr =
-            line.type === "add"
-              ? t("hunk.added")
-              : line.type === "del"
-                ? t("hunk.removed")
-                : "";
+            line.type === "add" ? t("hunk.added") : line.type === "del" ? t("hunk.removed") : "";
           return (
             <div
               key={i}

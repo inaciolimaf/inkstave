@@ -9,8 +9,7 @@ import type { DiffResult } from "./types";
 // Pull in the real `getDiff` (which maps a backend 413 → tooLarge) so the
 // too-large case can exercise the actual production code path rather than a
 // hand-rolled resolved value that would mask the bug.
-const { getDiff: realGetDiff } =
-  await vi.importActual<typeof import("./api")>("./api");
+const { getDiff: realGetDiff } = await vi.importActual<typeof import("./api")>("./api");
 
 const api = vi.hoisted(() => ({
   listVersions: vi.fn(),
@@ -43,7 +42,10 @@ function stubFetch(status: number, body: unknown) {
     json: async () => JSON.parse(text),
     text: async () => text,
   };
-  vi.stubGlobal("fetch", vi.fn(async () => res));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => res),
+  );
 }
 
 function diff(over: Partial<DiffResult> = {}): DiffResult {

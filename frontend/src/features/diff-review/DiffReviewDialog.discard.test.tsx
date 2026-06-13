@@ -22,9 +22,7 @@ describe("DiffReviewDialog (discard guard)", () => {
 
     // Cancel keeps the dialog open.
     await userEvent.click(screen.getByRole("button", { name: "Keep reviewing" }));
-    await waitFor(() =>
-      expect(screen.queryByText("Discard your review?")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Discard your review?")).not.toBeInTheDocument());
     expect(screen.getByText("main.tex")).toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalled();
 

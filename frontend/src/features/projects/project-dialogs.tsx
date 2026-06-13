@@ -41,11 +41,7 @@ import { useCreateProject, useDeleteProject, useRenameProject } from "./use-proj
 
 function makeNameSchema(t: TFunction<"projects">) {
   return z.object({
-    name: z
-      .string()
-      .trim()
-      .min(1, t("form.nameRequired"))
-      .max(255, t("form.nameTooLong")),
+    name: z.string().trim().min(1, t("form.nameRequired")).max(255, t("form.nameTooLong")),
   });
 }
 type NameValues = z.infer<ReturnType<typeof makeNameSchema>>;

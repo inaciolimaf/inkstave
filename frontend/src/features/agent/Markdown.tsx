@@ -34,10 +34,7 @@ const components: Components = {
   th: (p) => <th className="border px-2 py-1 text-left font-semibold" {...p} />,
   td: (p) => <td className="border px-2 py-1 align-top" {...p} />,
   pre: (p) => (
-    <pre
-      className="my-1 overflow-x-auto rounded bg-background/60 p-2 font-mono text-xs"
-      {...p}
-    />
+    <pre className="my-1 overflow-x-auto rounded bg-background/60 p-2 font-mono text-xs" {...p} />
   ),
   code({ className, children, ...rest }: ComponentPropsWithoutRef<"code">) {
     const isBlock = /language-/.test(className ?? "") || String(children ?? "").includes("\n");

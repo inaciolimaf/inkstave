@@ -117,7 +117,10 @@ describe("PreviewPane inverse sync (PDF -> editor)", () => {
     (getCompilePdf as Mock).mockResolvedValue(new ArrayBuffer(8));
     load.mockResolvedValue(fakeDoc(1));
     // Synctex inverse API resolves the clicked PDF point to a source line.
-    inverseSync.mockResolvedValue({ ok: true, value: { file: "main.tex", line: 42, column: null } });
+    inverseSync.mockResolvedValue({
+      ok: true,
+      value: { file: "main.tex", line: 42, column: null },
+    });
 
     // Mirror editor-workspace.handlePdfClick: resolve the point via pdfToCode,
     // then reveal the editor line and flash a highlight decoration.

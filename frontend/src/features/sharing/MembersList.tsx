@@ -68,10 +68,7 @@ export function MembersList({
               <p className="truncate text-xs text-muted-foreground">{m.email}</p>
             </div>
             {isOwner && m.role !== "owner" ? (
-              <Select
-                value={m.role}
-                onValueChange={(v) => onChangeRole(m.userId, v as InviteRole)}
-              >
+              <Select value={m.role} onValueChange={(v) => onChangeRole(m.userId, v as InviteRole)}>
                 <SelectTrigger
                   className="w-24 capitalize"
                   aria-label={t("members.roleFor", { name: m.name })}

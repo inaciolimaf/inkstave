@@ -62,9 +62,7 @@ export function RestoreVersionButton({
                 { version, labelName: labelName.trim() || undefined },
                 {
                   onSuccess: (result) => {
-                    toast.success(
-                      t("restore.success", { version, newVersion: result.newVersion }),
-                    );
+                    toast.success(t("restore.success", { version, newVersion: result.newVersion }));
                     setLabelName("");
                     setOpen(false);
                   },

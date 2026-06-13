@@ -44,9 +44,7 @@ function ErrorState({ onRetry, notFound }: { onRetry: () => void; notFound: bool
   const { t } = useTranslation("editor");
   return (
     <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-sm">
-      <p className="text-destructive">
-        {notFound ? t("pane.documentGone") : t("pane.loadFailed")}
-      </p>
+      <p className="text-destructive">{notFound ? t("pane.documentGone") : t("pane.loadFailed")}</p>
       {!notFound && (
         <Button variant="outline" size="sm" onClick={onRetry}>
           {t("pane.retry")}

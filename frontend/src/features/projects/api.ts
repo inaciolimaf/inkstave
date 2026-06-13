@@ -138,7 +138,9 @@ export function importProjectZip(
       let errorType: string | null = null;
       let message = `Upload failed (${xhr.status})`;
       try {
-        const body = JSON.parse(xhr.responseText) as { error?: { type?: string; message?: string } };
+        const body = JSON.parse(xhr.responseText) as {
+          error?: { type?: string; message?: string };
+        };
         errorType = body.error?.type ?? null;
         message = body.error?.message ?? message;
       } catch {
@@ -150,14 +152,9 @@ export function importProjectZip(
   });
 }
 
-export async function getImportStatus(
-  projectId: string,
-  importId: string,
-): Promise<ProjectImport> {
+export async function getImportStatus(projectId: string, importId: string): Promise<ProjectImport> {
   return toImport(
-    await apiClient.get<ProjectImportWire>(
-      `/api/v1/projects/${projectId}/import/${importId}`,
-    ),
+    await apiClient.get<ProjectImportWire>(`/api/v1/projects/${projectId}/import/${importId}`),
   );
 }
 

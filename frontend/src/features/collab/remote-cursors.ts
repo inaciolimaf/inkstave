@@ -83,7 +83,12 @@ function normaliseColor(value: string): string {
  */
 function idleColors(view: EditorView): Set<string> | null {
   const conf = view.state.facet(ySyncFacet) as
-    | { awareness?: { getStates(): Map<number, Record<string, unknown>>; doc: { clientID: number } } }
+    | {
+        awareness?: {
+          getStates(): Map<number, Record<string, unknown>>;
+          doc: { clientID: number };
+        };
+      }
     | undefined;
   const awareness = conf?.awareness;
   if (!awareness) return null;
@@ -115,9 +120,7 @@ const idleCaretFade = ViewPlugin.fromClass(
       if (idle === null) return;
       const carets = view.dom.querySelectorAll<HTMLElement>(".cm-ySelectionCaret");
       for (const caret of carets) {
-        const color = normaliseColor(
-          caret.style.backgroundColor || caret.style.borderColor || "",
-        );
+        const color = normaliseColor(caret.style.backgroundColor || caret.style.borderColor || "");
         caret.classList.toggle("cm-ySelectionCaret--idle", color !== "" && idle.has(color));
       }
     }

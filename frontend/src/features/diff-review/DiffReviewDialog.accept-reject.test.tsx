@@ -48,9 +48,7 @@ describe("DiffReviewDialog (accept/reject)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
     const confirm2 = await screen.findByRole("alertdialog");
     await userEvent.click(within(confirm2).getByRole("button", { name: "Apply" }));
-    await waitFor(() =>
-      expect(second.bridge.getText("main.tex").toString()).toBe("a\nB\nc\nD\n"),
-    );
+    await waitFor(() => expect(second.bridge.getText("main.tex").toString()).toBe("a\nB\nc\nD\n"));
   });
 
   it("reject-all then accept-all flips every switch and the counter/preview (AC3)", async () => {

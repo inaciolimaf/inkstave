@@ -187,10 +187,7 @@ function Conversation({
   const prompt = t("demo.prompt");
 
   return (
-    <div
-      className={cn("flex flex-col gap-2.5 p-3.5 text-[0.78rem]", className)}
-      {...rest}
-    >
+    <div className={cn("flex flex-col gap-2.5 p-3.5 text-[0.78rem]", className)} {...rest}>
       {/* User prompt */}
       <div className="self-end rounded-2xl rounded-br-sm bg-ink px-3 py-1.5 text-[0.76rem] text-paper">
         {prompt.slice(0, state.typed)}

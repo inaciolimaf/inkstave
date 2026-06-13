@@ -89,9 +89,7 @@ describe("NotificationsBell", () => {
     api.listNotifications.mockReturnValue(new Promise(() => {})); // never resolves
     renderWithProviders(<NotificationsBell />);
     await userEvent.click(await screen.findByRole("button", { name: /Notifications/ }));
-    await waitFor(() =>
-      expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument());
   });
 
   it("shows the error + retry UI when the list fails (criterion 157b)", async () => {

@@ -89,9 +89,7 @@ export function HistoryDiffView({
 
   const body = (() => {
     if (from === null) {
-      return (
-        <p className="p-4 text-sm text-muted-foreground">{t("diff.selectPrompt")}</p>
-      );
+      return <p className="p-4 text-sm text-muted-foreground">{t("diff.selectPrompt")}</p>;
     }
     if (query.isLoading) {
       return (
@@ -118,14 +116,10 @@ export function HistoryDiffView({
       return <p className="p-4 text-sm text-muted-foreground">{t("diff.binary")}</p>;
     }
     if (diff.tooLarge) {
-      return (
-        <p className="p-4 text-sm text-muted-foreground">{t("diff.tooLarge")}</p>
-      );
+      return <p className="p-4 text-sm text-muted-foreground">{t("diff.tooLarge")}</p>;
     }
     if (diff.hunks.length === 0) {
-      return (
-        <p className="p-4 text-sm text-muted-foreground">{t("diff.noChanges")}</p>
-      );
+      return <p className="p-4 text-sm text-muted-foreground">{t("diff.noChanges")}</p>;
     }
 
     return (

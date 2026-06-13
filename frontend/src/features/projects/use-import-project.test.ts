@@ -11,7 +11,11 @@ const api = vi.hoisted(() => ({
 
 vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api")>();
-  return { ...actual, importProjectZip: api.importProjectZip, getImportStatus: api.getImportStatus };
+  return {
+    ...actual,
+    importProjectZip: api.importProjectZip,
+    getImportStatus: api.getImportStatus,
+  };
 });
 
 const row = (over: Partial<ProjectImport> = {}): ProjectImport => ({

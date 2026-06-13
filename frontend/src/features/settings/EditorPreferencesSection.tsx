@@ -2,13 +2,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "@/auth/auth-context";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,

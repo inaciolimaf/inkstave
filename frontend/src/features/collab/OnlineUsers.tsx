@@ -61,7 +61,11 @@ export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex items-center -space-x-2" role="list" aria-label={t("presence.peopleOnline")}>
+      <div
+        className="flex items-center -space-x-2"
+        role="list"
+        aria-label={t("presence.peopleOnline")}
+      >
         {visible.map((user) => (
           <div role="listitem" key={user.id}>
             <PresenceAvatar user={user} />

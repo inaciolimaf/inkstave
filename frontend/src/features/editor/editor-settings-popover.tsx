@@ -51,7 +51,11 @@ export function EditorSettingsPopover({
             value={String(settings.fontSize)}
             onValueChange={(v) => onUpdate({ fontSize: Number(v) })}
           >
-            <SelectTrigger id="editor-font-size" aria-label={t("settings.fontSize")} className="w-24">
+            <SelectTrigger
+              id="editor-font-size"
+              aria-label={t("settings.fontSize")}
+              className="w-24"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
