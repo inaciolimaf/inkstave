@@ -5,10 +5,10 @@ order, then tick it. Specs 01–100 are already implemented.
 
 ## Backlog (only these remain)
 
-- [x] 101-project-zip-import
-- [x] 102-project-zip-export
-- [x] 103-email-delivery
+_All planned specs are implemented._
 
 ## Done
 
-Specs 01–100 (core system, runtime safety, validated fix-packs, audit fix-packs).
+- [x] 104-email-auth-flows
+Specs 01–103 (core system, runtime safety, validated fix-packs, audit fix-packs,
+ZIP import/export, email delivery).

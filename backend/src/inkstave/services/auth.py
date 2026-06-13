@@ -69,25 +69,52 @@ async def authenticate_user(
     return user
 
 
+class EmailNotVerifiedError(UnauthorizedError):
+    """Raised when ``require_verified_email_to_login`` is on and the email is unconfirmed."""
+
+    def __init__(self) -> None:
+        super().__init__("Please verify your email first.")
+
+
+async def issue_token_pair(
+    token_service: TokenService,
+    refresh_store: RefreshStore,
+    user: User,
+) -> TokenPair:
+    """Mint a fresh token family for ``user`` (the single issuance seam).
+
+    Shared by credential login and the magic-link callback (spec 104) so both
+    paths produce an identical, rotatable access+refresh pair.
+    """
+    family_id = uuid4()
+    access_token, expires_in = token_service.create_access_token(user)
+    refresh_token, jti = token_service.create_refresh_token(user.id, family_id)
+    await refresh_store.store_refresh(jti=jti, user_id=user.id, family_id=family_id)
+    return TokenPair(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
+
+
 async def login(
     session: AsyncSession,
     hasher: PasswordHasher,
     token_service: TokenService,
     refresh_store: RefreshStore,
     data: LoginRequest,
+    *,
+    require_verified_email: bool = False,
 ) -> TokenPair:
     user = await authenticate_user(session, hasher, data.email, data.password)
     if user is None:
         # Event only — never the attempted email or password.
         logger.warning("auth login failed: invalid credentials")
         raise InvalidCredentialsError()
+    if require_verified_email and not user.email_confirmed:
+        # Correct credentials prove existence already, so this leaks nothing new.
+        logger.warning("auth login rejected: email not verified", extra={"user_id": user.id})
+        raise EmailNotVerifiedError()
 
-    family_id = uuid4()
-    access_token, expires_in = token_service.create_access_token(user)
-    refresh_token, jti = token_service.create_refresh_token(user.id, family_id)
-    await refresh_store.store_refresh(jti=jti, user_id=user.id, family_id=family_id)
+    pair = await issue_token_pair(token_service, refresh_store, user)
     logger.info("auth login ok", extra={"user_id": user.id})
-    return TokenPair(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
+    return pair
 
 
 async def refresh_tokens(

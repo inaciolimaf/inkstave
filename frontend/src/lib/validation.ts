@@ -44,11 +44,33 @@ export const makeRegisterSchema = (t: Translate) =>
       path: ["confirm_password"],
     });
 
+/** Email-only request forms (forgot-password, magic-link, resend verification). */
+export const makeEmailRequestSchema = (t: Translate) =>
+  z.object({
+    email: z.string().min(1, t("validation.emailRequired")).email(t("validation.emailInvalid")),
+  });
+
+/** Reset-password form: a new password (spec-06 schema) plus a confirmation. */
+export const makeResetPasswordSchema = (t: Translate) =>
+  z
+    .object({
+      password: makePasswordSchema(t),
+      confirm_password: z.string().min(1, t("validation.confirmPasswordRequired")),
+    })
+    .refine((data) => data.password === data.confirm_password, {
+      message: t("validation.passwordsMismatch"),
+      path: ["confirm_password"],
+    });
+
 const defaultT: Translate = (key) => i18n.t(key, { ns: "auth" });
 
 export const passwordSchema = makePasswordSchema(defaultT);
 export const loginSchema = makeLoginSchema(defaultT);
 export const registerSchema = makeRegisterSchema(defaultT);
+export const emailRequestSchema = makeEmailRequestSchema(defaultT);
+export const resetPasswordSchema = makeResetPasswordSchema(defaultT);
 
 export type LoginValues = z.infer<typeof loginSchema>;
 export type RegisterValues = z.infer<typeof registerSchema>;
+export type EmailRequestValues = z.infer<typeof emailRequestSchema>;
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;

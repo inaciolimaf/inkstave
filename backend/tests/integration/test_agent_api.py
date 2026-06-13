@@ -65,6 +65,40 @@ async def test_post_message_enqueues_and_conflicts(
     assert again.status_code == 409
 
 
+async def test_post_message_after_terminal_state_starts_new_run(
+    seed: SimpleNamespace,
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    enqueuer: _FakeEnqueuer,
+) -> None:
+    """A finished run leaves the session in a terminal state (``done``/``error``);
+    the next message must start a fresh run rather than 409 (multi-turn chat)."""
+    from uuid import UUID
+
+    from inkstave.agent.models import AgentRunState, AgentSession
+
+    base = f"{API}/{seed.project.id}/agent"
+    sid = (await async_client.post(f"{base}/sessions", json={}, headers=seed.headers)).json()["id"]
+
+    first = await async_client.post(
+        f"{base}/sessions/{sid}/messages", json={"content": "hi"}, headers=seed.headers
+    )
+    assert first.status_code == 202
+
+    # Simulate the worker finishing the run: terminal state, run slot released.
+    row = await db_session.get(AgentSession, UUID(sid))
+    assert row is not None
+    row.run_state = AgentRunState.done.value
+    row.active_run_id = None
+    await db_session.commit()
+
+    second = await async_client.post(
+        f"{base}/sessions/{sid}/messages", json={"content": "again"}, headers=seed.headers
+    )
+    assert second.status_code == 202  # terminal → a new turn is accepted
+    assert len(enqueuer.calls) == 2
+
+
 async def test_too_long_message_is_400(
     seed: SimpleNamespace, async_client: AsyncClient, enqueuer: _FakeEnqueuer
 ) -> None:

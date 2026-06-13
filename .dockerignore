@@ -35,7 +35,12 @@ coverage.xml
 # Node / frontend build artefacts and tests
 **/node_modules
 frontend/dist
-frontend/e2e
+# e2e specs/reports aren't needed at runtime, BUT `pnpm build` runs `tsc -b`,
+# which type-checks playwright.config.ts → it imports e2e/support/env.ts. Keep
+# the support dir in context or the frontend image build fails (TS2307); the
+# files never reach the final image (multi-stage: runtime = nginx + dist only).
+frontend/e2e/*
+!frontend/e2e/support
 frontend/playwright-report
 frontend/test-results
 frontend/coverage

@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger("inkstave.ratelimit")
 
 # Scopes whose identity also includes the submitted email (credential stuffing).
-_EMAIL_SCOPES = {"login", "register"}
+# The verify/magic request endpoints throttle per address AND per IP; their
+# token-only callbacks carry no email, so ``_identity`` falls back to IP for them.
+_EMAIL_SCOPES = {"login", "register", "verify_email", "magic_link"}
 _SCOPE_SETTING = {
     "login": "rate_limit_login",
     "register": "rate_limit_register",
@@ -33,6 +35,12 @@ _SCOPE_SETTING = {
     # Sensitive public auth endpoints (spec 52/103): forgot-password reuses the
     # per-user/IP change-password policy (default 5/hour).
     "forgot_password": "rate_limit_auth_password",
+    # Email link-based auth flows (spec 104). The same scope guards a flow's
+    # request endpoint (per email+IP) and its token-only callback (IP only — a
+    # 32-byte url-safe token is unguessable, so this is defence-in-depth).
+    "verify_email": "rate_limit_verify_email",
+    "magic_link": "rate_limit_magic_link",
+    "reset_password": "rate_limit_reset_password",
 }
 
 

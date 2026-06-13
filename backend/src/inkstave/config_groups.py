@@ -106,6 +106,11 @@ class AuthSettingsMixin:
     rate_limit_refresh: str = "30/300"
     # Change-password / sensitive auth endpoints (spec 52 §5.2.1): 5/hour, user_or_ip.
     rate_limit_auth_password: str = "5/3600"
+    # Email link-based auth flows (spec 104). Request caps are per email+IP; the
+    # reset-password callback cap is per-IP (token brute-force blunting).
+    rate_limit_verify_email: str = "5/3600"
+    rate_limit_magic_link: str = "5/3600"
+    rate_limit_reset_password: str = "10/3600"
     # Per-user policies hardened in spec 52 ("<limit>/<window_seconds>").
     rate_limit_compile: str = "20/60"
     rate_limit_agent: str = "30/60"
@@ -349,5 +354,11 @@ class CollaborationSettingsMixin:
     # Transactional-link lifetimes (spec 103).
     password_reset_token_ttl: int = 3600  # password-reset link lifetime (seconds)
     email_verification_token_ttl: int = 86400  # account-verification link lifetime
+    # Email link-based auth flows (spec 104).
+    magic_login_token_ttl: int = 600  # passwordless sign-in link lifetime — short (10 min)
+    # When true, credential login (POST /auth/login) rejects an unconfirmed user;
+    # the magic-link / reset flows still work (they confirm the email). Default
+    # false keeps the existing login contract.
+    require_verified_email_to_login: bool = False
     notification_invite_ttl_days: int = 30
     notification_sweep_interval_s: int = 3600  # expiry sweep interval (mocked in tests)

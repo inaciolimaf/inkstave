@@ -111,6 +111,9 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `RATE_LIMIT_REGISTER` | No | `5/3600` | per IP | backend |
 | `RATE_LIMIT_REFRESH` | No | `30/300` | per IP | backend |
 | `RATE_LIMIT_AUTH_PASSWORD` | No | `5/3600` | change-password / sensitive-auth cap, `<limit>/<window_seconds>` per user-or-IP | backend |
+| `RATE_LIMIT_VERIFY_EMAIL` | No | `5/3600` | email verification (re)send cap, per email+IP | backend |
+| `RATE_LIMIT_MAGIC_LINK` | No | `5/3600` | magic-link request cap, per email+IP | backend |
+| `RATE_LIMIT_RESET_PASSWORD` | No | `10/3600` | reset-password callback cap, per IP | backend |
 | `TRUSTED_PROXY_HEADER` | No | `X-Forwarded-For` | source of the real client IP | backend, collab/websocket |
 | `WS_AUTH_CLOSE_CODE` | No | `4401` | WS unauthorized close code (contract, spec 29) | collab/websocket |
 | `MAX_DOCUMENT_BYTES` | No | `2000000` | max UTF-8 bytes of a single document | backend, collab/websocket |
@@ -220,6 +223,8 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `APP_BASE_URL` | No | `http://localhost` | base for accept_url / reset_url / verify_url in emails | backend, worker |
 | `PASSWORD_RESET_TOKEN_TTL` | No | `3600` | password-reset link lifetime (seconds) | backend |
 | `EMAIL_VERIFICATION_TOKEN_TTL` | No | `86400` | account email-verification link lifetime (seconds) | backend |
+| `MAGIC_LOGIN_TOKEN_TTL` | No | `600` | passwordless sign-in link lifetime (seconds) | backend |
+| `REQUIRE_VERIFIED_EMAIL_TO_LOGIN` | No | `false` | if true, credential login requires a confirmed email | backend |
 | `NOTIFICATION_INVITE_TTL_DAYS` | No | `30` | TTL for invite notifications | backend |
 | `NOTIFICATION_SWEEP_INTERVAL_S` | No | `3600` | expiry sweep interval (mocked in tests) | worker |
 | `VITE_NOTIFICATIONS_POLL_INTERVAL_MS` | No | `60000` | frontend bell poll interval | frontend build |

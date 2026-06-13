@@ -47,7 +47,7 @@ function PdfPageView({
 
   useEffect(() => {
     let cancelled = false;
-    let task: { cancel: () => void } | null = null;
+    let task: { cancel: () => void; promise: Promise<void> } | null = null;
     pdf.getPage(pageNumber).then((page: PdfPage) => {
       if (cancelled) return;
       const viewport = page.getViewport({ scale });
@@ -58,6 +58,12 @@ function PdfPageView({
       const ctx = canvas.getContext("2d");
       if (!ctx) return; // jsdom / headless: no 2d context — skip pixel render
       task = page.render({ canvasContext: ctx, viewport });
+      // Cancelling an in-flight render (scale/page change, unmount) rejects the
+      // task promise with RenderingCancelledException — expected, so swallow it;
+      // surface anything else.
+      task.promise.catch((err: unknown) => {
+        if ((err as { name?: string })?.name !== "RenderingCancelledException") throw err;
+      });
     });
     return () => {
       cancelled = true;

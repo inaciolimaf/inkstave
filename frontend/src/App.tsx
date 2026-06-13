@@ -1,6 +1,12 @@
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import { PublicOnly, RequireAuth } from "@/auth/require-auth";
+import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
+import { useApplyTheme } from "@/features/editor/use-apply-theme";
+import { MagicLinkPage } from "@/features/auth/MagicLinkPage";
+import { ResendVerificationPage } from "@/features/auth/ResendVerificationPage";
+import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
+import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
 import { LandingPage } from "@/features/landing/landing-page";
 import { ProjectsPage } from "@/features/projects/projects-page";
 import { ConfirmEmailPage } from "@/features/settings/ConfirmEmailPage";
@@ -34,6 +40,21 @@ const router = createBrowserRouter([
   },
   // Token-authorized; reachable signed-out (the token alone authorizes the change).
   { path: "/settings/confirm-email", element: <ConfirmEmailPage /> },
+  // Email link-based auth flows (spec 104). The token-authorized callbacks are
+  // reachable even while signed in (a user may click a link in another tab), so
+  // they are NOT wrapped in PublicOnly; only the pure request pages are.
+  { path: "/verify-email", element: <VerifyEmailPage /> },
+  { path: "/verify-email/resend", element: <ResendVerificationPage /> },
+  { path: "/magic-link", element: <MagicLinkPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
+  {
+    path: "/forgot-password",
+    element: (
+      <PublicOnly>
+        <ForgotPasswordPage />
+      </PublicOnly>
+    ),
+  },
   {
     element: <RequireAuth />,
     children: [
@@ -47,5 +68,6 @@ const router = createBrowserRouter([
 ]);
 
 export function App() {
+  useApplyTheme(); // keep <html> in sync with the user's theme preference (spec 59)
   return <RouterProvider router={router} />;
 }

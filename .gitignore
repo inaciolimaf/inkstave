@@ -29,6 +29,8 @@ data/
 coverage.xml
 # Playwright
 test-results/
+# Playwright MCP snapshot artifacts (generated during browser-driven runs)
+.playwright-mcp/
 playwright-report/
 blob-report/
 playwright/.cache/

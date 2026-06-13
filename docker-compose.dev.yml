@@ -168,6 +168,16 @@ services:
       - "8.8.8.8"
     # arq --watch reloads the worker when files under the path change.
     command: ["arq", "inkstave.compile.worker.WorkerSettings", "--watch", "/app/src"]
+    # Override the image's HTTP /health check (meant for the API): the worker is an
+    # ARQ process with no HTTP server, so the inherited check always fails (the
+    # container shows "unhealthy" while it is in fact processing jobs). `arq --check`
+    # reads the worker's health-check key from Redis instead — the correct probe.
+    healthcheck:
+      test: ["CMD", "arq", "--check", "inkstave.compile.worker.WorkerSettings"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 5
     volumes: *backend-volumes
     depends_on:
       postgres:
@@ -180,6 +190,13 @@ services:
   frontend:
     image: node:20-alpine
     working_dir: /app/frontend
+    # Resolve the npm registry via public resolvers — `pnpm install` below runs on
+    # every boot and the host's systemd-resolved/Tailscale stub makes Docker's
+    # embedded DNS flaky (intermittent EAI_AGAIN on registry.npmjs.org). Same fix
+    # as backend/worker above.
+    dns:
+      - "1.1.1.1"
+      - "8.8.8.8"
     # pnpm pinned to the lockfile's version; install into the container's
     # node_modules volumes (musl binaries), then run Vite with HMR.
     command:

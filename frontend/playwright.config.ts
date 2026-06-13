@@ -34,6 +34,15 @@ const backendEnv: Record<string, string> = {
   RATE_LIMIT_LOGIN: "1000/60",
   RATE_LIMIT_REGISTER: "1000/60",
   RATE_LIMIT_REFRESH: "1000/60",
+  // Email link-based auth flows (spec 104): capture emails to a file (no SMTP),
+  // generous limits, and build links against the preview origin.
+  RATE_LIMIT_AUTH_PASSWORD: "1000/60",
+  RATE_LIMIT_VERIFY_EMAIL: "1000/60",
+  RATE_LIMIT_MAGIC_LINK: "1000/60",
+  RATE_LIMIT_RESET_PASSWORD: "1000/60",
+  EMAIL_BACKEND: "file",
+  EMAIL_FILE_DIR: e2e.emailDir,
+  FRONTEND_URL: e2e.baseUrl,
   E2E_BACKEND_PORT: String(e2e.backendPort),
 };
 

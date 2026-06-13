@@ -28,8 +28,15 @@ def _too_large_response(limit: int) -> dict[str, object]:
 class BodySizeLimitMiddleware:
     """Abort with 413 when Content-Length exceeds the cap, or while streaming past it.
 
-    Upload routes (``/files``) use the larger upload cap; everything else the JSON cap.
+    Binary-upload routes (``/files`` for blob uploads, ``/import`` for project zips)
+    use the larger upload cap; everything else the JSON cap. The import route then
+    enforces its own precise ``import_max_zip_bytes`` while streaming the body.
     """
+
+    # Path suffixes that carry binary payloads, not JSON — exempt from the small
+    # JSON cap so a legitimately large upload isn't rejected before the route can
+    # apply its own (stricter, streamed) size guard.
+    _UPLOAD_SUFFIXES = ("/files", "/import")
 
     def __init__(self, app: ASGIApp, settings: Settings) -> None:
         self.app = app
@@ -37,7 +44,9 @@ class BodySizeLimitMiddleware:
         self.upload_cap = settings.max_upload_bytes
 
     def _cap(self, path: str) -> int:
-        return self.upload_cap if path.rstrip("/").endswith("/files") else self.json_cap
+        stripped = path.rstrip("/")
+        is_upload = any(stripped.endswith(suffix) for suffix in self._UPLOAD_SUFFIXES)
+        return self.upload_cap if is_upload else self.json_cap
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":

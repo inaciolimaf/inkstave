@@ -1,11 +1,4 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 
 import { apiClient, refreshTokens } from "@/lib/api-client";
 import { tokenStore } from "@/lib/token-store";
@@ -22,6 +15,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isBootstrapping: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Store a ready-made token pair (e.g. magic-link callback) and fetch the user. */
+  loginWithTokenPair: (pair: TokenPair) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<UserPublic>;
   logout: () => Promise<void>;
   /** Replace the cached user (e.g. after a settings update, spec 59). */
@@ -79,6 +74,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me);
   };
 
+  // Share the exact post-login path as `login`, but from an already-issued pair
+  // (the magic-link callback, spec 104). No credentials are involved.
+  const loginWithTokenPair = async (pair: TokenPair): Promise<void> => {
+    tokenStore.setTokens({ access: pair.access_token, refresh: pair.refresh_token });
+    const me = await apiClient.get<UserPublic>("/api/v1/users/me");
+    setUser(me);
+  };
+
   const register = (payload: RegisterPayload): Promise<UserPublic> =>
     apiClient.post<UserPublic>("/api/v1/auth/register", payload, { auth: false });
 
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: user !== null,
         isBootstrapping,
         login,
+        loginWithTokenPair,
         register,
         logout,
         applyUser,

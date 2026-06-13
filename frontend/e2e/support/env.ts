@@ -33,6 +33,12 @@ export const e2e = {
    * See the rationale comment on `workers:` in playwright.config.ts.
    */
   workers: process.env.E2E_PLAYWRIGHT_WORKERS ? num("E2E_PLAYWRIGHT_WORKERS", 1) : undefined,
+  /**
+   * Directory the backend's `file` email sender writes captured emails to (spec
+   * 104 e2e). Both the backend (via EMAIL_FILE_DIR) and the password-reset spec
+   * read this — no real SMTP/Mailpit; the reset link is read from disk.
+   */
+  emailDir: process.env.E2E_EMAIL_DIR ?? "/tmp/inkstave-e2e-emails",
 };
 
 /** A password that satisfies the backend's policy (letter + digit, not email-like). */

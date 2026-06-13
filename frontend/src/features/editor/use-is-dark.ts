@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 
-/** Tracks the app's dark mode via the `dark` class on <html> (Tailwind convention). */
+const QUERY = "(prefers-color-scheme: dark)";
+
+/** Tracks the OS-level dark-mode preference (`prefers-color-scheme`). This is the
+ * signal used to resolve the "system" theme setting (spec 59); the resolved
+ * theme is then applied to <html> by `useApplyTheme`. */
 export function useIsDark(): boolean {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [dark, setDark] = useState(() => window.matchMedia(QUERY).matches);
   useEffect(() => {
-    const el = document.documentElement;
-    const update = () => setDark(el.classList.contains("dark"));
-    const observer = new MutationObserver(update);
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
+    const mq = window.matchMedia(QUERY);
+    const update = () => setDark(mq.matches);
+    mq.addEventListener("change", update);
     update();
-    return () => observer.disconnect();
+    return () => mq.removeEventListener("change", update);
   }, []);
   return dark;
 }

@@ -86,11 +86,30 @@ def _email_verification(ctx: dict[str, Any]) -> tuple[str, str, str]:
     return subject, text, html
 
 
+def _magic_login(ctx: dict[str, Any]) -> tuple[str, str, str]:
+    name = ctx.get("user_name", "there")
+    magic_url = ctx["magic_url"]
+    subject = "Your Inkstave sign-in link"
+    text = (
+        f"Hi {name},\n\nHere is your one-time link to sign in to Inkstave.\n\n"
+        f"Sign in:\n{magic_url}\n\n"
+        "If you didn’t request this, you can ignore this email.\n"
+    )
+    html = (
+        f"<p>Hi {escape(str(name))},</p>"
+        "<p>Here is your one-time link to sign in to Inkstave.</p>"
+        f'<p><a href="{escape(str(magic_url), quote=True)}">Sign in to Inkstave</a></p>'
+        "<p>If you didn’t request this, you can ignore this email.</p>"
+    )
+    return subject, text, html
+
+
 _TEMPLATES = {
     "project_invite": _project_invite,
     "password_reset": _password_reset,
     "email_change_confirmation": _email_change_confirmation,
     "email_verification": _email_verification,
+    "magic_login": _magic_login,
 }
 
 

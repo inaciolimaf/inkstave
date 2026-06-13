@@ -13,6 +13,7 @@ from inkstave.agent.models import (
     AgentSessionStatus,
 )
 from inkstave.agent.safety.models import AgentAuditAction, AgentAuditLog
+from inkstave.db.models.auth_token import AuthToken
 from inkstave.db.models.compile import Compile, CompileJobStatus
 from inkstave.db.models.compile_output import CompileOutput, OutputKind
 from inkstave.db.models.crdt import CrdtDocumentState, CrdtUpdate
@@ -38,6 +39,7 @@ __all__ = [
     "AgentSessionStatus",
     "ProposedDiff",
     "ProposedDiffStatus",
+    "AuthToken",
     "Compile",
     "CompileJobStatus",
     "CompileOutput",

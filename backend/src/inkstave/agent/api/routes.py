@@ -74,6 +74,18 @@ class RunActiveError(ConflictError):
         super().__init__("A run is already active for this session.")
 
 
+# States in which a run is genuinely in flight, so a new message must wait. The
+# terminal states (``done``/``error``) and the initial ``idle`` all permit a
+# fresh turn — otherwise a session would refuse every message after its first.
+_ACTIVE_RUN_STATES = frozenset(
+    {
+        AgentRunState.queued.value,
+        AgentRunState.running.value,
+        AgentRunState.cancelling.value,
+    }
+)
+
+
 class MessageTooLongError(AppError):
     status_code = status.HTTP_400_BAD_REQUEST
     error_type = "message_too_long"
@@ -192,7 +204,7 @@ async def post_message(
     row = await _owned_session(session, project_id, session_id, user.id)
     if len(body.content) > get_agent_settings().agent_max_message_chars:
         raise MessageTooLongError()
-    if row.run_state != AgentRunState.idle.value:
+    if row.run_state in _ACTIVE_RUN_STATES:
         raise RunActiveError()  # 409 — one active run per session
 
     run_id = uuid4()

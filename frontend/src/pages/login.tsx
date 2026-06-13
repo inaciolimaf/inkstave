@@ -117,6 +117,26 @@ export function LoginPage() {
               </Button>
             </form>
           </Form>
+          <div className="mt-4 flex flex-col items-center gap-1 text-sm">
+            <Link
+              to="/forgot-password"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t("login.forgotPassword")}
+            </Link>
+            <Link
+              to="/magic-link"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t("login.magicLink")}
+            </Link>
+            <Link
+              to="/verify-email/resend"
+              className="text-muted-foreground underline-offset-4 hover:underline"
+            >
+              {t("login.resend")}
+            </Link>
+          </div>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("login.noAccount")}{" "}
             <Link
