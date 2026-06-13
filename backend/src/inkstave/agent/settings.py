@@ -62,9 +62,12 @@ class AgentSettings(BaseSettings):
     agent_max_concurrent_runs_per_user: int = 2
     agent_max_runs_per_minute_per_project: int = 20
     agent_max_tokens_per_run: int = 120000
-    agent_max_cost_per_run_usd: float = 0.50
+    # Per-run cap is kept ≤ the per-day-per-user cap below, so a single run can never
+    # blow a user's whole daily budget in one shot (the daily gate only blocks the
+    # *next* run once the counter is exhausted).
+    agent_max_cost_per_run_usd: float = 0.30
     agent_max_tokens_per_day_per_project: int = 2000000
-    agent_max_cost_per_day_per_user_usd: float = 10.00
+    agent_max_cost_per_day_per_user_usd: float = 0.30  # ~R$0.50/day per user
     agent_model_cost_table: dict[str, dict[str, float]] = Field(
         default_factory=lambda: {
             "openai/gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
