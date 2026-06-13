@@ -43,6 +43,8 @@ const dict = {
     label: "PDF preview pane",
     compileOutput: "Compile output",
     pdfPreview: "PDF preview",
+    collapseOutput: "Collapse compile output",
+    expandOutput: "Expand compile output",
   },
   log: {
     title: "Log",

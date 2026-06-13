@@ -168,6 +168,37 @@ describe("PreviewPane (integration)", () => {
     expect(getLog).toHaveBeenCalledWith("p1", "c1");
   });
 
+  it("collapses and re-expands the compile output dock", async () => {
+    reqCompile.mockResolvedValue(snap("queued"));
+    render(<PreviewPane projectId="p1" />);
+
+    // Expanded by default: the Problems tab panel is in the document.
+    expect(screen.getByRole("region", { name: "Compile problems" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse compile output" }));
+    expect(screen.queryByRole("region", { name: "Compile problems" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand compile output" }));
+    expect(screen.getByRole("region", { name: "Compile problems" })).toBeInTheDocument();
+  });
+
+  it("re-expands a collapsed dock when a compile fails", async () => {
+    reqCompile.mockResolvedValue(snap("queued"));
+    getLog.mockResolvedValue("! LaTeX Error.");
+    render(<PreviewPane projectId="p1" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse compile output" }));
+    expect(screen.queryByRole("region", { name: "Compile problems" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Compile project" }));
+    await waitFor(() => expect(sources).toHaveLength(1));
+    await emitStatus(snap("failure"));
+
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Compile log" })).toBeInTheDocument(),
+    );
+  });
+
   it("shows a timeout-specific message and re-triggers via Try again", async () => {
     reqCompile.mockResolvedValue(snap("queued"));
     getLog.mockResolvedValue("timed out");

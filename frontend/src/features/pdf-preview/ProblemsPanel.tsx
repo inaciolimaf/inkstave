@@ -1,9 +1,11 @@
 /**
  * Problems panel (spec 27): the parsed compile diagnostics grouped by severity,
  * each row a keyboard-navigable button that jumps to its source line.
+ *
+ * The panel renders only the diagnostics region; the title, severity counts and
+ * the collapse control live in the shared compile-output dock (see PreviewPane).
  */
-import { AlertCircle, AlertTriangle, ChevronRight, Info } from "lucide-react";
-import { useState } from "react";
+import { AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
@@ -52,24 +54,21 @@ function ProblemRow({
   );
 }
 
-export function ProblemsPanel({
+/**
+ * Compact severity counts shown in the compile-output tab bar; stays visible
+ * even when the dock is collapsed so problem totals are always at a glance.
+ */
+export function ProblemsSummary({
   problems,
-  loading,
-  reason,
+  loading = false,
   stale = false,
-  onJump,
 }: {
   problems: CompileProblems | null;
   loading?: boolean;
-  reason?: ProblemsReason | null;
-  /** A compile is running; the shown problems are from the previous result. */
+  /** A compile is running; the shown counts are from the previous result. */
   stale?: boolean;
-  onJump?: (file: string, line: number) => void;
 }) {
   const { t } = useTranslation("preview");
-  const total = problems?.problems.length ?? 0;
-  const [expanded, setExpanded] = useState(true);
-
   const counts = problems
     ? ([
         ["error", problems.errors] as const,
@@ -77,6 +76,42 @@ export function ProblemsPanel({
         ["info", problems.infos] as const,
       ] satisfies [ProblemSeverity, number][])
     : [];
+
+  return (
+    <>
+      {counts.map(([severity, count]) => {
+        const meta = SEVERITY_META[severity];
+        return (
+          <span
+            key={severity}
+            className="flex items-center gap-0.5 text-xs text-muted-foreground"
+            aria-label={t("problems.countSeverity", { count, severity })}
+          >
+            <meta.Icon className={cn("size-3.5", meta.className)} aria-hidden="true" />
+            {count}
+          </span>
+        );
+      })}
+      {(loading || stale) && (
+        <span className="text-xs text-muted-foreground">
+          {stale ? t("problems.updating") : t("problems.loading")}
+        </span>
+      )}
+    </>
+  );
+}
+
+export function ProblemsPanel({
+  problems,
+  reason,
+  onJump,
+}: {
+  problems: CompileProblems | null;
+  reason?: ProblemsReason | null;
+  onJump?: (file: string, line: number) => void;
+}) {
+  const { t } = useTranslation("preview");
+  const total = problems?.problems.length ?? 0;
 
   let body: React.ReactNode;
   if (reason === "log_unavailable") {
@@ -102,50 +137,13 @@ export function ProblemsPanel({
   }
 
   return (
-    <div className="flex flex-col border-t">
-      <div className="flex items-center gap-2 px-3 py-1.5">
-        <button
-          type="button"
-          onClick={() => setExpanded((o) => !o)}
-          aria-expanded={expanded}
-          aria-controls="problems-region"
-          className="flex items-center gap-1.5 text-sm font-medium hover:text-foreground/80"
-        >
-          <ChevronRight
-            className={cn("size-4 transition-transform", expanded && "rotate-90")}
-            aria-hidden="true"
-          />
-          {t("problems.title")}
-        </button>
-        {counts.map(([severity, count]) => {
-          const meta = SEVERITY_META[severity];
-          return (
-            <span
-              key={severity}
-              className="flex items-center gap-0.5 text-xs text-muted-foreground"
-              aria-label={t("problems.countSeverity", { count, severity })}
-            >
-              <meta.Icon className={cn("size-3.5", meta.className)} aria-hidden="true" />
-              {count}
-            </span>
-          );
-        })}
-        {(loading || stale) && (
-          <span className="text-xs text-muted-foreground">
-            {stale ? t("problems.updating") : t("problems.loading")}
-          </span>
-        )}
-      </div>
-      {expanded && (
-        <div
-          id="problems-region"
-          role="region"
-          aria-label={t("problems.region")}
-          className="max-h-48 overflow-auto"
-        >
-          {body}
-        </div>
-      )}
+    <div
+      id="problems-region"
+      role="region"
+      aria-label={t("problems.region")}
+      className="max-h-48 overflow-auto"
+    >
+      {body}
     </div>
   );
 }

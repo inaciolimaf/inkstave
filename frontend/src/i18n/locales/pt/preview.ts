@@ -45,6 +45,8 @@ const dict: Dict = {
     label: "Painel de prévia do PDF",
     compileOutput: "Saída da compilação",
     pdfPreview: "Prévia do PDF",
+    collapseOutput: "Recolher saída da compilação",
+    expandOutput: "Expandir saída da compilação",
   },
   log: {
     title: "Registro",

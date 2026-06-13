@@ -3,11 +3,12 @@
  * zoom + page navigation, and a collapsible raw-log panel, with empty / loading
  * / error states for every compile outcome.
  */
-import { Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n/config";
+import { cn } from "@/lib/utils";
 
 import { getCompilePdf } from "./api";
 import { CompileButton } from "./CompileButton";
@@ -16,7 +17,7 @@ import { PdfToolbar } from "./PdfToolbar";
 import { PdfViewer, type PageClickHandler } from "./PdfViewer";
 import { PreviewEmptyState } from "./PreviewEmptyState";
 import { PreviewErrorState } from "./PreviewErrorState";
-import { ProblemsPanel } from "./ProblemsPanel";
+import { ProblemsPanel, ProblemsSummary } from "./ProblemsPanel";
 import type { CompileProblems, ProblemsReason } from "./problems";
 import type { PdfHighlight } from "./hooks/useSyncTex";
 import { useCompile } from "./hooks/useCompile";
@@ -106,6 +107,7 @@ export function PreviewPane({
   const viewport = usePdfViewport(pdfDoc.numPages);
   const logState = useCompileLog(projectId, compile.compileId);
   const [bottomTab, setBottomTab] = useState<"problems" | "log">("problems");
+  const [outputCollapsed, setOutputCollapsed] = useState(false);
   const [highlight, setHighlight] = useState<{ page: number; box: PdfHighlight["box"] } | null>(
     null,
   );
@@ -115,10 +117,21 @@ export function PreviewPane({
     : null;
   const active = isActive(compile.status);
 
-  // Switch to the Log tab on a failed/timed-out/errored compile (§5.3.6).
+  // Reveal the Log tab on a failed/timed-out/errored compile (§5.3.6); expand
+  // the output dock too in case the user had collapsed it.
   useEffect(() => {
-    if (errorOutcome) setBottomTab("log");
+    if (errorOutcome) {
+      setBottomTab("log");
+      setOutputCollapsed(false);
+    }
   }, [errorOutcome]);
+
+  // Reveal a tab from elsewhere (e.g. the error state's "View log"): select it
+  // and make sure the dock is expanded.
+  const showOutputTab = (tab: "problems" | "log") => {
+    setBottomTab(tab);
+    setOutputCollapsed(false);
+  };
 
   // Report which compile the shown PDF belongs to (drives sync availability).
   useEffect(() => {
@@ -148,7 +161,7 @@ export function PreviewPane({
       <PreviewErrorState
         outcome={errorOutcome}
         detail={compile.error}
-        onViewLog={() => setBottomTab("log")}
+        onViewLog={() => showOutputTab("log")}
         onRetry={compile.compile}
       />
     );
@@ -214,62 +227,78 @@ export function PreviewPane({
         {announce(compile.status, compile.progressLabel)}
       </p>
 
-      {/* Problems and the raw log share one tabbed region (spec 27 §5.3). */}
+      {/* Problems and the raw log share one collapsible tabbed dock (spec 27 §5.3). */}
       <div className="flex flex-col border-t">
-        <div
-          role="tablist"
-          aria-label={t("pane.compileOutput")}
-          className="flex items-center gap-1 px-2"
-        >
-          {(["problems", "log"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              id={`compile-tab-${tab}`}
-              aria-selected={bottomTab === tab}
-              aria-controls={`compile-panel-${tab}`}
-              onClick={() => setBottomTab(tab)}
-              className={
-                bottomTab === tab
-                  ? "border-b-2 border-primary px-2 py-1.5 text-sm font-medium"
-                  : "border-b-2 border-transparent px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground/80"
-              }
+        <div className="flex items-center gap-1 px-2">
+          <button
+            type="button"
+            onClick={() => setOutputCollapsed((c) => !c)}
+            aria-expanded={!outputCollapsed}
+            aria-controls="compile-output-panels"
+            aria-label={outputCollapsed ? t("pane.expandOutput") : t("pane.collapseOutput")}
+            className="rounded p-1 text-muted-foreground hover:text-foreground/80"
+          >
+            <ChevronRight
+              className={cn("size-4 transition-transform", !outputCollapsed && "rotate-90")}
+              aria-hidden="true"
+            />
+          </button>
+          <div role="tablist" aria-label={t("pane.compileOutput")} className="flex items-center">
+            {(["problems", "log"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                id={`compile-tab-${tab}`}
+                aria-selected={!outputCollapsed && bottomTab === tab}
+                aria-controls={`compile-panel-${tab}`}
+                onClick={() => showOutputTab(tab)}
+                className={
+                  !outputCollapsed && bottomTab === tab
+                    ? "border-b-2 border-primary px-2 py-1.5 text-sm font-medium"
+                    : "border-b-2 border-transparent px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground/80"
+                }
+              >
+                {tab === "problems" ? t("problems.title") : t("log.title")}
+              </button>
+            ))}
+          </div>
+          {/* Severity counts stay visible even when the dock is collapsed. */}
+          <div className="ml-auto flex items-center gap-2 pr-1">
+            <ProblemsSummary problems={problems ?? null} loading={problemsLoading} stale={active} />
+          </div>
+        </div>
+        {!outputCollapsed && (
+          <div id="compile-output-panels">
+            <div
+              role="tabpanel"
+              id="compile-panel-problems"
+              aria-labelledby="compile-tab-problems"
+              hidden={bottomTab !== "problems"}
             >
-              {tab === "problems" ? t("problems.title") : t("log.title")}
-            </button>
-          ))}
-        </div>
-        <div
-          role="tabpanel"
-          id="compile-panel-problems"
-          aria-labelledby="compile-tab-problems"
-          hidden={bottomTab !== "problems"}
-        >
-          <ProblemsPanel
-            problems={problems ?? null}
-            loading={problemsLoading}
-            reason={problemsReason}
-            stale={active}
-            onJump={onProblemJump}
-          />
-        </div>
-        <div
-          role="tabpanel"
-          id="compile-panel-log"
-          aria-labelledby="compile-tab-log"
-          hidden={bottomTab !== "log"}
-        >
-          <LogPanel
-            expanded={bottomTab === "log"}
-            onToggle={() => setBottomTab((t) => (t === "log" ? "problems" : "log"))}
-            log={logState.log}
-            loading={logState.loading}
-            error={logState.error}
-            onFetch={logState.fetchLog}
-            meta={compile.meta}
-          />
-        </div>
+              <ProblemsPanel
+                problems={problems ?? null}
+                reason={problemsReason}
+                onJump={onProblemJump}
+              />
+            </div>
+            <div
+              role="tabpanel"
+              id="compile-panel-log"
+              aria-labelledby="compile-tab-log"
+              hidden={bottomTab !== "log"}
+            >
+              <LogPanel
+                expanded={bottomTab === "log"}
+                log={logState.log}
+                loading={logState.loading}
+                error={logState.error}
+                onFetch={logState.fetchLog}
+                meta={compile.meta}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

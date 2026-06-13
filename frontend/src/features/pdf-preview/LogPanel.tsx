@@ -1,10 +1,9 @@
-import { Check, ChevronRight, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import i18n from "@/i18n/config";
-import { cn } from "@/lib/utils";
 
 import type { CompileStatus } from "./types";
 
@@ -17,13 +16,13 @@ function statusLine(meta: CompileStatus | null): string | null {
 }
 
 /**
- * Collapsible raw compile-log viewer (spec 24, §5.3.6). Collapsed by default;
- * the parent auto-expands it on failure. The log is lazy-fetched the first time
- * the panel is open.
+ * Raw compile-log viewer (spec 24, §5.3.6). Visibility is owned by the shared
+ * compile-output dock (see PreviewPane): the panel renders its status line, a
+ * copy button and the log region only while `expanded`. The log is lazy-fetched
+ * the first time the panel is shown.
  */
 export function LogPanel({
   expanded,
-  onToggle,
   log,
   loading,
   error,
@@ -31,7 +30,6 @@ export function LogPanel({
   meta,
 }: {
   expanded: boolean;
-  onToggle: () => void;
   log: string | null;
   loading: boolean;
   error: string | null;
@@ -61,53 +59,42 @@ export function LogPanel({
     }
   };
 
+  if (!expanded) return null;
+
   const line = statusLine(meta);
 
   return (
-    <div className="flex flex-col border-t">
-      <div className="flex items-center gap-2 px-3 py-1.5">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={expanded}
-          aria-controls="compile-log-region"
-          className="flex items-center gap-1.5 text-sm font-medium hover:text-foreground/80"
-        >
-          <ChevronRight
-            className={cn("size-4 transition-transform", expanded && "rotate-90")}
-            aria-hidden="true"
-          />
-          {t("log.title")}
-        </button>
-        {line && <span className="truncate text-xs text-muted-foreground">{line}</span>}
-        {expanded && log != null && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto h-7"
-            onClick={copy}
-            aria-label={t("log.copyToClipboard")}
-          >
-            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-            {copied ? t("common:action.copied") : t("common:action.copy")}
-          </Button>
-        )}
-      </div>
-      {expanded && (
-        <div
-          id="compile-log-region"
-          role="region"
-          aria-label={t("log.compileLog")}
-          tabIndex={0}
-          className="max-h-48 overflow-auto bg-muted/40 px-3 py-2 font-mono text-xs whitespace-pre-wrap"
-        >
-          {loading && <span className="text-muted-foreground">{t("log.loadingLog")}</span>}
-          {error && <span className="text-destructive">{error}</span>}
-          {!loading &&
-            !error &&
-            (log ? log : <span className="text-muted-foreground">{t("log.noLogOutput")}</span>)}
+    <div className="flex flex-col">
+      {(line || log != null) && (
+        <div className="flex items-center gap-2 border-b px-3 py-1.5">
+          {line && <span className="truncate text-xs text-muted-foreground">{line}</span>}
+          {log != null && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto h-7"
+              onClick={copy}
+              aria-label={t("log.copyToClipboard")}
+            >
+              {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+              {copied ? t("common:action.copied") : t("common:action.copy")}
+            </Button>
+          )}
         </div>
       )}
+      <div
+        id="compile-log-region"
+        role="region"
+        aria-label={t("log.compileLog")}
+        tabIndex={0}
+        className="max-h-48 overflow-auto bg-muted/40 px-3 py-2 font-mono text-xs whitespace-pre-wrap"
+      >
+        {loading && <span className="text-muted-foreground">{t("log.loadingLog")}</span>}
+        {error && <span className="text-destructive">{error}</span>}
+        {!loading &&
+          !error &&
+          (log ? log : <span className="text-muted-foreground">{t("log.noLogOutput")}</span>)}
+      </div>
     </div>
   );
 }

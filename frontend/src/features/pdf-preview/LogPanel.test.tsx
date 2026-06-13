@@ -27,12 +27,10 @@ function meta(over: Partial<CompileStatus> = {}): CompileStatus {
 afterEach(() => vi.restoreAllMocks());
 
 describe("LogPanel", () => {
-  it("hides the log region when collapsed and toggles open", async () => {
-    const onToggle = vi.fn();
-    render(
+  it("renders nothing when collapsed", () => {
+    const { container } = render(
       <LogPanel
         expanded={false}
-        onToggle={onToggle}
         log={null}
         loading={false}
         error={null}
@@ -41,8 +39,7 @@ describe("LogPanel", () => {
       />,
     );
     expect(screen.queryByRole("region", { name: "Compile log" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /log/i }));
-    expect(onToggle).toHaveBeenCalled();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("lazy-fetches the log when expanded and shows the status line", () => {
@@ -50,7 +47,6 @@ describe("LogPanel", () => {
     render(
       <LogPanel
         expanded
-        onToggle={vi.fn()}
         log={"! Undefined control sequence."}
         loading={false}
         error={null}
@@ -71,7 +67,6 @@ describe("LogPanel", () => {
     render(
       <LogPanel
         expanded
-        onToggle={vi.fn()}
         log="log body"
         loading={false}
         error={null}
