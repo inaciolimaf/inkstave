@@ -133,6 +133,17 @@ export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunSta
         if (idx !== -1) {
           const cur = items[idx];
           if (cur.kind === "message") items[idx] = { ...cur, status: "cancelled" };
+        } else {
+          // Cancelled before any assistant message opened (e.g. during the tool
+          // phase): still surface a cancelled marker so the user sees the run
+          // stopped, not a silent transcript (spec 46 §8c).
+          items.push({
+            kind: "message",
+            id: `a-${event.seq ?? items.length}`,
+            role: "assistant",
+            text: "",
+            status: "cancelled",
+          });
         }
         return { ...base, phase: "cancelled", error: undefined };
       }
