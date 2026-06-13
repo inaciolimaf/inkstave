@@ -68,6 +68,32 @@ async def _scalar(url: str, sql: str, params: dict[str, Any]) -> Any:
         await engine.dispose()
 
 
+async def _cleanup(url: str, user_id: str, project_id: str) -> None:
+    """Remove the directly-seeded rows so they don't leak into other tests.
+
+    These migration tests write to the *shared template DB* outside the
+    per-test rollback transaction (they must, to exercise real DDL/backfills),
+    so they must clean up after themselves — otherwise the seeded user/project
+    persist and pollute any later test sharing the same worker DB (e.g. the
+    user-count assertion in test_register).
+    """
+    engine = create_async_engine(url)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("DELETE FROM project_memberships WHERE project_id = :pid"),
+                {"pid": project_id},
+            )
+            await conn.execute(
+                text("DELETE FROM tree_entities WHERE project_id = :pid"),
+                {"pid": project_id},
+            )
+            await conn.execute(text("DELETE FROM projects WHERE id = :pid"), {"pid": project_id})
+            await conn.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user_id})
+    finally:
+        await engine.dispose()
+
+
 def test_tree_migration_backfills_a_root_for_existing_project(_template_db: str) -> None:
     """Spec 12 §8: a pre-existing project (no root) gets exactly one root on upgrade.
 
@@ -77,8 +103,9 @@ def test_tree_migration_backfills_a_root_for_existing_project(_template_db: str)
     """
     cfg = Config(str(_ALEMBIC_INI))
     command.downgrade(cfg, _BEFORE_TREE)  # projects exist; tree_entities does not yet
+    user_id = project_id = None
     try:
-        _user_id, project_id = asyncio.run(_seed_project(_template_db))
+        user_id, project_id = asyncio.run(_seed_project(_template_db))
         command.upgrade(cfg, "head")  # runs the tree migration's root backfill
         roots = asyncio.run(
             _scalar(
@@ -90,12 +117,15 @@ def test_tree_migration_backfills_a_root_for_existing_project(_template_db: str)
         assert roots == 1
     finally:
         command.upgrade(cfg, "head")  # restore the shared template DB to head
+        if user_id is not None and project_id is not None:
+            asyncio.run(_cleanup(_template_db, user_id, project_id))
 
 
 def test_sharing_migration_backfills_owner_membership(_template_db: str) -> None:
     """Spec 33 §8: a pre-existing project's owner gets an active owner membership."""
     cfg = Config(str(_ALEMBIC_INI))
     command.downgrade(cfg, _BEFORE_SHARING)  # projects exist; memberships do not yet
+    user_id = project_id = None
     try:
         user_id, project_id = asyncio.run(_seed_project(_template_db))
         command.upgrade(cfg, "head")  # runs the sharing migration's owner backfill
@@ -111,6 +141,8 @@ def test_sharing_migration_backfills_owner_membership(_template_db: str) -> None
         assert count == 1
     finally:
         command.upgrade(cfg, "head")  # restore the shared template DB to head
+        if user_id is not None and project_id is not None:
+            asyncio.run(_cleanup(_template_db, user_id, project_id))
 
 
 async def test_autogenerate_is_empty(_template_db: str) -> None:
