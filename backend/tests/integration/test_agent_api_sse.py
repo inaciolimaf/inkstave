@@ -9,7 +9,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.api.events import RedisEventSink
+from inkstave.agent.api.events import RedisEventSink, run_channel
 from inkstave.agent.models import AgentRunState
 
 from ._agent_api_support import API, _auth, _make_session, seed
@@ -49,7 +49,17 @@ async def test_sse_events_route_streams_and_closes(
                 collected.append(chunk)
 
     task = asyncio.create_task(consume())
-    await asyncio.sleep(0.1)  # let the SSE subscriber attach
+    # Wait until the SSE endpoint has actually SUBSCRIBED before emitting. A fixed
+    # sleep races under load and drops the live-only `token` event (only the
+    # terminal `done` is replayable for late subscribers), which made this flaky.
+    channel = run_channel(run_id)
+    for _ in range(300):
+        subs = await redis.pubsub_numsub(channel)
+        if sum(count for _, count in subs) >= 1:
+            break
+        await asyncio.sleep(0.01)
+    else:  # pragma: no cover - the subscriber always attaches well within 3s
+        raise AssertionError("SSE subscriber did not attach")
     redis_sink = RedisEventSink(redis, run_id, ttl_seconds=60)
     await redis_sink.emit("token", text="Hi")
     await redis_sink.emit("done", final_text="Hi")
