@@ -107,7 +107,7 @@ export function AgentDemo() {
   return (
     <div className="grid gap-3 sm:grid-cols-[1.05fr_0.95fr]">
       {/* Editor pane */}
-      <figure className="overflow-hidden rounded-xl border border-rule bg-[hsl(36_30%_99%)] shadow-[0_1px_0_hsl(var(--ink)/0.04),0_24px_50px_-30px_hsl(var(--ink)/0.45)]">
+      <figure className="min-w-0 overflow-hidden rounded-xl border border-rule bg-[hsl(36_30%_99%)] shadow-[0_1px_0_hsl(var(--ink)/0.04),0_24px_50px_-30px_hsl(var(--ink)/0.45)]">
         <div className="flex items-center gap-2 border-b border-rule/80 bg-paper-deep/60 px-3.5 py-2">
           <span className="flex gap-1.5">
             <span className="size-2.5 rounded-full bg-rule" />
@@ -144,7 +144,7 @@ export function AgentDemo() {
       </figure>
 
       {/* Agent panel */}
-      <div className="flex flex-col overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_1px_0_hsl(var(--ink)/0.04),0_24px_50px_-30px_hsl(var(--ink)/0.45)]">
+      <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_1px_0_hsl(var(--ink)/0.04),0_24px_50px_-30px_hsl(var(--ink)/0.45)]">
         <div className="flex items-center gap-2 border-b border-rule/80 px-3.5 py-2.5">
           <Sparkles className="size-3.5 text-ink" />
           <span className="text-xs font-semibold tracking-tight">{t("demo.agent")}</span>
@@ -157,7 +157,7 @@ export function AgentDemo() {
          * the live content. The cell sizes to the ghost at any width, so the
          * panel never grows or shrinks as steps appear — nothing below reflows.
          */}
-        <div className="relative grid flex-1">
+        <div className="relative grid min-w-0 grid-cols-1 flex-1">
           <Conversation
             aria-hidden
             className="pointer-events-none invisible select-none [grid-area:1/1]"

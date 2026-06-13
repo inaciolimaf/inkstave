@@ -34,7 +34,7 @@ export function AgentShowcase() {
       className="relative scroll-mt-24 border-y border-rule bg-paper-deep/50 py-24 sm:py-32"
     >
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2 lg:gap-20">
-        <div ref={left} className="reveal">
+        <div ref={left} className="reveal min-w-0">
           <SectionEyebrow>{t("showcase.eyebrow")}</SectionEyebrow>
           <h2 className="mt-4 font-display text-3xl font-normal leading-tight tracking-tight text-ink sm:text-[2.7rem]">
             {t("showcase.titlePre")} <em className="italic text-ink">{t("showcase.titleEm")}</em>{" "}
@@ -65,7 +65,7 @@ export function AgentShowcase() {
         </div>
 
         {/* Static multi-hunk review card. */}
-        <div ref={right} className="reveal" style={{ "--reveal-delay": "120ms" } as CSSProperties}>
+        <div ref={right} className="reveal min-w-0" style={{ "--reveal-delay": "120ms" } as CSSProperties}>
           <ReviewCard />
         </div>
       </div>
