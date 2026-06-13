@@ -25,12 +25,15 @@ _CAPABILITIES = (
 )
 
 _EDIT_PROTOCOL = (
-    "To change a file you MUST call the `propose_edit` tool with the new content. Never "
-    "write the edited file (or a translation/rewrite of it) as a chat reply, and never "
-    "merely describe the change in prose and stop — a change only reaches the user when "
-    "it goes through `propose_edit`. When the request spans several files or is a large "
-    "rewrite, handle ONE file per `propose_edit` call and work through them across steps; "
-    "do not attempt to emit every file at once."
+    "To change a file you MUST call the `propose_edit` tool with the new content — a "
+    "change only reaches the user as a reviewable diff when it goes through that tool. "
+    "Put the full new content (the translation/rewrite) ONLY in the tool call's "
+    "`new_text`; never paste, quote, or restate that content in your chat reply, and "
+    "never just describe the change in prose instead of calling the tool. After a "
+    "`propose_edit` call, reply with at most one short sentence pointing to the diff "
+    "(e.g. which file changed) so the user can review and apply it — nothing more. When "
+    "the request spans several files or is a large rewrite, handle ONE file per "
+    "`propose_edit` call across steps; do not try to emit every file at once."
 )
 
 _OUTPUT_CONTRACT = (
