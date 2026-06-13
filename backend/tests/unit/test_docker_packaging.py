@@ -39,11 +39,14 @@ def test_expected_services_present(compose: dict) -> None:
     assert "collab" not in services
 
 
-def test_only_frontend_publishes_a_host_port(compose: dict) -> None:
+def test_only_frontend_exposes_a_port_under_a_managed_proxy(compose: dict) -> None:
+    # Under a managed proxy (Coolify/Traefik) the host's :80/:443 belong to that
+    # proxy, so no service publishes a host `ports:` mapping — the frontend only
+    # `expose`s :80 on the internal network for the proxy to route to.
     services = compose["services"]
-    assert "ports" in services["frontend"], "the proxy must publish a host port"
-    for name in ("postgres", "redis", "backend", "worker"):
-        assert "ports" not in services[name], f"{name} must not be host-published"
+    assert services["frontend"].get("expose") == ["80"], "frontend must expose :80"
+    for name in ("postgres", "redis", "backend", "worker", "frontend"):
+        assert "ports" not in services[name], f"{name} must not host-publish a port"
 
 
 def test_long_running_services_restart_and_healthcheck(compose: dict) -> None:
@@ -85,10 +88,14 @@ def test_expected_named_volumes_declared(compose: dict) -> None:
     assert "compiles" not in volumes and "workdir" not in volumes
 
 
-def test_packages_toml_mounted_into_backend_and_worker(compose: dict) -> None:
+def test_packages_toml_baked_into_image_and_tectonic_cache_mounted(compose: dict) -> None:
+    # packages.toml is baked into the image (a bind mount breaks Coolify, which has
+    # no repo checkout at deploy time); the Tectonic cache is still a named volume
+    # shared by backend + worker so the format/bundle warmup persists across runs.
+    dockerfile = _BACKEND_DOCKERFILE.read_text("utf-8")
+    assert "infra/tectonic/packages.toml" in dockerfile, "packages.toml must be baked in"
     for name in ("backend", "worker"):
         mounts = compose["services"][name].get("volumes", [])
-        assert any("packages.toml" in m for m in mounts), name
         assert any("/var/cache/tectonic" in m for m in mounts), name
 
 
