@@ -62,45 +62,60 @@ export function usePresence(
   const [idle, setIdle] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Publish the local user's identity once per session.
+  // Key the effects on the *awareness instance*, not the `session` wrapper:
+  // `useCollabDoc` returns a fresh session object on every parent re-render, so a
+  // `[session]` dep would re-run these effects constantly — and the publish
+  // cleanup (`setLocalState(null)`) would wipe our presence on each one, after
+  // which `setLocalStateField` is a no-op (it bails when the local state is null).
+  // The awareness object is stable for the life of the session.
+  const awareness = session?.awareness ?? null;
+
+  // Publish the local user's identity once per session. Merge via `setLocalState`
+  // (not `setLocalStateField`, which no-ops when the local state is null) so the
+  // identity is set regardless of whether the CodeMirror binding has populated a
+  // cursor field yet, while preserving any field it did add.
   useEffect(() => {
-    if (!session || !currentUser) return;
+    if (!awareness || !currentUser) return;
     const color = colorForUser(currentUser.id);
-    session.awareness.setLocalStateField("user", {
-      id: currentUser.id,
-      name: currentUser.name,
-      color,
-      colorLight: colorLight(color),
+    awareness.setLocalState({
+      ...(awareness.getLocalState() ?? {}),
+      user: {
+        id: currentUser.id,
+        name: currentUser.name,
+        color,
+        colorLight: colorLight(color),
+      },
     });
     return () => {
       try {
-        session.awareness.setLocalState(null); // clean leave: clears our cursor/avatar
+        awareness.setLocalState(null); // clean leave: clears our cursor/avatar
       } catch {
         /* awareness already torn down */
       }
     };
     // Re-publish only when the identity changes, not on every parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, currentUser?.id, currentUser?.name]);
+  }, [awareness, currentUser?.id, currentUser?.name]);
 
-  // Publish the idle flag.
+  // Publish the idle flag once a local state exists (the identity effect above
+  // creates it); merge to avoid spawning a user-less state.
   useEffect(() => {
-    if (!session) return;
-    session.awareness.setLocalStateField("idle", idle);
-  }, [idle, session]);
+    if (!awareness) return;
+    const state = awareness.getLocalState();
+    if (state !== null) awareness.setLocalState({ ...state, idle });
+  }, [idle, awareness]);
 
   // Track who is present, reacting to awareness changes (joins/leaves/cursors).
   useEffect(() => {
-    if (!session) {
+    if (!awareness) {
       setUsers([]);
       return;
     }
-    const awareness = session.awareness;
     const refresh = () => setUsers(collectPresence(awareness));
     refresh();
     awareness.on("change", refresh);
     return () => awareness.off("change", refresh);
-  }, [session]);
+  }, [awareness]);
 
   const markActivity = useCallback(() => {
     setIdle(false);
