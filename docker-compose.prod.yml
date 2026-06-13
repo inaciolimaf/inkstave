@@ -72,7 +72,6 @@ services:
     volumes:
       - uploads:/data/files
       - tectonic-cache:/var/cache/tectonic
-      - ./infra/tectonic/packages.toml:/app/infra/tectonic/packages.toml:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)"]
       interval: 15s
@@ -94,7 +93,6 @@ services:
     volumes:
       - uploads:/data/files
       - tectonic-cache:/var/cache/tectonic
-      - ./infra/tectonic/packages.toml:/app/infra/tectonic/packages.toml:ro
     healthcheck:
       test: ["CMD", "arq", "inkstave.compile.worker.WorkerSettings", "--check"]
       interval: 15s
