@@ -106,9 +106,14 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
-    # The ONLY host-published service. Put real TLS in front of this :80.
-    ports:
-      - "${PUBLIC_HTTP_PORT:-80}:80"
+    # nginx serves the SPA + proxies /api and /ws to the backend on port 80.
+    # No host `ports:` mapping: under a managed proxy (e.g. Coolify/Traefik) the
+    # host's :80/:443 are owned by that proxy — publishing :80 here collides
+    # ("port is already allocated"). Route to this service via a domain → port 80.
+    # For a standalone `docker compose -f docker-compose.prod.yml up`, add your own
+    # `ports: ["80:80"]` (or front it with your TLS proxy) since there's no proxy.
+    expose:
+      - "80"
     depends_on:
       backend:
         condition: service_healthy
