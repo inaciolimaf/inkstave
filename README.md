@@ -22,14 +22,6 @@ behaviour* — every line of Inkstave is written independently (see
   your project, locate sections (e.g. "the introduction"), and propose edits as
   reviewable diffs. **Nothing is applied without your explicit approval.**
 
-## Screenshots
-
-> Placeholders — replace with real captures before a marketing release.
-
-![The LaTeX editor and file tree](docs/assets/editor.svg)
-![The compiled PDF preview with the log and problems panels](docs/assets/pdf-preview.svg)
-![The AI agent chat panel and hunk-by-hunk diff review](docs/assets/agent-panel.svg)
-
 ## Quickstart
 
 **Prerequisites:** Docker + Docker Compose.
@@ -113,14 +105,3 @@ measures and enforces this gate.
 > and output cap, and a minimal environment that carries **no application secrets**),
 > but full multi-tenant sandboxing is out of scope. **Run Inkstave CE only for a
 > trusted user group.** See [docs/security-checklist.md](docs/security-checklist.md).
-
-## Licensing & originality
-
-Inkstave is released under the **MIT License** (see `LICENSE`).
-
-**Important originality rule.** Overleaf Community Edition is licensed under
-AGPLv3. To keep Inkstave a clean, independently-licensed project, implementers
-**must not copy, paste, or mechanically translate Overleaf source code.** The
-Overleaf repository may be read only to *understand* how a problem is
-approached; all Inkstave code must be an independent implementation. Each spec
-lists Overleaf reference paths purely as study material under this rule.
