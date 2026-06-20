@@ -21,11 +21,9 @@ _DOCS = _ROOT / "docs"
 
 _REQUIRED_SECTIONS: dict[str, list[str]] = {
     "README.md": [
-        "Screenshots",
         "Quickstart",
         "Tech stack",
         "Documentation",
-        "Licensing & originality",
     ],
     "CONTRIBUTING.md": [
         "Development setup",

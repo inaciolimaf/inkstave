@@ -5,8 +5,8 @@
 Inkstave is a from-scratch system **inspired by** [Overleaf Community Edition](https://github.com/overleaf/overleaf).
 It is **not** a fork and shares **no source code** with Overleaf. The Overleaf
 codebase is used only as a *reference for understanding architecture and
-behaviour* — every line of Inkstave is written independently (see
-[Licensing & originality](#licensing--originality)).
+behaviour* — every line of Inkstave is written independently (Inkstave is MIT
+licensed; see [`LICENSE`](LICENSE)).
 
 ---
 
