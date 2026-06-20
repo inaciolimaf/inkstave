@@ -60,7 +60,12 @@ owned_project = require_capability(Capability.COMPILE)
     response_model=CompileStatusResponse,
     summary="Enqueue a compile",
     responses=_ERRORS,
-    dependencies=[Depends(rate_limit_named("compile"))],
+    dependencies=[
+        Depends(rate_limit_named("compile")),
+        # Daily anti-DoS quota for public multi-tenant operation (spec 105):
+        # 30 compiles/user/24h → 429 + Retry-After on top of the per-minute cap.
+        Depends(rate_limit_named("compile_daily")),
+    ],
 )
 async def enqueue_compile(
     data: CompileRequest,

@@ -95,6 +95,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `MAX_REQUEST_BODY_BYTES` | No | `1048576` | global JSON body cap (1 MiB) | backend |
 | `MAX_UPLOAD_BYTES` | No | `52428800` | per-file upload cap (50 MiB) | backend |
 | `RATE_LIMIT_COMPILE` | No | `20/60` | per-user compile cap (limit/window_seconds) | backend |
+| `RATE_LIMIT_COMPILE_DAILY` | No | `30/86400` | per-user daily compile quota (anti-DoS, spec 105) | backend |
 | `RATE_LIMIT_AGENT` | No | `30/60` | per-user agent cap | backend |
 | `RATE_LIMIT_UPLOAD` | No | `60/60` | per-user upload cap | backend |
 | `ARGON2_TIME_COST` | No | `3` | iterations | backend |
@@ -248,6 +249,14 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `S3_ACCESS_KEY_ID` | No | `—` | S3 access key id for the s3 storage backend | backend, worker |
 | `S3_SECRET_ACCESS_KEY` | No | `—` | S3 secret access key for the s3 storage backend | backend, worker |
 | `COMPILE_MODE` | No | `real` | real \| mock — "mock" emits a canned PDF/log (no Tectonic); e2e uses mock | worker |
+| `COMPILE_RUNNER` | No | `local` | local \| sandbox — "sandbox" isolates each compile in a gVisor (runsc) container for public multi-tenant use (spec 105) | worker |
+| `COMPILE_SANDBOX_IMAGE` | No | `inkstave-tectonic` | offline compile image (infra/tectonic/Dockerfile) | worker |
+| `COMPILE_SANDBOX_RUNTIME` | No | `runsc` | Docker runtime for the sandbox (gVisor) | worker |
+| `COMPILE_SANDBOX_DOCKER_BIN` | No | `docker` | docker client the worker shells out to (point at the socket-proxy) | worker |
+| `COMPILE_SANDBOX_MEMORY_MB` | No | `2048` | container --memory cap (when COMPILE_ADDRESS_SPACE_BYTES unset) | worker |
+| `COMPILE_SANDBOX_CPUS` | No | `1.0` | container --cpus cap | worker |
+| `COMPILE_SANDBOX_PIDS_LIMIT` | No | `256` | container --pids-limit (fork-bomb guard) | worker |
+| `COMPILE_SANDBOX_TMPFS_MB` | No | `256` | size of the writable /tmp tmpfs in the container | worker |
 | `LLM_STUB` | No | `false` | true swaps the agent LLM for a deterministic in-process stub (no network); e2e uses true | backend, worker |
 | `E2E_BASE_URL` | No | `http://localhost:4173` | where Playwright points the browser (Vite preview origin) | tests |
 | `E2E_API_URL` | No | `http://localhost:8099` | backend origin the e2e frontend talks to | tests |

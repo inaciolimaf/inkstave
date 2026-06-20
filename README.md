@@ -96,12 +96,27 @@ measures and enforces this gate.
 
 ## Security & sandboxed compiles
 
-> **Trusted-users caveat (Community Edition).** Inkstave CE runs LaTeX compiles in
-> an environment where **all users of an instance are trusted**. There is no
-> per-user container isolation, so — as with Overleaf Community Edition — a compile
-> shares the compile container's filesystem and, unless the operator restricts it,
-> its network. Inkstave applies process-level hardening (Tectonic with no
-> shell-escape, a per-compile working directory that is cleaned up, a CPU timeout
-> and output cap, and a minimal environment that carries **no application secrets**),
-> but full multi-tenant sandboxing is out of scope. **Run Inkstave CE only for a
-> trusted user group.** See [docs/security-checklist.md](docs/security-checklist.md).
+Inkstave supports two compile postures, selected by `COMPILE_RUNNER`:
+
+- **`local` (default).** Tectonic runs in-process with process-level hardening
+  (no shell-escape, a per-compile working directory that is cleaned up, a CPU
+  timeout and output cap, and a minimal environment that carries **no application
+  secrets**). Best for a single team / trusted group.
+- **`sandbox` (public multi-tenant).** Every compile runs in a **throwaway
+  gVisor (`runsc`) container** with `--network none`, a read-only root, all Linux
+  capabilities dropped, `no-new-privileges`, a non-root user and hard
+  container-enforced memory/PID/CPU/tmpfs caps. The project is mounted read-only,
+  no application secrets reach the container, and abuse is bounded by a **daily
+  compile quota** (30/user/24h) and a per-user concurrency cap. This makes
+  Inkstave safe to run for **public, mutually-untrusted** users. Operate it by
+  installing gVisor on the worker host, building the offline `inkstave-tectonic`
+  image, and exposing the Docker socket only to the worker via a socket-proxy —
+  see [infra/README.md](infra/README.md).
+
+The compile sandbox never lets user-controlled data into the container's launch
+arguments (filenames are validated; the project is bind-mounted read-only), and
+the AI agent's tools have **no network egress** (only the LLM provider client
+makes outbound calls). The accepted residual risk in `sandbox` mode is a gVisor
+escape — mitigated by keeping `runsc` patched and pairing it with `--network
+none`. Full details and the threat model are in
+[docs/security-checklist.md](docs/security-checklist.md).

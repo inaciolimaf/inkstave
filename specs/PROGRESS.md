@@ -9,6 +9,8 @@ _All planned specs are implemented._
 
 ## Done
 
+- [x] 105-sandboxed-compiles
 - [x] 104-email-auth-flows
 Specs 01–103 (core system, runtime safety, validated fix-packs, audit fix-packs,
-ZIP import/export, email delivery).
+ZIP import/export, email delivery). Spec 105 adds per-compile gVisor isolation
+for public multi-tenant operation.

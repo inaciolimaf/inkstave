@@ -23,7 +23,7 @@ from inkstave.compile.outputs import OutputStore
 from inkstave.compile.packages import load_package_config
 from inkstave.compile.result import CompileResult
 from inkstave.compile.retention import cleanup_compile_outputs
-from inkstave.compile.runner import LocalTectonicRunner
+from inkstave.compile.runner import LocalTectonicRunner, SandboxedTectonicRunner
 from inkstave.compile.service import CompileService
 from inkstave.compile.sources import DbDocumentSource, StorageFileSource
 from inkstave.config import get_settings
@@ -70,6 +70,19 @@ async def startup(ctx: dict[str, Any]) -> None:
         from inkstave.testkit.compile_stub import MockTectonicRunner
 
         runner = MockTectonicRunner()
+    elif settings.compile_runner == "sandbox":
+        # Public multi-tenant mode (spec 105): every compile runs in an ephemeral
+        # gVisor (runsc) container with no network and hard resource caps.
+        runner = SandboxedTectonicRunner(
+            image=settings.compile_sandbox_image,
+            runtime=settings.compile_sandbox_runtime,
+            docker_bin=settings.compile_sandbox_docker_bin,
+            memory_mb=settings.compile_sandbox_memory_mb,
+            cpus=settings.compile_sandbox_cpus,
+            pids_limit=settings.compile_sandbox_pids_limit,
+            tmpfs_mb=settings.compile_sandbox_tmpfs_mb,
+            output_format=packages.format,
+        )
     else:
         runner = LocalTectonicRunner(
             bin_path=settings.tectonic_bin,

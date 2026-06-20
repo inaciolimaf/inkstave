@@ -115,6 +115,9 @@ class AuthSettingsMixin:
     rate_limit_compile: str = "20/60"
     rate_limit_agent: str = "30/60"
     rate_limit_upload: str = "60/60"
+    # Daily anti-DoS compile quota for public multi-tenant operation (spec 105):
+    # 30 compiles per user per 24h. Layered on top of the per-minute compile cap.
+    rate_limit_compile_daily: str = "30/86400"
     # Header carrying the real client IP behind a trusted proxy.
     trusted_proxy_header: str = "X-Forwarded-For"
     # Only honour the proxy header for client IP when behind a known proxy (spec 52).
@@ -191,6 +194,20 @@ class CompileSettingsMixin:
     # (e2e/test only, spec 54) swaps in a deterministic runner that emits a tiny
     # canned PDF + log with no subprocess. Production defaults to "real".
     compile_mode: Literal["real", "mock"] = "real"
+    # ``compile_runner`` selects the TectonicRunner implementation (spec 105):
+    # "local" runs Tectonic in-process (single-tenant / trusted users); "sandbox"
+    # runs each compile in an ephemeral gVisor (runsc) container with no network,
+    # dropped capabilities and hard resource caps — safe for PUBLIC, mutually
+    # untrusted users. Default "local" keeps existing deployments unchanged.
+    compile_runner: Literal["local", "sandbox"] = "local"
+    # Sandbox runner knobs (spec 105 §5.4); only used when compile_runner="sandbox".
+    compile_sandbox_docker_bin: str = "docker"
+    compile_sandbox_image: str = "inkstave-tectonic"
+    compile_sandbox_runtime: str = "runsc"
+    compile_sandbox_memory_mb: int = 2048  # container --memory when address-space unset
+    compile_sandbox_cpus: float = 1.0  # container --cpus
+    compile_sandbox_pids_limit: int = 256  # container --pids-limit (fork-bomb guard)
+    compile_sandbox_tmpfs_mb: int = 256  # size of the writable /tmp tmpfs
     # ``llm_stub`` (e2e/test only, spec 54) swaps the agent's LLM client for a
     # deterministic, network-free stub that scripts a search → read → propose_edit
     # tool sequence and a fixed reply. Production defaults to False (real provider).

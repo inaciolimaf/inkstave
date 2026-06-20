@@ -101,6 +101,8 @@ def _set_headers(response: Response, result: RateLimitResult) -> None:
 # name → (settings attribute, key strategy) for the hardened per-user policies.
 _NAMED_POLICIES: dict[str, tuple[str, str]] = {
     "compile": ("rate_limit_compile", "user"),
+    # Daily anti-DoS compile quota for public multi-tenant operation (spec 105).
+    "compile_daily": ("rate_limit_compile_daily", "user"),
     "agent": ("rate_limit_agent", "user"),
     "upload": ("rate_limit_upload", "user"),
 }

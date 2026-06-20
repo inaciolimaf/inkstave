@@ -1,8 +1,15 @@
 # ADR 0021 — Compile sandbox & security model (Tectonic)
 
-- **Status:** Accepted
+- **Status:** Accepted (the "trusted-users" caveat is **superseded by spec 105**)
 - **Date:** 2026-06-09
 - **Context spec:** 21 — Tectonic Integration (compile service)
+
+> **Update (spec 105).** The trusted-users caveat below describes the default
+> in-process `local` runner. Spec 105 adds an opt-in `sandbox` runner
+> (`COMPILE_RUNNER=sandbox`) that isolates each compile in a gVisor (`runsc`)
+> container with no network, dropped capabilities and hard resource caps, making
+> Inkstave safe for **public, mutually-untrusted** users. See
+> `docs/security-checklist.md` (Threat model) and `infra/README.md`.
 
 ## Context
 
