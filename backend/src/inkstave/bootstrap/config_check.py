@@ -20,7 +20,7 @@ from collections.abc import Mapping
 
 from pydantic import ValidationError
 
-from inkstave.config import get_settings
+from inkstave.config import Settings, get_settings
 
 # Accepted DSN prefixes for the well-formedness check (cheap string check only).
 _DB_PREFIXES = ("postgresql",)
@@ -75,6 +75,43 @@ def format_config_problems(problems: list[str]) -> str:
     return "\n".join([summary, *(f"  - {p}" for p in problems)])
 
 
+def _field_problems(exc: ValidationError, reported: set[str]) -> list[str]:
+    """Raw pydantic field errors, skipping vars already reported more readably."""
+    problems: list[str] = []
+    for err in exc.errors():
+        loc = err.get("loc") or ()
+        name = str(loc[0]).upper() if loc else "CONFIG"
+        if name in reported:
+            continue
+        problems.append(f"{name}: {err.get('msg', err)}")
+        reported.add(name)
+    return problems
+
+
+def _agent_problems(settings: Settings) -> list[str]:
+    """The agent needs a real provider key outside the stubbed test mode."""
+    if settings.environment != "prod" or settings.llm_stub:
+        return []
+    from inkstave.agent.settings import get_agent_settings
+
+    get_agent_settings.cache_clear()
+    if get_agent_settings().openrouter_api_key:
+        return []
+    return [
+        "OPENROUTER_API_KEY: required in production for the AI agent "
+        "(set LLM_STUB=true only for tests, never production)"
+    ]
+
+
+def _email_problems(settings: Settings) -> list[str]:
+    """Email-backend-gated secrets (spec 103): the selected backend must be usable."""
+    if settings.email_backend == "resend" and not settings.resend_api_key.strip():
+        return ["RESEND_API_KEY: required when EMAIL_BACKEND=resend"]
+    if settings.email_backend == "smtp" and not settings.smtp_host.strip():
+        return ["SMTP_HOST: required when EMAIL_BACKEND=smtp"]
+    return []
+
+
 def validate_config() -> list[str]:
     """Collect config problems for the current environment (empty list ⇒ valid).
 
@@ -90,28 +127,6 @@ def validate_config() -> list[str]:
     try:
         settings = get_settings()
     except ValidationError as exc:
-        for err in exc.errors():
-            loc = err.get("loc") or ()
-            name = str(loc[0]).upper() if loc else "CONFIG"
-            if name in reported:
-                continue
-            problems.append(f"{name}: {err.get('msg', err)}")
-            reported.add(name)
-        return problems
+        return problems + _field_problems(exc, reported)
 
-    if settings.environment == "prod" and not settings.llm_stub:
-        from inkstave.agent.settings import get_agent_settings
-
-        get_agent_settings.cache_clear()
-        if not get_agent_settings().openrouter_api_key:
-            problems.append(
-                "OPENROUTER_API_KEY: required in production for the AI agent "
-                "(set LLM_STUB=true only for tests, never production)"
-            )
-
-    # Email-backend-gated secrets (spec 103): the selected backend must be usable.
-    if settings.email_backend == "resend" and not settings.resend_api_key.strip():
-        problems.append("RESEND_API_KEY: required when EMAIL_BACKEND=resend")
-    if settings.email_backend == "smtp" and not settings.smtp_host.strip():
-        problems.append("SMTP_HOST: required when EMAIL_BACKEND=smtp")
-    return problems
+    return problems + _agent_problems(settings) + _email_problems(settings)

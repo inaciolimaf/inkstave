@@ -25,7 +25,7 @@ from sqlalchemy import select
 
 from inkstave.db.models.document import Document
 from inkstave.db.models.file import File
-from inkstave.db.models.tree_entity import TreeEntityType
+from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.errors import AppError
 from inkstave.services import tree_service
 from inkstave.services.tree_builder import compute_path
@@ -69,53 +69,60 @@ def _assert_safe_path(path: str) -> None:
             raise ValueError(f"unsafe archive path segment in {path!r}")
 
 
+async def _doc_sizes(session: AsyncSession, project_id: UUID) -> dict[UUID, int]:
+    rows = (
+        await session.execute(
+            select(Document.entity_id, Document.size_bytes).where(Document.project_id == project_id)
+        )
+    ).all()
+    return {eid: int(size) for eid, size in rows}
+
+
+async def _file_rows(session: AsyncSession, project_id: UUID) -> dict[UUID, tuple[str | None, int]]:
+    rows = (
+        await session.execute(
+            select(File.entity_id, File.storage_key, File.size_bytes).where(
+                File.project_id == project_id
+            )
+        )
+    ).all()
+    return {eid: (key, int(size)) for eid, key, size in rows}
+
+
+def _plan_entry(
+    entity: TreeEntity,
+    path: str,
+    doc_sizes: dict[UUID, int],
+    file_rows: dict[UUID, tuple[str | None, int]],
+) -> ExportEntry:
+    """One plan row; folders carry no bytes, docs and files carry their size."""
+    if entity.type is TreeEntityType.folder:
+        return ExportEntry(path, entity.type, entity.id, None, 0)
+    if entity.type is TreeEntityType.doc:
+        return ExportEntry(path, entity.type, entity.id, None, doc_sizes.get(entity.id, 0))
+    key, size = file_rows.get(entity.id, (None, 0))
+    return ExportEntry(path, entity.type, entity.id, key, size)
+
+
 async def build_export_plan(
     session: AsyncSession, project_id: UUID, settings: Settings
 ) -> list[ExportEntry]:
     """Build the deterministic, root-relative export plan and enforce the size cap."""
     entities = await tree_service.get_tree(session, project_id)
     by_id = {e.id: e for e in entities}
-
     # Bulk metadata reads (one SELECT each) so the plan never issues N queries.
-    doc_sizes: dict[UUID, int] = {
-        eid: size
-        for eid, size in (
-            await session.execute(
-                select(Document.entity_id, Document.size_bytes).where(
-                    Document.project_id == project_id
-                )
-            )
-        ).all()
-    }
-    file_rows = {
-        eid: (key, size)
-        for eid, key, size in (
-            await session.execute(
-                select(File.entity_id, File.storage_key, File.size_bytes).where(
-                    File.project_id == project_id
-                )
-            )
-        ).all()
-    }
+    doc_sizes = await _doc_sizes(session, project_id)
+    file_rows = await _file_rows(session, project_id)
 
     entries: list[ExportEntry] = []
-    total = 0
     for entity in entities:
         if entity.is_root:
             continue
         path = compute_path(entity, by_id)
         _assert_safe_path(path)
-        if entity.type is TreeEntityType.folder:
-            entries.append(ExportEntry(path, entity.type, entity.id, None, 0))
-        elif entity.type is TreeEntityType.doc:
-            size = int(doc_sizes.get(entity.id, 0))
-            total += size
-            entries.append(ExportEntry(path, entity.type, entity.id, None, size))
-        else:  # file
-            key, size = file_rows.get(entity.id, (None, 0))
-            total += int(size)
-            entries.append(ExportEntry(path, entity.type, entity.id, key, int(size)))
+        entries.append(_plan_entry(entity, path, doc_sizes, file_rows))
 
+    total = sum(e.size_bytes for e in entries)
     if total > settings.export_max_total_bytes and not settings.export_async_enabled:
         raise ExportTooLargeError()
 
@@ -148,6 +155,54 @@ class _StreamBuffer(io.RawIOBase):
         return len(self._buf)
 
 
+async def _doc_contents(session: AsyncSession, plan: list[ExportEntry]) -> dict[UUID, str]:
+    """One bulk read of doc text (post-flush) keyed by entity id — no N queries."""
+    doc_ids = [e.entity_id for e in plan if e.type is TreeEntityType.doc]
+    if not doc_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(Document.entity_id, Document.content).where(Document.entity_id.in_(doc_ids))
+        )
+    ).all()
+    return {eid: content for eid, content in rows}
+
+
+def _zip_info(path: str, *, is_dir: bool = False) -> zipfile.ZipInfo:
+    """A deterministic entry header (fixed timestamp + fixed permissions)."""
+    info = zipfile.ZipInfo(path + "/" if is_dir else path, date_time=_FIXED_DATE_TIME)
+    if is_dir:
+        info.external_attr = _DIR_EXTERNAL_ATTR
+        return info
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = _FILE_EXTERNAL_ATTR
+    return info
+
+
+async def _write_blob(
+    zf: zipfile.ZipFile,
+    buffer: _StreamBuffer,
+    entry: ExportEntry,
+    store: ObjectStore,
+    chunk_size: int,
+) -> AsyncIterator[bytes]:
+    """Stream one stored file into the archive, flushing the buffer as it fills."""
+    if entry.storage_key is None:
+        return
+    try:
+        _, stream = await store.open(entry.storage_key)
+    except ObjectNotFoundError:
+        # Storage desync: skip the orphaned entry, never abort the export.
+        logger.warning("export: blob missing for entity %s; skipping", entry.entity_id)
+        return
+    with zf.open(_zip_info(entry.path), mode="w") as dest:
+        async for chunk in stream:
+            dest.write(chunk)
+            if buffer.pending() >= chunk_size:
+                yield buffer.drain()
+    yield buffer.drain()
+
+
 async def stream_project_zip(
     plan: list[ExportEntry],
     store: ObjectStore,
@@ -155,52 +210,22 @@ async def stream_project_zip(
     settings: Settings,
 ) -> AsyncIterator[bytes]:
     """Yield the project archive as a stream — never the whole zip at once."""
-    # One bulk read of doc text (post-flush) keyed by entity id — no N queries.
-    doc_ids = [e.entity_id for e in plan if e.type is TreeEntityType.doc]
-    contents: dict[UUID, str] = {}
-    if doc_ids:
-        rows = (
-            await session.execute(
-                select(Document.entity_id, Document.content).where(Document.entity_id.in_(doc_ids))
-            )
-        ).all()
-        contents = {eid: content for eid, content in rows}
-
+    contents = await _doc_contents(session, plan)
     chunk_size = settings.storage_stream_chunk_bytes
     buffer = _StreamBuffer()
     zf = zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED)
     try:
         for entry in plan:
             if entry.type is TreeEntityType.folder:
-                info = zipfile.ZipInfo(entry.path + "/", date_time=_FIXED_DATE_TIME)
-                info.external_attr = _DIR_EXTERNAL_ATTR
-                zf.writestr(info, b"")
+                zf.writestr(_zip_info(entry.path, is_dir=True), b"")
                 yield buffer.drain()
             elif entry.type is TreeEntityType.doc:
-                info = zipfile.ZipInfo(entry.path, date_time=_FIXED_DATE_TIME)
-                info.compress_type = zipfile.ZIP_DEFLATED
-                info.external_attr = _FILE_EXTERNAL_ATTR
-                with zf.open(info, mode="w") as dest:
+                with zf.open(_zip_info(entry.path), mode="w") as dest:
                     dest.write(contents.get(entry.entity_id, "").encode("utf-8"))
                 yield buffer.drain()
             else:  # file
-                if entry.storage_key is None:
-                    continue
-                try:
-                    _, stream = await store.open(entry.storage_key)
-                except ObjectNotFoundError:
-                    # Storage desync: skip the orphaned entry, never abort the export.
-                    logger.warning("export: blob missing for entity %s; skipping", entry.entity_id)
-                    continue
-                info = zipfile.ZipInfo(entry.path, date_time=_FIXED_DATE_TIME)
-                info.compress_type = zipfile.ZIP_DEFLATED
-                info.external_attr = _FILE_EXTERNAL_ATTR
-                with zf.open(info, mode="w") as dest:
-                    async for chunk in stream:
-                        dest.write(chunk)
-                        if buffer.pending() >= chunk_size:
-                            yield buffer.drain()
-                yield buffer.drain()
+                async for chunk in _write_blob(zf, buffer, entry, store, chunk_size):
+                    yield chunk
     finally:
         zf.close()
     yield buffer.drain()  # the central directory written by close()

@@ -39,6 +39,28 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "_uid": str(user.id)}
 
 
+def _artifacts(outdir: Path, synctex_text: str, *, with_synctex: bool) -> list[CompileArtifact]:
+    """The compile's PDF, plus its SyncTeX sidecar when the case wants one."""
+    outdir.mkdir(parents=True, exist_ok=True)
+    pdf_path = outdir / "output.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7")
+    artifacts = [CompileArtifact("output.pdf", "output.pdf", pdf_path, 8, "application/pdf")]
+    if not with_synctex:
+        return artifacts
+    sx_path = outdir / "output.synctex.gz"
+    sx_path.write_bytes(gz(synctex_text))
+    artifacts.append(
+        CompileArtifact(
+            "output.synctex.gz",
+            "output.synctex.gz",
+            sx_path,
+            sx_path.stat().st_size,
+            "application/gzip",
+        )
+    )
+    return artifacts
+
+
 async def _seed(
     db_session: AsyncSession,
     backend: LocalObjectStore,
@@ -55,23 +77,7 @@ async def _seed(
     )
     await repo.update(row, status="success", has_pdf=True)
 
-    outdir = tmp_path / "wd" / "output"
-    outdir.mkdir(parents=True, exist_ok=True)
-    pdf_path = outdir / "output.pdf"
-    pdf_path.write_bytes(b"%PDF-1.7")
-    artifacts = [CompileArtifact("output.pdf", "output.pdf", pdf_path, 8, "application/pdf")]
-    if with_synctex:
-        sx_path = outdir / "output.synctex.gz"
-        sx_path.write_bytes(gz(synctex_text))
-        artifacts.append(
-            CompileArtifact(
-                "output.synctex.gz",
-                "output.synctex.gz",
-                sx_path,
-                sx_path.stat().st_size,
-                "application/gzip",
-            )
-        )
+    artifacts = _artifacts(tmp_path / "wd" / "output", synctex_text, with_synctex=with_synctex)
     result = CompileResult(
         status=CompileStatus.SUCCESS,
         pdf=artifacts[0],

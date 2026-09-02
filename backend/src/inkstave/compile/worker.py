@@ -56,24 +56,17 @@ def _sweep_minutes(sweep_s: int) -> set[int]:
     return {m for m in range(60) if m % step == 0}
 
 
-async def startup(ctx: dict[str, Any]) -> None:
-    settings = get_settings()
-    # Route inkstave.* logs (incl. the agent run progress) to stdout at the configured
-    # level — without this the worker only shows arq's own job start/stop lines.
-    configure_logging(settings)
-    engine, sessionmaker = create_engine_and_sessionmaker(settings)
-    store = get_object_store(settings)
-    packages = load_package_config(_PACKAGES_TOML, settings)
-    runner: Any
+def _build_runner(settings: Any, packages: Any) -> Any:
+    """The Tectonic runner this deployment compiles with."""
     if settings.compile_mode == "mock":
         # e2e/test only (spec 54): no Tectonic subprocess — emit a canned PDF + log.
         from inkstave.testkit.compile_stub import MockTectonicRunner
 
-        runner = MockTectonicRunner()
-    elif settings.compile_runner == "sandbox":
+        return MockTectonicRunner()
+    if settings.compile_runner == "sandbox":
         # Public multi-tenant mode (spec 105): every compile runs in an ephemeral
         # gVisor (runsc) container with no network and hard resource caps.
-        runner = SandboxedTectonicRunner(
+        return SandboxedTectonicRunner(
             image=settings.compile_sandbox_image,
             runtime=settings.compile_sandbox_runtime,
             docker_bin=settings.compile_sandbox_docker_bin,
@@ -83,14 +76,21 @@ async def startup(ctx: dict[str, Any]) -> None:
             tmpfs_mb=settings.compile_sandbox_tmpfs_mb,
             output_format=packages.format,
         )
-    else:
-        runner = LocalTectonicRunner(
-            bin_path=settings.tectonic_bin,
-            cache_dir=Path(settings.tectonic_cache_dir),
-            bundle_url=settings.tectonic_bundle_url or None,
-            offline=settings.tectonic_offline,
-            output_format=packages.format,
-        )
+    return LocalTectonicRunner(
+        bin_path=settings.tectonic_bin,
+        cache_dir=Path(settings.tectonic_cache_dir),
+        bundle_url=settings.tectonic_bundle_url or None,
+        offline=settings.tectonic_offline,
+        output_format=packages.format,
+    )
+
+
+def _register_compile(ctx: dict[str, Any], settings: Any, store: Any, packages: Any) -> None:
+    """Wire the compile seams: the service factory + the output-persistence hook."""
+    runner = _build_runner(settings, packages)
+
+    def make_output_store(session: Any) -> OutputStore:
+        return OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
 
     def make_service(session: Any) -> CompileService:
         return CompileService(
@@ -104,22 +104,29 @@ async def startup(ctx: dict[str, Any]) -> None:
     async def persist_outputs(
         session: Any, compile_id: UUID, project_id: UUID, result: CompileResult
     ) -> None:
-        store_service = OutputStore(
-            storage=store, repo=OutputRepository(session), settings=settings
-        )
-        await store_service.persist(compile_id, project_id, result)
+        await make_output_store(session).persist(compile_id, project_id, result)
+
+    ctx["make_compile_service"] = make_service
+    ctx["persist_hook"] = persist_outputs
+    ctx["make_output_store"] = make_output_store
+
+
+async def startup(ctx: dict[str, Any]) -> None:
+    settings = get_settings()
+    # Route inkstave.* logs (incl. the agent run progress) to stdout at the configured
+    # level — without this the worker only shows arq's own job start/stop lines.
+    configure_logging(settings)
+    engine, sessionmaker = create_engine_and_sessionmaker(settings)
+    store = get_object_store(settings)
 
     ctx["settings"] = settings
     ctx["engine"] = engine
     ctx["session_factory"] = sessionmaker
     ctx["redis"] = await create_redis_pool(settings.redis_url)
-    ctx["make_compile_service"] = make_service
-    ctx["persist_hook"] = persist_outputs
-    ctx["make_output_store"] = lambda session: OutputStore(
-        storage=store, repo=OutputRepository(session), settings=settings
-    )
     ctx["object_store"] = store  # used by the history compaction job (spec 36)
     ctx["email_sender"] = get_email_sender(settings)  # used by the email job (spec 39)
+    _register_compile(ctx, settings, store, load_package_config(_PACKAGES_TOML, settings))
+
     # The agent turn (run_agent_turn) needs AgentSettings, not the compile Settings
     # under ctx["settings"]; provide them so the worker can run agent jobs.
     ctx["agent_settings"] = get_agent_settings()

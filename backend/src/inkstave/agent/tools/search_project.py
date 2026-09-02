@@ -24,6 +24,43 @@ class SearchProjectArgs(BaseModel):
     path_glob: str | None = None
 
 
+def _hit(entity_id: object, path: str, line: int, snippet: str, kind: str) -> dict[str, object]:
+    return {
+        "doc_id": str(entity_id),
+        "path": path,
+        "line": line,
+        "snippet": snippet[:_SNIPPET_MAX],
+        "kind": kind,
+    }
+
+
+def _doc_matches(
+    entity_id: object, path: str, content: str, needle: str
+) -> list[dict[str, object]]:
+    """Path-, section- and content-level hits for one document."""
+    hits: list[dict[str, object]] = []
+    if needle in path.lower():
+        hits.append(_hit(entity_id, path, 0, path, "path"))
+    section_lines = {h.line for h in scan_headings(content) if needle in h.title.lower()}
+    for i, line in enumerate(content.splitlines()):
+        if needle in line.lower():
+            kind = "section" if i in section_lines else "content"
+            hits.append(_hit(entity_id, path, i, line.strip(), kind))
+    return hits
+
+
+def _bound_payload(matches: list[dict[str, object]]) -> tuple[list[dict[str, object]], bool]:
+    """Soft payload cap: drop trailing matches once the snippets get too big."""
+    size = 0
+    bounded: list[dict[str, object]] = []
+    for match in matches:
+        size += len(str(match["snippet"])) + 64
+        if size > _PAYLOAD_SOFT_CAP:
+            return bounded, True
+        bounded.append(match)
+    return bounded, False
+
+
 class SearchProjectTool(Tool):
     name = "search_project"
     description = "Search the project's text documents and paths for a keyword."
@@ -33,10 +70,9 @@ class SearchProjectTool(Tool):
         if (denied := await authorize(ctx)) is not None:
             return ToolResult(ok=False, error=denied)
 
-        query = args.query.strip()
-        if not query:
+        needle = args.query.strip().lower()
+        if not needle:
             return ToolResult.failure("invalid_args", "query must not be empty")
-        needle = query.lower()
         cap = min(args.max_results, ctx.settings.agent_tool_search_max_results)
 
         entities, paths = await load_tree(ctx)
@@ -49,43 +85,10 @@ class SearchProjectTool(Tool):
 
         matches: list[dict[str, object]] = []
         for entity, path in docs:
-            if needle in path.lower():
-                matches.append(
-                    {
-                        "doc_id": str(entity.id),
-                        "path": path,
-                        "line": 0,
-                        "snippet": path[:_SNIPPET_MAX],
-                        "kind": "path",
-                    }
-                )
             content = await read_content_for_collab(ctx.db, entity.id)
-            section_lines = {h.line for h in scan_headings(content) if needle in h.title.lower()}
-            for i, line in enumerate(content.splitlines()):
-                if needle in line.lower():
-                    kind = "section" if i in section_lines else "content"
-                    matches.append(
-                        {
-                            "doc_id": str(entity.id),
-                            "path": path,
-                            "line": i,
-                            "snippet": line.strip()[:_SNIPPET_MAX],
-                            "kind": kind,
-                        }
-                    )
+            matches.extend(_doc_matches(entity.id, path, content, needle))
 
         matches.sort(key=lambda m: _KIND_RANK.get(str(m["kind"]), 9))
         truncated = len(matches) > cap
-        matches = matches[:cap]
-
-        # Soft payload cap: drop trailing matches if the snippets get too big.
-        size = 0
-        bounded: list[dict[str, object]] = []
-        for match in matches:
-            size += len(str(match["snippet"])) + 64
-            if size > _PAYLOAD_SOFT_CAP:
-                truncated = True
-                break
-            bounded.append(match)
-
-        return ToolResult.success(matches=bounded, truncated=truncated)
+        bounded, capped = _bound_payload(matches[:cap])
+        return ToolResult.success(matches=bounded, truncated=truncated or capped)

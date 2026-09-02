@@ -49,7 +49,7 @@ class ResetPasswordRequest(StrictModel):
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
-    token_type: Literal["bearer"] = "bearer"
+    token_type: Literal["bearer"] = "bearer"  # noqa: S105 — the OAuth2 scheme name, not a secret
     expires_in: int
 
 

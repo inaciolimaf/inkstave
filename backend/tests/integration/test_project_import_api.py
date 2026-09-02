@@ -199,6 +199,16 @@ async def test_requires_auth(
 # --------------------------------------------------------------------------- #
 
 
+def _assert_round_trip_tree(nodes: dict[str, Any]) -> None:
+    """Every entry of the fixture archive landed with the right kind."""
+    assert nodes["chapters"]["type"] == "folder"
+    assert nodes["figures"]["type"] == "folder"
+    assert nodes["main.tex"]["type"] == "doc"
+    assert nodes["chapters/intro.tex"]["type"] == "doc"
+    assert nodes["refs.bib"]["type"] == "doc"
+    assert nodes["figures/diagram.png"]["type"] == "file"
+
+
 async def test_import_end_to_end_success(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -215,8 +225,7 @@ async def test_import_end_to_end_success(
             "figures/diagram.png": PNG,
         }
     )
-    resp = await _post_import(async_client, headers, zip_bytes)
-    body = resp.json()
+    body = (await _post_import(async_client, headers, zip_bytes)).json()
     pid, iid = body["project_id"], body["import_id"]
 
     await _run_job(db_session, store, redis, iid)
@@ -229,12 +238,7 @@ async def test_import_end_to_end_success(
 
     tree = (await async_client.get(f"/api/v1/projects/{pid}/tree", headers=headers)).json()
     nodes = _flatten(tree["root"])
-    assert nodes["chapters"]["type"] == "folder"
-    assert nodes["figures"]["type"] == "folder"
-    assert nodes["main.tex"]["type"] == "doc"
-    assert nodes["chapters/intro.tex"]["type"] == "doc"
-    assert nodes["refs.bib"]["type"] == "doc"
-    assert nodes["figures/diagram.png"]["type"] == "file"
+    _assert_round_trip_tree(nodes)
 
     # root_doc_id points at the main.tex doc entity.
     proj = (await async_client.get(f"/api/v1/projects/{pid}", headers=headers)).json()

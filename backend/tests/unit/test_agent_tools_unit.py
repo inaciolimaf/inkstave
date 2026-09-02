@@ -99,10 +99,8 @@ def test_list_tree_args_construct_for_valid_input() -> None:
     assert explicit.depth == 5
 
 
-async def test_search_project_caps_snippet_and_truncates_payload(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """search_project caps snippets at 240 chars and soft-caps the payload (AC 2)."""
+def _patch_search_corpus(monkeypatch: pytest.MonkeyPatch, content: str) -> UUID:
+    """Point search_project at a synthetic single-document corpus."""
     from dataclasses import dataclass
 
     from inkstave.agent.tools import search_project as sp
@@ -113,13 +111,7 @@ async def test_search_project_caps_snippet_and_truncates_payload(
         id: UUID
         type: TreeEntityType
 
-    # Synthetic in-memory corpus: many long lines all containing the needle, so
-    # the bounded-payload loop must trip the 8 KB soft cap (each match ~ snippet
-    # + 64 bytes of envelope; with 240-char snippets ~27 matches exceed 8 KB).
     doc_id = uuid4()
-    long_line = "needle " + ("x" * 400)  # > 240 chars after the needle
-    content = "\n".join(long_line for _ in range(60))
-
     entities = [_Entity(id=doc_id, type=TreeEntityType.doc)]
     paths = {doc_id: "main.tex"}
 
@@ -135,6 +127,20 @@ async def test_search_project_caps_snippet_and_truncates_payload(
     monkeypatch.setattr(sp, "load_tree", fake_load_tree)
     monkeypatch.setattr(sp, "read_content_for_collab", fake_read_content)
     monkeypatch.setattr(sp, "authorize", fake_authorize)
+    return doc_id
+
+
+async def test_search_project_caps_snippet_and_truncates_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """search_project caps snippets at 240 chars and soft-caps the payload (AC 2)."""
+    from inkstave.agent.tools import search_project as sp
+
+    # Synthetic in-memory corpus: many long lines all containing the needle, so the
+    # bounded-payload loop must trip the 8 KB soft cap (each match ~ snippet + 64
+    # bytes of envelope; with 240-char snippets ~27 matches exceed 8 KB).
+    long_line = "needle " + ("x" * 400)  # > 240 chars after the needle
+    _patch_search_corpus(monkeypatch, "\n".join(long_line for _ in range(60)))
 
     class _Settings:
         agent_tool_search_max_results = 50
@@ -145,7 +151,6 @@ async def test_search_project_caps_snippet_and_truncates_payload(
         user_id=str(uuid4()),
         settings=_Settings(),  # type: ignore[arg-type]
     )
-
     result = await sp.SearchProjectTool().run(SearchProjectArgs(query="needle"), ctx)
 
     assert result.ok

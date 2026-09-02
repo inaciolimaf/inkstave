@@ -27,6 +27,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger("inkstave.agent.llm")
 
 
+def _usage_of(usage: Any) -> LLMUsage | None:
+    """Token counts from an SDK usage object, or ``None`` when it carries none."""
+    if usage is None:
+        return None
+    return LLMUsage(
+        prompt=getattr(usage, "prompt_tokens", 0) or 0,
+        completion=getattr(usage, "completion_tokens", 0) or 0,
+        total=getattr(usage, "total_tokens", 0) or 0,
+    )
+
+
+def _overrides(temperature: float | None, max_tokens: int | None) -> dict[str, Any]:
+    """Per-call overrides; an unset value keeps the client's configured default."""
+    over: dict[str, Any] = {}
+    if temperature is not None:
+        over["temperature"] = temperature
+    if max_tokens is not None:
+        over["max_tokens"] = max_tokens
+    return over
+
+
 class OpenRouterLLMClient:
     def __init__(self, settings: AgentSettings) -> None:
         if not settings.openrouter_api_key:
@@ -106,29 +127,20 @@ class OpenRouterLLMClient:
 
     # --- API ---------------------------------------------------------------- #
 
-    async def complete(
-        self,
-        messages: list[LLMMessage],
-        *,
-        tools: list[ToolSpec] | None = None,
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-    ) -> LLMResponse:
-        try:
-            resp = await cast("Any", self._client).chat.completions.create(
-                model=self._model,
-                messages=self._to_openai_messages(messages),
-                tools=self._to_openai_tools(tools),
-                temperature=self._temperature if temperature is None else temperature,
-                max_tokens=self._max_tokens if max_tokens is None else max_tokens,
-                extra_headers=self._headers,
-            )
-        except Exception as exc:  # any network/SDK error
-            logger.exception("openrouter complete failed")
-            raise LLMError(f"LLM request failed: {exc}") from exc
+    async def _create(self, messages: list[LLMMessage], **overrides: Any) -> Any:
+        """One chat-completions call with this client's defaults applied."""
+        params: dict[str, Any] = {
+            "model": self._model,
+            "messages": self._to_openai_messages(messages),
+            "temperature": self._temperature,
+            "max_tokens": self._max_tokens,
+            "extra_headers": self._headers,
+        }
+        params.update(overrides)
+        return await cast("Any", self._client).chat.completions.create(**params)
 
-        choice = resp.choices[0]
-        tool_calls, had_error = self._parse_tool_calls(choice.message.tool_calls)
+    def _check_tool_calls(self, choice: Any, tool_calls: list[ToolCall], had_error: bool) -> bool:
+        """Whether the response must be reported as an error (spec 41 §4)."""
         if choice.finish_reason == "tool_calls" and not tool_calls:
             # The provider signalled a tool call but none survived parsing — e.g. some
             # providers (seen with DeepSeek via SiliconFlow) return the call in a shape
@@ -141,19 +153,40 @@ class OpenRouterLLMClient:
                 self._model,
                 choice.message,
             )
-            had_error = True
-        elif had_error:
+            return True
+        if had_error:
             logger.warning("openrouter: malformed tool-call arguments (model=%s)", self._model)
-        usage = LLMUsage(
-            prompt=getattr(resp.usage, "prompt_tokens", 0) or 0,
-            completion=getattr(resp.usage, "completion_tokens", 0) or 0,
-            total=getattr(resp.usage, "total_tokens", 0) or 0,
-        )
+        return had_error
+
+    async def complete(
+        self,
+        messages: list[LLMMessage],
+        *,
+        tools: list[ToolSpec] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> LLMResponse:
+        try:
+            resp = await self._create(
+                messages,
+                tools=self._to_openai_tools(tools),
+                **_overrides(temperature, max_tokens),
+            )
+        except Exception as exc:  # any network/SDK error
+            logger.exception("openrouter complete failed")
+            raise LLMError(f"LLM request failed: {exc}") from exc
+
+        choice = resp.choices[0]
+        tool_calls, had_error = self._parse_tool_calls(choice.message.tool_calls)
         return LLMResponse(
             content=choice.message.content,
             tool_calls=tool_calls,
-            usage=usage,
-            finish_reason="error" if had_error else choice.finish_reason,
+            usage=_usage_of(resp.usage) or LLMUsage(),
+            finish_reason=(
+                "error"
+                if self._check_tool_calls(choice, tool_calls, had_error)
+                else choice.finish_reason
+            ),
         )
 
     async def stream(
@@ -165,35 +198,25 @@ class OpenRouterLLMClient:
         max_tokens: int | None = None,
     ) -> AsyncIterator[LLMStreamChunk]:
         try:
-            stream = await cast("Any", self._client).chat.completions.create(
-                model=self._model,
-                messages=self._to_openai_messages(messages),
+            stream = await self._create(
+                messages,
                 tools=self._to_openai_tools(tools),
-                temperature=self._temperature if temperature is None else temperature,
-                max_tokens=self._max_tokens if max_tokens is None else max_tokens,
-                extra_headers=self._headers,
                 stream=True,
                 stream_options={"include_usage": True},
+                **_overrides(temperature, max_tokens),
             )
         except Exception as exc:
             logger.exception("openrouter stream failed")
             raise LLMError(f"LLM stream failed: {exc}") from exc
 
         async for event in stream:
-            usage = None
-            if getattr(event, "usage", None) is not None:
-                usage = LLMUsage(
-                    prompt=event.usage.prompt_tokens or 0,
-                    completion=event.usage.completion_tokens or 0,
-                    total=event.usage.total_tokens or 0,
-                )
+            usage = _usage_of(getattr(event, "usage", None))
             if not event.choices:
                 if usage is not None:
                     yield LLMStreamChunk(usage=usage)
                 continue
-            delta = event.choices[0].delta
             yield LLMStreamChunk(
-                delta=getattr(delta, "content", None),
+                delta=getattr(event.choices[0].delta, "content", None),
                 tool_call_delta=None,
                 usage=usage,
                 finish_reason=event.choices[0].finish_reason,

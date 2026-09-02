@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -13,36 +14,28 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def create(
-    db: AsyncSession,
-    *,
-    session_id: UUID,
-    message_id: UUID | None,
-    project_id: UUID,
-    doc_id: UUID,
-    path: str,
-    base_version: str,
-    base_hash: str,
-    diff_text: str,
-    hunks: list[dict[str, Any]],
-    stats: dict[str, int],
-    status: str = ProposedDiffStatus.proposed.value,
-    rationale: str | None = None,
-) -> ProposedDiff:
-    row = ProposedDiff(
-        session_id=session_id,
-        message_id=message_id,
-        project_id=project_id,
-        doc_id=doc_id,
-        path=path,
-        base_version=base_version,
-        base_hash=base_hash,
-        diff_text=diff_text,
-        hunks=hunks,
-        stats=stats,
-        status=status,
-        rationale=rationale,
+@dataclass(slots=True)
+class NewDiff:
+    """The payload for one ``proposed_diffs`` row."""
+
+    session_id: UUID
+    message_id: UUID | None
+    project_id: UUID
+    doc_id: UUID
+    path: str
+    base_version: str
+    base_hash: str
+    diff_text: str = ""
+    hunks: list[dict[str, Any]] = field(default_factory=list)
+    stats: dict[str, int] = field(
+        default_factory=lambda: {"additions": 0, "deletions": 0, "hunk_count": 0}
     )
+    status: str = ProposedDiffStatus.proposed.value
+    rationale: str | None = None
+
+
+async def create(db: AsyncSession, spec: NewDiff) -> ProposedDiff:
+    row = ProposedDiff(**asdict(spec))
     db.add(row)
     await db.flush()
     return row

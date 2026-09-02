@@ -44,6 +44,34 @@ class LogProblemsService:
             raise LogNotAvailable()
         return row
 
+    def _bounded_text(self, data: bytes, compile_id: UUID) -> tuple[str, bool]:
+        """The log text to parse, and whether it had to be truncated first."""
+        limit = self._settings.logparse_max_log_bytes
+        if len(data) <= limit:
+            return data.decode("utf-8", "replace"), False
+        # Keep the TAIL (last `limit` bytes), not the beginning. This intentionally
+        # supersedes the imprecise spec §5.5 wording ("truncated from the end") per
+        # ADR 0027: for LaTeX the final, actionable errors live at the end of the
+        # log, so the tail is the slice worth parsing.
+        logger.warning("log for compile %s truncated to %d bytes for parsing", compile_id, limit)
+        return data[-limit:].decode("utf-8", "replace"), True
+
+    def _cap(self, problems: list[Problem]) -> list[Problem]:
+        """Trim to the configured maximum, noting how many were dropped."""
+        cap = self._settings.logparse_max_problems
+        if len(problems) <= cap:
+            return problems
+        omitted = len(problems) - cap
+        return [
+            *problems[:cap],
+            Problem(
+                severity=ProblemSeverity.info,
+                message=f"{omitted} more problems omitted.",
+                raw="",
+                rule="too-many-problems",
+            ),
+        ]
+
     async def problems_for(self, project_id: UUID, compile_id: str | None) -> CompileProblems:
         row = await self._resolve_compile(project_id, compile_id)
         obj = await self._store.open_log(row.id)
@@ -51,25 +79,13 @@ class LogProblemsService:
             raise LogNotAvailable()
 
         data = b"".join([chunk async for chunk in obj.stream()])
-        truncated = False
-        limit = self._settings.logparse_max_log_bytes
-        if len(data) > limit:
-            # Keep the TAIL (last `limit` bytes), not the beginning. This
-            # intentionally supersedes the imprecise spec §5.5 wording ("truncated
-            # from the end") per ADR 0027: for LaTeX the final, actionable errors
-            # live at the end of the log, so the tail is the slice worth parsing.
-            data = data[-limit:]
-            truncated = True
-            logger.warning("log for compile %s truncated to %d bytes for parsing", row.id, limit)
-        text = data.decode("utf-8", "replace")
-
+        text, truncated = self._bounded_text(data, row.id)
         problems = await asyncio.to_thread(
             parse_latex_log,
             text,
             root_file=row.main_file,
             wrap_width=self._settings.logparse_wrap_width,
         )
-
         if truncated:
             problems.insert(
                 0,
@@ -80,27 +96,12 @@ class LogProblemsService:
                     rule="log-truncated",
                 ),
             )
+        problems = self._cap(problems)
 
-        cap = self._settings.logparse_max_problems
-        if len(problems) > cap:
-            omitted = len(problems) - cap
-            problems = problems[:cap]
-            problems.append(
-                Problem(
-                    severity=ProblemSeverity.info,
-                    message=f"{omitted} more problems omitted.",
-                    raw="",
-                    rule="too-many-problems",
-                )
-            )
-
-        errors = sum(p.severity is ProblemSeverity.error for p in problems)
-        warnings = sum(p.severity is ProblemSeverity.warning for p in problems)
-        infos = sum(p.severity is ProblemSeverity.info for p in problems)
         return CompileProblems(
             compile_id=str(row.id),
-            errors=errors,
-            warnings=warnings,
-            infos=infos,
+            errors=sum(p.severity is ProblemSeverity.error for p in problems),
+            warnings=sum(p.severity is ProblemSeverity.warning for p in problems),
+            infos=sum(p.severity is ProblemSeverity.info for p in problems),
             problems=problems,
         )

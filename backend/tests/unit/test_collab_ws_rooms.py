@@ -97,7 +97,8 @@ async def test_enqueue_timed_succeeds_within_grace_window() -> None:
         await asyncio.sleep(0)
         conn.send_queue.get_nowait()  # make room so the timed put can complete
 
-    asyncio.create_task(drain())  # noqa: RUF006
+    # Fire-and-forget: the task finishes within the awaited enqueue below.
+    asyncio.create_task(drain())
     assert await conn.enqueue_timed(b"payload", timeout_ms=200) is True
 
 

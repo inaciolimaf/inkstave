@@ -1,6 +1,6 @@
 """Agent safety: rate limits, budgets, injection mitigation, audit logging (spec 49)."""
 
-from inkstave.agent.safety.audit import audit
+from inkstave.agent.safety.audit import AuditSubject, AuditUsage, audit
 from inkstave.agent.safety.budget import (
     BudgetDecision,
     avg_rate_per_1k,
@@ -22,6 +22,8 @@ from inkstave.agent.safety.rate_limit import (
 __all__ = [
     "AgentAuditAction",
     "AgentAuditLog",
+    "AuditSubject",
+    "AuditUsage",
     "BudgetDecision",
     "RateDecision",
     "acquire_run",

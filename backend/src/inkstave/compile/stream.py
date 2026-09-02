@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from inkstave.db.models.compile import CompileJobStatus, is_terminal
+from inkstave.sse import Keepalive, event_pump
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -43,6 +43,30 @@ def _sse(event: str, data: dict[str, Any]) -> bytes:
 SnapshotProvider = Callable[[], Awaitable[dict[str, Any] | None]]
 
 
+def _is_terminal(payload: dict[str, Any]) -> bool:
+    return is_terminal(CompileJobStatus(payload["status"]))
+
+
+async def _frames(
+    pubsub: Any, initial: dict[str, Any], keepalive_seconds: int
+) -> AsyncIterator[bytes]:
+    """The snapshot frame, then one frame per transition / keep-alive until terminal."""
+    yield _sse("status", initial)
+    if _is_terminal(initial):
+        return
+
+    keepalive = Keepalive(keepalive_seconds)
+    async for payload in event_pump(pubsub, poll=min(0.1, float(keepalive_seconds))):
+        if payload is None:
+            if keepalive.due():
+                yield b": keep-alive\n\n"
+            continue
+        yield _sse("status", payload)
+        keepalive.reset()
+        if _is_terminal(payload):
+            return
+
+
 async def sse_stream(
     redis: Redis,
     compile_id: UUID,
@@ -58,26 +82,9 @@ async def sse_stream(
     # the snapshot read and the subscribe is lost.
     pubsub = redis.pubsub()
     await pubsub.subscribe(events_channel(compile_id))
-    poll = min(0.1, float(keepalive_seconds))
-    last = time.monotonic()
     try:
-        yield _sse("status", initial)
-        if is_terminal(CompileJobStatus(initial["status"])):
-            return
-        while True:
-            # A short poll (so transient None acks don't masquerade as keep-alives);
-            # emit a real keep-alive only once the configured interval has elapsed.
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=poll)
-            if message is None:
-                if time.monotonic() - last >= keepalive_seconds:
-                    yield b": keep-alive\n\n"
-                    last = time.monotonic()
-                continue
-            payload = json.loads(message["data"])
-            yield _sse("status", payload)
-            last = time.monotonic()
-            if is_terminal(CompileJobStatus(payload["status"])):
-                return
+        async for frame in _frames(pubsub, initial, keepalive_seconds):
+            yield frame
     finally:
         await pubsub.unsubscribe(events_channel(compile_id))
         await pubsub.aclose()

@@ -82,7 +82,7 @@ async def _probe(check: DepCheck, label: str, name: str) -> bool:
     """Run a probe, printing one friendly PASS/FAIL line (never a traceback)."""
     try:
         ok = await check()
-    except Exception as exc:  # noqa: BLE001 — reachability diagnostics never raise out
+    except Exception as exc:  # broad on purpose: reachability diagnostics never raise out
         print(f"{name}: FAIL ({label}) — {type(exc).__name__}: {exc}", file=sys.stderr)
         return False
     if ok:
@@ -115,7 +115,7 @@ async def _cmd_doctor(
     if db_check is None or redis_check is None:
         try:
             settings = get_settings()
-        except Exception:  # noqa: BLE001 — config already reported above
+        except Exception:  # broad on purpose: config errors are already reported above
             settings = None
 
     db_label = (settings.database_url if settings else None) or "<unset>"
@@ -173,7 +173,7 @@ async def _cmd_send_test_email(*, to: str, template: str, sender: object | None 
     except UnknownTemplateError as exc:
         print(f"send-test-email: FAIL — {exc}", file=sys.stderr)
         return 1
-    except Exception as exc:  # noqa: BLE001 — diagnostics never raise out (no traceback)
+    except Exception as exc:  # broad on purpose: diagnostics never raise out (no traceback)
         print(f"send-test-email: FAIL — {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print(f"send-test-email: PASS — sent to {to} via {settings.email_backend}")
@@ -238,7 +238,8 @@ async def _cmd_seed(*, demo: bool, force: bool) -> int:
         await engine.dispose()
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _build_parser() -> argparse.ArgumentParser:
+    """The `inkstave` CLI's subcommands and their options."""
     parser = argparse.ArgumentParser(prog="inkstave", description="Inkstave operations CLI")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("migrate", help="apply Alembic migrations to head (advisory-locked)")
@@ -257,24 +258,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         default="email_verification",
         help="template name (default: email_verification)",
     )
+    return parser
 
-    args = parser.parse_args(argv)
-    if args.command == "migrate":
-        return _cmd_migrate()
-    if args.command == "check-config":
-        return _cmd_check_config()
-    if args.command == "doctor":
-        return asyncio.run(_cmd_doctor())
-    if args.command == "bootstrap-admin":
-        creds = _resolve_admin_credentials()
-        if creds is None:
-            return 2
-        return asyncio.run(_cmd_bootstrap_admin(*creds))
-    if args.command == "seed":
-        return asyncio.run(_cmd_seed(demo=args.demo, force=args.force))
-    if args.command == "send-test-email":
-        return asyncio.run(_cmd_send_test_email(to=args.to, template=args.template))
-    return 2  # pragma: no cover - argparse requires a subcommand
+
+def _run_bootstrap_admin() -> int:
+    creds = _resolve_admin_credentials()
+    if creds is None:
+        return 2
+    return asyncio.run(_cmd_bootstrap_admin(*creds))
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    # One entry per subcommand; each takes the parsed args and returns the exit code.
+    commands: dict[str, Callable[[argparse.Namespace], int]] = {
+        "migrate": lambda _a: _cmd_migrate(),
+        "check-config": lambda _a: _cmd_check_config(),
+        "doctor": lambda _a: asyncio.run(_cmd_doctor()),
+        "bootstrap-admin": lambda _a: _run_bootstrap_admin(),
+        "seed": lambda a: asyncio.run(_cmd_seed(demo=a.demo, force=a.force)),
+        "send-test-email": lambda a: asyncio.run(
+            _cmd_send_test_email(to=a.to, template=a.template)
+        ),
+    }
+    handler = commands.get(args.command)
+    if handler is None:  # pragma: no cover - argparse requires a known subcommand
+        return 2
+    return handler(args)
 
 
 if __name__ == "__main__":

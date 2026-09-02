@@ -6,11 +6,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
 
+from inkstave.auth.refresh_store import RefreshRecord
 from inkstave.auth.tokens import TokenError
 from inkstave.db.models.user import User
 from inkstave.errors import UnauthorizedError
@@ -117,20 +118,9 @@ async def login(
     return pair
 
 
-async def refresh_tokens(
-    session: AsyncSession,
-    token_service: TokenService,
-    refresh_store: RefreshStore,
-    refresh_token: str,
-) -> TokenPair:
-    try:
-        claims = token_service.decode_token(refresh_token, "refresh")
-    except TokenError as exc:
-        raise RefreshError(_INVALID_REFRESH) from exc
-
-    jti = claims["jti"]
-    family_id = claims["family_id"]
-
+async def _validate_refresh(refresh_store: RefreshStore, claims: dict[str, Any]) -> RefreshRecord:
+    """The stored record for a refresh token that may still be rotated."""
+    jti, family_id = claims["jti"], claims["family_id"]
     record = await refresh_store.get_refresh(jti)
     if record is None or await refresh_store.is_family_revoked(family_id):
         logger.warning(
@@ -149,16 +139,31 @@ async def refresh_tokens(
     if await refresh_store.is_user_revoked(record):
         logger.warning("auth refresh rejected: user revoked", extra={"user_id": record.user_id})
         raise RefreshError(_INVALID_REFRESH)
+    return record
 
+
+async def refresh_tokens(
+    session: AsyncSession,
+    token_service: TokenService,
+    refresh_store: RefreshStore,
+    refresh_token: str,
+) -> TokenPair:
+    try:
+        claims = token_service.decode_token(refresh_token, "refresh")
+    except TokenError as exc:
+        raise RefreshError(_INVALID_REFRESH) from exc
+
+    await _validate_refresh(refresh_store, claims)
     user = await session.get(User, UUID(claims["sub"]))
     if user is None:
         logger.warning("auth refresh rejected: unknown user", extra={"user_id": claims["sub"]})
         raise RefreshError(_INVALID_REFRESH)
 
-    await refresh_store.rotate_refresh(jti)
+    family_id = UUID(claims["family_id"])
+    await refresh_store.rotate_refresh(claims["jti"])
     access_token, expires_in = token_service.create_access_token(user)
-    new_refresh, new_jti = token_service.create_refresh_token(user.id, UUID(family_id))
-    await refresh_store.store_refresh(jti=new_jti, user_id=user.id, family_id=UUID(family_id))
+    new_refresh, new_jti = token_service.create_refresh_token(user.id, family_id)
+    await refresh_store.store_refresh(jti=new_jti, user_id=user.id, family_id=family_id)
     logger.info("auth refresh rotated", extra={"user_id": user.id})
     return TokenPair(access_token=access_token, refresh_token=new_refresh, expires_in=expires_in)
 

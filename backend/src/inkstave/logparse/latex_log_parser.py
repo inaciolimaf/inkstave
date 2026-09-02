@@ -126,54 +126,68 @@ def _box(line: str, file: str | None) -> Problem | None:
     )
 
 
-def _warning(lines: list[str], idx: int, file: str | None) -> tuple[Problem, int] | None:
-    line = lines[idx]
+def _warning_head(line: str) -> tuple[str, str, str | None] | None:
+    """``(body, rule, continuation prefix)`` for a warning line, else ``None``."""
     pkg = _PKG_WARNING_RE.match(line)
-    font = _FONT_WARNING_RE.match(line)
-    latex = _LATEX_WARNING_RE.match(line)
-
     if pkg is not None:
         kind, name, body = pkg.group(1), pkg.group(2), pkg.group(3)
-        rule = "package-warning" if kind == "Package" else "class-warning"
-        prefix = f"({name})"
-    elif font is not None:
-        name, body, rule, prefix = "", font.group(1), "font-warning", "(Font)"
-    elif latex is not None:
-        body, rule, prefix = latex.group(1), "latex-warning", None
-    else:
-        return None
+        return body, ("package-warning" if kind == "Package" else "class-warning"), f"({name})"
+    font = _FONT_WARNING_RE.match(line)
+    if font is not None:
+        return font.group(1), "font-warning", "(Font)"
+    latex = _LATEX_WARNING_RE.match(line)
+    if latex is not None:
+        return latex.group(1), "latex-warning", None
+    return None
 
-    parts = [body.strip()]
-    raw = [line]
+
+def _fold_continuations(
+    lines: list[str], idx: int, prefix: str | None
+) -> tuple[list[str], list[str], int]:
+    """Fold continuation lines ("(name) …") for package/font warnings."""
+    parts: list[str] = []
+    raw = [lines[idx]]
     consumed = 1
-    # Fold continuation lines ("(name) …") for package/font warnings.
-    if prefix is not None:
-        j = idx + 1
-        while j < len(lines) and consumed <= _PKG_CONT_LIMIT and lines[j].startswith(prefix):
-            cont = lines[j][len(prefix) :].strip()
-            if cont:
-                parts.append(cont)
-            raw.append(lines[j])
-            j += 1
-            consumed += 1
+    if prefix is None:
+        return parts, raw, consumed
+    j = idx + 1
+    while j < len(lines) and consumed <= _PKG_CONT_LIMIT and lines[j].startswith(prefix):
+        cont = lines[j][len(prefix) :].strip()
+        if cont:
+            parts.append(cont)
+        raw.append(lines[j])
+        j += 1
+        consumed += 1
+    return parts, raw, consumed
 
-    message = " ".join(p for p in parts if p).strip()
+
+def _refine_rule(message: str, rule: str) -> str:
+    """Promote a generic warning rule to the specific undefined-ref/cite one."""
     if _UNDEF_REF_RE.search(message):
-        rule = "undefined-ref"
-    elif _UNDEF_CITE_RE.search(message):
-        rule = "undefined-cite"
+        return "undefined-ref"
+    if _UNDEF_CITE_RE.search(message):
+        return "undefined-cite"
+    return rule
 
+
+def _warning(lines: list[str], idx: int, file: str | None) -> tuple[Problem, int] | None:
+    head = _warning_head(lines[idx])
+    if head is None:
+        return None
+    body, rule, prefix = head
+
+    continuations, raw, consumed = _fold_continuations(lines, idx, prefix)
+    message = " ".join(p for p in [body.strip(), *continuations] if p).strip()
     input_match = _INPUT_LINE_RE.search(message)
-    line_no = int(input_match.group(1)) if input_match else None
     return (
         Problem(
             severity=ProblemSeverity.warning,
             message=message,
             file=file,
-            line=line_no,
+            line=int(input_match.group(1)) if input_match else None,
             end_line=None,
             raw="\n".join(raw),
-            rule=rule,
+            rule=_refine_rule(message, rule),
         ),
         consumed,
     )
@@ -227,6 +241,21 @@ def _file_line_error(line: str) -> Problem | None:
     )
 
 
+def _problem_at(lines: list[str], idx: int, current: str | None) -> tuple[Problem, int] | None:
+    """The problem starting at `lines[idx]` and how many lines it consumed."""
+    line = lines[idx]
+    if line.startswith("! "):
+        return _error(lines, idx, current)
+    file_line = _file_line_error(line)
+    if file_line is not None:
+        return file_line, 1
+    warning = _warning(lines, idx, current)
+    if warning is not None:
+        return warning
+    box = _box(line, current)
+    return None if box is None else (box, 1)
+
+
 def parse_latex_log(
     text: str, *, root_file: str | None = None, wrap_width: int = 79
 ) -> list[Problem]:
@@ -245,24 +274,13 @@ def parse_latex_log(
     problems: list[Problem] = []
 
     i = 0
-    n = len(lines)
-    while i < n:
-        line = lines[i]
-        current = _current_file(stack, root)
+    while i < len(lines):
+        found = _problem_at(lines, i, _current_file(stack, root))
         advance = 1
-
-        if line.startswith("! "):
-            problem, advance = _error(lines, i, current)
-            problems.append(problem)
-        elif (file_line := _file_line_error(line)) is not None:
-            problems.append(file_line)
-        elif (warning := _warning(lines, i, current)) is not None:
-            problems.append(warning[0])
-            advance = warning[1]
-        elif (box := _box(line, current)) is not None:
-            problems.append(box)
-
-        for k in range(i, min(i + advance, n)):
+        if found is not None:
+            problems.append(found[0])
+            advance = found[1]
+        for k in range(i, min(i + advance, len(lines))):
             _update_stack(stack, lines[k])
         i += advance
 

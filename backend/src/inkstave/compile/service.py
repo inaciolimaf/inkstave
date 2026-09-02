@@ -35,6 +35,33 @@ class CompileOptions:
     compile_id: UUID | None = None
 
 
+def _declares_documentclass(path: Path) -> bool:
+    try:
+        return "\\documentclass" in path.read_text("utf-8", errors="ignore")
+    except OSError:
+        return False
+
+
+def _resolve_root(input_dir: Path, main_file: str) -> str | None:
+    """The .tex file to compile, or ``None`` when the project has none.
+
+    If the requested root (default "main.tex") is missing, fall back to a .tex file
+    in the project so it still compiles. Prefer the shallowest file that actually
+    declares ``\\documentclass`` (a real root), otherwise the first .tex by path.
+    """
+    if (input_dir / main_file).is_file():
+        return main_file
+    candidates = sorted(
+        (p.relative_to(input_dir).as_posix() for p in input_dir.rglob("*.tex") if p.is_file()),
+        key=lambda rel: (rel.count("/"), rel),
+    )
+    if not candidates:
+        return None
+    return next(
+        (rel for rel in candidates if _declares_documentclass(input_dir / rel)), candidates[0]
+    )
+
+
 class CompileService:
     def __init__(
         self,
@@ -67,94 +94,81 @@ class CompileService:
         self, opts: CompileOptions, cancel: CancelToken | None = None
     ) -> CompileResult:
         cancel = cancel or CancelToken()
-        limits = self._limits()
-        timeout_s = opts.timeout_s or self._settings.tectonic_compile_timeout_s
         compile_id = opts.compile_id or uuid4()
         workdir: Path | None = None
         result: CompileResult | None = None
-
         try:
             workdir = await create_workdir(Path(self._settings.compile_workdir_root), compile_id)
-
-            if cancel.is_cancelled:
-                result = _empty(CompileStatus.CANCELLED)
-                return result
-
-            try:
-                await assemble_inputs(
-                    workdir=workdir,
-                    project_id=opts.project_id,
-                    docs=self._docs,
-                    files=self._files,
-                    limits=limits,
-                )
-            except CompileError as exc:
-                result = _empty(CompileStatus.SYSTEM_ERROR, log_text=str(exc))
-                return result
-
-            input_dir = workdir / "input"
-            root = opts.main_file
-            if not (input_dir / root).is_file():
-                # The requested root (default "main.tex") is missing: fall back to a
-                # .tex file in the project so it still compiles. Prefer the shallowest
-                # file that actually declares \documentclass (a real root), otherwise
-                # the first .tex by path. Only fail if there is no .tex at all.
-                candidates = sorted(
-                    (
-                        p.relative_to(input_dir).as_posix()
-                        for p in input_dir.rglob("*.tex")
-                        if p.is_file()
-                    ),
-                    key=lambda rel: (rel.count("/"), rel),
-                )
-                if not candidates:
-                    return _empty(
-                        CompileStatus.FAILURE,
-                        log_text=(
-                            f"No LaTeX root document found: '{opts.main_file}' is missing and the "
-                            "project has no .tex file to compile."
-                        ),
-                    )
-                root = candidates[0]
-                for rel in candidates:
-                    try:
-                        if "\\documentclass" in (input_dir / rel).read_text(
-                            "utf-8", errors="ignore"
-                        ):
-                            root = rel
-                            break
-                    except OSError:
-                        continue
-
-            if cancel.is_cancelled:
-                result = _empty(CompileStatus.CANCELLED)
-                return result
-
-            outcome = await self._runner.run(
-                workdir=workdir,
-                main_file=root,
-                output_dir=workdir / "output",
-                timeout_s=timeout_s,
-                limits=limits,
-                cancel=cancel,
-            )
-            result = self._build_result(workdir, root, outcome, limits)
+            result = await self._run(workdir, opts, cancel)
             return result
         except Exception as exc:  # pragma: no cover - defensive catch-all
             result = _empty(CompileStatus.SYSTEM_ERROR, log_text=f"compile failed: {exc}")
             return result
         finally:
             if workdir is not None:
-                keep = opts.keep_workdir or (
-                    result is not None
-                    and result.status in _FAILED
-                    and self._settings.compile_keep_workdir_on_failure
-                )
-                if keep:
-                    if result is not None:
-                        result.workdir = workdir
-                else:
-                    await cleanup_workdir(workdir)
+                await self._release_workdir(workdir, opts, result)
+
+    async def _run(self, workdir: Path, opts: CompileOptions, cancel: CancelToken) -> CompileResult:
+        """Assemble, resolve the root document, and run Tectonic once."""
+        limits = self._limits()
+        if cancel.is_cancelled:
+            return _empty(CompileStatus.CANCELLED)
+
+        assembly_error = await self._assemble(workdir, opts, limits)
+        if assembly_error is not None:
+            return assembly_error
+
+        root = _resolve_root(workdir / "input", opts.main_file)
+        if root is None:
+            return _empty(
+                CompileStatus.FAILURE,
+                log_text=(
+                    f"No LaTeX root document found: '{opts.main_file}' is missing and the "
+                    "project has no .tex file to compile."
+                ),
+            )
+        if cancel.is_cancelled:
+            return _empty(CompileStatus.CANCELLED)
+
+        outcome = await self._runner.run(
+            workdir=workdir,
+            main_file=root,
+            output_dir=workdir / "output",
+            timeout_s=opts.timeout_s or self._settings.tectonic_compile_timeout_s,
+            limits=limits,
+            cancel=cancel,
+        )
+        return self._build_result(workdir, root, outcome, limits)
+
+    async def _assemble(
+        self, workdir: Path, opts: CompileOptions, limits: ResourceLimits
+    ) -> CompileResult | None:
+        """Materialise the project's inputs; a failure becomes a terminal result."""
+        try:
+            await assemble_inputs(
+                workdir=workdir,
+                project_id=opts.project_id,
+                docs=self._docs,
+                files=self._files,
+                limits=limits,
+            )
+        except CompileError as exc:
+            return _empty(CompileStatus.SYSTEM_ERROR, log_text=str(exc))
+        return None
+
+    async def _release_workdir(
+        self, workdir: Path, opts: CompileOptions, result: CompileResult | None
+    ) -> None:
+        """Hand the workdir to the caller, or delete it."""
+        keep = opts.keep_workdir or (
+            result is not None
+            and result.status in _FAILED
+            and self._settings.compile_keep_workdir_on_failure
+        )
+        if not keep:
+            await cleanup_workdir(workdir)
+        elif result is not None:
+            result.workdir = workdir
 
     def _build_result(
         self, workdir: Path, main_file: str, outcome: RunOutcome, limits: ResourceLimits

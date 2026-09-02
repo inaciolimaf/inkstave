@@ -33,39 +33,46 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-def evaluate(timing: dict[str, Any]) -> GateResult:
+def _total_messages(total: float) -> tuple[bool, list[str]]:
+    """Gate the whole-suite wall clock against the budget + headroom alarm."""
     budget = _env_float("SUITE_BUDGET_SECONDS", 120)
     warn = _env_float("SUITE_WARN_SECONDS", 90)
+    if total > budget:
+        return False, [f"FAIL: suite {total:.1f}s exceeds the {budget:.0f}s budget."]
+    if total > warn:
+        return True, [f"WARN: suite {total:.1f}s is over the {warn:.0f}s headroom alarm."]
+    return True, []
+
+
+def _slow_messages(slowest: list[dict[str, Any]]) -> tuple[bool, list[str]]:
+    """Per-test slow scan over `slow: [{name, duration_s, slow_marked}]`."""
     slow_fail = _env_float("SLOW_TEST_FAIL_S", 10)
     slow_warn = _env_float("SLOW_TEST_WARN_S", 3)
-
-    total = float(timing.get("total_s", 0))
-    messages: list[str] = [
-        f"Suite total: {total:.1f}s "
-        f"(backend {timing.get('backend_s', 0)}s, frontend {timing.get('frontend_s', 0)}s, "
-        f"e2e {timing.get('e2e_s', 0)}s)"
-    ]
     ok = True
-
-    if total > budget:
-        ok = False
-        messages.append(f"FAIL: suite {total:.1f}s exceeds the {budget:.0f}s budget.")
-    elif total > warn:
-        messages.append(f"WARN: suite {total:.1f}s is over the {warn:.0f}s headroom alarm.")
-
-    # Per-test slow scan. `slow: [{name, duration_s, slow_marked}]` (slow_marked excluded).
-    for item in timing.get("slowest", []):
-        name = item.get("name", "?")
-        dur = float(item.get("duration_s", 0))
+    messages: list[str] = []
+    for item in slowest:
         if item.get("slow_marked"):
             continue  # @slow tests are excluded from the default budget
+        name = item.get("name", "?")
+        dur = float(item.get("duration_s", 0))
         if dur > slow_fail:
             ok = False
             messages.append(f"FAIL: '{name}' took {dur:.1f}s (> {slow_fail:.0f}s); mark @slow.")
         elif dur > slow_warn:
             messages.append(f"WARN: '{name}' took {dur:.1f}s (> {slow_warn:.0f}s).")
+    return ok, messages
 
-    return GateResult(ok=ok, messages=messages)
+
+def evaluate(timing: dict[str, Any]) -> GateResult:
+    total = float(timing.get("total_s", 0))
+    header = (
+        f"Suite total: {total:.1f}s "
+        f"(backend {timing.get('backend_s', 0)}s, frontend {timing.get('frontend_s', 0)}s, "
+        f"e2e {timing.get('e2e_s', 0)}s)"
+    )
+    total_ok, total_messages = _total_messages(total)
+    slow_ok, slow_messages = _slow_messages(timing.get("slowest", []))
+    return GateResult(ok=total_ok and slow_ok, messages=[header, *total_messages, *slow_messages])
 
 
 def main(argv: list[str]) -> int:

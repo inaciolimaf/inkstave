@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -106,41 +106,31 @@ async def get_file(session: AsyncSession, project_id: UUID, entity_id: UUID) -> 
     return file_row
 
 
-async def upload_file(
-    session: AsyncSession,
-    store: ObjectStore,
-    project_id: UUID,
-    parent_id: UUID | None,
-    name: str,
-    read: ByteReader,
-    declared_content_type: str | None,
-    original_filename: str | None,
-) -> File:
-    settings = get_settings()
-    chunk_size = settings.storage_stream_chunk_bytes
+async def _persist(session: AsyncSession, file_row: File) -> None:
+    session.add(file_row)
+    await session.flush()
+    await session.refresh(file_row)
 
-    # Create the file tree entity first (validates name, resolves the folder
-    # parent, and rejects duplicate sibling names).
-    entity = await tree_service.create_entity(
-        session, project_id, TreeEntityType.file, name, parent_id
-    )
-    key = _storage_key(project_id, entity.id)
 
-    # Extension allow-list (spec 52): reject before reading the body.
-    if not extension_allowed(name, settings.upload_allowed_extensions):
-        raise UnsupportedMediaTypeError()
+def _validated_content_type(name: str, head: bytes, declared: str | None, settings: Any) -> str:
+    """The sniffed content type, rejected unless it is allowed and matches `name`.
 
-    head = await read(chunk_size)
-    content_type = sniff_content_type(head, declared_content_type)
+    The sniffed content must be consistent with the claimed extension (spec 52):
+    a `.png` whose bytes are really a PDF is rejected.
+    """
+    content_type = sniff_content_type(head, declared)
     if content_type not in settings.allowed_upload_mime:
         raise UnsupportedMediaTypeError()
-    # The sniffed content must be consistent with the claimed extension (spec 52):
-    # a `.png` whose bytes are really a PDF is rejected.
     if not content_matches_extension(name, content_type):
         raise UnsupportedMediaTypeError()
+    return content_type
 
-    hasher = hashlib.sha256()
-    total = {"size": 0}
+
+def _hashing_body(
+    head: bytes, read: ByteReader, hasher: Any, total: dict[str, int], settings: Any
+) -> AsyncIterator[bytes]:
+    """Re-stream the body from `head`, hashing and size-capping as it goes."""
+    chunk_size = settings.storage_stream_chunk_bytes
 
     async def body() -> AsyncIterator[bytes]:
         chunk = head
@@ -154,21 +144,50 @@ async def upload_file(
             yield chunk
             chunk = await read(chunk_size)
 
+    return body()
+
+
+async def upload_file(
+    session: AsyncSession,
+    store: ObjectStore,
+    project_id: UUID,
+    parent_id: UUID | None,
+    name: str,
+    read: ByteReader,
+    declared_content_type: str | None,
+    original_filename: str | None,
+) -> File:
+    settings = get_settings()
+
+    # Create the file tree entity first (validates name, resolves the folder
+    # parent, and rejects duplicate sibling names).
+    entity = await tree_service.create_entity(
+        session, project_id, TreeEntityType.file, name, parent_id
+    )
+    key = _storage_key(project_id, entity.id)
+
+    # Extension allow-list (spec 52): reject before reading the body.
+    if not extension_allowed(name, settings.upload_allowed_extensions):
+        raise UnsupportedMediaTypeError()
+
+    head = await read(settings.storage_stream_chunk_bytes)
+    content_type = _validated_content_type(name, head, declared_content_type, settings)
+
+    hasher = hashlib.sha256()
+    total = {"size": 0}
     try:
-        await store.put(key, body(), content_type=content_type)
-        checksum_sha256 = await asyncio.to_thread(hasher.hexdigest)
+        body = _hashing_body(head, read, hasher, total, settings)
+        await store.put(key, body, content_type=content_type)
         file_row = File(
             entity_id=entity.id,
             project_id=project_id,
             storage_key=key,
             content_type=content_type,
             size_bytes=total["size"],
-            checksum_sha256=checksum_sha256,
+            checksum_sha256=await asyncio.to_thread(hasher.hexdigest),
             original_filename=original_filename[:255] if original_filename else None,
         )
-        session.add(file_row)
-        await session.flush()
-        await session.refresh(file_row)
+        await _persist(session, file_row)
         # Attach the just-created entity (already loaded — no query) so the route's
         # _read can use file_row.entity.name without a standalone SELECT (spec 99 #6.1).
         file_row.entity = entity

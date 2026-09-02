@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,6 +64,39 @@ async def test_retention_batch_bound_binds(db_session: AsyncSession) -> None:
     assert len(pruned) == 3  # LIMIT :batch binds even though 5 are eligible
 
 
+async def _seed_retention(
+    db_session: AsyncSession, project_id: Any, user_id: Any, now: datetime
+) -> tuple[list[Any], list[Any]]:
+    """Two recent compiles to keep, two aged-out compiles to evict."""
+    keep = [
+        await _compile_with_output(db_session, project_id, user_id, now - timedelta(minutes=i))
+        for i in range(2)
+    ]
+    evict = [
+        await _compile_with_output(db_session, project_id, user_id, now - timedelta(days=40 + i))
+        for i in range(2)
+    ]
+    return keep, evict
+
+
+async def _assert_evicted(
+    repo: OutputRepository, backend: LocalObjectStore, rows: list[Any]
+) -> None:
+    for row in rows:
+        assert await repo.list_for_compile(row.id) == []
+        for key in await repo.storage_keys_for_compile(row.id):
+            assert await backend.exists(key) is False
+
+
+async def _assert_retained(
+    repo: OutputRepository, backend: LocalObjectStore, rows: list[Any]
+) -> None:
+    for row in rows:
+        outputs = await repo.list_for_compile(row.id)
+        assert outputs
+        assert await backend.exists(outputs[0].storage_key)
+
+
 async def test_cleanup_compile_outputs_job_evicts(db_session: AsyncSession, tmp_path: Path) -> None:
     """AC10 end-to-end: invoke ``cleanup_compile_outputs(ctx)`` itself (not just
     the repo helper) and assert evicted compiles lose both their storage objects
@@ -79,15 +113,7 @@ async def test_cleanup_compile_outputs_job_evicts(db_session: AsyncSession, tmp_
     def make_store(session: AsyncSession) -> OutputStore:
         return OutputStore(storage=backend, repo=OutputRepository(session), settings=settings)
 
-    # Two recent compiles to keep, two aged-out compiles to evict.
-    keep = [
-        await _compile_with_output(db_session, project.id, user.id, now - timedelta(minutes=i))
-        for i in range(2)
-    ]
-    evict = [
-        await _compile_with_output(db_session, project.id, user.id, now - timedelta(days=40 + i))
-        for i in range(2)
-    ]
+    keep, evict = await _seed_retention(db_session, project.id, user.id, now)
     # Materialise the stored objects each row's storage_key points at.
     store = make_store(db_session)
     for row in keep + evict:
@@ -103,14 +129,8 @@ async def test_cleanup_compile_outputs_job_evicts(db_session: AsyncSession, tmp_
     assert summary["pruned"] == len(evict)
 
     repo = OutputRepository(db_session)
-    for row in evict:
-        assert await repo.list_for_compile(row.id) == []
-        for key in await repo.storage_keys_for_compile(row.id):
-            assert await backend.exists(key) is False
-    for row in keep:
-        rows = await repo.list_for_compile(row.id)
-        assert rows
-        assert await backend.exists(rows[0].storage_key)
+    await _assert_evicted(repo, backend, evict)
+    await _assert_retained(repo, backend, keep)
 
 
 async def test_retention_selects_by_age(db_session: AsyncSession) -> None:

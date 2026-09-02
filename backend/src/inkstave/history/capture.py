@@ -55,6 +55,17 @@ class _DocBuffer:
     timer: asyncio.TimerHandle | None = None
 
 
+@dataclass(slots=True)
+class _Pending:
+    """A doc's buffered updates, merged and detached from the buffer."""
+
+    merged: bytes
+    op_count: int
+    author_id: UUID | None
+    at: datetime
+    project_id: UUID
+
+
 class HistoryCaptureService:
     def __init__(
         self, session_factory: SessionFactory, object_store: ObjectStore, settings: Settings
@@ -111,62 +122,83 @@ class HistoryCaptureService:
         buf.timer = asyncio.get_running_loop().call_later(delay, self._on_timer, doc_id)
 
     def _on_timer(self, doc_id: UUID) -> None:
-        asyncio.ensure_future(self.flush_doc(doc_id=doc_id, reason="idle"))  # noqa: RUF006
+        # Fire-and-forget by design: the debounce timer owns no task handle, and a
+        # failed flush is retried by the next edit or the periodic compaction job.
+        asyncio.ensure_future(self.flush_doc(doc_id=doc_id, reason="idle"))
 
     # --- flush (the actual write) ------------------------------------------ #
 
-    async def flush_doc(self, *, doc_id: UUID, reason: FlushReason) -> None:
-        async with self._lock(doc_id):
-            buf = self._buffers.get(doc_id)
-            if buf is None or not buf.updates:
-                if reason in ("idle", "shutdown"):
-                    self._drop_state(doc_id)
-                return
-            raw = buf.updates
-            author = buf.author_id
-            at = buf.last_at or _utcnow()
-            project_id = self._project_ids[doc_id]
-            if buf.timer is not None:
-                buf.timer.cancel()
-            self._buffers.pop(doc_id, None)
+    def _take(self, doc_id: UUID) -> _Pending | None:
+        """Detach the doc's buffer and return its merged contents, if any."""
+        buf = self._buffers.get(doc_id)
+        if buf is None or not buf.updates:
+            return None
+        if buf.timer is not None:
+            buf.timer.cancel()
+        self._buffers.pop(doc_id, None)
+        raw = buf.updates
+        return _Pending(
+            merged=merge_updates(*raw) if len(raw) > 1 else raw[0],
+            op_count=len(raw),
+            author_id=buf.author_id,
+            at=buf.last_at or _utcnow(),
+            project_id=self._project_ids[doc_id],
+        )
 
-            merged = merge_updates(*raw) if len(raw) > 1 else raw[0]
+    async def _write(self, doc_id: UUID, pending: _Pending) -> None:
+        """Append the pending update to the open chunk, sealing it when it is full."""
+        async with self._session_factory() as session:
+            open_chunk = await self._open_chunk(session, doc_id)
+            replica = await self._replica(session, doc_id, open_chunk)
+            max_v = await self._max_version(session, doc_id)
+            next_v = max_v + 1
 
-            async with self._session_factory() as session:
-                open_chunk = await self._open_chunk(session, doc_id)
-                replica = await self._replica(session, doc_id, open_chunk)
-                max_v = await self._max_version(session, doc_id)
-                next_v = max_v + 1
+            if open_chunk is None:
+                open_chunk = await self._new_chunk(
+                    session, pending.project_id, doc_id, replica.get_state(), base_version=max_v
+                )
 
-                if open_chunk is None:
-                    open_chunk = await self._new_chunk(
-                        session, project_id, doc_id, replica.get_state(), base_version=max_v
-                    )
-
-                replica.apply_update(merged)
-                await self._insert_update(
-                    session,
+            replica.apply_update(pending.merged)
+            await self._insert_update(
+                session,
+                _UpdateEntry(
                     chunk=open_chunk,
-                    project_id=project_id,
+                    project_id=pending.project_id,
                     doc_id=doc_id,
                     version=next_v,
-                    payload=merged,
-                    op_count=len(raw),
-                    author_id=author,
-                    at=at,
-                )
-                open_chunk.end_version = next_v
+                    payload=pending.merged,
+                    op_count=pending.op_count,
+                    author_id=pending.author_id,
+                    at=pending.at,
+                ),
+            )
+            open_chunk.end_version = next_v
+            await self._roll_over(session, open_chunk, doc_id, pending, replica, next_v)
+            await session.commit()
 
-                in_chunk = next_v - open_chunk.start_version + 1
-                if in_chunk >= self._settings.history_chunk_max_updates:
-                    open_chunk.sealed = True
-                    await session.flush()  # free the partial-unique open-chunk index
-                    await self._new_chunk(
-                        session, project_id, doc_id, replica.get_state(), base_version=next_v
-                    )
+    async def _roll_over(
+        self,
+        session: AsyncSession,
+        chunk: HistoryChunk,
+        doc_id: UUID,
+        pending: _Pending,
+        replica: YDocument,
+        version: int,
+    ) -> None:
+        """Seal a full chunk and open the next one from the current replica state."""
+        if version - chunk.start_version + 1 < self._settings.history_chunk_max_updates:
+            return
+        chunk.sealed = True
+        await session.flush()  # free the partial-unique open-chunk index
+        await self._new_chunk(
+            session, pending.project_id, doc_id, replica.get_state(), base_version=version
+        )
 
-                await session.commit()
-
+    async def flush_doc(self, *, doc_id: UUID, reason: FlushReason) -> None:
+        async with self._lock(doc_id):
+            pending = self._take(doc_id)
+            if pending is not None:
+                await self._write(doc_id, pending)
             if reason in ("idle", "shutdown"):
                 self._drop_state(doc_id)
 
@@ -269,34 +301,39 @@ class HistoryCaptureService:
         await self._store.put(key, payload, content_type="application/octet-stream")
         return None, key
 
-    async def _insert_update(
-        self,
-        session: AsyncSession,
-        *,
-        chunk: HistoryChunk,
-        project_id: UUID,
-        doc_id: UUID,
-        version: int,
-        payload: bytes,
-        op_count: int,
-        author_id: UUID | None,
-        at: datetime,
-    ) -> None:
-        inline, blob_key = await self._store_payload(payload, self._is_oversized(payload))
+    async def _insert_update(self, session: AsyncSession, entry: _UpdateEntry) -> None:
+        """Persist one history update, offloading an oversized payload to the store."""
+        inline, blob_key = await self._store_payload(
+            entry.payload, self._is_oversized(entry.payload)
+        )
         session.add(
             HistoryUpdate(
-                chunk_id=chunk.id,
-                project_id=project_id,
-                doc_id=doc_id,
-                version=version,
-                timestamp=at,
-                author_id=author_id,
+                chunk_id=entry.chunk.id,
+                project_id=entry.project_id,
+                doc_id=entry.doc_id,
+                version=entry.version,
+                timestamp=entry.at,
+                author_id=entry.author_id,
                 payload=inline,
                 payload_blob_key=blob_key,
-                payload_size=len(payload),
-                op_count=op_count,
+                payload_size=len(entry.payload),
+                op_count=entry.op_count,
             )
         )
+
+
+@dataclass(slots=True)
+class _UpdateEntry:
+    """One history row's worth of data, before it is written."""
+
+    chunk: HistoryChunk
+    project_id: UUID
+    doc_id: UUID
+    version: int
+    payload: bytes
+    op_count: int
+    author_id: UUID | None
+    at: datetime
 
 
 def _utcnow() -> datetime:

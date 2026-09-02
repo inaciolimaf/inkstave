@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
 import time
@@ -15,6 +16,8 @@ from uuid import uuid4
 from inkstave.compile.errors import CompileError
 from inkstave.compile.limits import CancelToken, ResourceLimits
 from inkstave.compile.result import RunOutcome
+
+logger = logging.getLogger(__name__)
 
 
 class TectonicRunner(Protocol):
@@ -125,41 +128,12 @@ class LocalTectonicRunner:
             stderr=asyncio.subprocess.PIPE,
             preexec_fn=_rlimit_preexec(limits),
         )
-
-        comm = asyncio.ensure_future(proc.communicate())
-        cancel_wait = asyncio.ensure_future(cancel.wait())
-        done, _pending = await asyncio.wait(
-            {comm, cancel_wait}, timeout=timeout_s, return_when=asyncio.FIRST_COMPLETED
-        )
-        duration_ms = int((time.monotonic() - start) * 1000)
-
-        if comm in done and not cancel_wait.done():
-            cancel_wait.cancel()
-            stdout, stderr = comm.result()
-            return RunOutcome(
-                exit_code=proc.returncode,
-                stdout=_cap(stdout, limits.max_stdout_bytes),
-                stderr=_cap(stderr, limits.max_stdout_bytes),
-                timed_out=False,
-                cancelled=False,
-                duration_ms=duration_ms,
-            )
-
-        cancelled = cancel_wait.done()
+        watch = _ProcessWatch(proc, limits, start)
+        outcome = await watch.wait(cancel, timeout_s)
+        if outcome is not None:
+            return outcome
         await self._terminate(proc)
-        cancel_wait.cancel()
-        try:
-            stdout, stderr = await comm
-        except Exception:  # pragma: no cover - defensive
-            stdout, stderr = b"", b""
-        return RunOutcome(
-            exit_code=proc.returncode,
-            stdout=_cap(stdout, limits.max_stdout_bytes),
-            stderr=_cap(stderr, limits.max_stdout_bytes),
-            timed_out=not cancelled,
-            cancelled=cancelled,
-            duration_ms=duration_ms,
-        )
+        return await watch.reap()
 
     @staticmethod
     async def _terminate(proc: asyncio.subprocess.Process) -> None:
@@ -171,6 +145,66 @@ class LocalTectonicRunner:
         except (TimeoutError, asyncio.TimeoutError):  # noqa: UP041
             proc.kill()
             await proc.wait()
+
+
+class _ProcessWatch:
+    """Waits on a compile subprocess with both a timeout and a cancel token.
+
+    Both runners share this: a clean finish yields the outcome directly, while a
+    timeout or a cancel makes `wait()` return ``None`` so the caller can kill the
+    process its own way before `reap()` collects whatever it produced.
+    """
+
+    def __init__(
+        self, proc: asyncio.subprocess.Process, limits: ResourceLimits, start: float
+    ) -> None:
+        self._proc = proc
+        self._limits = limits
+        self._start = start
+        self._comm = asyncio.ensure_future(proc.communicate())
+        self._cancel_wait: asyncio.Future[None] | None = None
+        self._duration_ms = 0
+        self._cancelled = False
+
+    async def wait(self, cancel: CancelToken, timeout_s: int) -> RunOutcome | None:
+        """The outcome of a clean finish, or ``None`` on timeout / cancellation."""
+        self._cancel_wait = asyncio.ensure_future(cancel.wait())
+        done, _pending = await asyncio.wait(
+            {self._comm, self._cancel_wait},
+            timeout=timeout_s,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        self._duration_ms = int((time.monotonic() - self._start) * 1000)
+        if self._comm in done and not self._cancel_wait.done():
+            self._cancel_wait.cancel()
+            stdout, stderr = self._comm.result()
+            return self._outcome(stdout, stderr, timed_out=False, cancelled=False)
+        self._cancelled = self._cancel_wait.done()
+        return None
+
+    async def reap(self) -> RunOutcome:
+        """Collect whatever the terminated process produced."""
+        if self._cancel_wait is not None:
+            self._cancel_wait.cancel()
+        try:
+            stdout, stderr = await self._comm
+        except Exception:  # pragma: no cover - defensive
+            stdout, stderr = b"", b""
+        return self._outcome(
+            stdout, stderr, timed_out=not self._cancelled, cancelled=self._cancelled
+        )
+
+    def _outcome(
+        self, stdout: bytes, stderr: bytes, *, timed_out: bool, cancelled: bool
+    ) -> RunOutcome:
+        return RunOutcome(
+            exit_code=self._proc.returncode,
+            stdout=_cap(stdout, self._limits.max_stdout_bytes),
+            stderr=_cap(stderr, self._limits.max_stdout_bytes),
+            timed_out=timed_out,
+            cancelled=cancelled,
+            duration_ms=self._duration_ms,
+        )
 
 
 @dataclass(slots=True)
@@ -250,6 +284,33 @@ class SandboxedTectonicRunner:
             return max(1, limits.address_space_bytes // (1024 * 1024))
         return self._memory_mb
 
+    def _sandbox_flags(self, limits: ResourceLimits, container_name: str) -> list[str]:
+        """The fixed hardening flags for the throwaway compile container."""
+        return [
+            f"--runtime={self._runtime}",
+            "--network",
+            "none",
+            "--read-only",
+            "--tmpfs",
+            # Not a host path: `/tmp` here is the tmpfs mount point *inside* the
+            # throwaway container, which has no writable filesystem otherwise.
+            f"/tmp:size={self._tmpfs_mb}m",  # noqa: S108 — see above
+            "--user",
+            "65534",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges",
+            "--pids-limit",
+            str(self._pids_limit),
+            "--memory",
+            f"{self._memory_for(limits)}m",
+            "--cpus",
+            str(self._cpus),
+            "--name",
+            container_name,
+        ]
+
     def build_command(
         self,
         *,
@@ -269,26 +330,7 @@ class SandboxedTectonicRunner:
             self._docker_bin,
             "run",
             "--rm",
-            f"--runtime={self._runtime}",
-            "--network",
-            "none",
-            "--read-only",
-            "--tmpfs",
-            f"/tmp:size={self._tmpfs_mb}m",
-            "--user",
-            "65534",
-            "--cap-drop",
-            "ALL",
-            "--security-opt",
-            "no-new-privileges",
-            "--pids-limit",
-            str(self._pids_limit),
-            "--memory",
-            f"{self._memory_for(limits)}m",
-            "--cpus",
-            str(self._cpus),
-            "--name",
-            container_name,
+            *self._sandbox_flags(limits, container_name),
             "--workdir",
             "/work",
             "-v",
@@ -336,44 +378,16 @@ class SandboxedTectonicRunner:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        watch = _ProcessWatch(proc, limits, start)
+        outcome = await watch.wait(cancel, timeout_s)
+        if outcome is not None:
+            return outcome
 
-        comm = asyncio.ensure_future(proc.communicate())
-        cancel_wait = asyncio.ensure_future(cancel.wait())
-        done, _pending = await asyncio.wait(
-            {comm, cancel_wait}, timeout=timeout_s, return_when=asyncio.FIRST_COMPLETED
-        )
-        duration_ms = int((time.monotonic() - start) * 1000)
-
-        if comm in done and not cancel_wait.done():
-            cancel_wait.cancel()
-            stdout, stderr = comm.result()
-            return RunOutcome(
-                exit_code=proc.returncode,
-                stdout=_cap(stdout, limits.max_stdout_bytes),
-                stderr=_cap(stderr, limits.max_stdout_bytes),
-                timed_out=False,
-                cancelled=False,
-                duration_ms=duration_ms,
-            )
-
-        cancelled = cancel_wait.done()
         # On timeout/cancel, kill the container by name (it outlives the SIGTERM'd
         # launcher otherwise), then reap the launcher process.
         await self._kill_container(container_name)
         await LocalTectonicRunner._terminate(proc)
-        cancel_wait.cancel()
-        try:
-            stdout, stderr = await comm
-        except Exception:  # pragma: no cover - defensive
-            stdout, stderr = b"", b""
-        return RunOutcome(
-            exit_code=proc.returncode,
-            stdout=_cap(stdout, limits.max_stdout_bytes),
-            stderr=_cap(stderr, limits.max_stdout_bytes),
-            timed_out=not cancelled,
-            cancelled=cancelled,
-            duration_ms=duration_ms,
-        )
+        return await watch.reap()
 
     async def _kill_container(self, container_name: str) -> None:
         try:
@@ -387,4 +401,4 @@ class SandboxedTectonicRunner:
             )
             await asyncio.wait_for(killer.wait(), timeout=5.0)
         except Exception:  # pragma: no cover - best-effort; --rm reaps the container
-            pass
+            logger.debug("docker kill failed for %s", container_name, exc_info=True)

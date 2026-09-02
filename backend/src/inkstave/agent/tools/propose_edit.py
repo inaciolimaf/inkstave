@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 from inkstave.agent.edits import EditMode, StagedEdit
 from inkstave.agent.tools._common import resolve_document
 from inkstave.agent.tools.base import Tool, ToolContext, ToolResult, authorize
+from inkstave.invariants import require
 
 
 class ProposeEditArgs(BaseModel):
@@ -43,31 +44,40 @@ class ProposeEditTool(Tool):
             return ToolResult(ok=False, error=resolved)
         _entity, document, path = resolved
 
-        if args.mode == EditMode.range:
-            line_count = len(document.content.splitlines())
-            start, end = args.start_line, args.end_line
-            assert start is not None and end is not None  # guaranteed by the validator
-            if start > end or end > line_count:
-                return ToolResult.failure("invalid_args", "range is outside the document's bounds.")
+        if not _range_within_bounds(args, document.content):
+            return ToolResult.failure("invalid_args", "range is outside the document's bounds.")
 
-        base_version = str(document.version)
-        staged = StagedEdit(
-            edit_id=uuid.uuid4().hex,
-            doc_id=args.doc_id,
-            path=path,
-            base_version=base_version,
-            mode=args.mode,
-            new_text=args.new_text,
-            start_line=args.start_line,
-            end_line=args.end_line,
-            rationale=args.rationale,
-        )
+        staged = _stage(args, path, str(document.version))
         ctx.staged_edits.append(staged)  # consumed by spec 43; the document is NOT changed
         return ToolResult.success(
             edit_id=staged.edit_id,
             doc_id=args.doc_id,
             path=path,
             mode=args.mode.value,
-            base_version=base_version,
+            base_version=staged.base_version,
             staged=True,
         )
+
+
+def _range_within_bounds(args: ProposeEditArgs, content: str) -> bool:
+    """For `mode=range`, whether the requested lines exist in the document."""
+    if args.mode != EditMode.range:
+        return True
+    # Both bounds are guaranteed by the model validator for `mode=range`.
+    start = require(args.start_line, "range edit reached the tool without start_line")
+    end = require(args.end_line, "range edit reached the tool without end_line")
+    return start <= end and end <= len(content.splitlines())
+
+
+def _stage(args: ProposeEditArgs, path: str, base_version: str) -> StagedEdit:
+    return StagedEdit(
+        edit_id=uuid.uuid4().hex,
+        doc_id=args.doc_id,
+        path=path,
+        base_version=base_version,
+        mode=args.mode,
+        new_text=args.new_text,
+        start_line=args.start_line,
+        end_line=args.end_line,
+        rationale=args.rationale,
+    )

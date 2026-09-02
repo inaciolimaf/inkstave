@@ -26,6 +26,15 @@ repos:
   # content and (b) committing any real `.env` file (only `.env.example` is ok).
   - repo: local
     hooks:
+      - id: function-length
+        name: function-length
+        description: Reject functions whose body exceeds the 30-line ceiling.
+        language: python
+        entry: python scripts/lint_function_length.py
+        types: [python]
+        # The checker takes the staged files as arguments; migrations are
+        # generated and exempt (mirrors ruff's extend-exclude).
+        exclude: '^backend/migrations/'
       - id: block-secret-tokens
         name: block-secret-tokens
         description: Reject staged content containing API-key-shaped secrets.

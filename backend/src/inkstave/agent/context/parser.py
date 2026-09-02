@@ -63,24 +63,32 @@ def _extract_braces(s: str, start: int) -> tuple[str | None, int]:
     return s[start + 1 :], len(s)  # unbalanced → best-effort to EOL
 
 
+def _skip_spaces(code: str, pos: int) -> int:
+    """Advance past horizontal whitespace."""
+    while pos < len(code) and code[pos] in " \t":
+        pos += 1
+    return pos
+
+
+def _skip_optional_arg(code: str, pos: int) -> int:
+    """Advance past a balanced ``[...]`` optional argument, if one starts at `pos`."""
+    if pos >= len(code) or code[pos] != "[":
+        return pos
+    depth = 0
+    while pos < len(code):
+        if code[pos] == "[":
+            depth += 1
+        elif code[pos] == "]":
+            depth -= 1
+            if depth == 0:
+                return pos + 1
+        pos += 1
+    return pos
+
+
 def _extract_title(code: str, pos: int) -> str | None:
     """From `pos`, skip whitespace + an optional [..] arg, then read the {title}."""
-    n = len(code)
-    while pos < n and code[pos] in " \t":
-        pos += 1
-    if pos < n and code[pos] == "[":
-        depth = 0
-        while pos < n:
-            if code[pos] == "[":
-                depth += 1
-            elif code[pos] == "]":
-                depth -= 1
-                if depth == 0:
-                    pos += 1
-                    break
-            pos += 1
-    while pos < n and code[pos] in " \t":
-        pos += 1
+    pos = _skip_spaces(code, _skip_optional_arg(code, _skip_spaces(code, pos)))
     title, _ = _extract_braces(code, pos)
     return title.strip() if title is not None else None
 
@@ -98,115 +106,135 @@ class _Sec:
     children: list[StructureNode] = field(default_factory=list)
 
 
-def parse_latex_structure(
-    text: str, file_path: str, extra_commands: Sequence[str] = ()
-) -> list[StructureNode]:
-    lines = text.split("\n")
-    line_starts: list[int] = []
-    offset = 0
-    for line in lines:
-        line_starts.append(offset)
-        offset += len(line) + 1
-    total_chars = len(text)
-    total_lines = len(lines)
-    extra_levels = {name: 1 for name in extra_commands}
+@dataclass
+class _Scan:
+    """Mutable state of one linear pass over a file.
 
-    secs: list[_Sec] = []
-    envs: list[StructureNode] = []
-    inputs: list[StructureNode] = []
-    env_stack: list[StructureNode] = []
-    verbatim_stack: list[str] = []
+    Each token kind has its own small handler; `token()` is the only dispatcher,
+    so adding a construct never grows the scan loop itself.
+    """
+
+    file_path: str
+    line_starts: list[int]
+    extra_levels: dict[str, int]
+    secs: list[_Sec] = field(default_factory=list)
+    envs: list[StructureNode] = field(default_factory=list)
+    inputs: list[StructureNode] = field(default_factory=list)
+    env_stack: list[StructureNode] = field(default_factory=list)
+    verbatim_stack: list[str] = field(default_factory=list)
     body_start_line: int | None = None
 
-    def char_at(line_idx: int, col: int) -> int:
-        return line_starts[line_idx] + col
+    def char_at(self, line_idx: int, col: int) -> int:
+        return self.line_starts[line_idx] + col
 
-    for i, raw in enumerate(lines):
-        line_no = i + 1
+    def close_verbatim(self, line_idx: int, raw: str, line_no: int) -> None:
+        """Inside a verbatim environment only its own ``\\end`` is meaningful.
 
-        if verbatim_stack:
-            # Verbatim content is opaque: do NOT strip comments here, or a literal '%'
-            # before the closing tag would hide \end{verbatim} and swallow the rest of
-            # the file. Scan the raw line for the matching \end only.
-            m = _END_RE.search(raw)
-            if m and m.group(1).strip() == verbatim_stack[-1]:
-                verbatim_stack.pop()
-                if env_stack and env_stack[-1].command == m.group(1).strip():
-                    env_stack[-1].end_line = line_no
-                    env_stack[-1].end_char = char_at(i, m.end()) - 1
-                    env_stack.pop()
-            continue
+        Verbatim content is opaque: do NOT strip comments here, or a literal '%'
+        before the closing tag would hide \\end{verbatim} and swallow the rest of
+        the file. Scan the raw line for the matching \\end only.
+        """
+        match = _END_RE.search(raw)
+        if match is None or match.group(1).strip() != self.verbatim_stack[-1]:
+            return
+        self.verbatim_stack.pop()
+        if self.env_stack and self.env_stack[-1].command == match.group(1).strip():
+            self.env_stack[-1].end_line = line_no
+            self.env_stack[-1].end_char = self.char_at(line_idx, match.end()) - 1
+            self.env_stack.pop()
 
-        code = _strip_comment(raw)
-        for tok in _TOKEN_RE.finditer(code):
-            piece = tok.group(0)
-            start_char = char_at(i, tok.start())
+    def token(self, code: str, tok: re.Match[str], line_idx: int, line_no: int) -> None:
+        """Route one matched token to the handler for its kind."""
+        piece = tok.group(0)
+        start_char = self.char_at(line_idx, tok.start())
+        end_char = self.char_at(line_idx, tok.end()) - 1
 
-            sec_m = _SECTION_RE.match(piece)
-            if sec_m:
-                name = sec_m.group(1)
-                level = SECTION_LEVELS.get(name, extra_levels.get(name, 1))
-                title = _extract_title(code, tok.end())
-                secs.append(_Sec(name, level, title, None, line_no, start_char))
-                continue
+        sec_m = _SECTION_RE.match(piece)
+        if sec_m:
+            self._section(sec_m.group(1), code, tok.end(), line_no, start_char)
+            return
+        begin_m = _BEGIN_RE.match(piece)
+        if begin_m:
+            self._begin(begin_m.group(1).strip(), line_no, start_char)
+            return
+        end_m = _END_RE.match(piece)
+        if end_m:
+            self._end(end_m.group(1).strip(), line_no, end_char)
+            return
+        input_m = _INPUT_RE.match(piece)
+        if input_m:
+            self._input(input_m, line_no, start_char, end_char)
+            return
+        label_m = _LABEL_RE.match(piece)
+        if label_m:
+            self._label(label_m.group(1).strip())
 
-            begin_m = _BEGIN_RE.match(piece)
-            if begin_m:
-                env = begin_m.group(1).strip()
-                if env == "document":
-                    body_start_line = line_no
-                    continue
-                if env in VERBATIM_ENVS or env in NOTABLE_ENVS:
-                    node = StructureNode(
-                        kind=StructureKind.ENVIRONMENT,
-                        command=env,
-                        file_path=file_path,
-                        start_line=line_no,
-                        end_line=line_no,
-                        start_char=start_char,
-                        end_char=start_char,
-                    )
-                    env_stack.append(node)
-                    envs.append(node)
-                    if env in VERBATIM_ENVS:
-                        verbatim_stack.append(env)
-                continue
+    def _section(self, name: str, code: str, after: int, line_no: int, start_char: int) -> None:
+        level = SECTION_LEVELS.get(name, self.extra_levels.get(name, 1))
+        title = _extract_title(code, after)
+        self.secs.append(_Sec(name, level, title, None, line_no, start_char))
 
-            end_m = _END_RE.match(piece)
-            if end_m:
-                env = end_m.group(1).strip()
-                for k in range(len(env_stack) - 1, -1, -1):
-                    if env_stack[k].command == env:
-                        env_stack[k].end_line = line_no
-                        env_stack[k].end_char = char_at(i, tok.end()) - 1
-                        del env_stack[k]
-                        break
-                continue
+    def _begin(self, env: str, line_no: int, start_char: int) -> None:
+        if env == "document":
+            self.body_start_line = line_no
+            return
+        if env not in VERBATIM_ENVS and env not in NOTABLE_ENVS:
+            return
+        node = StructureNode(
+            kind=StructureKind.ENVIRONMENT,
+            command=env,
+            file_path=self.file_path,
+            start_line=line_no,
+            end_line=line_no,
+            start_char=start_char,
+            end_char=start_char,
+        )
+        self.env_stack.append(node)
+        self.envs.append(node)
+        if env in VERBATIM_ENVS:
+            self.verbatim_stack.append(env)
 
-            input_m = _INPUT_RE.match(piece)
-            if input_m:
-                inputs.append(
-                    StructureNode(
-                        kind=StructureKind.INPUT,
-                        command=input_m.group(1),
-                        title=input_m.group(2).strip(),
-                        file_path=file_path,
-                        start_line=line_no,
-                        end_line=line_no,
-                        start_char=start_char,
-                        end_char=char_at(i, tok.end()) - 1,
-                    )
-                )
-                continue
+    def _end(self, env: str, line_no: int, end_char: int) -> None:
+        """Close the innermost open environment with this name."""
+        for k in range(len(self.env_stack) - 1, -1, -1):
+            if self.env_stack[k].command == env:
+                self.env_stack[k].end_line = line_no
+                self.env_stack[k].end_char = end_char
+                del self.env_stack[k]
+                break
 
-            label_m = _LABEL_RE.match(piece)
-            if label_m and secs:
-                # Attach a label to the nearest preceding heading on this line, else the last one.
-                target = secs[-1]
-                if target.label is None:
-                    target.label = label_m.group(1).strip()
+    def _input(self, match: re.Match[str], line_no: int, start_char: int, end_char: int) -> None:
+        self.inputs.append(
+            StructureNode(
+                kind=StructureKind.INPUT,
+                command=match.group(1),
+                title=match.group(2).strip(),
+                file_path=self.file_path,
+                start_line=line_no,
+                end_line=line_no,
+                start_char=start_char,
+                end_char=end_char,
+            )
+        )
 
-    # Section ranges: extend to just before the next sibling-or-higher heading.
+    def _label(self, label: str) -> None:
+        """Attach the label to the nearest preceding heading, if it has none yet."""
+        if self.secs and self.secs[-1].label is None:
+            self.secs[-1].label = label
+
+
+def _line_starts(lines: list[str]) -> list[int]:
+    """Character offset at which each line begins."""
+    starts: list[int] = []
+    offset = 0
+    for line in lines:
+        starts.append(offset)
+        offset += len(line) + 1
+    return starts
+
+
+def _close_section_ranges(secs: list[_Sec], total_lines: int, total_chars: int) -> None:
+    """Extend each heading's range to just before the next sibling-or-higher heading."""
     for idx, sec in enumerate(secs):
         nxt = next((s for s in secs[idx + 1 :] if s.level <= sec.level), None)
         if nxt is not None:
@@ -216,7 +244,24 @@ def parse_latex_structure(
             sec.end_line = total_lines
             sec.end_char = max(0, total_chars - 1)
 
-    return _assemble(file_path, lines, secs, envs, inputs, body_start_line)
+
+def parse_latex_structure(
+    text: str, file_path: str, extra_commands: Sequence[str] = ()
+) -> list[StructureNode]:
+    lines = text.split("\n")
+    scan = _Scan(file_path, _line_starts(lines), {name: 1 for name in extra_commands})
+
+    for line_idx, raw in enumerate(lines):
+        line_no = line_idx + 1
+        if scan.verbatim_stack:
+            scan.close_verbatim(line_idx, raw, line_no)
+            continue
+        code = _strip_comment(raw)
+        for tok in _TOKEN_RE.finditer(code):
+            scan.token(code, tok, line_idx, line_no)
+
+    _close_section_ranges(scan.secs, len(lines), len(text))
+    return _assemble(file_path, lines, scan.secs, scan.envs, scan.inputs, scan.body_start_line)
 
 
 def _to_node(sec: _Sec, file_path: str) -> StructureNode:
@@ -235,46 +280,36 @@ def _to_node(sec: _Sec, file_path: str) -> StructureNode:
     )
 
 
-def _assemble(
-    file_path: str,
-    lines: list[str],
-    secs: list[_Sec],
-    envs: list[StructureNode],
-    inputs: list[StructureNode],
-    body_start_line: int | None,
-) -> list[StructureNode]:
-    top: list[StructureNode] = []
+def _preamble_node(
+    file_path: str, lines: list[str], body_start_line: int | None
+) -> StructureNode | None:
+    """Everything before ``\\begin{document}``, or ``None`` when there is no preamble."""
+    if not body_start_line or body_start_line <= 1:
+        return None
+    span = sum(len(line) + 1 for line in lines[: body_start_line - 1])
+    return StructureNode(
+        kind=StructureKind.PREAMBLE,
+        command="preamble",
+        file_path=file_path,
+        start_line=1,
+        end_line=body_start_line - 1,
+        start_char=0,
+        end_char=max(0, span - 1),
+    )
 
-    if body_start_line and body_start_line > 1:
-        top.append(
-            StructureNode(
-                kind=StructureKind.PREAMBLE,
-                command="preamble",
-                file_path=file_path,
-                start_line=1,
-                end_line=body_start_line - 1,
-                start_char=0,
-                end_char=max(0, sum(len(line) + 1 for line in lines[: body_start_line - 1]) - 1),
-            )
-        )
 
-    # Attach environments + inputs to the deepest section that contains them.
-    def owner(node: StructureNode) -> _Sec | None:
-        best: _Sec | None = None
-        for sec in secs:
-            if sec.line <= node.start_line <= sec.end_line:
-                if best is None or sec.line > best.line:
-                    best = sec
-        return best
+def _owner(secs: list[_Sec], node: StructureNode) -> _Sec | None:
+    """The deepest section whose range contains `node`, if any."""
+    best: _Sec | None = None
+    for sec in secs:
+        contains = sec.line <= node.start_line <= sec.end_line
+        if contains and (best is None or sec.line > best.line):
+            best = sec
+    return best
 
-    for node in [*envs, *inputs]:
-        host = owner(node)
-        if host is not None:
-            host.children.append(node)
-        else:
-            top.append(node)
 
-    # Nest sections by level.
+def _nest_sections(secs: list[_Sec], file_path: str, top: list[StructureNode]) -> None:
+    """Nest headings by level; roots are appended to `top`."""
     stack: list[_Sec] = []
     nodes_by_sec: dict[int, StructureNode] = {}
     for sec in secs:
@@ -288,11 +323,35 @@ def _assemble(
             top.append(node)
         stack.append(sec)
 
-    # Order top-level + children by start_line for stable output.
-    def sort_tree(items: list[StructureNode]) -> None:
-        items.sort(key=lambda n: n.start_line)
-        for it in items:
-            sort_tree(it.children)
 
-    sort_tree(top)
+def _sort_tree(items: list[StructureNode]) -> None:
+    """Order each level by start_line for stable output."""
+    items.sort(key=lambda n: n.start_line)
+    for item in items:
+        _sort_tree(item.children)
+
+
+def _assemble(
+    file_path: str,
+    lines: list[str],
+    secs: list[_Sec],
+    envs: list[StructureNode],
+    inputs: list[StructureNode],
+    body_start_line: int | None,
+) -> list[StructureNode]:
+    top: list[StructureNode] = []
+    preamble = _preamble_node(file_path, lines, body_start_line)
+    if preamble is not None:
+        top.append(preamble)
+
+    # Attach environments + inputs to the deepest section that contains them.
+    for node in [*envs, *inputs]:
+        host = _owner(secs, node)
+        if host is not None:
+            host.children.append(node)
+        else:
+            top.append(node)
+
+    _nest_sections(secs, file_path, top)
+    _sort_tree(top)
     return top

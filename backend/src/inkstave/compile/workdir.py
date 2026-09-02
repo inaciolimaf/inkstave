@@ -78,6 +78,70 @@ async def cleanup_workdir(workdir: Path) -> None:
     await asyncio.to_thread(shutil.rmtree, workdir, ignore_errors=True)
 
 
+@dataclass(slots=True)
+class _Budget:
+    """Running file/byte totals, enforced against the compile's resource limits."""
+
+    limits: ResourceLimits
+    count: int = 0
+    total: int = 0
+
+    def add_file(self) -> None:
+        self.count += 1
+        if self.count > self.limits.max_input_files:
+            raise InputLimitError(f"too many input files (> {self.limits.max_input_files})")
+
+    def add_bytes(self, extra: int) -> None:
+        self.total += extra
+        if self.total > self.limits.max_input_bytes:
+            raise InputLimitError(f"input too large (> {self.limits.max_input_bytes} bytes)")
+
+
+async def _write_stream(dest: Path, stream: AsyncIterator[bytes], budget: _Budget) -> None:
+    """Stream one binary input to disk, counting its bytes against the budget."""
+    handle = await asyncio.to_thread(open, dest, "wb")
+    try:
+        async for chunk in stream:
+            budget.add_bytes(len(chunk))
+            await asyncio.to_thread(handle.write, chunk)
+    finally:
+        await asyncio.to_thread(handle.close)
+        # Close the source stream (async generator) so a partially-consumed input on
+        # an early error path does not leak the underlying handle.
+        aclose = getattr(stream, "aclose", None)
+        if aclose is not None:
+            with contextlib.suppress(Exception):
+                await aclose()
+
+
+async def _write_documents(
+    input_dir: Path, project_id: UUID, docs: DocumentSource, budget: _Budget
+) -> list[str]:
+    paths: list[str] = []
+    async for rel, content in docs.iter_documents(project_id):
+        dest = safe_join(input_dir, rel)
+        data = content.encode("utf-8")
+        budget.add_file()
+        budget.add_bytes(len(data))
+        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(dest.write_bytes, data)
+        paths.append(rel)
+    return paths
+
+
+async def _write_files(
+    input_dir: Path, project_id: UUID, files: FileSource, budget: _Budget
+) -> list[str]:
+    paths: list[str] = []
+    async for rel, stream in files.iter_files(project_id):
+        dest = safe_join(input_dir, rel)
+        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
+        await _write_stream(dest, stream, budget)
+        budget.add_file()
+        paths.append(rel)
+    return paths
+
+
 async def assemble_inputs(
     *,
     workdir: Path,
@@ -88,53 +152,10 @@ async def assemble_inputs(
 ) -> AssembledInputs:
     """Materialise all docs + binary files under ``<workdir>/input/`` within limits."""
     input_dir = workdir / "input"
-    count = 0
-    total = 0
-    paths: list[str] = []
-
-    def _bump(extra: int) -> None:
-        nonlocal count, total
-        count += 1
-        total += extra
-        if count > limits.max_input_files:
-            raise InputLimitError(f"too many input files (> {limits.max_input_files})")
-        if total > limits.max_input_bytes:
-            raise InputLimitError(f"input too large (> {limits.max_input_bytes} bytes)")
-
-    async for rel, content in docs.iter_documents(project_id):
-        dest = safe_join(input_dir, rel)
-        data = content.encode("utf-8")
-        _bump(len(data))
-        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
-        await asyncio.to_thread(dest.write_bytes, data)
-        paths.append(rel)
-
-    async for rel, stream in files.iter_files(project_id):
-        dest = safe_join(input_dir, rel)
-        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
-        size = 0
-        handle = await asyncio.to_thread(open, dest, "wb")
-        try:
-            async for chunk in stream:
-                size += len(chunk)
-                total += len(chunk)
-                if total > limits.max_input_bytes:
-                    raise InputLimitError(f"input too large (> {limits.max_input_bytes} bytes)")
-                await asyncio.to_thread(handle.write, chunk)
-        finally:
-            await asyncio.to_thread(handle.close)
-            # Close the source stream (async generator) so a partially-consumed
-            # input on an early error path does not leak the underlying handle.
-            aclose = getattr(stream, "aclose", None)
-            if aclose is not None:
-                with contextlib.suppress(Exception):
-                    await aclose()
-        count += 1
-        if count > limits.max_input_files:
-            raise InputLimitError(f"too many input files (> {limits.max_input_files})")
-        paths.append(rel)
-
-    return AssembledInputs(file_count=count, total_bytes=total, paths=paths)
+    budget = _Budget(limits)
+    paths = await _write_documents(input_dir, project_id, docs, budget)
+    paths += await _write_files(input_dir, project_id, files, budget)
+    return AssembledInputs(file_count=budget.count, total_bytes=budget.total, paths=paths)
 
 
 def _content_type(name: str) -> str:

@@ -62,64 +62,76 @@ async def _ensure_migrations(engine: Any, settings: Settings) -> None:
         )
 
 
+async def _check_redis(redis: Any) -> None:
+    """Log Redis reachability; a failed ping is never fatal (/ready reports it)."""
+    if await ping_redis(redis, STARTUP_PING_TIMEOUT_SECONDS):
+        logger.info("Connected to Redis")
+    else:
+        # Do not crash: the app must still serve /health; /ready reports this.
+        logger.warning("Redis ping failed at startup; continuing")
+
+
+async def _open_database(app: FastAPI, settings: Settings, redis: Any) -> None:
+    """Wire the engine, sessionmaker and collab components, or log that they are off."""
+    if not settings.database_url:
+        logger.warning("DATABASE_URL is not configured; database is disabled")
+        return
+
+    engine, sessionmaker = create_engine_and_sessionmaker(settings)
+    app.state.db_engine = engine
+    app.state.db_sessionmaker = sessionmaker
+    if await check_db(engine, STARTUP_PING_TIMEOUT_SECONDS):
+        logger.info("Connected to the database")
+    else:
+        logger.warning("Database check failed at startup; continuing")
+    # Migration gate (spec 57): refuse to start unless the DB is at head, or apply
+    # migrations now in convenience mode.
+    await _ensure_migrations(engine, settings)
+    # --- Collaboration (CRDT WebSocket) components (spec 28/29) ---
+    app.state.collab = build_collab_components(
+        redis=redis,
+        session_factory=sessionmaker,
+        settings=settings,
+        instance_id=uuid4().hex,
+    )
+
+
+async def _close_collab(app: FastAPI) -> None:
+    """Flush buffered history, then stop the manager's background tasks."""
+    collab = app.state.collab
+    if collab is None:
+        return
+    if collab.history is not None:
+        # Flush any buffered history to the DB *before* tearing down the engine, so
+        # un-debounced edits are not lost on shutdown (spec 40).
+        try:
+            await collab.history.flush_all()
+        except Exception:  # never let a flush failure block clean shutdown
+            logger.exception("history flush_all failed during shutdown")
+    # Cancel the manager's debounced flush/evict tasks before disposing the engine,
+    # so none can wake up against a closed connection (spec 55).
+    with suppress(Exception):
+        await collab.manager.aclose()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Open shared connections on startup; dispose them on shutdown."""
     settings = get_settings()
-
-    # --- Redis ---
-    redis = await create_redis_pool(settings.redis_url)
-    app.state.redis = redis
     app.state.db_engine = None
     app.state.db_sessionmaker = None
     app.state.collab = None
+    redis = await create_redis_pool(settings.redis_url)
+    app.state.redis = redis
 
-    # Everything created above is disposed in the finally block, so a failure
-    # while wiring the database below cannot leak the Redis pool.
+    # Everything created above is disposed in the finally block, so a failure while
+    # wiring the database below cannot leak the Redis pool.
     try:
-        if await ping_redis(redis, STARTUP_PING_TIMEOUT_SECONDS):
-            logger.info("Connected to Redis")
-        else:
-            # Do not crash: the app must still serve /health; /ready reports this.
-            logger.warning("Redis ping failed at startup; continuing")
-
-        # --- Database (async SQLAlchemy engine + sessionmaker) ---
-        if settings.database_url:
-            engine, sessionmaker = create_engine_and_sessionmaker(settings)
-            app.state.db_engine = engine
-            app.state.db_sessionmaker = sessionmaker
-            if await check_db(engine, STARTUP_PING_TIMEOUT_SECONDS):
-                logger.info("Connected to the database")
-            else:
-                logger.warning("Database check failed at startup; continuing")
-            # Migration gate (spec 57): refuse to start unless the DB is at head,
-            # or apply migrations now in convenience mode.
-            await _ensure_migrations(engine, settings)
-            # --- Collaboration (CRDT WebSocket) components (spec 28/29) ---
-            app.state.collab = build_collab_components(
-                redis=redis,
-                session_factory=sessionmaker,
-                settings=settings,
-                instance_id=uuid4().hex,
-            )
-        else:
-            logger.warning("DATABASE_URL is not configured; database is disabled")
-
+        await _check_redis(redis)
+        await _open_database(app, settings, redis)
         yield
     finally:
-        # Flush any buffered history to the DB *before* tearing down the engine,
-        # so un-debounced edits are not lost on shutdown (spec 40).
-        collab = app.state.collab
-        if collab is not None and collab.history is not None:
-            try:
-                await collab.history.flush_all()
-            except Exception:  # never let a flush failure block clean shutdown
-                logger.exception("history flush_all failed during shutdown")
-        if collab is not None:
-            # Cancel the manager's debounced flush/evict tasks before disposing the
-            # engine, so none can wake up against a closed connection (spec 55).
-            with suppress(Exception):
-                await collab.manager.aclose()
+        await _close_collab(app)
         await redis.aclose()
         app.state.redis = None
         app.state.collab = None

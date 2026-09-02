@@ -90,6 +90,26 @@ async def _identity(request: Request, scope: str, settings: Settings) -> str:
     return ip
 
 
+async def _hit(redis: Redis, key: str, window: int) -> tuple[int, int]:
+    """Increment the window counter for `key`, returning ``(count, ttl)``."""
+    try:
+        count, ttl = await redis.eval(_WINDOW_LUA, 1, key, str(window))  # type: ignore[misc]
+    except ResponseError:
+        # Backend without server-side scripting: two-step fallback.
+        count = await redis.incr(key)
+        if int(count) == 1:
+            await redis.expire(key, window)
+        ttl = await redis.ttl(key)
+    return int(count), int(ttl or 0)
+
+
+async def _enforce(redis: Redis, key: str, limit: int, window: int) -> None:
+    """Raise :class:`RateLimitError` once the scope's limit is exceeded."""
+    count, ttl = await _hit(redis, key, window)
+    if count > limit:
+        raise RateLimitError(retry_after_seconds=ttl if ttl > 0 else window)
+
+
 def rate_limit(scope: str) -> Callable[..., Awaitable[None]]:
     """Build a dependency that rate-limits the given ``scope``."""
 
@@ -103,17 +123,7 @@ def rate_limit(scope: str) -> Callable[..., Awaitable[None]]:
         limit, window = parse_rate_limit(getattr(settings, _SCOPE_SETTING[scope]))
         key = f"ratelimit:{scope}:{await _identity(request, scope, settings)}"
         try:
-            try:
-                count, ttl = await redis.eval(_WINDOW_LUA, 1, key, str(window))  # type: ignore[misc]
-            except ResponseError:
-                # Backend without server-side scripting: two-step fallback.
-                count = await redis.incr(key)
-                if int(count) == 1:
-                    await redis.expire(key, window)
-                ttl = await redis.ttl(key)
-            if int(count) > limit:
-                ttl_s = int(ttl) if ttl and int(ttl) > 0 else window
-                raise RateLimitError(retry_after_seconds=ttl_s)
+            await _enforce(redis, key, limit, window)
         except RateLimitError:
             raise
         except Exception:

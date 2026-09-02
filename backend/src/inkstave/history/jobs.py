@@ -10,6 +10,7 @@ versions stop being individually addressable (documented in the ADR).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from sqlalchemy import func, select
 
 from inkstave.db.models.history import HistoryChunk, HistoryUpdate
 from inkstave.history.reconstruct import reconstruct_state
+from inkstave.invariants import require
 from inkstave.storage.factory import get_object_store
 
 if TYPE_CHECKING:
@@ -68,32 +70,57 @@ async def _docs_needing_compaction(session: AsyncSession, min_updates: int) -> l
 async def _read(store: ObjectStore, row: HistoryUpdate) -> bytes:
     if row.payload is not None:
         return row.payload
-    assert row.payload_blob_key is not None
-    parts = [part async for part in await store.get(row.payload_blob_key)]
+    key = require(row.payload_blob_key, f"history update {row.id} has no payload and no blob key")
+    parts = [part async for part in await store.get(key)]
     return b"".join(parts)
 
 
-async def _compact_doc(
+def _tiny_runs(rows: list[HistoryUpdate], merge_bytes: int) -> Iterator[list[HistoryUpdate]]:
+    """Maximal runs of >= 2 adjacent updates that are each smaller than `merge_bytes`."""
+    i = 0
+    while i < len(rows):
+        if rows[i].payload_size >= merge_bytes:
+            i += 1
+            continue
+        j = i
+        while j + 1 < len(rows) and rows[j + 1].payload_size < merge_bytes:
+            j += 1
+        if j > i:
+            yield rows[i : j + 1]
+        i = j + 1
+
+
+async def _merge_run(
+    session: AsyncSession, store: ObjectStore, settings: Settings, run: list[HistoryUpdate]
+) -> list[str]:
+    """Collapse one run into its last row; returns the blob keys left dangling."""
+    payloads = [await _read(store, r) for r in run]
+    merged = merge_updates(*payloads)
+    dead = [r.payload_blob_key for r in run if r.payload_blob_key is not None]
+    for r in run[:-1]:
+        await session.delete(r)
+    keep = run[-1]
+    inline, blob_key = await _store(
+        store, merged, settings.history_blob_prefix, len(merged) > settings.history_inline_max_bytes
+    )
+    keep.payload = inline
+    keep.payload_blob_key = blob_key
+    keep.payload_size = len(merged)
+    keep.op_count = sum(r.op_count for r in run)
+    return dead
+
+
+async def _merge_sealed_chunks(
     session: AsyncSession, store: ObjectStore, settings: Settings, doc_id: UUID
-) -> tuple[int, int, list[str]]:
-    merge_bytes = settings.history_compact_merge_bytes
-    inline_max = settings.history_inline_max_bytes
-    prefix = settings.history_blob_prefix
+) -> tuple[int, list[str]]:
+    """Merge adjacent tiny updates inside every sealed chunk of a document."""
     merged_rows = 0
-    offloaded = 0
     dead_blobs: list[str] = []
-
-    # §5.4.2 step 2: seal the open tail if it overflowed without inline-sealing
-    # (e.g. an interrupted/multi-worker flush). Done first so the freshly sealed
-    # chunk is eligible for the merge/offload pass below in this same run.
-    await _seal_open_tail(session, store, settings, doc_id)
-
     sealed_chunks = (
         await session.execute(
             select(HistoryChunk).where(HistoryChunk.doc_id == doc_id, HistoryChunk.sealed.is_(True))
         )
     ).scalars()
-
     for chunk in sealed_chunks:
         rows = list(
             (
@@ -104,34 +131,18 @@ async def _compact_doc(
                 )
             ).scalars()
         )
-        i = 0
-        while i < len(rows):
-            if rows[i].payload_size >= merge_bytes:
-                i += 1
-                continue
-            j = i
-            while j + 1 < len(rows) and rows[j + 1].payload_size < merge_bytes:
-                j += 1
-            if j > i:  # a maximal run of >= 2 adjacent tiny updates
-                run = rows[i : j + 1]
-                payloads = [await _read(store, r) for r in run]
-                merged = merge_updates(*payloads)
-                keep = run[-1]
-                for r in run:
-                    if r.payload_blob_key is not None:
-                        dead_blobs.append(r.payload_blob_key)
-                for r in run[:-1]:
-                    await session.delete(r)
-                inline, blob_key = await _store(store, merged, prefix, len(merged) > inline_max)
-                keep.payload = inline
-                keep.payload_blob_key = blob_key
-                keep.payload_size = len(merged)
-                keep.op_count = sum(r.op_count for r in run)
-                merged_rows += len(run) - 1
-            i = j + 1
+        for run in list(_tiny_runs(rows, settings.history_compact_merge_bytes)):
+            dead_blobs += await _merge_run(session, store, settings, run)
+            merged_rows += len(run) - 1
         await session.flush()
+    return merged_rows, dead_blobs
 
-    # Offload oversized inline payloads + snapshots (idempotent — only inline rows).
+
+async def _offload_updates(
+    session: AsyncSession, store: ObjectStore, settings: Settings, doc_id: UUID
+) -> int:
+    """Move oversized inline update payloads to the blob store (idempotent)."""
+    inline_max = settings.history_inline_max_bytes
     oversized = (
         await session.execute(
             select(HistoryUpdate).where(
@@ -141,29 +152,50 @@ async def _compact_doc(
             )
         )
     ).scalars()
+    count = 0
     for row in oversized:
-        assert row.payload is not None
-        _, key = await _store(store, row.payload, prefix, offload=True)
+        payload = require(row.payload, f"history update {row.id} lost its payload mid-sweep")
+        _, key = await _store(store, payload, settings.history_blob_prefix, offload=True)
         row.payload = None
         row.payload_blob_key = key
-        offloaded += 1
+        count += 1
+    return count
 
+
+async def _offload_snapshots(
+    session: AsyncSession, store: ObjectStore, settings: Settings, doc_id: UUID
+) -> int:
+    """Move oversized inline chunk snapshots to the blob store (idempotent)."""
     big_chunks = (
         await session.execute(
             select(HistoryChunk).where(
                 HistoryChunk.doc_id == doc_id,
                 HistoryChunk.base_snapshot.is_not(None),
-                HistoryChunk.base_snapshot_size > inline_max,
+                HistoryChunk.base_snapshot_size > settings.history_inline_max_bytes,
             )
         )
     ).scalars()
+    count = 0
     for chunk in big_chunks:
-        assert chunk.base_snapshot is not None
-        _, key = await _store(store, chunk.base_snapshot, prefix, offload=True)
+        snapshot = require(chunk.base_snapshot, f"chunk {chunk.id} lost its snapshot mid-sweep")
+        _, key = await _store(store, snapshot, settings.history_blob_prefix, offload=True)
         chunk.base_snapshot = None
         chunk.base_snapshot_blob_key = key
-        offloaded += 1
+        count += 1
+    return count
 
+
+async def _compact_doc(
+    session: AsyncSession, store: ObjectStore, settings: Settings, doc_id: UUID
+) -> tuple[int, int, list[str]]:
+    # §5.4.2 step 2: seal the open tail if it overflowed without inline-sealing
+    # (e.g. an interrupted/multi-worker flush). Done first so the freshly sealed
+    # chunk is eligible for the merge/offload pass below in this same run.
+    await _seal_open_tail(session, store, settings, doc_id)
+
+    merged_rows, dead_blobs = await _merge_sealed_chunks(session, store, settings, doc_id)
+    offloaded = await _offload_updates(session, store, settings, doc_id)
+    offloaded += await _offload_snapshots(session, store, settings, doc_id)
     return merged_rows, offloaded, dead_blobs
 
 
@@ -201,8 +233,18 @@ async def _seal_open_tail(
 
     open_chunk.sealed = True
     await session.flush()  # free the partial-unique open-chunk index before reopening
+    await _reopen_after(session, store, settings, doc_id, open_chunk)
 
-    base_state = await reconstruct_state(session, store, doc_id, open_chunk.end_version)
+
+async def _reopen_after(
+    session: AsyncSession,
+    store: ObjectStore,
+    settings: Settings,
+    doc_id: UUID,
+    sealed: HistoryChunk,
+) -> None:
+    """Start a fresh open chunk snapshotted at the just-sealed chunk's end version."""
+    base_state = await reconstruct_state(session, store, doc_id, sealed.end_version)
     snapshot, blob_key = await _store(
         store,
         base_state,
@@ -211,11 +253,11 @@ async def _seal_open_tail(
     )
     session.add(
         HistoryChunk(
-            project_id=open_chunk.project_id,
+            project_id=sealed.project_id,
             doc_id=doc_id,
-            start_version=open_chunk.end_version + 1,
-            end_version=open_chunk.end_version,
-            base_version=open_chunk.end_version,
+            start_version=sealed.end_version + 1,
+            end_version=sealed.end_version,
+            base_version=sealed.end_version,
             base_snapshot=snapshot,
             base_snapshot_blob_key=blob_key,
             base_snapshot_size=len(base_state),

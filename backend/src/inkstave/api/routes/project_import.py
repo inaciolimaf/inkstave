@@ -89,6 +89,59 @@ def _effective_name(name: str | None, filename: str | None) -> str:
     return "Imported project"
 
 
+async def _stage_upload(
+    file: UploadFile, head: bytes, store: ObjectStore, settings: Settings
+) -> tuple[str, int]:
+    """Stream the archive to object storage; returns its key and byte count."""
+    source_key = f"imports/{uuid4()}/source.zip"
+    chunk_size = settings.storage_stream_chunk_bytes
+    total = {"n": 0}
+
+    async def body() -> Any:
+        chunk = head
+        while chunk:
+            total["n"] += len(chunk)
+            if total["n"] > settings.import_max_zip_bytes:
+                raise FileTooLargeError()
+            yield chunk
+            chunk = await file.read(chunk_size)
+
+    try:
+        await store.put(source_key, body(), content_type="application/zip")
+    except FileTooLargeError:
+        # No orphan staged blob (AC6): the partial write is best-effort removed.
+        await store.delete(source_key)
+        raise
+    return source_key, total["n"]
+
+
+async def _create_import(
+    session: AsyncSession,
+    enqueuer: ImportEnqueuer,
+    user: User,
+    file: UploadFile,
+    name: str | None,
+    source_key: str,
+    source_bytes: int,
+) -> ProjectImport:
+    """One transaction: create the NEW project, the import row, then enqueue."""
+    project = await project_service.create_project(
+        session, user.id, _effective_name(name, file.filename)
+    )
+    repo = ProjectImportRepository(session)
+    row = await repo.create(
+        project_id=project.id,
+        requested_by=user.id,
+        source_key=source_key,
+        source_bytes=source_bytes,
+        original_filename=sanitize_filename(file.filename) if file.filename else None,
+    )
+    job_id = await enqueuer.enqueue(row.id)
+    if job_id is not None:
+        await repo.update(row, job_id=job_id)
+    return row
+
+
 @router.post(
     "/import",
     status_code=status.HTTP_202_ACCEPTED,
@@ -110,46 +163,13 @@ async def import_project(
     if extension_of(file.filename or "") != ".zip":
         raise UnsupportedMediaTypeError()
 
-    chunk_size = settings.storage_stream_chunk_bytes
-    head = await file.read(chunk_size)
+    head = await file.read(settings.storage_stream_chunk_bytes)
     if not _looks_like_zip(file.content_type, head):
         raise UnsupportedMediaTypeError()
 
-    source_key = f"imports/{uuid4()}/source.zip"
-    total = {"n": 0}
-
-    async def body() -> Any:
-        chunk = head
-        while chunk:
-            total["n"] += len(chunk)
-            if total["n"] > settings.import_max_zip_bytes:
-                raise FileTooLargeError()
-            yield chunk
-            chunk = await file.read(chunk_size)
-
+    source_key, source_bytes = await _stage_upload(file, head, store, settings)
     try:
-        await store.put(source_key, body(), content_type="application/zip")
-    except FileTooLargeError:
-        # No orphan staged blob (AC6): the partial write is best-effort removed.
-        await store.delete(source_key)
-        raise
-
-    # One transaction: create the NEW project, the import row, then enqueue.
-    try:
-        project = await project_service.create_project(
-            session, user.id, _effective_name(name, file.filename)
-        )
-        repo = ProjectImportRepository(session)
-        row = await repo.create(
-            project_id=project.id,
-            requested_by=user.id,
-            source_key=source_key,
-            source_bytes=total["n"],
-            original_filename=sanitize_filename(file.filename) if file.filename else None,
-        )
-        job_id = await enqueuer.enqueue(row.id)
-        if job_id is not None:
-            await repo.update(row, job_id=job_id)
+        row = await _create_import(session, enqueuer, user, file, name, source_key, source_bytes)
     except Exception:
         await store.delete(source_key)  # best-effort: no orphan blob on a DB failure
         raise

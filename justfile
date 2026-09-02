@@ -18,9 +18,13 @@ fmt:
     uv run --project backend ruff format backend
     # frontend: pnpm prettier — added in spec 09
 
-# Lint + type-check the backend.
+# Lint + type-check the backend. `ruff check` enforces the complexity budget
+# (C901 / PLR09xx) and the bandit security rules; the function-length ceiling
+# has no ruff equivalent, so it ships as its own dependency-free checker.
 lint:
-    uv run --project backend ruff check backend && uv run --project backend mypy backend/src
+    uv run --project backend ruff check backend
+    uv run --project backend python scripts/lint_function_length.py
+    uv run --project backend mypy backend/src
 
 # Run the backend fast test tier (unit + integration; excludes slow/e2e).
 # Parallelised with pytest-xdist (`-n auto`, inherited from pyproject addopts) so

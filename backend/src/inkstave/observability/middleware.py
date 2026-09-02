@@ -26,6 +26,19 @@ _EXCLUDED_PATHS = {"/metrics", "/healthz", "/readyz", "/health", "/ready"}
 _UNMATCHED = "<unmatched>"
 
 
+def _route_path(route: object, scope: Scope) -> tuple[Match, str] | None:
+    """How `route` matches `scope`, with its path template — ``None`` if unusable."""
+    try:
+        match, _ = route.matches(scope)  # type: ignore[attr-defined]
+    except Exception:
+        # A route whose matcher raises must never break request logging; skip it,
+        # but leave a trace so a broken route definition is diagnosable.
+        logger.debug("route matcher raised for %r", route, exc_info=True)
+        return None
+    path = getattr(route, "path", None)
+    return (match, path) if isinstance(path, str) else None
+
+
 def _route_template(scope: Scope) -> str:
     """The matched route's path template (bounded cardinality), or `<unmatched>`.
 
@@ -37,13 +50,10 @@ def _route_template(scope: Scope) -> str:
         return _UNMATCHED
     partial: str | None = None
     for route in app.routes:
-        try:
-            match, _ = route.matches(scope)
-        except Exception:
+        found = _route_path(route, scope)
+        if found is None:
             continue
-        path = getattr(route, "path", None)
-        if not isinstance(path, str):
-            continue
+        match, path = found
         if match == Match.FULL:
             return path
         if match == Match.PARTIAL and partial is None:
@@ -58,17 +68,42 @@ class RequestContextMiddleware:
         self.app = app
         self.header_name = header_name
 
+    def _request_id(self, scope: Scope) -> str:
+        """The inbound correlation id when it is well-formed, else a fresh one."""
+        inbound = Headers(scope=scope).get(self.header_name)
+        return inbound if inbound and _VALID_REQUEST_ID.match(inbound) else uuid4().hex
+
+    def _record(
+        self, scope: Scope, status_code: int, duration_s: float, error: BaseException | None
+    ) -> None:
+        """Emit the finish log + HTTP metrics, unless the path is excluded."""
+        template = _route_template(scope)
+        method = scope["method"]
+        if template in _EXCLUDED_PATHS or scope["path"] in _EXCLUDED_PATHS:
+            return
+        metrics.observe_http(method, template, status_code, duration_s)
+        extra = {
+            "http.method": method,
+            "http.path": template,
+            "http.status_code": status_code,
+            "http.duration_ms": round(duration_s * 1000, 2),
+        }
+        if error is None:
+            logger.info("request", extra=extra)
+            return
+        logger.error(
+            "request failed",
+            exc_info=(type(error), error, error.__traceback__),
+            extra={**extra, "error.type": type(error).__name__},
+        )
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
-        headers = Headers(scope=scope)
-        inbound = headers.get(self.header_name)
-        request_id = inbound if inbound and _VALID_REQUEST_ID.match(inbound) else uuid4().hex
-        trace_id = current_trace_id() or request_id
-        tokens = bind_context(request_id=request_id, trace_id=trace_id)
-
+        request_id = self._request_id(scope)
+        tokens = bind_context(request_id=request_id, trace_id=current_trace_id() or request_id)
         status_code = 500
         start = perf_counter()
 
@@ -82,27 +117,9 @@ class RequestContextMiddleware:
         error: BaseException | None = None
         try:
             await self.app(scope, receive, send_wrapper)
-        except BaseException as exc:  # noqa: BLE001 — re-raised below to spec-02 handlers
+        except BaseException as exc:  # broad on purpose: re-raised to the spec-02 handlers
             error = exc
             raise
         finally:
-            duration_s = perf_counter() - start
-            template = _route_template(scope)
-            method = scope["method"]
-            if template not in _EXCLUDED_PATHS and scope["path"] not in _EXCLUDED_PATHS:
-                metrics.observe_http(method, template, status_code, duration_s)
-                extra = {
-                    "http.method": method,
-                    "http.path": template,
-                    "http.status_code": status_code,
-                    "http.duration_ms": round(duration_s * 1000, 2),
-                }
-                if error is not None:
-                    logger.error(
-                        "request failed",
-                        exc_info=(type(error), error, error.__traceback__),
-                        extra={**extra, "error.type": type(error).__name__},
-                    )
-                else:
-                    logger.info("request", extra=extra)
+            self._record(scope, status_code, perf_counter() - start, error)
             clear_context(tokens)

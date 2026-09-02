@@ -6,6 +6,7 @@ Shared helpers/constants live in ``_compile_outputs_support.py``.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +61,18 @@ async def test_job_persists_outputs_and_cleans_workdir(
     assert not (tmp_path / "wd").exists()  # workdir removed after persistence
 
 
+def _ordered_persist_hook(backend: LocalObjectStore, settings: Settings, order: list[str]) -> Any:
+    """A persist hook that records when it ran, relative to the publish spy."""
+
+    async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
+        await OutputStore(
+            storage=backend, repo=OutputRepository(session), settings=settings
+        ).persist(cid, pid, res)
+        order.append("persist")
+
+    return persist
+
+
 async def test_job_persists_before_terminal_status_event(
     db_session: AsyncSession, redis, tmp_path: Path
 ) -> None:
@@ -72,17 +85,9 @@ async def test_job_persists_before_terminal_status_event(
     _, project, compile_row = await _seed(db_session)
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"
-    backend = LocalObjectStore(tmp_path / "blobs", 65536)
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
 
     order: list[str] = []
-
-    async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
-        await OutputStore(
-            storage=backend, repo=OutputRepository(session), settings=settings
-        ).persist(cid, pid, res)
-        order.append("persist")
-
     real_publish = jobs_module.publish_status
 
     async def spy_publish(*args, **kwargs):
@@ -94,7 +99,9 @@ async def test_job_persists_before_terminal_status_event(
         "redis": redis,
         "session_factory": lambda: _SessionCtx(db_session),
         "make_compile_service": lambda _s: _StubService(result),
-        "persist_hook": persist,
+        "persist_hook": _ordered_persist_hook(
+            LocalObjectStore(tmp_path / "blobs", 65536), settings, order
+        ),
     }
     monkey = pytest.MonkeyPatch()
     monkey.setattr(jobs_module, "publish_status", spy_publish)

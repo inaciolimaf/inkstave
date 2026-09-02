@@ -9,6 +9,8 @@ DB layer.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from inkstave.errors import AppError
 
 MAX_TREE_ENTITY_NAME_LENGTH = 255
@@ -34,25 +36,34 @@ class InvalidNameError(AppError):
         super().__init__(message)
 
 
+def _is_reserved(name: str) -> bool:
+    """Windows device names are rejected bare and as a file stem (``con.txt``)."""
+    stem = name.split(".", 1)[0]
+    return name.lower() in _RESERVED_NAMES or stem.lower() in _RESERVED_NAMES
+
+
+# Each rule rejects a name when its predicate holds; checked in order.
+_NAME_RULES: tuple[tuple[Callable[[str], bool], str], ...] = (
+    (lambda n: not n, "Name must not be empty."),
+    (lambda n: len(n) > MAX_TREE_ENTITY_NAME_LENGTH, "Name is too long."),
+    (lambda n: "/" in n or "\\" in n, "Name must not contain a path separator."),
+    (lambda n: n in (".", ".."), "Name must not be a path traversal segment."),
+    (
+        lambda n: any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in n),
+        "Name must not contain control characters.",
+    ),
+    (lambda n: n.endswith((".", " ")), "Name must not end with a dot or space."),
+    (_is_reserved, "Name is a reserved device name."),
+)
+
+
 def validate_name_segment(raw: str) -> str:
     """Validate and normalise a single path segment, or raise ``InvalidNameError``.
 
     Returns the surrounding-whitespace-stripped name to store.
     """
     name = raw.strip()
-    if not name:
-        raise InvalidNameError("Name must not be empty.")
-    if len(name) > MAX_TREE_ENTITY_NAME_LENGTH:
-        raise InvalidNameError("Name is too long.")
-    if "/" in name or "\\" in name:
-        raise InvalidNameError("Name must not contain a path separator.")
-    if name in (".", ".."):
-        raise InvalidNameError("Name must not be a path traversal segment.")
-    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in name):
-        raise InvalidNameError("Name must not contain control characters.")
-    if name.endswith((".", " ")):
-        raise InvalidNameError("Name must not end with a dot or space.")
-    stem = name.split(".", 1)[0]
-    if name.lower() in _RESERVED_NAMES or stem.lower() in _RESERVED_NAMES:
-        raise InvalidNameError("Name is a reserved device name.")
+    for rejects, message in _NAME_RULES:
+        if rejects(name):
+            raise InvalidNameError(message)
     return name

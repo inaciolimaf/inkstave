@@ -36,6 +36,7 @@ two queries and the frontend all use this one convention; see
 
 from __future__ import annotations
 
+import contextlib
 import gzip
 import os
 import posixpath
@@ -95,6 +96,168 @@ class _Leaf:
         return self.width * (self.height + self.depth)
 
 
+# Preamble fields that are plain floats: prefix -> (attribute, default).
+_FLOAT_FIELDS = {
+    "Magnification:": ("magnification", 1000.0),
+    "Unit:": ("unit", 1.0),
+    "X Offset:": ("x_offset", 0.0),
+    "Y Offset:": ("y_offset", 0.0),
+}
+
+
+@dataclass(slots=True)
+class _Preamble:
+    """Header fields, already converted, plus where the content section starts."""
+
+    inputs: dict[int, str]
+    scale: float
+    x_off_pt: float
+    y_off_pt: float
+    version: str
+    content_at: int
+
+
+@dataclass
+class _Header:
+    """Accumulates preamble lines as they are seen; unknown lines are ignored."""
+
+    inputs: dict[int, str] = field(default_factory=dict)
+    magnification: float = 1000.0
+    unit: float = 1.0
+    x_offset: float = 0.0
+    y_offset: float = 0.0
+    version: str | None = None
+
+    def read(self, line: str) -> None:
+        if line.startswith("SyncTeX Version:"):
+            self.version = line.split(":", 1)[1].strip()
+            return
+        if line.startswith("Input:"):
+            self._read_input(line)
+            return
+        for prefix, (attr, default) in _FLOAT_FIELDS.items():
+            if line.startswith(prefix):
+                setattr(self, attr, _field_float(line, default))
+                return
+
+    def _read_input(self, line: str) -> None:
+        """Record one ``Input:<tag>:<path>`` mapping; a malformed tag is dropped."""
+        tag_s, sep, path = line[len("Input:") :].partition(":")
+        if sep:
+            with contextlib.suppress(ValueError):
+                self.inputs[int(tag_s)] = normalise_path(path)
+
+
+def _parse_preamble(lines: list[str]) -> _Preamble:
+    """Read the header up to ``Content:``. Raises if the version line is absent."""
+    header = _Header()
+    content_at = 0
+    for content_at, line in enumerate(lines, start=1):  # noqa: B007 — index past `line`
+        if line.startswith("Content:"):
+            break
+        header.read(line)
+
+    if header.version is None:
+        raise SyncTexParseError("missing 'SyncTeX Version:' preamble")
+
+    scale = header.unit / _SP_PER_PT * (header.magnification / 1000.0)
+    return _Preamble(
+        inputs=header.inputs,
+        scale=scale,
+        x_off_pt=header.x_offset * scale,
+        y_off_pt=header.y_offset * scale,
+        version=header.version,
+        content_at=content_at,
+    )
+
+
+def _sheet_number(line: str) -> int | None:
+    """The page number from a ``{<page>`` sheet marker, or ``None`` if malformed."""
+    try:
+        return int(line[1:].strip() or "0")
+    except ValueError:
+        return None
+
+
+def _record_leaf(line: str, page: int, pre: _Preamble) -> _Leaf | None:
+    """One data-bearing record in PDF points, or ``None`` if the line is not one."""
+    match = _RECORD_RE.match(line)
+    if match is None:
+        return None
+    _type, tag_s, line_s, col_s, h_s, v_s, w_s, ht_s, d_s = match.groups()
+    width = height = depth = 0.0
+    if w_s is not None:
+        width = abs(int(w_s) * pre.scale)
+        height = abs(int(ht_s) * pre.scale)
+        depth = abs(int(d_s) * pre.scale)
+    return _Leaf(
+        page=page,
+        tag=int(tag_s),
+        line=int(line_s),
+        column=int(col_s) if col_s is not None else None,
+        h=int(h_s) * pre.scale + pre.x_off_pt,
+        v=int(v_s) * pre.scale + pre.y_off_pt,
+        width=width,
+        height=height,
+        depth=depth,
+    )
+
+
+@dataclass
+class _Content:
+    """Leaves accumulated per sheet while walking the content section."""
+
+    pre: _Preamble
+    leaves_by_page: dict[int, list[_Leaf]] = field(default_factory=dict)
+    page: int | None = None
+
+    def open_sheet(self, line: str) -> None:
+        self.page = _sheet_number(line)
+        if self.page is not None:
+            self.leaves_by_page.setdefault(self.page, [])
+
+    def record(self, line: str) -> None:
+        """Append one record to the open sheet; records outside a sheet are dropped."""
+        if self.page is None:
+            return
+        leaf = _record_leaf(line, self.page, self.pre)
+        if leaf is not None:
+            self.leaves_by_page[self.page].append(leaf)
+
+
+def _parse_content(lines: list[str], pre: _Preamble) -> dict[int, list[_Leaf]]:
+    """Walk the content section, grouping leaf records by sheet."""
+    content = _Content(pre)
+    for line in lines:
+        if not line:
+            continue
+        if line.startswith("Postamble"):
+            break
+        if line[0] == "{":
+            content.open_sheet(line)
+        elif line[0] == "}":
+            content.page = None
+        else:
+            content.record(line)
+    return content.leaves_by_page
+
+
+def _build_index(
+    inputs: dict[int, str], leaves_by_page: dict[int, list[_Leaf]]
+) -> tuple[dict[tuple[str, int], list[_Leaf]], dict[str, list[int]]]:
+    """Forward lookup ``(file, line) -> leaves``, plus the sorted lines per file."""
+    forward_index: dict[tuple[str, int], list[_Leaf]] = {}
+    lines_set: dict[str, set[int]] = {}
+    for page_leaves in leaves_by_page.values():
+        for leaf in page_leaves:
+            file = inputs.get(leaf.tag)
+            if file is None:
+                continue
+            forward_index.setdefault((file, leaf.line), []).append(leaf)
+            lines_set.setdefault(file, set()).add(leaf.line)
+    return forward_index, {file: sorted(seen) for file, seen in lines_set.items()}
+
+
 @dataclass(slots=True)
 class SyncTexIndex:
     inputs: dict[int, str]  # tag -> normalised source path
@@ -122,111 +285,15 @@ class SyncTexIndex:
     @classmethod
     def _parse(cls, text: str) -> SyncTexIndex:
         lines = text.splitlines()
-        inputs: dict[int, str] = {}
-        magnification = 1000.0
-        unit = 1.0
-        x_offset = y_offset = 0.0
-        version = ""
-        seen_version = False
-
-        idx = 0
-        n = len(lines)
-        while idx < n:
-            line = lines[idx]
-            if line.startswith("SyncTeX Version:"):
-                version = line.split(":", 1)[1].strip()
-                seen_version = True
-            elif line.startswith("Input:"):
-                tag_s, sep, path = line[len("Input:") :].partition(":")
-                if sep:
-                    try:
-                        inputs[int(tag_s)] = normalise_path(path)
-                    except ValueError:
-                        pass
-            elif line.startswith("Magnification:"):
-                magnification = _field_float(line, 1000.0)
-            elif line.startswith("Unit:"):
-                unit = _field_float(line, 1.0)
-            elif line.startswith("X Offset:"):
-                x_offset = _field_float(line, 0.0)
-            elif line.startswith("Y Offset:"):
-                y_offset = _field_float(line, 0.0)
-            elif line.startswith("Content:"):
-                idx += 1
-                break
-            idx += 1
-
-        if not seen_version:
-            raise SyncTexParseError("missing 'SyncTeX Version:' preamble")
-
-        scale = unit / _SP_PER_PT * (magnification / 1000.0)
-        x_off_pt = x_offset * scale
-        y_off_pt = y_offset * scale
-
-        leaves_by_page: dict[int, list[_Leaf]] = {}
-        page: int | None = None
-        for line in lines[idx:]:
-            if not line:
-                continue
-            head = line[0]
-            if head == "{":
-                try:
-                    page = int(line[1:].strip() or "0")
-                except ValueError:
-                    page = None
-                if page is not None:
-                    leaves_by_page.setdefault(page, [])
-                continue
-            if head == "}":
-                page = None
-                continue
-            if line.startswith("Postamble"):
-                break
-            if page is None:
-                continue
-            match = _RECORD_RE.match(line)
-            if match is None:
-                continue
-            _type, tag_s, line_s, col_s, h_s, v_s, w_s, ht_s, d_s = match.groups()
-            h_pt = int(h_s) * scale + x_off_pt
-            v_pt = int(v_s) * scale + y_off_pt
-            if w_s is not None:
-                width = abs(int(w_s) * scale)
-                height = abs(int(ht_s) * scale)
-                depth = abs(int(d_s) * scale)
-            else:
-                width = height = depth = 0.0
-            leaves_by_page[page].append(
-                _Leaf(
-                    page=page,
-                    tag=int(tag_s),
-                    line=int(line_s),
-                    column=int(col_s) if col_s is not None else None,
-                    h=h_pt,
-                    v=v_pt,
-                    width=width,
-                    height=height,
-                    depth=depth,
-                )
-            )
-
-        forward_index: dict[tuple[str, int], list[_Leaf]] = {}
-        lines_set: dict[str, set[int]] = {}
-        for page_leaves in leaves_by_page.values():
-            for leaf in page_leaves:
-                file = inputs.get(leaf.tag)
-                if file is None:
-                    continue
-                forward_index.setdefault((file, leaf.line), []).append(leaf)
-                lines_set.setdefault(file, set()).add(leaf.line)
-        lines_by_file = {file: sorted(s) for file, s in lines_set.items()}
-
+        pre = _parse_preamble(lines)
+        leaves_by_page = _parse_content(lines[pre.content_at :], pre)
+        forward_index, lines_by_file = _build_index(pre.inputs, leaves_by_page)
         return cls(
-            inputs=inputs,
+            inputs=pre.inputs,
             leaves_by_page=leaves_by_page,
             forward_index=forward_index,
             lines_by_file=lines_by_file,
-            version=version,
+            version=pre.version,
         )
 
     # --------------------------------------------------------------- queries #

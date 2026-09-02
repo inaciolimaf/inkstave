@@ -199,6 +199,48 @@ def _is_ignored(parts: tuple[str, ...]) -> bool:
     return parts[0] in _IGNORED_FIRST_SEGMENTS or parts[-1] in _IGNORED_BASENAMES
 
 
+@dataclass(slots=True)
+class _Planned:
+    """Outcome of inspecting one central-directory entry."""
+
+    entry: PlannedEntry | None = None
+    skipped: int = 0
+
+
+def _plan_entry(info: zipfile.ZipInfo, limits: ImportLimits) -> _Planned:
+    """Inspect one central-directory entry without reading its bytes.
+
+    Returns the importable leaf, or an empty result — with ``skipped`` set when the
+    entry is a real file rejected for its extension, and clear when it is merely
+    ignored. Raises a :class:`ZipImportError` subclass for an entry that makes the
+    whole archive unsafe.
+    """
+    # Reject symlinks up front — never read or follow them, even for dirs.
+    if _is_symlink(info):
+        raise SymlinkEntryError("Archive contains a symlink entry.")
+
+    parts = _safe_parts(info.filename)
+    # Folders are reconstructed from leaf parents; explicit dir entries only need
+    # to pass the safety checks above.
+    if _is_ignored(parts) or info.is_dir():
+        return _Planned()
+
+    classification = _classify(parts[-1], limits)
+    if classification is None:
+        return _Planned(skipped=1)
+    if info.file_size > limits.max_file_bytes:
+        raise ZipBombError("An archive entry exceeds the per-file size limit.")
+    return _Planned(
+        entry=PlannedEntry(
+            zip_name=info.filename,
+            parts=parts,
+            is_dir=False,
+            uncompressed_size=info.file_size,
+            classification=classification,
+        )
+    )
+
+
 def plan_entries(zf: zipfile.ZipFile, limits: ImportLimits) -> ImportPlan:
     """Validate the archive's central directory without extracting any bytes.
 
@@ -213,39 +255,15 @@ def plan_entries(zf: zipfile.ZipFile, limits: ImportLimits) -> ImportPlan:
     total_uncompressed = 0
 
     for info in zf.infolist():
-        # Reject symlinks up front — never read or follow them, even for dirs.
-        if _is_symlink(info):
-            raise SymlinkEntryError("Archive contains a symlink entry.")
-
-        parts = _safe_parts(info.filename)
-        if _is_ignored(parts):
-            continue
-        if info.is_dir():
-            # Folders are reconstructed from leaf parents; explicit dir entries
-            # only need to pass the safety checks above.
+        planned = _plan_entry(info, limits)
+        skipped += planned.skipped
+        if planned.entry is None:
             continue
 
-        classification = _classify(parts[-1], limits)
-        if classification is None:
-            skipped += 1
-            continue
-
-        size = info.file_size
-        if size > limits.max_file_bytes:
-            raise ZipBombError("An archive entry exceeds the per-file size limit.")
-        total_uncompressed += size
+        total_uncompressed += planned.entry.uncompressed_size
         if total_uncompressed > limits.max_uncompressed_bytes:
             raise ZipBombError("The archive's uncompressed size exceeds the limit.")
-
-        entries.append(
-            PlannedEntry(
-                zip_name=info.filename,
-                parts=parts,
-                is_dir=False,
-                uncompressed_size=size,
-                classification=classification,
-            )
-        )
+        entries.append(planned.entry)
         if len(entries) > limits.max_entries:
             raise ZipEntryCountError("The archive contains too many entries.")
 
@@ -382,6 +400,42 @@ async def _find_child_folder(
     return (await session.execute(stmt)).scalars().first()
 
 
+@dataclass
+class _Reconstruction:
+    """Running state while materialising a plan into the project tree."""
+
+    outcome: ImportOutcome
+    cache: _FolderCache = field(default_factory=_FolderCache)
+    text_blobs: dict[tuple[str, ...], bytes] = field(default_factory=dict)
+    doc_ids: dict[tuple[str, ...], UUID] = field(default_factory=dict)
+
+
+async def _import_text(
+    session: AsyncSession,
+    project_id: UUID,
+    parent_id: UUID | None,
+    zf: zipfile.ZipFile,
+    entry: PlannedEntry,
+    settings: Settings,
+    state: _Reconstruction,
+) -> None:
+    """Create one document from a text entry, or count it as skipped if oversized."""
+    raw = await asyncio.to_thread(
+        _read_member_bounded, zf, entry.zip_name, settings.import_max_file_bytes
+    )
+    content = decode_text(raw)
+    if len(content.encode("utf-8")) > settings.max_document_bytes:
+        state.outcome.skipped += 1
+        return
+    entity = await tree_service.create_entity(
+        session, project_id, TreeEntityType.doc, entry.parts[-1], parent_id
+    )
+    await document_service.set_content_from_collab(session, entity.id, content)
+    state.outcome.docs_created += 1
+    state.text_blobs[entry.parts] = raw
+    state.doc_ids[entry.parts] = entity.id
+
+
 async def reconstruct_tree(
     session: AsyncSession,
     store: ObjectStore,
@@ -392,42 +446,28 @@ async def reconstruct_tree(
     settings: Settings,
 ) -> ImportOutcome:
     """Create folders/docs/files for the planned entries, reusing the services."""
-    outcome = ImportOutcome(skipped=plan.skipped)
-    cache = _FolderCache()
-    text_blobs: dict[tuple[str, ...], bytes] = {}
-    doc_ids: dict[tuple[str, ...], UUID] = {}
-    max_file = settings.import_max_file_bytes
+    state = _Reconstruction(ImportOutcome(skipped=plan.skipped))
 
     for entry in plan.entries:
-        parent_id = await _ensure_folder(session, project_id, entry.parts[:-1], cache, outcome)
-        name = entry.parts[-1]
+        parent_id = await _ensure_folder(
+            session, project_id, entry.parts[:-1], state.cache, state.outcome
+        )
         if entry.classification == "text":
-            raw = await asyncio.to_thread(_read_member_bounded, zf, entry.zip_name, max_file)
-            content = decode_text(raw)
-            if len(content.encode("utf-8")) > settings.max_document_bytes:
-                outcome.skipped += 1
-                continue
-            entity = await tree_service.create_entity(
-                session, project_id, TreeEntityType.doc, name, parent_id
+            await _import_text(session, project_id, parent_id, zf, entry, settings, state)
+            continue
+        try:
+            await _import_binary(
+                session, store, project_id, parent_id, entry.parts[-1], zf, entry, settings
             )
-            await document_service.set_content_from_collab(session, entity.id, content)
-            outcome.docs_created += 1
-            text_blobs[entry.parts] = raw
-            doc_ids[entry.parts] = entity.id
-        else:
-            try:
-                await _import_binary(
-                    session, store, project_id, parent_id, name, zf, entry, settings
-                )
-                outcome.files_created += 1
-            except _SkipEntry:
-                outcome.skipped += 1
+            state.outcome.files_created += 1
+        except _SkipEntry:
+            state.outcome.skipped += 1
 
-    root = detect_root_doc(plan.entries, text_blobs)
-    if root is not None and root in doc_ids:
-        outcome.root_doc_entity_id = doc_ids[root]
-        outcome.root_doc_path = root
-    return outcome
+    root = detect_root_doc(plan.entries, state.text_blobs)
+    if root is not None and root in state.doc_ids:
+        state.outcome.root_doc_entity_id = state.doc_ids[root]
+        state.outcome.root_doc_path = root
+    return state.outcome
 
 
 class _SkipEntry(Exception):

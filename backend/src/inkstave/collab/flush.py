@@ -56,5 +56,5 @@ async def flush_open_project_docs(
     for doc_id in rows:
         try:
             await collab.manager.flush(doc_id)
-        except Exception:  # noqa: BLE001 — best-effort; never block the run
+        except Exception:  # broad on purpose: best-effort flush must never block the run
             logger.warning("pre-read flush failed for doc %s", doc_id, exc_info=True)

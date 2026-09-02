@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from inkstave.compile.output_repository import OutputRow
 from inkstave.db.models.compile_output import CompileOutput, OutputKind
 
 if TYPE_CHECKING:
@@ -61,25 +62,28 @@ class ByteRange:
         return self.end - self.start + 1
 
 
+def _range_bounds(start_s: str, end_s: str, total: int) -> tuple[int, int] | None:
+    """Absolute ``[start, end]`` for one byte-range spec, or ``None`` if unsatisfiable."""
+    if start_s == "":  # suffix range: last N bytes
+        suffix = int(end_s)
+        if suffix == 0:
+            return None
+        return max(0, total - suffix), total - 1
+    start = int(start_s)
+    return start, (min(int(end_s), total - 1) if end_s else total - 1)
+
+
 def parse_range(header: str | None, total: int) -> ByteRange | RangeResult:
     """Parse an HTTP ``Range: bytes=…`` header against a known total size."""
     if not header:
         return RangeResult.FULL
     match = re.fullmatch(r"\s*bytes=(\d*)-(\d*)\s*", header)
-    if not match:
-        return RangeResult.FULL  # ignore malformed Range -> full body
-    start_s, end_s = match.group(1), match.group(2)
-    if start_s == "" and end_s == "":
-        return RangeResult.FULL
-    if start_s == "":  # suffix range: last N bytes
-        suffix = int(end_s)
-        if suffix == 0:
-            return RangeResult.UNSATISFIABLE
-        start = max(0, total - suffix)
-        end = total - 1
-    else:
-        start = int(start_s)
-        end = min(int(end_s), total - 1) if end_s else total - 1
+    if not match or match.group(1) == match.group(2) == "":
+        return RangeResult.FULL  # absent or malformed Range -> full body
+    bounds = _range_bounds(match.group(1), match.group(2), total)
+    if bounds is None:
+        return RangeResult.UNSATISFIABLE
+    start, end = bounds
     if start >= total or start > end:
         return RangeResult.UNSATISFIABLE
     return ByteRange(start, end)
@@ -130,15 +134,17 @@ class OutputStore:
             key = self._key(project_id, compile_id, artifact.name)
             await self._storage.put(key, data, content_type=artifact.content_type)
             row = await self._repo.upsert(
-                compile_id=compile_id,
-                project_id=project_id,
-                name=artifact.name,
-                rel_path=artifact.rel_path,
-                kind=classify(artifact.name).value,
-                content_type=artifact.content_type,
-                size_bytes=len(data),
-                storage_key=key,
-                etag=etag,
+                OutputRow(
+                    compile_id=compile_id,
+                    project_id=project_id,
+                    name=artifact.name,
+                    rel_path=artifact.rel_path,
+                    kind=classify(artifact.name).value,
+                    content_type=artifact.content_type,
+                    size_bytes=len(data),
+                    storage_key=key,
+                    etag=etag,
+                )
             )
             rows.append(row)
         self._logger.debug(

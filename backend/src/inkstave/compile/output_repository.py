@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -14,46 +15,41 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+@dataclass(slots=True)
+class OutputRow:
+    """The stored metadata for one compile artifact."""
+
+    compile_id: UUID
+    project_id: UUID
+    name: str
+    rel_path: str
+    kind: str
+    content_type: str
+    size_bytes: int
+    storage_key: str
+    etag: str
+
+
 class OutputRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def upsert(
-        self,
-        *,
-        compile_id: UUID,
-        project_id: UUID,
-        name: str,
-        rel_path: str,
-        kind: str,
-        content_type: str,
-        size_bytes: int,
-        storage_key: str,
-        etag: str,
-    ) -> CompileOutput:
-        existing = await self.get_by_name(compile_id, name)
+    async def upsert(self, row: OutputRow) -> CompileOutput:
+        """Insert the artifact's row, or refresh the existing one. Idempotent."""
+        existing = await self.get_by_name(row.compile_id, row.name)
         if existing is not None:
-            existing.rel_path = rel_path
-            existing.kind = kind
-            existing.content_type = content_type
-            existing.size_bytes = size_bytes
-            existing.storage_key = storage_key
-            existing.etag = etag
-            await self._session.flush()
-            await self._session.refresh(existing)
-            return existing
-        row = CompileOutput(
-            compile_id=compile_id,
-            project_id=project_id,
-            name=name,
-            rel_path=rel_path,
-            kind=kind,
-            content_type=content_type,
-            size_bytes=size_bytes,
-            storage_key=storage_key,
-            etag=etag,
-        )
-        self._session.add(row)
+            existing.rel_path = row.rel_path
+            existing.kind = row.kind
+            existing.content_type = row.content_type
+            existing.size_bytes = row.size_bytes
+            existing.storage_key = row.storage_key
+            existing.etag = row.etag
+            return await self._persist(existing)
+        return await self._persist(CompileOutput(**asdict(row)), add=True)
+
+    async def _persist(self, row: CompileOutput, *, add: bool = False) -> CompileOutput:
+        if add:
+            self._session.add(row)
         await self._session.flush()
         await self._session.refresh(row)
         return row

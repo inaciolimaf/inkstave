@@ -33,7 +33,7 @@ async def test_file_sender_writes_one_file(tmp_path: Path) -> None:
     await sender.send(OutgoingEmail(to="bob@x.com", subject="Hi", text_body="hello"))
     files = list(tmp_path.glob("*.json"))  # noqa: ASYNC240
     assert len(files) == 1  # criterion 1: written, no SMTP
-    data = json.loads(files[0].read_text())  # noqa: ASYNC240
+    data = json.loads(files[0].read_text())
     assert data["to"] == "bob@x.com" and data["subject"] == "Hi" and data["text_body"] == "hello"
 
 

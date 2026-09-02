@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -15,18 +16,32 @@ if TYPE_CHECKING:
 logger = logging.getLogger("inkstave.agent.audit")
 
 
+@dataclass(slots=True)
+class AuditSubject:
+    """Who an audit row is about; only the user is always known."""
+
+    user_id: UUID
+    project_id: UUID | None = None
+    session_id: UUID | None = None
+    run_id: UUID | None = None
+
+
+@dataclass(slots=True)
+class AuditUsage:
+    """Token + cost figures, recorded on the rows that have them."""
+
+    tokens_prompt: int | None = None
+    tokens_completion: int | None = None
+    cost_estimate_usd: Decimal | None = None
+
+
 async def audit(
     db: AsyncSession,
     action: AgentAuditAction,
+    subject: AuditSubject,
     *,
-    user_id: UUID,
-    project_id: UUID | None = None,
-    session_id: UUID | None = None,
-    run_id: UUID | None = None,
     tool_name: str | None = None,
-    tokens_prompt: int | None = None,
-    tokens_completion: int | None = None,
-    cost_estimate_usd: Decimal | None = None,
+    usage: AuditUsage | None = None,
     outcome: str = "ok",
     detail: dict[str, Any] | None = None,
 ) -> None:
@@ -34,18 +49,19 @@ async def audit(
 
     A failed write is logged and swallowed so a run is never crashed by auditing.
     """
+    counts = usage or AuditUsage()
     try:
         db.add(
             AgentAuditLog(
-                user_id=user_id,
-                project_id=project_id,
-                session_id=session_id,
-                run_id=run_id,
+                user_id=subject.user_id,
+                project_id=subject.project_id,
+                session_id=subject.session_id,
+                run_id=subject.run_id,
                 action=action.value,
                 tool_name=tool_name,
-                tokens_prompt=tokens_prompt,
-                tokens_completion=tokens_completion,
-                cost_estimate_usd=cost_estimate_usd,
+                tokens_prompt=counts.tokens_prompt,
+                tokens_completion=counts.tokens_completion,
+                cost_estimate_usd=counts.cost_estimate_usd,
                 outcome=outcome,
                 detail=detail,
             )

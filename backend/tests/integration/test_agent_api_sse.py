@@ -22,6 +22,22 @@ pytestmark = pytest.mark.integration
 # --- HTTP: SSE events route (query-param token auth) ----------------------- #
 
 
+async def _await_subscriber(redis: Any, channel: str) -> None:
+    """Block until the SSE endpoint has actually SUBSCRIBED.
+
+    A fixed sleep races under load and drops the live-only `token` event (only the
+    terminal `done` is replayable for late subscribers), which made this flaky.
+    """
+    import asyncio
+
+    for _ in range(300):
+        subs = await redis.pubsub_numsub(channel)
+        if sum(count for _, count in subs) >= 1:
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("SSE subscriber did not attach")  # pragma: no cover
+
+
 async def test_sse_events_route_streams_and_closes(
     seed: SimpleNamespace, async_client: AsyncClient, db_session: AsyncSession, redis: Any
 ) -> None:
@@ -49,17 +65,8 @@ async def test_sse_events_route_streams_and_closes(
                 collected.append(chunk)
 
     task = asyncio.create_task(consume())
-    # Wait until the SSE endpoint has actually SUBSCRIBED before emitting. A fixed
-    # sleep races under load and drops the live-only `token` event (only the
-    # terminal `done` is replayable for late subscribers), which made this flaky.
-    channel = run_channel(run_id)
-    for _ in range(300):
-        subs = await redis.pubsub_numsub(channel)
-        if sum(count for _, count in subs) >= 1:
-            break
-        await asyncio.sleep(0.01)
-    else:  # pragma: no cover - the subscriber always attaches well within 3s
-        raise AssertionError("SSE subscriber did not attach")
+    await _await_subscriber(redis, run_channel(run_id))
+
     redis_sink = RedisEventSink(redis, run_id, ttl_seconds=60)
     await redis_sink.emit("token", text="Hi")
     await redis_sink.emit("done", final_text="Hi")

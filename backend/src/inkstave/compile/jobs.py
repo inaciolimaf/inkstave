@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
@@ -110,132 +111,169 @@ async def run_compile(
         clear_context(tokens)
 
 
+@dataclass(slots=True)
+class _Job:
+    """One compile row plus the writers every job step needs."""
+
+    session: Any
+    repo: CompileRepository
+    redis: Any
+    cid: UUID
+    row: Compile
+
+    async def announce(self, **fields: Any) -> None:
+        """Apply a row transition, commit it, and publish the status event."""
+        await self.repo.update(self.row, **fields)
+        await self.session.commit()
+        await publish_status(self.redis, self.cid, status_payload(self.row))
+
+    async def finish(self, **fields: Any) -> dict[str, Any]:
+        """`announce` a terminal transition and return the job summary."""
+        await self.announce(**fields)
+        return _summary(self.row)
+
+
+async def _fail(job: _Job, message: str) -> dict[str, Any]:
+    """Settle the row as ERROR with `message` (truncated to the column width)."""
+    return await job.finish(
+        status=CompileJobStatus.ERROR.value, error_message=message[:1000], finished_at=_now()
+    )
+
+
+async def _settle_if_cancelled(job: _Job) -> dict[str, Any] | None:
+    """Settle a compile that is already terminal, or was cancelled before pickup."""
+    already_terminal = is_terminal(CompileJobStatus(job.row.status))
+    if already_terminal:
+        return _summary(job.row)
+    if not await is_cancel_requested(job.redis, job.cid):
+        return None
+    return await job.finish(status=CompileJobStatus.CANCELLED.value, finished_at=_now())
+
+
+async def _settle_if_unauthorized(job: _Job) -> dict[str, Any] | None:
+    """Defense-in-depth re-authorization (spec 34 §5.2).
+
+    The compile ARQ job entry re-verifies COMPILE + active membership for the
+    requesting user, even though the REST trigger already authorized before
+    enqueue. It reuses the same authorization seam (`role_for` + the capability
+    matrix) the REST endpoint uses. If the requester lost membership/capability
+    between enqueue and pickup, fail the compile gracefully instead of running it.
+    """
+    role = await role_for(job.session, job.row.requested_by, job.row.project_id)
+    if Capability.COMPILE in capabilities_for(role):
+        return None
+    return await _fail(job, "requester no longer authorized to compile this project")
+
+
+async def _compile_with_cancel(job: _Job, service: Any, settings: Any) -> CompileResult:
+    """Run the compile with a cancel watcher attached for its whole lifetime."""
+    cancel = CancelToken()
+    watcher = asyncio.create_task(_cancel_watcher(job.redis, job.cid, cancel))
+    try:
+        opts = CompileOptions(
+            project_id=job.row.project_id,
+            main_file=job.row.main_file,
+            timeout_s=settings.tectonic_compile_timeout_s,
+            compile_id=job.cid,
+            keep_workdir=True,  # the job owns cleanup, after persisting outputs
+        )
+        return await service.compile(opts, cancel)
+    finally:
+        watcher.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await watcher
+
+
+async def _persist_outputs(job: _Job, persist_hook: Any, result: CompileResult) -> str | None:
+    """Persist outputs (spec 23) BEFORE the terminal event, while the workdir is
+    still alive; then clean the workdir up. Returns the failure message, if any."""
+    try:
+        await persist_hook(job.session, job.cid, job.row.project_id, result)
+    except Exception as exc:  # persistence failure is recorded, not crashed
+        return str(exc)[:1000]
+    finally:
+        if result.workdir is not None:
+            await cleanup_workdir(result.workdir)
+    return None
+
+
+def _outcome_fields(result: CompileResult, persist_error: str | None) -> dict[str, Any]:
+    """The terminal row fields for a compile that actually ran."""
+    if persist_error is not None:
+        return {
+            "status": CompileJobStatus.ERROR.value,
+            "error_message": f"output persistence failed: {persist_error}",
+            "finished_at": _now(),
+        }
+    job_status = _STATUS_MAP.get(result.status, CompileJobStatus.ERROR)
+    return {
+        "status": job_status.value,
+        "exit_code": result.exit_code,
+        "duration_ms": result.duration_ms,
+        "has_pdf": result.pdf is not None,
+        "artifact_manifest": _manifest(result),
+        # Tail, not head (spec 22 §5.1): for LaTeX the meaningful errors live at the
+        # END of the log, so keep the last 2000 chars.
+        "log_excerpt": result.log_text[-2000:] or None,
+        "error_message": (result.log_text[:1000] if job_status is CompileJobStatus.ERROR else None),
+        "finished_at": _now(),
+    }
+
+
+def _log_non_success(job: _Job) -> None:
+    """Surface the reason in the worker log (the arq result summary truncates it).
+
+    The fullest detail lives in error_message / the log tail.
+    """
+    if job.row.status == CompileJobStatus.SUCCESS.value:
+        return
+    logger.warning(
+        "compile %s ended status=%s: %s",
+        job.cid,
+        job.row.status,
+        (job.row.error_message or job.row.log_excerpt or "")[:500],
+    )
+
+
+async def _compile_once(
+    ctx: dict[str, Any], session: Any, cid: UUID, compile_id: str
+) -> dict[str, Any]:
+    """The compile job proper: settle-or-run one row, inside the caller's session."""
+    repo = CompileRepository(session)
+    row = await repo.get_by_id(cid)
+    if row is None:
+        return {"compile_id": compile_id, "status": "error", "error": "compile not found"}
+
+    job = _Job(session, repo, ctx["redis"], cid, row)
+    settled = await _settle_if_cancelled(job)
+    if settled is None:
+        settled = await _settle_if_unauthorized(job)
+    if settled is not None:
+        return settled
+
+    await job.announce(status=CompileJobStatus.RUNNING.value, started_at=_now())
+    service = ctx["make_compile_service"](session)
+    try:
+        result = await _compile_with_cancel(job, service, ctx["settings"])
+    except Exception as exc:  # a job failure, not a LaTeX failure
+        return await _fail(job, str(exc))
+
+    persist_error = await _persist_outputs(job, ctx["persist_hook"], result)
+    summary = await job.finish(**_outcome_fields(result, persist_error))
+    _log_non_success(job)
+    return summary
+
+
 async def _run_compile_body(ctx: dict[str, Any], compile_id: str) -> dict[str, Any]:
-    cid = UUID(compile_id)
-    settings = ctx["settings"]
-    redis = ctx["redis"]
-    persist_hook = ctx["persist_hook"]
     # The job owns workdir cleanup (spec 23): the service runs with
     # keep_workdir=True so outputs can be persisted, then the job removes the dir.
     # This top-level finally is the backstop that guarantees no workdir is ever
     # orphaned under COMPILE_WORKDIR_ROOT on ANY exit path — service exception,
     # persistence failure, or early return included. cleanup_workdir never raises.
-    workdir_path = Path(settings.compile_workdir_root) / compile_id
-
+    workdir_path = Path(ctx["settings"].compile_workdir_root) / compile_id
     async with ctx["session_factory"]() as session:
         try:
-            repo = CompileRepository(session)
-            row = await repo.get_by_id(cid)
-            if row is None:
-                return {"compile_id": compile_id, "status": "error", "error": "compile not found"}
-
-            # A cancel that arrived before the worker picked the job up.
-            if is_terminal(CompileJobStatus(row.status)) or await is_cancel_requested(redis, cid):
-                if not is_terminal(CompileJobStatus(row.status)):
-                    await repo.update(
-                        row, status=CompileJobStatus.CANCELLED.value, finished_at=_now()
-                    )
-                    await session.commit()
-                    await publish_status(redis, cid, status_payload(row))
-                return _summary(row)
-
-            # Defense-in-depth re-authorization (spec 34 §5.2): the compile ARQ
-            # job entry re-verifies COMPILE + active membership for the requesting
-            # user, even though the REST trigger already authorized before enqueue.
-            # Reuse the same authorization seam (`role_for` + the capability matrix)
-            # the REST endpoint uses. If the requester lost membership/capability
-            # between enqueue and pickup, fail the compile gracefully instead of
-            # running it.
-            requester_role = await role_for(session, row.requested_by, row.project_id)
-            if Capability.COMPILE not in capabilities_for(requester_role):
-                await repo.update(
-                    row,
-                    status=CompileJobStatus.ERROR.value,
-                    error_message="requester no longer authorized to compile this project",
-                    finished_at=_now(),
-                )
-                await session.commit()
-                await publish_status(redis, cid, status_payload(row))
-                return _summary(row)
-
-            await repo.update(row, status=CompileJobStatus.RUNNING.value, started_at=_now())
-            await session.commit()
-            await publish_status(redis, cid, status_payload(row))
-
-            service = ctx["make_compile_service"](session)
-            cancel = CancelToken()
-            watcher = asyncio.create_task(_cancel_watcher(redis, cid, cancel))
-            try:
-                opts = CompileOptions(
-                    project_id=row.project_id,
-                    main_file=row.main_file,
-                    timeout_s=settings.tectonic_compile_timeout_s,
-                    compile_id=cid,
-                    keep_workdir=True,  # the job owns cleanup, after persisting outputs
-                )
-                result = await service.compile(opts, cancel)
-            except Exception as exc:  # a job failure, not a LaTeX failure
-                await repo.update(
-                    row,
-                    status=CompileJobStatus.ERROR.value,
-                    error_message=str(exc)[:1000],
-                    finished_at=_now(),
-                )
-                await session.commit()
-                await publish_status(redis, cid, status_payload(row))
-                return _summary(row)
-            finally:
-                watcher.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await watcher
-
-            # Persist outputs (spec 23) BEFORE the terminal event, while the
-            # workdir is still alive; then the job cleans the workdir up.
-            persist_error: str | None = None
-            try:
-                await persist_hook(session, cid, row.project_id, result)
-            except Exception as exc:  # persistence failure is recorded, not crashed
-                persist_error = str(exc)[:1000]
-            finally:
-                if result.workdir is not None:
-                    await cleanup_workdir(result.workdir)
-
-            if persist_error is not None:
-                await repo.update(
-                    row,
-                    status=CompileJobStatus.ERROR.value,
-                    error_message=f"output persistence failed: {persist_error}",
-                    finished_at=_now(),
-                )
-            else:
-                job_status = _STATUS_MAP.get(result.status, CompileJobStatus.ERROR)
-                await repo.update(
-                    row,
-                    status=job_status.value,
-                    exit_code=result.exit_code,
-                    duration_ms=result.duration_ms,
-                    has_pdf=result.pdf is not None,
-                    artifact_manifest=_manifest(result),
-                    # Tail, not head (spec 22 §5.1): for LaTeX the meaningful
-                    # errors live at the END of the log, so keep the last 2000 chars.
-                    log_excerpt=result.log_text[-2000:] or None,
-                    error_message=(
-                        result.log_text[:1000] if job_status is CompileJobStatus.ERROR else None
-                    ),
-                    finished_at=_now(),
-                )
-            await session.commit()
-            await publish_status(redis, cid, status_payload(row))
-            if row.status != CompileJobStatus.SUCCESS.value:
-                # Surface the reason in the worker log (the arq result summary truncates
-                # it). The fullest detail lives in error_message / the log tail.
-                logger.warning(
-                    "compile %s ended status=%s: %s",
-                    cid,
-                    row.status,
-                    (row.error_message or row.log_excerpt or "")[:500],
-                )
-            return _summary(row)
+            return await _compile_once(ctx, session, UUID(compile_id), compile_id)
         finally:
             # Backstop: remove the workdir on every path (idempotent; never raises).
             await cleanup_workdir(workdir_path)

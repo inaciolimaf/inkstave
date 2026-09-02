@@ -20,6 +20,7 @@ from inkstave.dependencies import (
     get_token_service,
 )
 from inkstave.errors import ErrorEnvelope
+from inkstave.invariants import require
 from inkstave.mailer.enqueuer import EmailEnqueuer
 from inkstave.schemas.auth import (
     EmailOnlyRequest,
@@ -110,8 +111,10 @@ async def forgot_password(
     """
     raw = await email_auth.request_password_reset(session, email=str(data.email), settings=settings)
     if raw is not None:
-        user = await get_user_by_email(session, str(data.email))
-        assert user is not None  # raw is only non-None when the user exists
+        user = require(
+            await get_user_by_email(session, str(data.email)),
+            "password-reset token issued for an address with no user",
+        )
         reset_url = f"{settings.frontend_url}/reset-password?token={raw}"
         await emails.enqueue_email(
             template="password_reset",
@@ -184,8 +187,10 @@ async def magic_link(
     """Send a one-time sign-in link — non-enumerating; enqueues only if the user exists."""
     raw = await email_auth.request_magic_login(session, email=str(data.email), settings=settings)
     if raw is not None:
-        user = await get_user_by_email(session, str(data.email))
-        assert user is not None
+        user = require(
+            await get_user_by_email(session, str(data.email)),
+            "magic-link token issued for an address with no user",
+        )
         magic_url = f"{settings.frontend_url}/magic-link?token={raw}"
         await emails.enqueue_email(
             template="magic_login",

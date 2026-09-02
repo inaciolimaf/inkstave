@@ -131,6 +131,26 @@ async def read_content_for_collab(session: AsyncSession, entity_id: UUID) -> str
     return content or ""
 
 
+async def _create_document(session: AsyncSession, entity_id: UUID, content: str) -> bool:
+    """Insert the document row for a doc entity; False when there is no such entity."""
+    entity = (
+        await session.execute(select(TreeEntity).where(TreeEntity.id == entity_id))
+    ).scalar_one_or_none()
+    if entity is None or entity.type is not TreeEntityType.doc:
+        return False
+    session.add(
+        Document(
+            entity_id=entity_id,
+            project_id=entity.project_id,
+            content=content,
+            version=1,
+            size_bytes=len(content.encode("utf-8")),
+        )
+    )
+    await session.flush()
+    return True
+
+
 async def set_content_from_collab(session: AsyncSession, entity_id: UUID, content: str) -> bool:
     """Write CRDT text into the spec-13 ``content`` column directly — no version
     check, no CRDT round-trip. Idempotent (a no-op when unchanged); bumps
@@ -142,31 +162,16 @@ async def set_content_from_collab(session: AsyncSession, entity_id: UUID, conten
     ).scalar_one_or_none()
     if current == content:
         return False
-    size_bytes = len(content.encode("utf-8"))
     if current is None:
-        entity = (
-            await session.execute(select(TreeEntity).where(TreeEntity.id == entity_id))
-        ).scalar_one_or_none()
-        if entity is None or entity.type is not TreeEntityType.doc:
-            return False
-        session.add(
-            Document(
-                entity_id=entity_id,
-                project_id=entity.project_id,
-                content=content,
-                version=1,
-                size_bytes=size_bytes,
-            )
-        )
-        await session.flush()
-        return True
+        return await _create_document(session, entity_id, content)
+
     await session.execute(
         update(Document)
         .where(Document.entity_id == entity_id)
         .values(
             content=content,
             version=Document.version + 1,
-            size_bytes=size_bytes,
+            size_bytes=len(content.encode("utf-8")),
             updated_at=func.clock_timestamp(),
         )
     )

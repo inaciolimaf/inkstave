@@ -24,7 +24,7 @@ from inkstave.authorization.service import role_for
 from inkstave.collab.flush import flush_open_project_docs
 from inkstave.compile.coordinator import CompileCoordinator, CompileEnqueuer
 from inkstave.compile.jobs import status_payload
-from inkstave.compile.outputs import ByteRange, OutputStore, RangeResult, parse_range
+from inkstave.compile.outputs import OutputStore, RangeResult, parse_range
 from inkstave.compile.repository import CompileRepository
 from inkstave.compile.stream import publish_status, request_cancel, sse_stream
 from inkstave.db.models.compile import CompileJobStatus, is_terminal
@@ -212,7 +212,6 @@ async def get_output_pdf(
             media_type="application/pdf",
             headers={**headers, "Content-Length": str(obj.size)},
         )
-    assert isinstance(spec, ByteRange)
     return StreamingResponse(
         obj.read_range(spec.start, spec.end),
         status_code=206,

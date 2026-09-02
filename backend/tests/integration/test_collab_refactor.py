@@ -113,6 +113,31 @@ async def test_no_eviction_while_connections_remain(db_session: AsyncSession) ->
     assert manager._entries[doc_id].refcount == 1
 
 
+def _parked_evictor(manager: Any, in_eviction: asyncio.Event, release: asyncio.Event) -> Any:
+    """A ``_evict_after_idle`` clone that parks inside the critical section.
+
+    It mirrors DocumentManager._evict_after_idle, but waits (still holding the
+    per-document lock) so a concurrent acquire is forced to block on this exact
+    lock object before the entry and lock are popped.
+    """
+
+    async def _evict(document_id: UUID) -> None:
+        lock = manager._lock(document_id)
+        async with lock:
+            entry = manager._entries.get(document_id)
+            if entry is None or entry.refcount > 0:
+                return
+            in_eviction.set()
+            await release.wait()
+            manager._entries.pop(document_id, None)
+            manager._aw.drop(document_id)
+            manager.load_count.pop(document_id, None)
+            if manager._locks.get(document_id) is lock:
+                manager._locks.pop(document_id, None)
+
+    return _evict
+
+
 async def test_concurrent_acquire_evicted_lock_swap_loads_once(
     db_session: AsyncSession,
 ) -> None:
@@ -120,10 +145,8 @@ async def test_concurrent_acquire_evicted_lock_swap_loads_once(
     out from under a waiting acquire, the identity-mismatch retry must re-acquire on
     the fresh lock and still load the document exactly once.
 
-    Construction (deterministic, barrier-driven): we drive an eviction that holds the
-    per-document lock and then *parks inside the critical section* before popping the
-    entry/lock. A concurrent ``acquire`` then blocks waiting on that very lock. When
-    we release the barrier, eviction pops the entry + lock and exits; the parked
+    Construction is deterministic and barrier-driven — see `_parked_evictor`. When
+    the barrier is released, eviction pops the entry + lock and exits; the parked
     acquire wakes on the now-orphaned lock, sees ``self._locks.get(id) is not lock``,
     and retries on the fresh lock — loading the document exactly once across the
     whole race (and never twice)."""
@@ -132,22 +155,7 @@ async def test_concurrent_acquire_evicted_lock_swap_loads_once(
 
     in_eviction = asyncio.Event()  # set once eviction holds the lock and is parked
     let_eviction_finish = asyncio.Event()  # release the parked eviction
-
-    async def _hand_rolled_evict(document_id: UUID) -> None:
-        # Mirror DocumentManager._evict_after_idle, but park (still holding the lock)
-        # so a concurrent acquire is forced to wait on this exact lock object.
-        lock = manager._lock(document_id)
-        async with lock:
-            entry = manager._entries.get(document_id)
-            if entry is None or entry.refcount > 0:
-                return
-            in_eviction.set()
-            await let_eviction_finish.wait()
-            manager._entries.pop(document_id, None)
-            manager._aw.drop(document_id)
-            manager.load_count.pop(document_id, None)
-            if manager._locks.get(document_id) is lock:
-                manager._locks.pop(document_id, None)
+    _hand_rolled_evict = _parked_evictor(manager, in_eviction, let_eviction_finish)
 
     await manager.acquire(doc_id)  # load_count[doc] == 1
     assert manager.load_count[doc_id] == 1

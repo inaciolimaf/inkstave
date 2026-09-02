@@ -23,25 +23,24 @@ from tests.fixtures.paths import DEFAULT_TEST_DB
 # --------------------------------------------------------------------------- #
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _configure_test_env() -> Iterator[None]:
-    """Force test settings for the whole session.
+def _test_database_url() -> str:
+    """The DSN for this worker's database.
 
-    Points the app and Alembic at ``TEST_DATABASE_URL`` and selects readable,
-    non-JSON logs. Individual unit tests may still construct ``Settings`` with
-    explicit overrides (``_env_file=None`` + monkeypatched env).
+    Under pytest-xdist (spec 53), each worker uses its own database (suffixed by the
+    worker id) so workers never share state and the per-test rollback stays isolated.
     """
-    test_db_url = normalize_async_dsn(os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DB))
-    # Under pytest-xdist (spec 53), each worker uses its own database (suffixed by the
-    # worker id) so workers never share state and the per-test rollback stays isolated.
+    url = normalize_async_dsn(os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DB))
     worker = os.environ.get("PYTEST_XDIST_WORKER")
-    if worker:
-        parsed = make_url(test_db_url)
-        test_db_url = parsed.set(database=f"{parsed.database}_{worker}").render_as_string(
-            hide_password=False
-        )
-    overrides = {
-        "DATABASE_URL": test_db_url,
+    if not worker:
+        return url
+    parsed = make_url(url)
+    return parsed.set(database=f"{parsed.database}_{worker}").render_as_string(hide_password=False)
+
+
+def _test_overrides() -> dict[str, str]:
+    """The environment every test runs under."""
+    return {
+        "DATABASE_URL": _test_database_url(),
         "ENVIRONMENT": "test",
         # Spec 51 §5.6 mandates the test profile force LOG_LEVEL=warning (LOG_FORMAT=json,
         # OTEL_ENABLED=false, METRICS_PUBLIC=true already come from config defaults).
@@ -57,6 +56,17 @@ def _configure_test_env() -> Iterator[None]:
         "RATE_LIMIT_REGISTER": "1000/3600",
         "RATE_LIMIT_REFRESH": "1000/300",
     }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _configure_test_env() -> Iterator[None]:
+    """Force test settings for the whole session.
+
+    Points the app and Alembic at ``TEST_DATABASE_URL`` and selects readable,
+    non-JSON logs. Individual unit tests may still construct ``Settings`` with
+    explicit overrides (``_env_file=None`` + monkeypatched env).
+    """
+    overrides = _test_overrides()
     previous = {key: os.environ.get(key) for key in overrides}
     os.environ.update(overrides)
     get_settings.cache_clear()

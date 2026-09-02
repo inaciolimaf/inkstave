@@ -23,6 +23,18 @@ async def _auth_user(db_session: AsyncSession) -> tuple[User, dict[str, str]]:
     return user, {"Authorization": f"Bearer {token}"}
 
 
+async def _assert_gone(async_client: AsyncClient, project_id: str, headers: dict[str, str]) -> None:
+    """Every route on a deleted project answers 404 project_not_found."""
+    for call in (
+        async_client.get(f"{PROJECTS}/{project_id}", headers=headers),
+        async_client.patch(f"{PROJECTS}/{project_id}", json={"name": "x"}, headers=headers),
+        async_client.delete(f"{PROJECTS}/{project_id}", headers=headers),
+    ):
+        resp = await call
+        assert resp.status_code == 404
+        assert resp.json()["error"]["type"] == "project_not_found"
+
+
 async def test_crud_happy_path(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user, headers = await _auth_user(db_session)
 
@@ -45,8 +57,7 @@ async def test_crud_happy_path(async_client: AsyncClient, db_session: AsyncSessi
     assert "deleted_at" not in listed.json()["items"][0]
 
     # Get
-    fetched = await async_client.get(f"{PROJECTS}/{project_id}", headers=headers)
-    assert fetched.status_code == 200
+    assert (await async_client.get(f"{PROJECTS}/{project_id}", headers=headers)).status_code == 200
 
     # Rename -> updated_at strictly advances
     renamed = await async_client.patch(
@@ -59,14 +70,7 @@ async def test_crud_happy_path(async_client: AsyncClient, db_session: AsyncSessi
     # Delete -> 204, then gone
     deleted = await async_client.delete(f"{PROJECTS}/{project_id}", headers=headers)
     assert deleted.status_code == 204
-    for call in (
-        async_client.get(f"{PROJECTS}/{project_id}", headers=headers),
-        async_client.patch(f"{PROJECTS}/{project_id}", json={"name": "x"}, headers=headers),
-        async_client.delete(f"{PROJECTS}/{project_id}", headers=headers),
-    ):
-        resp = await call
-        assert resp.status_code == 404
-        assert resp.json()["error"]["type"] == "project_not_found"
+    await _assert_gone(async_client, project_id, headers)
     assert (await async_client.get(PROJECTS, headers=headers)).json()["total"] == 0
 
 

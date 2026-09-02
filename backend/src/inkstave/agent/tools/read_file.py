@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import BaseModel, Field, model_validator
 
 from inkstave.agent.tools._common import load_tree, resolve_document
 from inkstave.agent.tools.base import Tool, ToolContext, ToolResult, authorize
-from inkstave.db.models.tree_entity import TreeEntityType
+from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
 
 
 class ReadFileArgs(BaseModel):
@@ -57,16 +59,9 @@ class ReadFileTool(Tool):
             return ToolResult(ok=False, error=denied)
 
         entities, paths = await load_tree(ctx)
-        if args.doc_id is not None:
-            doc_id = args.doc_id
-        else:
-            target = next(
-                (e for e in entities if paths[e.id] == args.path and e.type == TreeEntityType.doc),
-                None,
-            )
-            if target is None:
-                return ToolResult.failure("not_found", "No such document in this project.")
-            doc_id = str(target.id)
+        doc_id = args.doc_id or _doc_id_for_path(entities, paths, args.path)
+        if doc_id is None:
+            return ToolResult.failure("not_found", "No such document in this project.")
 
         resolved = await resolve_document(ctx, doc_id, paths)
         if not isinstance(resolved, tuple):
@@ -74,31 +69,44 @@ class ReadFileTool(Tool):
         _entity, document, path = resolved
 
         lines = document.content.splitlines(keepends=True)
-        line_count = len(lines)
-        version = str(document.version)
-        cap = ctx.settings.agent_tool_read_max_chars
-
-        if args.start_line is not None or args.end_line is not None:
-            start = args.start_line or 0
-            end = args.end_line if args.end_line is not None else line_count
-            if start > line_count:
-                return ToolResult.failure("invalid_args", "start_line is past end of document.")
-            window = lines[start:end]
-        else:
-            start, window = 0, lines
+        window = _window(args, lines)
+        if window is None:
+            return ToolResult.failure("invalid_args", "start_line is past end of document.")
+        start, selected = window
 
         # The char cap applies on BOTH paths (a wide window must not pull the whole doc).
-        text, kept, truncated = _cap_to_chars(window, cap)
+        text, kept, truncated = _cap_to_chars(selected, ctx.settings.agent_tool_read_max_chars)
         result: dict[str, object] = {
             "doc_id": doc_id,
             "path": path,
-            "version": version,
+            "version": str(document.version),
             "start_line": start,
             "end_line": start + kept,
-            "line_count": line_count,
+            "line_count": len(lines),
             "content": text,
             "truncated": truncated,
         }
         if truncated:
             result["hint"] = "Output exceeds the size cap; request a smaller line range."
         return ToolResult.success(**result)
+
+
+def _doc_id_for_path(
+    entities: list[TreeEntity], paths: dict[UUID, str], path: str | None
+) -> str | None:
+    """The id of the document at `path`, or ``None`` when there is none."""
+    target = next(
+        (e for e in entities if paths[e.id] == path and e.type == TreeEntityType.doc), None
+    )
+    return None if target is None else str(target.id)
+
+
+def _window(args: ReadFileArgs, lines: list[str]) -> tuple[int, list[str]] | None:
+    """The requested ``[start, end)`` slice, or ``None`` when start is past the end."""
+    if args.start_line is None and args.end_line is None:
+        return 0, lines
+    start = args.start_line or 0
+    if start > len(lines):
+        return None
+    end = args.end_line if args.end_line is not None else len(lines)
+    return start, lines[start:end]

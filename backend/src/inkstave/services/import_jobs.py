@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import logging
 import zipfile
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -74,74 +75,96 @@ async def import_project_zip(
         clear_context(tokens)
 
 
-async def _run_import_body(ctx: dict[str, Any], import_id: str) -> dict[str, Any]:
-    iid = UUID(import_id)
-    settings = ctx["settings"]
-    redis = ctx["redis"]
-    store = ctx["object_store"]
+async def _still_owned(session: Any, row: Any) -> bool:
+    """Defence-in-depth re-authorization (spec 34): the requester still owns the project."""
+    try:
+        await get_owned_project(session, row.requested_by, row.project_id)
+    except ProjectNotFoundError:
+        return False
+    return True
 
-    async with ctx["session_factory"]() as session:
-        repo = ProjectImportRepository(session)
-        row = await repo.get_by_id(iid)
-        if row is None:
-            return {"import_id": import_id, "status": "error", "error": "import not found"}
-        if is_terminal(ProjectImportStatus(row.status)):
-            return _summary(row)
 
-        # Defence-in-depth re-authorization (spec 34): confirm the requester still
-        # owns the project created up-front by the REST endpoint.
-        try:
-            await get_owned_project(session, row.requested_by, row.project_id)
-        except ProjectNotFoundError:
-            await repo.update(
-                row,
-                status=ProjectImportStatus.ERROR.value,
-                error_type="error",
-                error_message="requester no longer owns this project",
-                finished_at=_now(),
-            )
-            await session.commit()
-            await publish_status(redis, iid, status_payload(row))
-            return _summary(row)
+async def _import_archive(
+    session: Any, store: Any, row: Any, settings: Any, iid: UUID
+) -> dict[str, Any]:
+    """Stage + process the archive, turning every failure into terminal row fields."""
+    tmp_path = Path(settings.import_workdir_root) / f"{iid}.zip"
+    try:
+        await _stage_to_temp(store, row.source_key, tmp_path, settings.import_max_zip_bytes)
+        return await _process_archive(session, store, row, tmp_path, settings)
+    except ZipImportError as exc:
+        await session.rollback()
+        return {
+            "status": ProjectImportStatus.FAILURE.value,
+            "error_type": exc.error_type,
+            "error_message": str(exc)[:1000],
+        }
+    except Exception as exc:  # the job never crashes
+        await session.rollback()
+        logger.exception("project import %s failed unexpectedly", iid)
+        return {
+            "status": ProjectImportStatus.ERROR.value,
+            "error_type": "error",
+            "error_message": str(exc)[:1000],
+        }
+    finally:
+        await _cleanup(store, row.source_key, tmp_path)
 
-        await repo.update(row, status=ProjectImportStatus.RUNNING.value, started_at=_now())
-        await session.commit()
-        await publish_status(redis, iid, status_payload(row))
 
-        workdir = Path(settings.import_workdir_root)
-        tmp_path = workdir / f"{iid}.zip"
-        terminal: dict[str, Any]
-        try:
-            await _stage_to_temp(store, row.source_key, tmp_path, settings.import_max_zip_bytes)
-            terminal = await _process_archive(session, store, row, tmp_path, settings)
-        except ZipImportError as exc:
-            await session.rollback()
-            terminal = {
-                "status": ProjectImportStatus.FAILURE.value,
-                "error_type": exc.error_type,
-                "error_message": str(exc)[:1000],
-            }
-        except Exception as exc:  # the job never crashes
-            await session.rollback()
-            logger.exception("project import %s failed unexpectedly", iid)
-            terminal = {
-                "status": ProjectImportStatus.ERROR.value,
-                "error_type": "error",
-                "error_message": str(exc)[:1000],
-            }
-        finally:
-            await _cleanup(store, row.source_key, tmp_path)
+@dataclass(slots=True)
+class _Import:
+    """One import row plus the writers every job step needs."""
 
-        # Reload (a rollback above may have expired the row) and write the result.
-        row = await repo.get_by_id(iid)
-        if row is None:  # pragma: no cover - defensive
-            return {"import_id": import_id, "status": "error", "error": "import vanished"}
-        await repo.update(row, finished_at=_now(), **terminal)
-        await session.commit()
-        await publish_status(redis, iid, status_payload(row))
-        if row.status != ProjectImportStatus.SUCCESS.value:
-            logger.info("project import %s ended status=%s", iid, row.status)
+    session: Any
+    repo: ProjectImportRepository
+    redis: Any
+    iid: UUID
+    row: Any
+
+    async def settle(self, **fields: Any) -> None:
+        """Apply a row transition, commit it, and publish the status event."""
+        await self.repo.update(self.row, **fields)
+        await self.session.commit()
+        await publish_status(self.redis, self.iid, status_payload(self.row))
+
+
+async def _import_once(
+    ctx: dict[str, Any], session: Any, iid: UUID, import_id: str
+) -> dict[str, Any]:
+    """Settle-or-run one import row, inside the caller's session."""
+    repo = ProjectImportRepository(session)
+    row = await repo.get_by_id(iid)
+    if row is None:
+        return {"import_id": import_id, "status": "error", "error": "import not found"}
+    if is_terminal(ProjectImportStatus(row.status)):
         return _summary(row)
+
+    job = _Import(session, repo, ctx["redis"], iid, row)
+    if not await _still_owned(session, row):
+        await job.settle(
+            status=ProjectImportStatus.ERROR.value,
+            error_type="error",
+            error_message="requester no longer owns this project",
+            finished_at=_now(),
+        )
+        return _summary(row)
+
+    await job.settle(status=ProjectImportStatus.RUNNING.value, started_at=_now())
+    terminal = await _import_archive(session, ctx["object_store"], row, ctx["settings"], iid)
+
+    # Reload (a rollback above may have expired the row) and write the result.
+    job.row = await repo.get_by_id(iid)
+    if job.row is None:  # pragma: no cover - defensive
+        return {"import_id": import_id, "status": "error", "error": "import vanished"}
+    await job.settle(finished_at=_now(), **terminal)
+    if job.row.status != ProjectImportStatus.SUCCESS.value:
+        logger.info("project import %s ended status=%s", iid, job.row.status)
+    return _summary(job.row)
+
+
+async def _run_import_body(ctx: dict[str, Any], import_id: str) -> dict[str, Any]:
+    async with ctx["session_factory"]() as session:
+        return await _import_once(ctx, session, UUID(import_id), import_id)
 
 
 async def _stage_to_temp(store: Any, source_key: str, tmp_path: Path, max_bytes: int) -> None:

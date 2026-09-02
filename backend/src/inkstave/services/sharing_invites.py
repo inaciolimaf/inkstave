@@ -39,6 +39,32 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+async def _reject_if_member(session: AsyncSession, project_id: UUID, email: str) -> None:
+    """409 if the email already belongs to an active member of the project."""
+    user = (
+        await session.execute(select(User).where(func.lower(User.email) == email))
+    ).scalar_one_or_none()
+    if user is None:
+        return
+    member = await membership_of(session, project_id, user.id)
+    if member is not None and member.status == MembershipStatus.active:
+        raise AlreadyMemberError()
+
+
+async def _pending_invite(
+    session: AsyncSession, project_id: UUID, email: str
+) -> ProjectInvite | None:
+    return (
+        await session.execute(
+            select(ProjectInvite).where(
+                ProjectInvite.project_id == project_id,
+                func.lower(ProjectInvite.email) == email,
+                ProjectInvite.status == InviteStatus.pending,
+            )
+        )
+    ).scalar_one_or_none()
+
+
 async def create_invite(
     session: AsyncSession,
     project_id: UUID,
@@ -50,15 +76,7 @@ async def create_invite(
 ) -> tuple[ProjectInvite, str]:
     await require_owner(session, project_id, actor_id)
     normalized = email.strip().lower()
-
-    # 409 if the email already belongs to an active member.
-    existing_user = (
-        await session.execute(select(User).where(func.lower(User.email) == normalized))
-    ).scalar_one_or_none()
-    if existing_user is not None:
-        member = await membership_of(session, project_id, existing_user.id)
-        if member is not None and member.status == MembershipStatus.active:
-            raise AlreadyMemberError()
+    await _reject_if_member(session, project_id, normalized)
 
     raw_token = generate_token()
     token_hash = hash_token(raw_token)
@@ -66,33 +84,18 @@ async def create_invite(
 
     # Refresh an existing pending invite for the same (project, email) instead of
     # creating a duplicate.
-    pending = (
-        await session.execute(
-            select(ProjectInvite).where(
-                ProjectInvite.project_id == project_id,
-                func.lower(ProjectInvite.email) == normalized,
-                ProjectInvite.status == InviteStatus.pending,
-            )
+    invite = await _pending_invite(session, project_id, normalized)
+    if invite is None:
+        invite = ProjectInvite(
+            project_id=project_id,
+            email=normalized,
+            status=InviteStatus.pending,
         )
-    ).scalar_one_or_none()
-    if pending is not None:
-        pending.role = role
-        pending.token_hash = token_hash
-        pending.expires_at = expires_at
-        pending.invited_by = actor_id
-        await session.flush()
-        return pending, raw_token
-
-    invite = ProjectInvite(
-        project_id=project_id,
-        email=normalized,
-        role=role,
-        token_hash=token_hash,
-        status=InviteStatus.pending,
-        invited_by=actor_id,
-        expires_at=expires_at,
-    )
-    session.add(invite)
+        session.add(invite)
+    invite.role = role
+    invite.token_hash = token_hash
+    invite.expires_at = expires_at
+    invite.invited_by = actor_id
     await session.flush()
     return invite, raw_token
 
@@ -162,25 +165,30 @@ async def get_invite_preview(
     return invite, project, inviter
 
 
-async def accept_invite(session: AsyncSession, raw_token: str, actor: User) -> tuple[UUID, str]:
-    invite = await _invite_by_token(session, raw_token)
+async def _already_accepted(
+    session: AsyncSession, invite: ProjectInvite, actor: User
+) -> tuple[UUID, str]:
+    """Idempotent re-accept: succeeds only while the membership is still active."""
+    member = await membership_of(session, invite.project_id, actor.id)
+    if member is not None and member.status == MembershipStatus.active:
+        return invite.project_id, member.role
+    raise InviteGoneError()
 
-    # Idempotent: re-accepting a still-active membership succeeds.
-    if invite.status == InviteStatus.accepted:
-        member = await membership_of(session, invite.project_id, actor.id)
-        if member is not None and member.status == MembershipStatus.active:
-            return invite.project_id, member.role
-        raise InviteGoneError()
 
-    if invite.status != InviteStatus.pending or invite.expires_at < _now():
-        if invite.status == InviteStatus.pending:
-            invite.status = InviteStatus.expired
-            await session.flush()
-        raise InviteGoneError()
+async def _require_pending(session: AsyncSession, invite: ProjectInvite) -> None:
+    """Raise unless the invite is still pending and unexpired, expiring it if due."""
+    if invite.status == InviteStatus.pending and invite.expires_at >= _now():
+        return
+    if invite.status == InviteStatus.pending:
+        invite.status = InviteStatus.expired
+        await session.flush()
+    raise InviteGoneError()
 
-    if actor.email.strip().lower() != invite.email.strip().lower():
-        raise InviteEmailMismatchError()
 
+async def _grant_membership(
+    session: AsyncSession, invite: ProjectInvite, actor: User
+) -> ProjectMembership:
+    """Create or re-activate the actor's membership; an owner keeps their role."""
     member = await membership_of(session, invite.project_id, actor.id)
     if member is None:
         member = ProjectMembership(
@@ -193,7 +201,19 @@ async def accept_invite(session: AsyncSession, raw_token: str, actor: User) -> t
     elif member.role != MembershipRole.owner:
         member.role = invite.role
         member.status = MembershipStatus.active
+    return member
 
+
+async def accept_invite(session: AsyncSession, raw_token: str, actor: User) -> tuple[UUID, str]:
+    invite = await _invite_by_token(session, raw_token)
+    if invite.status == InviteStatus.accepted:
+        return await _already_accepted(session, invite, actor)
+
+    await _require_pending(session, invite)
+    if actor.email.strip().lower() != invite.email.strip().lower():
+        raise InviteEmailMismatchError()
+
+    member = await _grant_membership(session, invite, actor)
     invite.status = InviteStatus.accepted
     invite.responded_at = _now()
     await session.flush()

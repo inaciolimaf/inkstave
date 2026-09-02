@@ -105,12 +105,12 @@ class AuthSettingsMixin:
     rate_limit_register: str = "5/3600"
     rate_limit_refresh: str = "30/300"
     # Change-password / sensitive auth endpoints (spec 52 §5.2.1): 5/hour, user_or_ip.
-    rate_limit_auth_password: str = "5/3600"
+    rate_limit_auth_password: str = "5/3600"  # noqa: S105 — a "<limit>/<window>" policy, not a secret
     # Email link-based auth flows (spec 104). Request caps are per email+IP; the
     # reset-password callback cap is per-IP (token brute-force blunting).
     rate_limit_verify_email: str = "5/3600"
     rate_limit_magic_link: str = "5/3600"
-    rate_limit_reset_password: str = "10/3600"
+    rate_limit_reset_password: str = "10/3600"  # noqa: S105 — a "<limit>/<window>" policy, not a secret
     # Per-user policies hardened in spec 52 ("<limit>/<window_seconds>").
     rate_limit_compile: str = "20/60"
     rate_limit_agent: str = "30/60"
@@ -216,7 +216,10 @@ class CompileSettingsMixin:
     tectonic_cache_dir: str = "/var/cache/tectonic"
     tectonic_bundle_url: str = ""
     tectonic_offline: bool = False
-    compile_workdir_root: str = "/tmp/inkstave-compiles"
+    # Scratch root only: every compile gets its own `<root>/<compile_id>` directory
+    # (create_workdir, mode 0700) that is torn down afterwards, so the shared root
+    # is never written to directly. Override with COMPILE_WORKDIR_ROOT in production.
+    compile_workdir_root: str = "/tmp/inkstave-compiles"  # noqa: S108 — see above
     tectonic_compile_timeout_s: int = 60
     compile_max_input_files: int = 2000
     compile_max_input_bytes: int = 104_857_600  # 100 MiB
@@ -286,7 +289,9 @@ class ImportSettingsMixin:
             ".eps",
         ]
     )
-    import_workdir_root: str = "/tmp/inkstave-imports"  # scratch dir for the bounded temp copy
+    # Scratch root for the bounded temp copy; each import works inside its own
+    # subdirectory under it. Override with IMPORT_WORKDIR_ROOT in production.
+    import_workdir_root: str = "/tmp/inkstave-imports"  # noqa: S108 — see above
 
 
 class ExportSettingsMixin:

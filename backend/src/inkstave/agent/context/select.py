@@ -9,6 +9,7 @@ from inkstave.agent.context.models import (
     ContextBundle,
     ContextChunk,
     ProjectMap,
+    SectionMatch,
     StructureKind,
     StructureNode,
 )
@@ -65,6 +66,52 @@ def _fit(chunk: ContextChunk, remaining: int, count: TokenCounter) -> ContextChu
     )
 
 
+def _target_chunk(
+    match_node: StructureNode, file_reader: FileReader, surrounding_lines: int
+) -> ContextChunk | None:
+    """Priority 0: the target section's content + surrounding lines."""
+    content = file_reader(match_node.file_path)
+    if content is None:
+        return None
+    return ContextChunk(
+        kind="section",
+        file_path=match_node.file_path,
+        title=match_node.title,
+        text=_section_text(content, match_node, surrounding_lines),
+        priority=0,
+    )
+
+
+def _related_chunk(match: SectionMatch) -> ContextChunk:
+    """Priority 2: a sibling match's title (cheap grounding)."""
+    node = match.node
+    return ContextChunk(
+        kind="search",
+        file_path=node.file_path,
+        title=node.title,
+        text=f"Related: {node.command} '{node.title}' ({node.file_path}:{node.start_line})",
+        priority=2,
+    )
+
+
+def _candidates(
+    project_map: ProjectMap,
+    file_reader: FileReader,
+    matches: list[SectionMatch],
+    surrounding_lines: int,
+) -> list[ContextChunk]:
+    """Every chunk worth considering, in no particular order."""
+    chunks: list[ContextChunk] = []
+    if matches:
+        target = _target_chunk(matches[0].node, file_reader, surrounding_lines)
+        if target is not None:
+            chunks.append(target)
+    # Priority 1: a compact outline summary.
+    chunks.append(ContextChunk(kind="outline", text=_outline_summary(project_map), priority=1))
+    chunks.extend(_related_chunk(m) for m in matches[1:4])
+    return chunks
+
+
 def select_context(
     project_map: ProjectMap,
     file_reader: FileReader,
@@ -74,41 +121,10 @@ def select_context(
     surrounding_lines: int = 40,
     token_count: TokenCounter = estimate_tokens,
 ) -> ContextBundle:
-    candidates: list[ContextChunk] = []
-
-    # Priority 0: the target section's content + surrounding lines.
     matches = locate_section(project_map, goal)
-    target = matches[0].node if matches else None
-    if target is not None:
-        content = file_reader(target.file_path)
-        if content is not None:
-            candidates.append(
-                ContextChunk(
-                    kind="section",
-                    file_path=target.file_path,
-                    title=target.title,
-                    text=_section_text(content, target, surrounding_lines),
-                    priority=0,
-                )
-            )
-
-    # Priority 1: a compact outline summary.
-    candidates.append(ContextChunk(kind="outline", text=_outline_summary(project_map), priority=1))
-
-    # Priority 2: the next-highest-ranked sibling matches' titles (cheap grounding).
-    for match in matches[1:4]:
-        candidates.append(
-            ContextChunk(
-                kind="search",
-                file_path=match.node.file_path,
-                title=match.node.title,
-                text=f"Related: {match.node.command} '{match.node.title}' "
-                f"({match.node.file_path}:{match.node.start_line})",
-                priority=2,
-            )
-        )
-
+    candidates = _candidates(project_map, file_reader, matches, surrounding_lines)
     candidates.sort(key=lambda c: c.priority)
+
     chosen: list[ContextChunk] = []
     used = 0
     for chunk in candidates:

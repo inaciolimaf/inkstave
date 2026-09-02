@@ -13,7 +13,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from inkstave.config import Settings
@@ -143,9 +143,7 @@ class ResendEmailSender:
         # network-free; production leaves it None (a real connection).
         self._transport = transport
 
-    async def send(self, email: OutgoingEmail) -> None:
-        import httpx
-
+    def _payload(self, email: OutgoingEmail) -> dict[str, object]:
         payload: dict[str, object] = {
             "from": email.from_addr or self._default_from,
             "to": [email.to],
@@ -154,15 +152,20 @@ class ResendEmailSender:
         }
         if email.html_body is not None:
             payload["html"] = email.html_body
+        return payload
+
+    async def _post(self, email: OutgoingEmail) -> Any:
+        """POST the message, logging (never the key) and re-raising on a transport error."""
+        import httpx
 
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout_s,
                 transport=self._transport,  # type: ignore[arg-type]
             ) as client:
-                response = await client.post(
+                return await client.post(
                     f"{self._base_url}/emails",
-                    json=payload,
+                    json=self._payload(email),
                     headers={
                         "Authorization": f"Bearer {self._api_key}",
                         "Content-Type": "application/json",
@@ -173,6 +176,15 @@ class ResendEmailSender:
             logger.warning("email_resend_transport_error: to=%s error=%s", email.to, exc)
             raise
 
+    @staticmethod
+    def _message_id(response: Any) -> str:
+        try:
+            return str(response.json().get("id", ""))
+        except ValueError:  # non-JSON 2xx body — fine, just no id to log
+            return ""
+
+    async def send(self, email: OutgoingEmail) -> None:
+        response = await self._post(email)
         if response.status_code >= 400:
             # Surface the HTTP status + any error body (never the key) and raise to retry.
             logger.warning(
@@ -182,13 +194,7 @@ class ResendEmailSender:
                 response.text[:500],
             )
             response.raise_for_status()
-
-        message_id = ""
-        try:
-            message_id = str(response.json().get("id", ""))
-        except ValueError:  # non-JSON 2xx body — fine, just no id to log
-            pass
-        logger.debug("email_resend_sent: to=%s id=%s", email.to, message_id)
+        logger.debug("email_resend_sent: to=%s id=%s", email.to, self._message_id(response))
 
 
 def get_email_sender(settings: Settings) -> EmailSender:

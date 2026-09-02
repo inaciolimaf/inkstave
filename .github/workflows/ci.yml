@@ -34,6 +34,8 @@ jobs:
         run: uv run --project backend ruff check backend/src backend/tests
       - name: ruff format --check
         run: uv run --project backend ruff format --check backend/src backend/tests
+      - name: function-length ceiling
+        run: uv run --project backend python scripts/lint_function_length.py
       - uses: pnpm/action-setup@v4
         with: { version: 9 }
       - uses: actions/setup-node@v4

@@ -39,6 +39,19 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "_uid": str(user.id)}
 
 
+def _artifacts(outdir: Path, *, with_log: bool) -> list[CompileArtifact]:
+    """A log artifact (the parse target) or, without one, a bare PDF."""
+    outdir.mkdir(parents=True, exist_ok=True)
+    if with_log:
+        log_path = outdir / "main.log"
+        log_path.write_bytes(SAMPLE_LOG.encode())
+        size = log_path.stat().st_size
+        return [CompileArtifact("main.log", "main.log", log_path, size, "text/plain")]
+    pdf_path = outdir / "output.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7")
+    return [CompileArtifact("output.pdf", "output.pdf", pdf_path, 8, "application/pdf")]
+
+
 async def _seed(
     db_session: AsyncSession,
     backend: LocalObjectStore,
@@ -54,22 +67,6 @@ async def _seed(
     )
     await repo.update(row, status="failure")
 
-    outdir = tmp_path / "wd" / "output"
-    outdir.mkdir(parents=True, exist_ok=True)
-    artifacts = []
-    if with_log:
-        log_path = outdir / "main.log"
-        log_path.write_bytes(SAMPLE_LOG.encode())
-        artifacts.append(
-            CompileArtifact("main.log", "main.log", log_path, log_path.stat().st_size, "text/plain")
-        )
-    else:
-        pdf_path = outdir / "output.pdf"
-        pdf_path.write_bytes(b"%PDF-1.7")
-        artifacts.append(
-            CompileArtifact("output.pdf", "output.pdf", pdf_path, 8, "application/pdf")
-        )
-
     result = CompileResult(
         status=CompileStatus.FAILURE,
         pdf=None,
@@ -78,7 +75,7 @@ async def _seed(
         stderr="",
         exit_code=1,
         duration_ms=1,
-        artifacts=artifacts,
+        artifacts=_artifacts(tmp_path / "wd" / "output", with_log=with_log),
     )
     store = OutputStore(
         storage=backend,

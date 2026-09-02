@@ -48,46 +48,54 @@ class BodySizeLimitMiddleware:
         is_upload = any(stripped.endswith(suffix) for suffix in self._UPLOAD_SUFFIXES)
         return self.upload_cap if is_upload else self.json_cap
 
+    @staticmethod
+    def _declared_over(scope: Scope, cap: int) -> bool:
+        """True when the request declares a Content-Length above `cap`."""
+        content_length = Headers(scope=scope).get("content-length")
+        if content_length is None:
+            return False
+        try:
+            return int(content_length) > cap
+        except ValueError:
+            return False
+
+    def _guarded_pipe(self, receive: Receive, send: Send, cap: int) -> tuple[Receive, Send]:
+        """A receive/send pair that aborts with 413 once `cap` bytes are exceeded.
+
+        Handles a streamed body without (or with an under-declared) Content-Length:
+        it counts what actually arrives and rejects before the route can answer.
+        """
+        state = {"received": 0, "too_large": False, "rejected": False}
+
+        async def counting_receive() -> Message:
+            message = await receive()
+            if message["type"] == "http.request":
+                state["received"] += len(message.get("body", b""))
+                state["too_large"] = state["received"] > cap
+            return message
+
+        async def guarded_send(message: Message) -> None:
+            if state["rejected"]:
+                return
+            if state["too_large"]:
+                state["rejected"] = True
+                await self._reject(send, cap)
+                return
+            await send(message)
+
+        return counting_receive, guarded_send
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
         cap = self._cap(scope["path"])
-        content_length = Headers(scope=scope).get("content-length")
-        if content_length is not None:
-            try:
-                declared = int(content_length)
-            except ValueError:
-                declared = 0
-            if declared > cap:
-                await self._reject(send, cap)
-                return
+        if self._declared_over(scope, cap):
+            await self._reject(send, cap)
+            return
 
-        # Streamed body without (or under-declared) Content-Length: count and abort.
-        received = 0
-        too_large = False
-
-        async def counting_receive() -> Message:
-            nonlocal received, too_large
-            message = await receive()
-            if message["type"] == "http.request":
-                received += len(message.get("body", b""))
-                if received > cap:
-                    too_large = True
-            return message
-
-        sent_413 = False
-
-        async def guarded_send(message: Message) -> None:
-            nonlocal sent_413
-            if too_large and not sent_413:
-                sent_413 = True
-                await self._reject(send, cap)
-                return
-            if not sent_413:
-                await send(message)
-
+        counting_receive, guarded_send = self._guarded_pipe(receive, send, cap)
         await self.app(scope, counting_receive, guarded_send)
 
     async def _reject(self, send: Send, limit: int) -> None:

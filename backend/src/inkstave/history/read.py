@@ -151,8 +151,7 @@ async def get_diff(
         to_text = await current_text(session, doc_id)
         to_value: int | str = "current"
     else:
-        assert isinstance(to, int)
-        to_text = text_from_state(await reconstruct_state(session, store, doc_id, to))
+        to_text = text_from_state(await reconstruct_state(session, store, doc_id, int(to)))
         to_value = to
 
     limit = settings.history_diff_max_bytes

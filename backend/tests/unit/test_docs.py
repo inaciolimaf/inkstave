@@ -156,27 +156,31 @@ def _markdown_files() -> list[Path]:
     return files
 
 
+def _link_problem(md: Path, target: str) -> str | None:
+    """The reason `target` does not resolve from `md`, or ``None`` when it does."""
+    path_part, _, anchor = target.partition("#")
+    dest = md
+    if path_part:
+        dest = (md.parent / path_part).resolve()
+        if not dest.exists():
+            return "missing path"
+    if not anchor or dest.suffix != ".md" or not dest.is_file():
+        return None
+    slugs = {_slug(h) for h in _headings(dest.read_text("utf-8"))}
+    return None if anchor in slugs else "missing anchor"
+
+
 def test_internal_links_resolve() -> None:
-    broken: list[str] = []
     link_re = re.compile(r"\]\(([^)]+)\)")
+    broken: list[str] = []
     for md in _markdown_files():
-        text = md.read_text("utf-8")
-        for target in link_re.findall(text):
-            target = target.strip()
+        for raw in link_re.findall(md.read_text("utf-8")):
+            target = raw.strip()
             if target.startswith(("http://", "https://", "mailto:", "<")):
                 continue
-            path_part, _, anchor = target.partition("#")
-            if path_part:
-                dest = (md.parent / path_part).resolve()
-                if not dest.exists():
-                    broken.append(f"{md.relative_to(_ROOT)} -> {target} (missing path)")
-                    continue
-            else:
-                dest = md  # same-file anchor
-            if anchor and dest.suffix == ".md" and dest.is_file():
-                slugs = {_slug(h) for h in _headings(dest.read_text("utf-8"))}
-                if anchor not in slugs:
-                    broken.append(f"{md.relative_to(_ROOT)} -> {target} (missing anchor)")
+            problem = _link_problem(md, target)
+            if problem is not None:
+                broken.append(f"{md.relative_to(_ROOT)} -> {target} ({problem})")
     assert broken == [], "broken internal links:\n" + "\n".join(broken)
 
 

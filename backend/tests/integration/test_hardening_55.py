@@ -139,23 +139,15 @@ async def test_unknown_request_field_is_rejected(async_client: AsyncClient) -> N
     assert res.status_code == 422
 
 
-def test_request_models_forbid_extra_fields() -> None:
-    from inkstave.agent.api.schemas import CreateSessionIn, PostMessageIn
+def _core_request_models() -> list[type]:
+    """Auth, user, project and tree request bodies."""
     from inkstave.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest
-    from inkstave.schemas.compile import CompileRequest
     from inkstave.schemas.document import DocumentContentReplace
-    from inkstave.schemas.history import (
-        LabelCreate,
-        ProjectLabelCreate,
-        ProjectRestoreRequest,
-        RestoreRequest,
-    )
     from inkstave.schemas.project import ProjectCreate, ProjectRename
-    from inkstave.schemas.sharing import InviteCreate, MemberRoleUpdate, TransferRequest
     from inkstave.schemas.tree import CreateEntityIn, MoveEntityIn, RenameEntityIn
     from inkstave.schemas.user import RegisterRequest
 
-    request_models = [
+    return [
         LoginRequest,
         RefreshRequest,
         LogoutRequest,
@@ -166,6 +158,22 @@ def test_request_models_forbid_extra_fields() -> None:
         CreateEntityIn,
         RenameEntityIn,
         MoveEntityIn,
+    ]
+
+
+def _feature_request_models() -> list[type]:
+    """Sharing, compile, history and agent request bodies."""
+    from inkstave.agent.api.schemas import CreateSessionIn, PostMessageIn
+    from inkstave.schemas.compile import CompileRequest
+    from inkstave.schemas.history import (
+        LabelCreate,
+        ProjectLabelCreate,
+        ProjectRestoreRequest,
+        RestoreRequest,
+    )
+    from inkstave.schemas.sharing import InviteCreate, MemberRoleUpdate, TransferRequest
+
+    return [
         MemberRoleUpdate,
         TransferRequest,
         InviteCreate,
@@ -177,5 +185,17 @@ def test_request_models_forbid_extra_fields() -> None:
         PostMessageIn,
         CreateSessionIn,
     ]
-    offenders = [m.__name__ for m in request_models if m.model_config.get("extra") != "forbid"]
+
+
+def _request_models() -> list[type]:
+    """Every model that backs a request body — all must reject unknown fields."""
+    return [*_core_request_models(), *_feature_request_models()]
+
+
+def test_request_models_forbid_extra_fields() -> None:
+    offenders = [
+        m.__name__
+        for m in _request_models()
+        if m.model_config.get("extra") != "forbid"  # type: ignore[attr-defined]
+    ]
     assert offenders == [], f"request models missing extra='forbid': {offenders}"

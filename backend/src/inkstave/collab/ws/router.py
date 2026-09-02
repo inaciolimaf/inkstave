@@ -44,7 +44,9 @@ from inkstave.observability.context import bind_context, clear_context
 from inkstave.observability.metrics import track_ws
 
 if TYPE_CHECKING:
+    from inkstave.collab.manager import OpenDocument
     from inkstave.collab.ws.components import CollabComponents
+    from inkstave.db.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,73 @@ __all__ = [
 router = APIRouter()
 
 
+async def _admit(
+    websocket: WebSocket,
+    components: CollabComponents,
+    project_id: UUID,
+    document_id: UUID,
+    token: str,
+) -> tuple[User, bool] | int:
+    """Authenticate + authorize BEFORE accept (never expose room data first).
+
+    Returns the user and their write flag, or the close code to reject with.
+    """
+    token_service = build_token_service(get_settings())
+    async with components.session_factory() as session:
+        try:
+            user = await authenticate_ws_token(token, token_service, session)
+        except NotAuthenticatedError:
+            # Non-sensitive context only — never the token. A non-auth error (e.g. a
+            # DB failure) deliberately propagates instead of masquerading as 4401.
+            logger.warning(
+                "collab ws auth failed",
+                extra={"project_id": str(project_id), "document_id": str(document_id)},
+            )
+            return CLOSE_UNAUTHORIZED
+        deny_code, can_write = await _authorize(session, user, project_id, document_id)
+    return deny_code if deny_code is not None else (user, can_write)
+
+
+async def _join_room(components: CollabComponents, conn: Connection) -> OpenDocument:
+    """Attach the connection to its room, subscribing to Redis on first join."""
+    handle = await components.manager.acquire(conn.document_id)
+    _room, created = components.rooms.join(conn)
+    if created:
+        components.subscriptions[conn.document_id] = await components.redis_bridge.subscribe(
+            conn.document_id, _make_forwarder(components, conn.document_id)
+        )
+    return handle
+
+
+async def _handshake(components: CollabComponents, conn: Connection, handle: OpenDocument) -> None:
+    """Server side of the sync handshake: our Step 1 + the awareness snapshot."""
+    conn.try_enqueue(encode_sync_step1(handle.ydoc.get_state_vector()))
+    # Mark our step1 as sent so a client SyncStep1 doesn't re-send it.
+    conn.server_step1_sent = True  # type: ignore[attr-defined]
+    snapshot = components.awareness.snapshot(conn.document_id)
+    if snapshot is not None:
+        conn.try_enqueue(encode_awareness(snapshot))
+
+
+async def _serve(components: CollabComponents, conn: Connection) -> None:
+    """Run one accepted connection to completion, always cleaning it up."""
+    handle = await _join_room(components, conn)
+    writer = asyncio.create_task(_writer(conn))
+    try:
+        await _handshake(components, conn, handle)
+        await _receive_loop(conn, components, components.ws_settings)
+    except Exception:
+        # Abrupt disconnect / socket error: expected in normal operation, so never
+        # escalate — but record it so a systematic failure is visible.
+        logger.debug("collab session ended abnormally", exc_info=True)
+    finally:
+        conn.closed = True
+        writer.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await writer
+        await _cleanup(components, conn)
+
+
 @router.websocket("/ws/collab/projects/{project_id}/documents/{document_id}")
 async def collab_ws(
     websocket: WebSocket,
@@ -73,32 +142,26 @@ async def collab_ws(
     if components is None:
         await websocket.close(code=CLOSE_DEAD)
         return
-
-    settings = get_settings()
-    token_service = build_token_service(settings)
-
-    # --- Authenticate + authorize BEFORE accept (never expose room data first). ---
     if not token:
         await websocket.close(code=CLOSE_UNAUTHORIZED)
         return
-    async with components.session_factory() as session:
-        try:
-            user = await authenticate_ws_token(token, token_service, session)
-        except NotAuthenticatedError:
-            # Non-sensitive context only — never the token. A non-auth error (e.g. a
-            # DB failure) deliberately propagates instead of masquerading as 4401.
-            logger.warning(
-                "collab ws auth failed",
-                extra={"project_id": str(project_id), "document_id": str(document_id)},
-            )
-            await websocket.close(code=CLOSE_UNAUTHORIZED)
-            return
-        deny_code, can_write = await _authorize(session, user, project_id, document_id)
-    if deny_code is not None:
-        await websocket.close(code=deny_code)
+
+    admitted = await _admit(websocket, components, project_id, document_id, token)
+    if isinstance(admitted, int):
+        await websocket.close(code=admitted)
         return
+    user, can_write = admitted
 
     await websocket.accept()
+    conn = Connection(
+        id=uuid4().hex,
+        user_id=user.id,
+        document_id=document_id,
+        websocket=websocket,
+        send_queue=asyncio.Queue(maxsize=components.ws_settings.send_queue_max),
+        can_write=can_write,
+        project_id=project_id,
+    )
     # Observability (spec 51): bind WS context + track the active-connections gauge for
     # the whole connection; track_ws/clear_context in finally so a crash never leaks them.
     ctx_tokens = bind_context(
@@ -106,41 +169,6 @@ async def collab_ws(
     )
     try:
         with track_ws("collab"):
-            ws = components.ws_settings
-            conn = Connection(
-                id=uuid4().hex,
-                user_id=user.id,
-                document_id=document_id,
-                websocket=websocket,
-                send_queue=asyncio.Queue(maxsize=ws.send_queue_max),
-                can_write=can_write,
-                project_id=project_id,
-            )
-
-            handle = await components.manager.acquire(document_id)
-            _room, created = components.rooms.join(conn)
-            if created:
-                components.subscriptions[document_id] = await components.redis_bridge.subscribe(
-                    document_id, _make_forwarder(components, document_id)
-                )
-
-            writer = asyncio.create_task(_writer(conn))
-            try:
-                # Server side of the sync handshake: our Step 1 + the awareness snapshot.
-                conn.try_enqueue(encode_sync_step1(handle.ydoc.get_state_vector()))
-                # Mark our step1 as sent so a client SyncStep1 doesn't re-send it.
-                conn.server_step1_sent = True  # type: ignore[attr-defined]
-                snapshot = components.awareness.snapshot(document_id)
-                if snapshot is not None:
-                    conn.try_enqueue(encode_awareness(snapshot))
-                await _receive_loop(conn, components, ws)
-            except Exception:
-                pass  # abrupt disconnect / socket error — fall through to cleanup
-            finally:
-                conn.closed = True
-                writer.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await writer
-                await _cleanup(components, conn)
+            await _serve(components, conn)
     finally:
         clear_context(ctx_tokens)

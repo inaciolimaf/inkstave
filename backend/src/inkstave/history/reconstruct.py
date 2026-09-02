@@ -17,6 +17,7 @@ from inkstave.collab.ydocument import YDocument
 from inkstave.db.models.crdt import CrdtDocumentState, CrdtUpdate
 from inkstave.db.models.history import HistoryChunk, HistoryUpdate
 from inkstave.errors import NotFoundError
+from inkstave.invariants import require
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,15 +52,15 @@ async def _read_blob(store: ObjectStore, key: str) -> bytes:
 async def _chunk_base(store: ObjectStore, chunk: HistoryChunk) -> bytes:
     if chunk.base_snapshot is not None:
         return chunk.base_snapshot
-    assert chunk.base_snapshot_blob_key is not None
-    return await _read_blob(store, chunk.base_snapshot_blob_key)
+    key = require(chunk.base_snapshot_blob_key, f"chunk {chunk.id} has no snapshot and no blob key")
+    return await _read_blob(store, key)
 
 
 async def _update_payload(store: ObjectStore, row: HistoryUpdate) -> bytes:
     if row.payload is not None:
         return row.payload
-    assert row.payload_blob_key is not None
-    return await _read_blob(store, row.payload_blob_key)
+    key = require(row.payload_blob_key, f"history update {row.id} has no payload and no blob key")
+    return await _read_blob(store, key)
 
 
 async def reconstruct_doc(

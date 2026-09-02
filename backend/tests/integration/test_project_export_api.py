@@ -265,29 +265,28 @@ class _SessionCtx:
         return False
 
 
-async def test_export_import_round_trip(
-    async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore, redis: Any
-) -> None:
-    """AC13 — export then re-import reproduces the tree (paths, doc text, file bytes)."""
+def _override_enqueuer(async_client: AsyncClient) -> None:
+    """The import endpoint enqueues; this test runs the job inline instead."""
     from inkstave.dependencies import get_import_enqueuer
-    from inkstave.services.import_jobs import import_project_zip
-
-    # The import endpoint enqueues; run the job inline against the same session/store.
-    captured: list[str] = []
 
     class _Fake:
         async def enqueue(self, import_id: Any) -> str | None:
-            captured.append(str(import_id))
             return "job"
 
-    async_client._transport.app.dependency_overrides[get_import_enqueuer] = lambda: _Fake()  # type: ignore[attr-defined]
+    app = async_client._transport.app  # type: ignore[attr-defined]
+    app.dependency_overrides[get_import_enqueuer] = lambda: _Fake()
 
-    headers, _ = await _auth(db_session)
-    pid = await _project(async_client, headers, "Original")
-    await _seed_tree(async_client, pid, headers)
-    zip_bytes = (
-        await async_client.get(f"/api/v1/projects/{pid}/export.zip", headers=headers)
-    ).content
+
+async def _import_inline(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    store: ObjectStore,
+    redis: Any,
+    headers: dict[str, str],
+    zip_bytes: bytes,
+) -> tuple[str, str]:
+    """POST the archive, then run the enqueued import job inline. Returns (pid, iid)."""
+    from inkstave.services.import_jobs import import_project_zip
 
     imp = await async_client.post(
         "/api/v1/projects/import",
@@ -295,26 +294,43 @@ async def test_export_import_round_trip(
         headers=headers,
     )
     assert imp.status_code == 202, imp.text
-    new_pid, iid = imp.json()["project_id"], imp.json()["import_id"]
     ctx = {
         "settings": get_settings(),
         "redis": redis,
         "object_store": store,
         "session_factory": lambda: _SessionCtx(db_session),
     }
-    await import_project_zip(ctx, iid)
+    await import_project_zip(ctx, imp.json()["import_id"])
+    return imp.json()["project_id"], imp.json()["import_id"]
+
+
+def _flatten(node: dict[str, Any]) -> dict[str, str]:
+    """``{path: type}`` for every descendant of a tree node."""
+    out: dict[str, str] = {}
+    for child in node.get("children") or []:
+        out[child["path"]] = child["type"]
+        out.update(_flatten(child))
+    return out
+
+
+async def test_export_import_round_trip(
+    async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore, redis: Any
+) -> None:
+    """AC13 — export then re-import reproduces the tree (paths, doc text, file bytes)."""
+    _override_enqueuer(async_client)
+    headers, _ = await _auth(db_session)
+    pid = await _project(async_client, headers, "Original")
+    await _seed_tree(async_client, pid, headers)
+    zip_bytes = (
+        await async_client.get(f"/api/v1/projects/{pid}/export.zip", headers=headers)
+    ).content
+
+    new_pid, iid = await _import_inline(async_client, db_session, store, redis, headers, zip_bytes)
 
     status = (
         await async_client.get(f"/api/v1/projects/{new_pid}/import/{iid}", headers=headers)
     ).json()
     assert status["status"] == "success"
-
-    def _flatten(node: dict[str, Any]) -> dict[str, str]:
-        out: dict[str, str] = {}
-        for child in node.get("children") or []:
-            out[child["path"]] = child["type"]
-            out.update(_flatten(child))
-        return out
 
     tree = (await async_client.get(f"/api/v1/projects/{new_pid}/tree", headers=headers)).json()
     nodes = _flatten(tree["root"])

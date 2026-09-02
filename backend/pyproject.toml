@@ -65,12 +65,50 @@ target-version = "py312"
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "ASYNC"]
+# `C901` + the `PLR09xx` family cap structural complexity; `S` (bandit) covers the
+# security surface; `RUF100` keeps suppressions honest by failing on any `noqa`
+# that no longer silences anything. Thresholds and rationale:
+# docs/adr/0106-complexity-and-security-lint.md. The line ceiling per function
+# (30) has no ruff equivalent and is enforced by scripts/lint_function_length.py.
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "ASYNC",
+    "C901",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "RUF100",
+    "S",
+]
+
+[tool.ruff.lint.mccabe]
+# Deliberately stricter than ruff's default of 10: a function with more than six
+# independent paths is past the point where a reader can hold it in their head.
+max-complexity = 6
+
+[tool.ruff.lint.pylint]
+# `max-args` is loosened from ruff's default of 5 — DI-heavy FastAPI/service
+# constructors legitimately take more — while the other three are ruff's
+# defaults, restated here so the whole complexity budget is readable in one place.
+max-args = 8
+max-branches = 12
+max-returns = 6
+max-statements = 50
 
 [tool.ruff.lint.per-file-ignores]
 # The in-process ASGI WebSocket test client exposes idiomatic `timeout=` params
 # (mirroring Starlette's TestClient / the `websockets` API); ASYNC109 doesn't fit.
 "tests/collab_ws_harness.py" = ["ASYNC109"]
+# Tests are held to the same complexity budget as `src`, but bandit's credential
+# and sandbox heuristics do not apply to them: `assert` *is* the assertion
+# mechanism, fixture passwords/tokens are deliberately fake, `0.0.0.0` appears in
+# bind-address assertions, and `/tmp` paths are settings fixtures, not real I/O.
+"tests/**" = ["S101", "S104", "S105", "S106", "S107", "S108"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's dependency-injection markers are designed to be call expressions in

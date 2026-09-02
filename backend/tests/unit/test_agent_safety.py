@@ -10,6 +10,7 @@ import pytest
 
 from inkstave.agent.safety import (
     AgentAuditAction,
+    AuditSubject,
     acquire_run,
     audit,
     check_rate_limit,
@@ -127,4 +128,4 @@ async def test_audit_failure_is_isolated() -> None:
             pass
 
     # Must not raise — auditing never crashes a run (AC9).
-    await audit(_Boom(), AgentAuditAction.run_start, user_id=uuid4())  # type: ignore[arg-type]
+    await audit(_Boom(), AgentAuditAction.run_start, AuditSubject(uuid4()))  # type: ignore[arg-type]

@@ -90,6 +90,40 @@ def _ordinal_match(query: str, sections: list[StructureNode]) -> SectionMatch | 
     return None
 
 
+def _exact_score(
+    title: str, label: str, query: str, concepts: set[str]
+) -> tuple[float, str] | None:
+    """The first exact/synonym rule that fires, or ``None`` to fall through to fuzzy."""
+    if title and query == title:
+        return 1.0, "exact title"
+    if label and query == label:
+        return _SCORE_LABEL_MATCH, "label"
+    if concepts and title and any(c in title for c in concepts):
+        return _SCORE_SYNONYM, "synonym"
+    return None
+
+
+def _fuzzy_score(title: str, query: str, query_tokens: set[str]) -> tuple[float, str]:
+    """Substring, then token-overlap scoring; ``(0.0, "")`` when neither hits."""
+    if not title:
+        return 0.0, ""
+    if query in title or title in query:
+        return _SCORE_SUBSTRING, "substring"
+    overlap = len(query_tokens & set(title.split())) / max(1, len(query_tokens))
+    if not overlap:
+        return 0.0, ""
+    return round(overlap * _SCORE_TOKEN_OVERLAP, 3), "token overlap"
+
+
+def _score_node(
+    node: StructureNode, query: str, concepts: set[str], query_tokens: set[str]
+) -> tuple[float, str]:
+    """How well one heading answers `query`; ``(0.0, "")`` when it does not."""
+    title = _normalize(node.title or "")
+    exact = _exact_score(title, (node.label or "").lower(), query, concepts)
+    return exact if exact is not None else _fuzzy_score(title, query, query_tokens)
+
+
 def locate_section(project_map: ProjectMap, query: str) -> list[SectionMatch]:
     sections = _flatten(project_map.outline)
     if not sections:
@@ -100,28 +134,14 @@ def locate_section(project_map: ProjectMap, query: str) -> list[SectionMatch]:
     if ordinal is not None:
         return [ordinal]
 
-    matches: list[SectionMatch] = []
     concepts = _concepts(q)
     q_tokens = set(q.split())
-    for node in sections:
-        title = _normalize(node.title or "")
-        label = (node.label or "").lower()
-        score = 0.0
-        reason = ""
-        if title and q == title:
-            score, reason = 1.0, "exact title"
-        elif label and q == label:
-            score, reason = _SCORE_LABEL_MATCH, "label"
-        elif concepts and title and any(c in title for c in concepts):
-            score, reason = _SCORE_SYNONYM, "synonym"
-        elif title and (q in title or title in q):
-            score, reason = _SCORE_SUBSTRING, "substring"
-        elif title:
-            overlap = len(q_tokens & set(title.split())) / max(1, len(q_tokens))
-            if overlap:
-                score, reason = round(overlap * _SCORE_TOKEN_OVERLAP, 3), "token overlap"
-        if score > 0:
-            matches.append(SectionMatch(node=node, score=score, reason=reason))
-
+    matches = [
+        SectionMatch(node=node, score=score, reason=reason)
+        for node, (score, reason) in (
+            (node, _score_node(node, q, concepts, q_tokens)) for node in sections
+        )
+        if score > 0
+    ]
     matches.sort(key=lambda m: m.score, reverse=True)
     return matches
