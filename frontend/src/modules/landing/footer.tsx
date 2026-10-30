@@ -27,7 +27,7 @@ export function ClosingCta() {
           className="pointer-events-none absolute inset-0 opacity-[0.07]"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(to bottom, transparent 0, transparent 31px, white 31px, white 32px)",
+              "repeating-linear-gradient(to bottom, transparent 0, transparent 31px, hsl(var(--on-accent)) 31px, hsl(var(--on-accent)) 32px)",
           }}
         />
         <div className="relative">

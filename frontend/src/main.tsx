@@ -6,6 +6,7 @@ import { App } from "@/App";
 import { AuthProvider } from "@/modules/auth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
+import "@/fonts";
 import "@/i18n/config";
 import "@/index.css";
 

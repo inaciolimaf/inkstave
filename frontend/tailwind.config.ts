@@ -84,8 +84,8 @@ export default {
       // `font-mono`). `sans` is intentionally left as the Tailwind default so
       // the existing app keeps its system font stack.
       fontFamily: {
-        serif: ['"Newsreader"', "Georgia", "Cambria", "serif"],
-        mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        serif: ['"Newsreader Variable"', "Georgia", "Cambria", "serif"],
+        mono: ['"JetBrains Mono Variable"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
       fontSize: {
         small: "var(--text-small)",

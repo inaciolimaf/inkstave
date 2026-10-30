@@ -3,6 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { reducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /*
@@ -34,14 +35,6 @@ interface DemoState {
   chips: number; // tool chips shown (0–2)
 }
 
-function prefersReducedMotion() {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
-
 export function AgentDemo() {
   const { t } = useTranslation("landing");
   const prompt = t("demo.prompt");
@@ -49,7 +42,7 @@ export function AgentDemo() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
+    if (reducedMotion()) {
       setState({ phase: "applied", typed: prompt.length, chips: 2 });
       return;
     }
@@ -118,8 +111,8 @@ export function AgentDemo() {
             <FileText className="size-3.5" />
             main.tex
           </span>
-          <span className="ml-auto flex items-center gap-1.5 text-[0.7rem] font-medium text-emerald-700">
-            <span className="size-1.5 rounded-full bg-emerald-500 pulse-dot" />
+          <span className="ml-auto flex items-center gap-1.5 text-[0.7rem] font-medium text-[hsl(var(--ink-added))]">
+            <span className="size-1.5 rounded-full bg-[hsl(var(--ink-added-mark))] pulse-dot" />
             {t("demo.live")}
           </span>
         </div>
@@ -132,7 +125,7 @@ export function AgentDemo() {
             <CodeLine
               key={`${applied ? "a" : "b"}-${i}`}
               n={12 + i}
-              className={cn(applied && "rise-in bg-emerald-500/10")}
+              className={cn(applied && "rise-in bg-[hsl(var(--ink-added-mark)/0.1)]")}
             >
               {line}
             </CodeLine>
@@ -213,14 +206,14 @@ function Conversation({
           </div>
           <pre className="overflow-x-auto px-2.5 py-2 font-mono text-[0.66rem] leading-relaxed">
             {ABSTRACT_BEFORE.map((l, i) => (
-              <div key={`r${i}`} className="text-rose-700/90">
-                <span className="mr-1.5 select-none text-rose-400">−</span>
+              <div key={`r${i}`} className="text-[hsl(var(--ink-removed)/0.9)]">
+                <span className="mr-1.5 select-none text-[hsl(var(--ink-removed-mark))]">−</span>
                 {l}
               </div>
             ))}
             {ABSTRACT_AFTER.map((l, i) => (
-              <div key={`g${i}`} className="text-emerald-700">
-                <span className="mr-1.5 select-none text-emerald-500">+</span>
+              <div key={`g${i}`} className="text-[hsl(var(--ink-added))]">
+                <span className="mr-1.5 select-none text-[hsl(var(--ink-added-mark))]">+</span>
                 {l}
               </div>
             ))}
@@ -229,7 +222,9 @@ function Conversation({
             <span
               className={cn(
                 "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[0.7rem] font-medium transition-all",
-                state.phase === "applying" ? "scale-95 bg-emerald-600 text-white" : "bg-ink text-paper",
+                state.phase === "applying"
+                  ? "scale-95 bg-[hsl(var(--ink-added-solid))] text-[hsl(var(--on-accent))]"
+                  : "bg-ink text-paper",
               )}
             >
               <Check className="size-3" /> {t("demo.accept")}
@@ -244,7 +239,7 @@ function Conversation({
 
       {/* Applied confirmation */}
       {state.phase === "applied" && (
-        <div className="rise-in mt-auto flex items-center gap-1.5 rounded-md bg-emerald-500/12 px-2.5 py-1.5 text-[0.72rem] font-medium text-emerald-800">
+        <div className="rise-in mt-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[0.72rem] font-medium text-[hsl(var(--ink-added-deep))]">
           <Check className="size-3.5" /> {t("demo.applied")}
           <ArrowRight className="ml-auto size-3.5 opacity-60" />
         </div>
@@ -277,7 +272,7 @@ function Tex({ children }: { children: string }) {
       {parts.map((p, i) => {
         if (p.startsWith("\\"))
           return (
-            <span key={i} className="text-indigo-700">
+            <span key={i} className="text-[hsl(var(--ink-command))]">
               {p}
             </span>
           );
@@ -288,7 +283,7 @@ function Tex({ children }: { children: string }) {
             </span>
           );
         return (
-          <span key={i} className="text-emerald-800">
+          <span key={i} className="text-[hsl(var(--ink-added-deep))]">
             {p}
           </span>
         );

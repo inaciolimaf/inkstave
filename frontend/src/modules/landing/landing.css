@@ -5,6 +5,54 @@
  * shadcn light theme + system font).
  */
 
+/*
+ * Faces only the landing needs, so they stay out of the app's entry. Latin and
+ * latin-ext only (Portuguese fits latin); unicode-range keeps latin-ext unloaded
+ * until a glyph asks for it. Upright Newsreader comes from src/fonts.ts, because
+ * the app's logo uses it too. Newsreader keeps its `opsz` axis for
+ * `font-optical-sizing: auto`; Inter carries `wght` only.
+ */
+@font-face {
+  font-family: "Newsreader Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("@fontsource-variable/newsreader/files/newsreader-latin-ext-opsz-italic.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Newsreader Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url("@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 .landing-root {
   /* Paper — warm off-whites, slightly varied per band for depth. */
   --paper: 40 40% 97.5%;
@@ -19,10 +67,31 @@
   /* Hairline rules — the quiet structural lines of an editorial layout. */
   --rule: 36 22% 84%;
 
+  /* A pure white sheet (the compiled-page thumbnail) and text on saturated fills. */
+  --sheet: 0 0% 100%;
+  --on-accent: 0 0% 100%;
+
+  /* Diff inks: text, its stronger shade, the +/- mark, tints and the applied fill. */
+  --ink-added: 162.9 93.5% 24.3%;
+  --ink-added-deep: 163.1 88.1% 19.8%;
+  --ink-added-mark: 160.1 84.1% 39.4%;
+  --ink-added-solid: 161.4 93.5% 30.4%;
+  --ink-removed: 345.3 82.7% 40.8%;
+  --ink-removed-mark: 351.3 94.5% 71.4%;
+  --ink-removed-tint: 349.7 89.2% 60.2%;
+
+  /* LaTeX command tint in the sample code. */
+  --ink-command: 244.5 57.9% 50.6%;
+
+  /* Content colours: one per sample collaborator, not status colours. */
+  --cursor-mara: 349.7 89.2% 60.2%;
+  --cursor-theo: 200.4 98% 39.4%;
+  --cursor-iris: 37.7 92.1% 50.2%;
+
   background-color: hsl(var(--paper));
   color: hsl(var(--ink));
   font-family:
-    "Inter",
+    "Inter Variable",
     system-ui,
     -apple-system,
     "Segoe UI",
@@ -42,7 +111,7 @@
 /* Optical-size aware serif display. Newsreader has a real italic we lean on
    for editorial emphasis. */
 .font-display {
-  font-family: "Newsreader", Georgia, Cambria, serif;
+  font-family: "Newsreader Variable", Georgia, Cambria, serif;
   font-optical-sizing: auto;
   letter-spacing: -0.012em;
 }
