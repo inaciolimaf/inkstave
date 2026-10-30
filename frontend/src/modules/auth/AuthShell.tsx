@@ -20,7 +20,7 @@ export function AuthShell({
 }) {
   return (
     <TitlePage>
-      <InkstaveLogo className="text-title" />
+      <InkstaveLogo />
       <h1 className="mt-8 font-serif text-title font-medium leading-tight tracking-tight">{title}</h1>
       {description && <p className="mt-2 text-body text-muted-foreground">{description}</p>}
       <Rule className="my-6" />

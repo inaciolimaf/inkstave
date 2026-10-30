@@ -46,7 +46,7 @@ export function ErrorState({
 export function ErrataSlip({ title, body, actions }: { title: string; body: string; actions: ReactNode }) {
   return (
     <TitlePage>
-      <InkstaveLogo className="text-title" />
+      <InkstaveLogo />
       <div role="alert" className="mt-8">
         <h1 className="font-serif text-title font-medium leading-tight tracking-tight">{title}</h1>
         <p className="mt-2 text-body text-muted-foreground">{body}</p>

@@ -7,7 +7,6 @@ const dict: Dict = {
   },
   profile: {
     title: "Perfil",
-    description: "Seu nome de exibição e avatar.",
     displayName: "Nome de exibição",
     save: "Salvar perfil",
     saving: "Salvando…",

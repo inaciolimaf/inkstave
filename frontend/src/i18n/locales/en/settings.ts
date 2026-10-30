@@ -5,7 +5,6 @@ const dict = {
   },
   profile: {
     title: "Profile",
-    description: "Your display name and avatar.",
     displayName: "Display name",
     save: "Save profile",
     saving: "Saving…",

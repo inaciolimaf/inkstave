@@ -32,7 +32,6 @@ const PENDING_SIZE =
         "src/modules/pdf-preview/hooks/useCompile.ts",
         "src/modules/projects/import-project-dialog.tsx",
         "src/modules/sharing/MembersList.tsx",
-        "src/modules/auth/login.tsx",
         "src/modules/auth/register.tsx",
         "src/modules/auth/setup/setup-page.tsx",
       ];
@@ -42,6 +41,7 @@ const PENDING_SIZE =
 const HEX_COLOR = "/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-zA-Z_-])/";
 const RAW_PALETTE =
   "/(^|[\\s:])(bg|text|border|ring|fill|stroke)-(white|black|(red|rose|orange|amber|yellow|green|emerald|teal|sky|blue|indigo|violet|purple|pink|gray|slate|zinc|neutral|stone)-[0-9]+)/";
+const RAW_TYPE = "/(^|[\\s:])text-(xs|sm|base|lg|xl|[2-9]xl|\\[[0-9.]+(px|rem)\\])(\\s|$)/";
 const REUSE_RULES = {
   color: [
     {
@@ -63,20 +63,20 @@ const REUSE_RULES = {
       message: "Use a role token (success, warning, error-text, backdrop, page) instead of a Tailwind hue.",
     },
   ],
+  type: [
+    {
+      selector: `Literal[value=${RAW_TYPE}]`,
+      message: "Use a type token: text-small, text-body, text-heading, text-title or text-figure.",
+    },
+    {
+      selector: `TemplateElement[value.raw=${RAW_TYPE}]`,
+      message: "Use a type token: text-small, text-body, text-heading, text-title or text-figure.",
+    },
+  ],
   number: [
     {
       selector: "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]",
       message: "Use formatNumber/formatDate/formatDateTime from src/lib/formatting.ts.",
-    },
-  ],
-  sheet: [
-    {
-      selector: "Literal[value=/shadow-card/]",
-      message: "Use <Card> from src/components/ui/card.tsx.",
-    },
-    {
-      selector: "TemplateElement[value.raw=/shadow-card/]",
-      message: "Use <Card> from src/components/ui/card.tsx.",
     },
   ],
   keyboard: [
@@ -154,9 +154,14 @@ export default tseslint.config(
     rules: { "no-restricted-imports": ["error", NO_MODULES] },
   },
   ...(PENDING_SIZE.length ? [{ files: PENDING_SIZE, rules: { "max-lines-per-function": "off" } }] : []),
+  // The landing is a marketing page with its own display sizes (spec 106).
+  {
+    files: ["src/modules/landing/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-syntax": reuseRules("type") },
+  },
   { files: ["src/lib/palettes.ts"], rules: { "no-restricted-syntax": reuseRules("color") } },
   { files: ["src/lib/formatting.ts"], rules: { "no-restricted-syntax": reuseRules("number") } },
-  { files: ["src/components/ui/card.tsx"], rules: { "no-restricted-syntax": reuseRules("sheet") } },
   { files: ["src/lib/shortcuts.ts"], rules: { "no-restricted-syntax": reuseRules("keyboard") } },
   {
     // Playwright e2e suite (spec 54): Node + browser globals. No React rules: Playwright's fixture

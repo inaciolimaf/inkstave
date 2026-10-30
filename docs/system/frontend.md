@@ -305,10 +305,6 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
 
 ## Points of attention
 
-- **Editor overflow on phones.** `frontend/e2e/mobile.spec.ts` lists `/projects/:projectId` in `KNOWN_OVERFLOW`
-  and marks it with `test.fail`, with the reason "toolbar overflows on a phone". The comment records a measured
-  width of 461 px against 390 px. It is not a skip: the test runs and is expected to fail, so the suite goes red
-  the day the editor fits, and the entry must then be removed.
 - **`QueryView` adoption is partial.** The code has 17 `useQuery` or `useInfiniteQuery` call sites. Three
   components use `QueryView`: `HistoryTimeline`, `HistoryDiffView` and `NotificationsBell`. Seven screens still
   branch by hand: `project-list-view.tsx`, `file-tree-body.tsx`, `editor-pane.tsx`, `AcceptInvitePage.tsx`,
@@ -355,7 +351,9 @@ The `frontend-standard` skill applies, with the identity in `specs/106-visual-id
 
 - **Skeleton.** `Manuscript`, `TitlePage` and `Desk` (`frontend/src/components/manuscript.tsx`) are the root
   of a screen, each marked `data-manuscript`; `ManuscriptHeader` and `Rule` build it. The palette is in
-  `frontend/src/index.css`.
+  `frontend/src/index.css`. `AuthShell` (title pages) and `ErrataSlip` (error screens) sit on `TitlePage`;
+  `SettingsSection` is a ruled section of settings. `Card` is gone. On phones the editor toolbar shows icons
+  only, and `sheetTheme` paints CodeMirror with the page tokens in both themes.
 - **Shell.** `AppShell` (`frontend/src/components/app-shell.tsx`) is the root route's element. It renders a
   skip link, moves focus to the screen's `h1` (or `main`) when the pathname changes, and sets
   `document.title` from the route's `handle.title`, a key of the `common` namespace. Screens render one
@@ -378,5 +376,5 @@ The `frontend-standard` skill applies, with the identity in `specs/106-visual-id
 | Only cheap properties animate | `frontend/tests/keyframes.test.ts` |
 | Text 4.5:1, focus and control borders 3:1, both themes | `frontend/tests/contrast.test.ts` |
 | No `100vh`, `h-screen` or `min-h-screen` | `frontend/tests/css-rules.test.ts` |
-| No raw Tailwind hue | `palette` group in `frontend/eslint.config.js` |
+| No raw Tailwind hue, no size outside the type tokens | `palette` and `type` groups in `frontend/eslint.config.js` |
 | Axe over every route, both themes; one `main`, one `h1` | `frontend/e2e/a11y.spec.ts` |

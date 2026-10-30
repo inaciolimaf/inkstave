@@ -27,8 +27,11 @@ no such list.
 run of the same axe tags found only the colour contrast failures fixed since, and that run was not
 repeated after the fix. CI will be its first real run, and its cost against the 2-minute budget is unknown.
 
-**The type scale tokens exist but screens do not use them yet, and field metrics are not collected.**
-*Why:* sizes move screen by screen under spec 106; `web-vitals` waits for real users.
+**Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
+
+**The editor has two bars, not the one spec 106 asks for.** The route's bar and the `EditorWorkspace` toolbar
+are separate rows, and the agent sheet shows two solid buttons while a proposal is open. *Why:* folding them
+means lifting workspace state, a behavior-sensitive change.
 
 **The landing animates paint.** `.ink-underline` transitions `background-size` and `transition-all`
 animates `box-shadow`. *Why:* not yet reviewed; its loops are an accepted exception (spec 106).
@@ -88,9 +91,6 @@ the Portuguese interface. *Why:* the language lives only in the browser. Deliver
 preference, and invites to non-users have no recipient record at all.
 
 ### Frontend
-
-**The editor overflows at 390 px.** The toolbar needs 461 px. `frontend/e2e/mobile.spec.ts` keeps the route in
-`KNOWN_OVERFLOW` with `test.fail`, so the suite goes red the day it fits. *Why:* needs a toolbar redesign.
 
 **`QueryView` is partial.** 3 of 17 query call sites use it; 7 screens hand-roll loading and error states
 (list in `docs/system/frontend.md`). *Why:* adopted incrementally.
