@@ -13,6 +13,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
 
+from inkstave.core.db.ownership import get_owned
 from inkstave.core.errors import NotFoundError
 from inkstave.modules.notifications.models import Notification
 
@@ -130,9 +131,6 @@ class NotificationService:
         return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
     async def _owned(self, user_id: UUID, notification_id: UUID) -> Notification:
-        notification = await self._session.scalar(
-            select(Notification).where(Notification.id == notification_id, Notification.user_id == user_id)
+        return await get_owned(
+            self._session, Notification, notification_id, user_id, not_found=NotificationNotFoundError()
         )
-        if notification is None:
-            raise NotificationNotFoundError()
-        return notification

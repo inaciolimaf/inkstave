@@ -73,7 +73,8 @@ class _FakeConn:
     def __exit__(self, *exc: object) -> bool:
         return False
 
-    def exec_driver_sql(self, sql: str, params: dict[str, Any] | None = None) -> None:
+    def execute(self, statement: Any) -> None:
+        sql = str(statement)
         if "pg_advisory_lock" in sql:
             self._calls.append("lock")
         elif "pg_advisory_unlock" in sql:
@@ -121,7 +122,7 @@ class _FakeAsyncConn:
     async def __aexit__(self, *exc: object) -> bool:
         return False
 
-    async def exec_driver_sql(self, sql: str) -> _FakeResult:
+    async def execute(self, _statement: Any) -> _FakeResult:
         return _FakeResult(self._value)
 
 

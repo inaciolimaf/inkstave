@@ -50,6 +50,11 @@ async def create_project(session: AsyncSession, owner_id: UUID, name: str) -> Pr
     return project
 
 
+async def get_project_name(session: AsyncSession, project_id: UUID) -> str | None:
+    name: str | None = await session.scalar(select(Project.name).where(Project.id == project_id))
+    return name
+
+
 async def get_owned_project(session: AsyncSession, owner_id: UUID, project_id: UUID) -> Project:
     stmt = select(Project).where(
         Project.id == project_id,

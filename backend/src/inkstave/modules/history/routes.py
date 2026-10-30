@@ -7,7 +7,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
 
 from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
@@ -26,9 +25,14 @@ from inkstave.modules.history.schemas import (
     VersionsResponse,
 )
 from inkstave.modules.history.versions import labels as labels_service
-from inkstave.modules.history.versions.read import get_diff, list_updates, list_versions
+from inkstave.modules.history.versions.read import (
+    doc_belongs_to_project,
+    get_diff,
+    list_updates,
+    list_versions,
+)
 from inkstave.modules.history.versions.restore import RestoreScope, restore_document, restore_project
-from inkstave.modules.projects import Capability, Document, ProjectNotFoundError, require_capability
+from inkstave.modules.projects import Capability, ProjectNotFoundError, require_capability
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,10 +64,7 @@ def _components(request: Request) -> CollabComponents | None:
 
 async def _verify_doc(session: AsyncSession, project_id: UUID, doc_id: UUID) -> None:
     """404 (anti-enumeration) if the doc is not a document of this project."""
-    exists = await session.scalar(
-        select(Document.entity_id).where(Document.entity_id == doc_id, Document.project_id == project_id)
-    )
-    if exists is None:
+    if not await doc_belongs_to_project(session, project_id, doc_id):
         raise ProjectNotFoundError()
 
 

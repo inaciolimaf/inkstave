@@ -9,11 +9,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import zipfile
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
 import pytest
+
+from inkstave.core.config.settings import get_settings
 
 
 class _Result:
@@ -101,3 +105,51 @@ async def test_file_email_sender_offloads_io_and_writes_identically(
     }
     offloaded = {getattr(f, "__name__", str(f)) for f in calls}
     assert {"mkdir", "write_text"} <= offloaded
+
+
+async def test_compile_filesystem_work_runs_via_to_thread(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from inkstave.modules.compile.running import service as compile_service
+    from tests.unit.test_compile_service import FakeRunner, build_service, ok_outcome
+
+    calls = _record_to_thread(monkeypatch)
+    runner = FakeRunner(ok_outcome(), {"main.pdf": b"%PDF-1.7", "main.log": b"log"})
+    service = build_service(tmp_path, runner, [("main.tex", "hi")])
+
+    await service.compile(compile_service.CompileOptions(project_id=uuid4()))
+
+    assert compile_service._resolve_root in calls
+    assert service._build_result in calls
+
+
+async def test_opening_and_planning_the_zip_run_via_to_thread(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from inkstave.modules.projects.transfer import jobs
+
+    archive = tmp_path / "project.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("main.tex", "hi")
+    calls = _record_to_thread(monkeypatch)
+
+    async def stop(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("stop before reconstructing")
+
+    monkeypatch.setattr(jobs, "reconstruct_tree", stop)
+
+    with pytest.raises(RuntimeError):
+        await jobs._process_archive(None, None, SimpleNamespace(project_id=uuid4()), archive, get_settings())
+
+    assert zipfile.ZipFile in calls
+    assert jobs.plan_entries in calls
+
+
+async def test_a_corrupt_zip_is_still_an_invalid_zip_error(tmp_path: Path) -> None:
+    from inkstave.modules.projects.transfer import jobs
+
+    archive = tmp_path / "project.zip"
+    archive.write_bytes(b"not a zip")
+
+    with pytest.raises(jobs.InvalidZipError):
+        await jobs._process_archive(None, None, SimpleNamespace(), archive, get_settings())

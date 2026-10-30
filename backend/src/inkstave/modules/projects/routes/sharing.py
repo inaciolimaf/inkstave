@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
 
 from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
@@ -20,7 +19,7 @@ from inkstave.infra.deps import get_email_enqueuer
 from inkstave.modules.auth import get_current_user
 from inkstave.modules.notifications import notify_invite
 from inkstave.modules.projects import sharing as sharing_service
-from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.catalog.service import get_project_name
 from inkstave.modules.projects.schemas.sharing import (
     AcceptResponse,
     InviteCreate,
@@ -135,7 +134,7 @@ async def create_invite(
     invite, raw_token = await sharing_service.create_invite(
         session, project_id, user.id, data.email, data.role, ttl_days=settings.invite_ttl_days
     )
-    project_name = await session.scalar(select(Project.name).where(Project.id == project_id))
+    project_name = await get_project_name(session, project_id)
     # Spec-39 hook: in-app notification (if the invitee has an account) + invite email.
     await notify_invite(
         session,

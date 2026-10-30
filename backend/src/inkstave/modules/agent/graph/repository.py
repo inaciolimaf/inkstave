@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 
 from inkstave.modules.agent.models import AgentMessage, AgentSession
+from inkstave.modules.projects import Project
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +35,11 @@ async def create_session(
     db.add(session)
     await db.flush()
     return session
+
+
+async def project_is_live(db: AsyncSession, project_id: UUID) -> bool:
+    found = await db.scalar(select(Project.id).where(Project.id == project_id, Project.deleted_at.is_(None)))
+    return found is not None
 
 
 async def get_session(db: AsyncSession, session_id: UUID) -> AgentSession | None:

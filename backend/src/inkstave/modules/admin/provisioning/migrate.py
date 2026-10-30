@@ -15,7 +15,7 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine
+from sqlalchemy import column, create_engine, func, select, table
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -30,6 +30,10 @@ _DEFAULT_ALEMBIC_INI = Path(__file__).resolve().parents[5] / "alembic.ini"
 
 # A fixed key so every process contends for the *same* migration lock.
 MIGRATION_LOCK_KEY = 0x494E4B53  # "INKS"
+
+
+# Alembic owns this table, so it is outside the application's metadata.
+_ALEMBIC_VERSION = table("alembic_version", column("version_num"))
 
 
 def _alembic_config(ini: Path | None = None) -> Config:
@@ -47,11 +51,11 @@ def script_head(ini: Path | None = None) -> str | None:
 
 
 def acquire_advisory_lock(conn: Connection, key: int = MIGRATION_LOCK_KEY) -> None:
-    conn.exec_driver_sql("SELECT pg_advisory_lock(%(k)s)", {"k": key})
+    conn.execute(select(func.pg_advisory_lock(key)))
 
 
 def release_advisory_lock(conn: Connection, key: int = MIGRATION_LOCK_KEY) -> None:
-    conn.exec_driver_sql("SELECT pg_advisory_unlock(%(k)s)", {"k": key})
+    conn.execute(select(func.pg_advisory_unlock(key)))
 
 
 def run_upgrade(settings: Settings, *, ini: Path | None = None, lock_key: int = MIGRATION_LOCK_KEY) -> None:
@@ -80,7 +84,7 @@ async def current_revision(engine: AsyncEngine) -> str | None:
     """The DB's current Alembic revision, or ``None`` if never migrated."""
     async with engine.connect() as conn:
         try:
-            result = await conn.exec_driver_sql("SELECT version_num FROM alembic_version")
+            result = await conn.execute(select(_ALEMBIC_VERSION.c.version_num))
             return result.scalar()
         except Exception:
             return None  # alembic_version table absent

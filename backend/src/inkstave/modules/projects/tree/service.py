@@ -15,10 +15,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 
 from inkstave.core.config.settings import get_settings
+from inkstave.modules.projects.models.file import File
 from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree.builder import build_tree, compute_path
 from inkstave.modules.projects.tree.errors import (
@@ -35,6 +37,7 @@ from inkstave.modules.projects.tree.safe_path import validate_name_segment
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from sqlalchemy import CTE
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.infra.storage.base import ObjectStore
@@ -149,24 +152,26 @@ async def _sibling_exists(
     return (await session.execute(stmt)).first() is not None
 
 
+def _subtree(project_id: UUID, root_id: UUID) -> CTE:
+    """``root_id`` and everything below it, within one project."""
+    child = aliased(TreeEntity)
+    subtree = (
+        select(TreeEntity.id)
+        .where(TreeEntity.id == root_id, TreeEntity.project_id == project_id)
+        .cte("subtree", recursive=True)
+    )
+    return subtree.union_all(
+        select(child.id).join(subtree, child.parent_id == subtree.c.id).where(child.project_id == project_id)
+    )
+
+
 async def is_descendant(
     session: AsyncSession, project_id: UUID, ancestor_id: UUID, candidate_id: UUID
 ) -> bool:
     """True if ``candidate_id`` is ``ancestor_id`` or anywhere in its subtree."""
-    sql = text(
-        """
-        WITH RECURSIVE subtree AS (
-            SELECT id FROM tree_entities WHERE id = :anc AND project_id = :pid
-            UNION ALL
-            SELECT t.id FROM tree_entities t
-            JOIN subtree s ON t.parent_id = s.id
-            WHERE t.project_id = :pid
-        )
-        SELECT 1 FROM subtree WHERE id = :cand LIMIT 1
-        """
-    )
-    row = (await session.execute(sql, {"anc": ancestor_id, "pid": project_id, "cand": candidate_id})).first()
-    return row is not None
+    subtree = _subtree(project_id, ancestor_id)
+    found = await session.scalar(select(subtree.c.id).where(subtree.c.id == candidate_id).limit(1))
+    return found is not None
 
 
 async def create_entity(
@@ -263,20 +268,9 @@ async def move_entity(
 
 
 async def _file_keys_in_subtree(session: AsyncSession, project_id: UUID, entity_id: UUID) -> list[str]:
-    sql = text(
-        """
-        WITH RECURSIVE subtree AS (
-            SELECT id FROM tree_entities WHERE id = :eid AND project_id = :pid
-            UNION ALL
-            SELECT t.id FROM tree_entities t
-            JOIN subtree s ON t.parent_id = s.id
-            WHERE t.project_id = :pid
-        )
-        SELECT f.storage_key FROM files f JOIN subtree s ON f.entity_id = s.id
-        """
-    )
-    rows = (await session.execute(sql, {"eid": entity_id, "pid": project_id})).all()
-    return [row[0] for row in rows]
+    subtree = _subtree(project_id, entity_id)
+    rows = await session.scalars(select(File.storage_key).join(subtree, File.entity_id == subtree.c.id))
+    return list(rows)
 
 
 async def delete_entity(

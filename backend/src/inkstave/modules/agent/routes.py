@@ -7,9 +7,9 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
 
 from inkstave.core.config.agent import get_agent_settings
+from inkstave.core.db.ownership import get_owned
 from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import AppError, ConflictError, ErrorEnvelope
@@ -35,7 +35,7 @@ from inkstave.modules.auth import (
     sse_user,
 )
 from inkstave.modules.collab import flush_open_project_docs
-from inkstave.modules.projects import Project, ProjectNotFoundError, role_for
+from inkstave.modules.projects import ProjectNotFoundError, role_for
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -91,10 +91,7 @@ class MessageTooLongError(AppError):
 
 async def _require_member(session: AsyncSession, project_id: UUID, user_id: UUID) -> None:
     """404 for an unknown/deleted project, 403 for a non-member (spec 44)."""
-    project = await session.scalar(
-        select(Project.id).where(Project.id == project_id, Project.deleted_at.is_(None))
-    )
-    if project is None:
+    if not await agent_repo.project_is_live(session, project_id):
         raise ProjectNotFoundError()
     if await role_for(session, user_id, project_id) is None:
         raise NotProjectMemberError()
@@ -103,10 +100,9 @@ async def _require_member(session: AsyncSession, project_id: UUID, user_id: UUID
 async def _owned_session(
     session: AsyncSession, project_id: UUID, session_id: UUID, user_id: UUID
 ) -> AgentSession:
-    row = await agent_repo.get_session(session, session_id)
-    if row is None or row.project_id != project_id or row.user_id != user_id:
-        raise ProjectNotFoundError()  # 404 — do not leak another user's session
-    return row
+    return await get_owned(
+        session, AgentSession, session_id, user_id, not_found=ProjectNotFoundError(), project_id=project_id
+    )
 
 
 def _diff_summary(diff: ProposedDiff, *, include_hunks: bool) -> ProposedDiffSummary:
