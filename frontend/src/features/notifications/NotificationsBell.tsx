@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { QueryView } from "@/components/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -141,33 +142,35 @@ export function NotificationsBell() {
             </Button>
           )}
         </div>
-        {list.isLoading ? (
-          <div className="space-y-2" aria-busy="true">
-            <Skeleton className="h-12" />
-            <Skeleton className="h-12" />
-          </div>
-        ) : list.isError ? (
-          <div className="flex items-center justify-between p-2 text-sm text-destructive" role="alert">
-            {t("loadFailed")}
-            <Button size="sm" variant="outline" onClick={() => void list.refetch()}>
-              {t("common:action.retry")}
-            </Button>
-          </div>
-        ) : (list.data?.items.length ?? 0) === 0 ? (
-          <p className="p-4 text-center text-sm text-muted-foreground">{t("empty")}</p>
-        ) : (
-          <div className="max-h-96 space-y-1 overflow-auto" role="list" aria-label={t("title")}>
-            {list.data!.items.map((n) => (
-              <NotificationRow
-                key={n.id}
-                notification={n}
-                onRead={(id) => read.mutate(id)}
-                onDismiss={(id) => dismiss.mutate(id)}
-                onAccept={onAccept}
-              />
-            ))}
-          </div>
-        )}
+        <QueryView
+          query={list}
+          loading={
+            <div className="space-y-2" aria-busy="true">
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+            </div>
+          }
+          errorMessage={t("loadFailed")}
+          errorClassName="justify-between gap-0 p-2"
+        >
+          {(data) =>
+            data.items.length === 0 ? (
+              <p className="p-4 text-center text-sm text-muted-foreground">{t("empty")}</p>
+            ) : (
+              <div className="max-h-96 space-y-1 overflow-auto" role="list" aria-label={t("title")}>
+                {data.items.map((n) => (
+                  <NotificationRow
+                    key={n.id}
+                    notification={n}
+                    onRead={(id) => read.mutate(id)}
+                    onDismiss={(id) => dismiss.mutate(id)}
+                    onAccept={onAccept}
+                  />
+                ))}
+              </div>
+            )
+          }
+        </QueryView>
       </PopoverContent>
     </Popover>
   );

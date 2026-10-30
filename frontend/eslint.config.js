@@ -115,19 +115,6 @@ export default tseslint.config(
     },
   },
   ...(PENDING_SIZE.length ? [{ files: PENDING_SIZE, rules: { "max-lines-per-function": "off" } }] : []),
-  // Hits that move to their helpers with the feat(frontend) commit that adds those helpers.
-  {
-    files: ["src/features/collab/colors.ts", "src/features/collab/usePresence.ts"],
-    rules: { "no-restricted-syntax": reuseRules("color") },
-  },
-  {
-    files: ["src/features/projects/project-table.tsx"],
-    rules: { "no-restricted-syntax": reuseRules("number") },
-  },
-  {
-    files: ["src/features/editor/editor-pane.tsx"],
-    rules: { "no-restricted-syntax": reuseRules("keyboard") },
-  },
   { files: ["src/lib/palettes.ts"], rules: { "no-restricted-syntax": reuseRules("color") } },
   { files: ["src/lib/formatting.ts"], rules: { "no-restricted-syntax": reuseRules("number") } },
   { files: ["src/components/ui/card.tsx"], rules: { "no-restricted-syntax": reuseRules("sheet") } },

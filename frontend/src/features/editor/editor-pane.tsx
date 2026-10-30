@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CollabEditor } from "@/features/collab/CollabEditor";
 import { useCollabDoc } from "@/features/collab/useCollabDoc";
 import { ApiError } from "@/lib/api-client";
+import { useShortcuts } from "@/lib/shortcuts";
 import type { TreeEntity } from "@/features/file-tree/types";
 
 import { getDocument } from "./api";
@@ -158,17 +159,7 @@ export function EditorPane({
   }, [loaded?.id]);
 
   // Ctrl/Cmd+S forces an immediate flush and suppresses the browser save dialog.
-  useEffect(() => {
-    if (!isDoc) return;
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        saveNow();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isDoc, saveNow]);
+  useShortcuts({ "mod+s": () => saveNow() }, isDoc);
 
   let body: React.ReactNode;
   if (!openEntity) body = <EmptyState />;

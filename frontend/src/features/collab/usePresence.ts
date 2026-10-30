@@ -6,6 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Awareness } from "y-protocols/awareness";
 
+import { PRESENCE_FALLBACK_COLOR } from "@/lib/palettes";
+
 import { colorForUser, colorLight } from "./colors";
 import type { CollabDocSession } from "./useCollabDoc";
 
@@ -37,7 +39,7 @@ export function collectPresence(awareness: Awareness): PresenceUser[] {
     const presence: PresenceUser = {
       id: user.id,
       name: user.name ?? "Anonymous",
-      color: user.color ?? "#888888",
+      color: user.color ?? PRESENCE_FALLBACK_COLOR,
       idle: Boolean((state as { idle?: boolean }).idle),
       isLocal: clientId === localClientId,
     };

@@ -1,6 +1,7 @@
 /** Reverse-chronological versions list with pagination + selection (spec 38). */
 import { useTranslation } from "react-i18next";
 
+import { QueryView } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -106,57 +107,50 @@ export function HistoryTimeline({
   const { t } = useTranslation("history");
   const query = useVersions(projectId, docId, true);
 
-  if (query.isLoading) {
-    return (
-      <div className="space-y-2" aria-busy="true">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-12" />
-        ))}
-      </div>
-    );
-  }
-  if (query.isError) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-        {t("timeline.loadFailed")}
-        <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
-          {t("common:action.retry")}
-        </Button>
-      </div>
-    );
-  }
-
-  const versions = (query.data?.pages ?? []).flatMap((page) => page.versions);
-  if (versions.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("timeline.empty")}</p>;
-  }
+  const loading = (
+    <div className="space-y-2" aria-busy="true">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-12" />
+      ))}
+    </div>
+  );
 
   return (
-    <div className="space-y-2" role="list" aria-label={t("timeline.ariaLabel")}>
-      {versions.map((version) => (
-        <div role="listitem" key={version.version}>
-          <VersionRow
-            version={version}
-            selected={primary === version.version}
-            compared={compare === version.version}
-            canWrite={canWrite}
-            onSelect={onSelect}
-            onAddLabel={onAddLabel}
-            onDeleteLabel={onDeleteLabel}
-          />
-        </div>
-      ))}
-      {query.hasNextPage && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          disabled={query.isFetchingNextPage}
-          onClick={() => void query.fetchNextPage()}
-        >
-          {query.isFetchingNextPage ? t("timeline.loading") : t("timeline.loadMore")}
-        </Button>
-      )}
-    </div>
+    <QueryView query={query} loading={loading} errorMessage={t("timeline.loadFailed")}>
+      {(data) => {
+        const versions = data.pages.flatMap((page) => page.versions);
+        if (versions.length === 0) {
+          return <p className="text-sm text-muted-foreground">{t("timeline.empty")}</p>;
+        }
+        return (
+          <div className="space-y-2" role="list" aria-label={t("timeline.ariaLabel")}>
+            {versions.map((version) => (
+              <div role="listitem" key={version.version}>
+                <VersionRow
+                  version={version}
+                  selected={primary === version.version}
+                  compared={compare === version.version}
+                  canWrite={canWrite}
+                  onSelect={onSelect}
+                  onAddLabel={onAddLabel}
+                  onDeleteLabel={onDeleteLabel}
+                />
+              </div>
+            ))}
+            {query.hasNextPage && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={query.isFetchingNextPage}
+                onClick={() => void query.fetchNextPage()}
+              >
+                {query.isFetchingNextPage ? t("timeline.loading") : t("timeline.loadMore")}
+              </Button>
+            )}
+          </div>
+        );
+      }}
+    </QueryView>
   );
 }

@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { formatDate } from "@/lib/formatting";
+
 import { useDownloadProject } from "./use-download-project";
 import {
   Table,
@@ -24,14 +26,6 @@ import {
 } from "@/components/ui/table";
 
 import type { Project } from "./types";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 interface RowActions {
   onOpen: (p: Project) => void;

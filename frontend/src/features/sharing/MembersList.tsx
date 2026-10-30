@@ -1,6 +1,7 @@
 /** "People with access" list: role controls, transfer/remove/leave actions (spec 33). */
 import { useTranslation } from "react-i18next";
 
+import { ErrorState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,14 +44,7 @@ export function MembersList({
           <Skeleton className="h-9 w-full" />
         </div>
       )}
-      {isError && (
-        <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-          {t("members.loadError")}
-          <Button size="sm" variant="outline" onClick={() => refetch()}>
-            {t("common:action.retry")}
-          </Button>
-        </div>
-      )}
+      {isError && <ErrorState message={t("members.loadError")} onRetry={refetch} />}
       <ul className="space-y-1">
         {members.map((m) => (
           <li key={m.userId} className="flex items-center gap-2 text-sm">

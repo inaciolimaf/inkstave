@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { ErrorState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +30,6 @@ export function DiffReviewDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation("review");
-  const { t: tCommon } = useTranslation("common");
   const r = useDiffReview(projectId, sessionId, proposalId, bridge, open);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -113,12 +113,7 @@ export function DiffReviewDialog({
               <Skeleton className="h-32" />
             </div>
           ) : r.isError ? (
-            <div className="flex items-center gap-2 text-sm text-destructive" role="alert">
-              {t("loadError")}
-              <Button size="sm" variant="outline" onClick={() => void r.refetch()}>
-                {tCommon("action.retry")}
-              </Button>
-            </div>
+            <ErrorState message={t("loadError")} onRetry={() => void r.refetch()} />
           ) : !r.proposal || r.proposal.files.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noChanges")}</p>
           ) : r.applyPhase === "error" ? (

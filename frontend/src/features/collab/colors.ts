@@ -8,19 +8,9 @@
  * same color) — deterministic-and-stable is preferred over guaranteed-unique.
  */
 
-/** Caret/ring colors (≈ AA contrast on both light and dark editor backgrounds). */
-export const PRESENCE_PALETTE: readonly string[] = [
-  "#2563eb", // blue
-  "#dc2626", // red
-  "#16a34a", // green
-  "#d97706", // amber
-  "#7c3aed", // violet
-  "#0891b2", // cyan
-  "#db2777", // pink
-  "#65a30d", // lime
-  "#ea580c", // orange
-  "#0d9488", // teal
-];
+import { PRESENCE_PALETTE } from "@/lib/palettes";
+
+export { PRESENCE_PALETTE };
 
 function hash(value: string): number {
   // FNV-1a (32-bit) — stable across clients/runtimes.

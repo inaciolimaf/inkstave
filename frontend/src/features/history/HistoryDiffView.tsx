@@ -2,7 +2,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { QueryView } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -83,43 +83,34 @@ export function HistoryDiffView({
     if (from === null) {
       return <p className="p-4 text-sm text-muted-foreground">{t("diff.selectPrompt")}</p>;
     }
-    if (query.isLoading) {
-      return (
-        <div className="space-y-2 p-4" aria-busy="true">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-4" />
-          ))}
-        </div>
-      );
-    }
-    if (query.isError || !query.data) {
-      return (
-        <div className="flex items-center gap-2 p-4 text-sm text-destructive" role="alert">
-          {t("diff.loadFailed")}
-          <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
-            {t("common:action.retry")}
-          </Button>
-        </div>
-      );
-    }
-
-    const diff = query.data;
-    if (diff.binary) {
-      return <p className="p-4 text-sm text-muted-foreground">{t("diff.binary")}</p>;
-    }
-    if (diff.tooLarge) {
-      return <p className="p-4 text-sm text-muted-foreground">{t("diff.tooLarge")}</p>;
-    }
-    if (diff.hunks.length === 0) {
-      return <p className="p-4 text-sm text-muted-foreground">{t("diff.noChanges")}</p>;
-    }
-
-    return (
-      <div className="space-y-3 p-2" role="region" aria-label={t("diff.ariaLabel")}>
-        {diff.hunks.map((hunk, i) => (
-          <HunkView key={i} hunk={hunk} />
+    const loading = (
+      <div className="space-y-2 p-4" aria-busy="true">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-4" />
         ))}
       </div>
+    );
+    return (
+      <QueryView query={query} loading={loading} errorMessage={t("diff.loadFailed")} errorClassName="p-4">
+        {(diff) => {
+          if (diff.binary) {
+            return <p className="p-4 text-sm text-muted-foreground">{t("diff.binary")}</p>;
+          }
+          if (diff.tooLarge) {
+            return <p className="p-4 text-sm text-muted-foreground">{t("diff.tooLarge")}</p>;
+          }
+          if (diff.hunks.length === 0) {
+            return <p className="p-4 text-sm text-muted-foreground">{t("diff.noChanges")}</p>;
+          }
+          return (
+            <div className="space-y-3 p-2" role="region" aria-label={t("diff.ariaLabel")}>
+              {diff.hunks.map((hunk, i) => (
+                <HunkView key={i} hunk={hunk} />
+              ))}
+            </div>
+          );
+        }}
+      </QueryView>
     );
   })();
 
