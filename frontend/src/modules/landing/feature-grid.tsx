@@ -122,7 +122,7 @@ function CollabVisual() {
   return (
     <VisualFrame className="relative min-h-[170px] justify-center p-6 font-mono text-[0.72rem] leading-[2] text-ink-soft">
       <div>
-        <span className="text-indigo-700">\section</span>
+        <span className="text-[hsl(var(--ink-command))]">\section</span>
         <span className="text-ink-faint">{"{"}</span>Results
         <span className="text-ink-faint">{"}"}</span>
       </div>
@@ -130,8 +130,8 @@ function CollabVisual() {
         The estimator converges&nbsp;
         {/* Cursor 1 */}
         <span className="relative inline-block align-baseline">
-          <span className="inline-block h-[1.15em] w-px translate-y-[3px] bg-rose-500" />
-          <span className="cursor-bob absolute -top-5 left-0 whitespace-nowrap rounded bg-rose-500 px-1.5 py-0.5 text-[0.6rem] font-medium text-white">
+          <span className="inline-block h-[1.15em] w-px translate-y-[3px] bg-[hsl(var(--cursor-mara))]" />
+          <span className="cursor-bob absolute -top-5 left-0 whitespace-nowrap rounded bg-[hsl(var(--cursor-mara))] px-1.5 py-0.5 text-[0.6rem] font-medium text-[hsl(var(--on-accent))]">
             Mara
           </span>
         </span>
@@ -140,9 +140,9 @@ function CollabVisual() {
         quickly under mild assumptions&nbsp;
         {/* Cursor 2 */}
         <span className="relative inline-block align-baseline">
-          <span className="inline-block h-[1.15em] w-px translate-y-[3px] bg-sky-600" />
+          <span className="inline-block h-[1.15em] w-px translate-y-[3px] bg-[hsl(var(--cursor-theo))]" />
           <span
-            className="cursor-bob absolute -top-5 left-0 whitespace-nowrap rounded bg-sky-600 px-1.5 py-0.5 text-[0.6rem] font-medium text-white"
+            className="cursor-bob absolute -top-5 left-0 whitespace-nowrap rounded bg-[hsl(var(--cursor-theo))] px-1.5 py-0.5 text-[0.6rem] font-medium text-[hsl(var(--on-accent))]"
             style={{ animationDelay: "0.9s" }}
           >
             Theo
@@ -159,11 +159,11 @@ function AgentVisual() {
   return (
     <VisualFrame className="items-center justify-center p-5">
       <div className="w-full max-w-[15rem] space-y-1.5 rounded-lg border border-rule bg-[hsl(36_30%_99%)] p-3 font-mono text-[0.62rem]">
-        <div className="text-rose-700/90">
-          <span className="mr-1 text-rose-400">−</span>in great detail
+        <div className="text-[hsl(var(--ink-removed)/0.9)]">
+          <span className="mr-1 text-[hsl(var(--ink-removed-mark))]">−</span>in great detail
         </div>
-        <div className="text-emerald-700">
-          <span className="mr-1 text-emerald-500">+</span>concisely
+        <div className="text-[hsl(var(--ink-added))]">
+          <span className="mr-1 text-[hsl(var(--ink-added-mark))]">+</span>concisely
         </div>
         <div className="flex gap-1.5 pt-1.5">
           <span className="rounded bg-ink px-1.5 py-0.5 text-[0.58rem] text-paper">{t("demo.accept")}</span>
@@ -185,7 +185,7 @@ function CompileVisual() {
           <FileCheck2 className="size-3.5" /> {t("features.compileButton")}
         </span>
         <div className="h-1 w-24 overflow-hidden rounded-full bg-rule">
-          <div className="h-full w-2/3 rounded-full bg-emerald-500" />
+          <div className="h-full w-2/3 rounded-full bg-[hsl(var(--ink-added-mark))]" />
         </div>
         <span className="text-[0.62rem] text-ink-faint">{t("features.compileStatus")}</span>
       </div>
@@ -196,7 +196,7 @@ function CompileVisual() {
 function PreviewVisual() {
   return (
     <VisualFrame className="items-center justify-center p-5">
-      <div className="w-20 rounded-sm border border-rule bg-white p-2 shadow-sm">
+      <div className="w-20 rounded-sm border border-rule bg-[hsl(var(--sheet))] p-2 shadow-sm">
         <div className="mx-auto mb-2 h-1.5 w-3/4 rounded bg-ink/70" />
         <div className="space-y-1">
           {[100, 92, 96, 70, 88, 60].map((w, i) => (

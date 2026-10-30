@@ -8,9 +8,9 @@ import { SectionEyebrow } from "./feature-grid";
 import { useReveal } from "./use-reveal";
 
 const PEOPLE = [
-  { name: "Mara", color: "bg-rose-500", initial: "M" },
-  { name: "Theo", color: "bg-sky-600", initial: "T" },
-  { name: "Iris", color: "bg-amber-500", initial: "I" },
+  { name: "Mara", color: "bg-[hsl(var(--cursor-mara))]", initial: "M" },
+  { name: "Theo", color: "bg-[hsl(var(--cursor-theo))]", initial: "T" },
+  { name: "Iris", color: "bg-[hsl(var(--cursor-iris))]", initial: "I" },
 ];
 
 export function Collaboration() {
@@ -68,7 +68,7 @@ export function Collaboration() {
                     <span
                       key={p.name}
                       className={cn(
-                        "inline-flex size-6 items-center justify-center rounded-full border-2 border-paper text-[0.62rem] font-semibold text-white",
+                        "inline-flex size-6 items-center justify-center rounded-full border-2 border-paper text-[0.62rem] font-semibold text-[hsl(var(--on-accent))]",
                         p.color,
                       )}
                     >
@@ -84,11 +84,11 @@ export function Collaboration() {
             <div className="relative px-6 py-7 font-mono text-[0.78rem] leading-[2.1] text-ink-soft">
               <p>
                 We propose a method that
-                <Cursor name="Mara" color="bg-rose-500" />
+                <Cursor name="Mara" color="bg-[hsl(var(--cursor-mara))]" />
                 &nbsp;converges quickly and remains robust under noise. In
-                <Cursor name="Theo" color="bg-sky-600" delay="1.1s" />
+                <Cursor name="Theo" color="bg-[hsl(var(--cursor-theo))]" delay="1.1s" />
                 &nbsp;practice it scales to large corpora without
-                <Cursor name="Iris" color="bg-amber-500" delay="0.5s" />
+                <Cursor name="Iris" color="bg-[hsl(var(--cursor-iris))]" delay="0.5s" />
                 &nbsp;loss of accuracy.
               </p>
             </div>
@@ -134,7 +134,7 @@ function Cursor({ name, color, delay }: { name: string; color: string; delay?: s
       <span className={cn("inline-block h-[1.2em] w-px translate-y-[3px]", color)} />
       <span
         className={cn(
-          "cursor-bob absolute -top-5 left-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[0.58rem] font-medium text-white",
+          "cursor-bob absolute -top-5 left-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[0.58rem] font-medium text-[hsl(var(--on-accent))]",
           color,
         )}
         style={delay ? ({ animationDelay: delay } as CSSProperties) : undefined}

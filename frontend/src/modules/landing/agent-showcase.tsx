@@ -79,7 +79,7 @@ function ReviewCard() {
       <div className="overflow-hidden rounded-2xl border border-rule bg-[hsl(36_30%_99%)] shadow-[0_40px_80px_-50px_hsl(var(--ink)/0.55)]">
         <div className="flex items-center justify-between border-b border-rule/80 bg-paper-deep/50 px-4 py-2.5 text-xs">
           <span className="font-mono text-ink-soft">main.tex</span>
-          <span className="text-emerald-700">+4 −5</span>
+          <span className="text-[hsl(var(--ink-added))]">+4 −5</span>
         </div>
 
         <pre className="overflow-x-auto px-4 py-3 font-mono text-[0.7rem] leading-relaxed">
@@ -126,13 +126,17 @@ function ReviewCard() {
 function DiffLine({ type, n, children }: { type: "ctx" | "add" | "del"; n: string; children: ReactNode }) {
   const tone =
     type === "add"
-      ? "bg-emerald-500/10 text-emerald-800"
+      ? "bg-[hsl(var(--ink-added-mark)/0.1)] text-[hsl(var(--ink-added-deep))]"
       : type === "del"
-        ? "bg-rose-500/10 text-rose-700/90"
+        ? "bg-[hsl(var(--ink-removed-tint)/0.1)] text-[hsl(var(--ink-removed)/0.9)]"
         : "text-ink-soft";
   const sign = type === "add" ? "+" : type === "del" ? "−" : " ";
   const signTone =
-    type === "add" ? "text-emerald-500" : type === "del" ? "text-rose-400" : "text-transparent";
+    type === "add"
+      ? "text-[hsl(var(--ink-added-mark))]"
+      : type === "del"
+        ? "text-[hsl(var(--ink-removed-mark))]"
+        : "text-transparent";
   return (
     <div className={`-mx-4 flex gap-3 px-4 ${tone}`}>
       <span className="w-5 shrink-0 select-none text-right text-ink-faint/50">{n}</span>
