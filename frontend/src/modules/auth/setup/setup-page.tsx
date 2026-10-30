@@ -42,22 +42,23 @@ export function SetupPage() {
 
   if (status.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
         <div className="w-full max-w-sm space-y-3" aria-busy="true">
           <Skeleton className="h-8" />
           <Skeleton className="h-24" />
         </div>
-      </div>
+      </main>
     );
   }
 
   if (status.isError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <h1 className="sr-only">{t("setup.title")}</h1>
         <Alert variant="destructive" className="w-full max-w-sm" role="alert">
           <AlertDescription>{t("setup.statusError")}</AlertDescription>
         </Alert>
-      </div>
+      </main>
     );
   }
 
@@ -99,11 +100,13 @@ export function SetupPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
       <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">{t("setup.title")}</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>{t("setup.title")}</h1>
+          </CardTitle>
           <CardDescription>{t("setup.description")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -166,6 +169,6 @@ export function SetupPage() {
           </Form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

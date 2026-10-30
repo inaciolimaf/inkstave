@@ -28,6 +28,25 @@ const common = {
     error: "Algo deu errado. Tente novamente.",
     empty: "Nada por aqui ainda.",
   },
+  shell: {
+    skipToContent: "Pular para o conteúdo principal",
+  },
+  /** The screen part of `document.title`, set by the app shell from each route's `handle`. */
+  title: {
+    setup: "Configuração inicial",
+    login: "Entrar",
+    register: "Criar conta",
+    confirmEmail: "Confirmar troca de e-mail",
+    verifyEmail: "Verificar e-mail",
+    resendVerification: "Reenviar e-mail de verificação",
+    magicLink: "Link mágico",
+    resetPassword: "Redefinir senha",
+    forgotPassword: "Esqueci a senha",
+    projects: "Projetos",
+    editor: "Editor",
+    settings: "Configurações",
+    invite: "Convite para projeto",
+  },
   errorBoundary: {
     title: "Algo deu errado",
     body: "A página encontrou um erro inesperado. Você pode tentar de novo ou recarregar se o problema persistir.",

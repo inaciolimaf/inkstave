@@ -22,13 +22,15 @@ export function EditorRoute() {
           <Link to="/projects" aria-label="Inkstave" className="shrink-0 hover:opacity-80">
             <InkstaveMark className="h-5 w-5 text-foreground" />
           </Link>
-          <span className="truncate font-semibold">{query.data?.name ?? t("common:state.loading")}</span>
+          <h1 className="truncate font-semibold">{query.data?.name ?? t("common:state.loading")}</h1>
         </div>
         <Link to="/projects" className="shrink-0 text-sm text-primary hover:underline">
           {t("toolbar.backToProjects")}
         </Link>
       </header>
-      {projectId && <EditorWorkspace projectId={projectId} />}
+      <main className="flex min-h-0 flex-1 flex-col">
+        {projectId && <EditorWorkspace projectId={projectId} />}
+      </main>
     </div>
   );
 }

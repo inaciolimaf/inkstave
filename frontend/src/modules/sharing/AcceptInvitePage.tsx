@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api-client";
 import { acceptInvite, declineInvite, getInvitePreview } from "./api";
 
 export function AcceptInvitePage() {
-  const { t } = useTranslation("sharing");
+  const { t } = useTranslation(["sharing", "common"]);
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
 
@@ -39,7 +39,8 @@ export function AcceptInvitePage() {
   const gone = preview.error instanceof ApiError && preview.error.status === 410;
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <main className="flex min-h-screen items-center justify-center p-4">
+      {!preview.data && !gone && <h1 className="sr-only">{t("common:title.invite")}</h1>}
       <Card className="w-full max-w-md">
         {preview.isLoading && (
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
@@ -50,7 +51,9 @@ export function AcceptInvitePage() {
         {gone && (
           <>
             <CardHeader>
-              <CardTitle>{t("accept.unavailableTitle")}</CardTitle>
+              <CardTitle>
+                <h1>{t("accept.unavailableTitle")}</h1>
+              </CardTitle>
               <CardDescription>{t("accept.unavailableDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -70,7 +73,9 @@ export function AcceptInvitePage() {
         {preview.data && (
           <>
             <CardHeader>
-              <CardTitle>{t("accept.invitedTo", { projectName: preview.data.projectName })}</CardTitle>
+              <CardTitle>
+                <h1>{t("accept.invitedTo", { projectName: preview.data.projectName })}</h1>
+              </CardTitle>
               <CardDescription>
                 {t("accept.invitedBy", { inviterName: preview.data.inviterName })}
                 <strong>{t(`role.${preview.data.role}`)}</strong>.
@@ -87,6 +92,6 @@ export function AcceptInvitePage() {
           </>
         )}
       </Card>
-    </div>
+    </main>
   );
 }

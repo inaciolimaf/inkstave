@@ -35,10 +35,12 @@ export function ConfirmEmailPage() {
   }, [token, t]);
 
   return (
-    <div className="mx-auto max-w-md p-6">
+    <main className="mx-auto max-w-md p-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t("confirmEmail.title")}</CardTitle>
+          <CardTitle>
+            <h1>{t("confirmEmail.title")}</h1>
+          </CardTitle>
           <CardDescription>
             {state.kind === "loading" && t("confirmEmail.confirming")}
             {state.kind === "done" && t("confirmEmail.done", { email: state.email })}
@@ -51,6 +53,6 @@ export function ConfirmEmailPage() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

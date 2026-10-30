@@ -28,6 +28,25 @@ export default {
     error: "Something went wrong. Please try again.",
     empty: "Nothing here yet.",
   },
+  shell: {
+    skipToContent: "Skip to main content",
+  },
+  /** The screen part of `document.title`, set by the app shell from each route's `handle`. */
+  title: {
+    setup: "Set up",
+    login: "Sign in",
+    register: "Create account",
+    confirmEmail: "Confirm email change",
+    verifyEmail: "Verify your email",
+    resendVerification: "Resend verification email",
+    magicLink: "Magic link",
+    resetPassword: "Reset your password",
+    forgotPassword: "Forgot password",
+    projects: "Projects",
+    editor: "Editor",
+    settings: "Settings",
+    invite: "Project invitation",
+  },
   errorBoundary: {
     title: "Something went wrong",
     body: "The page hit an unexpected error. You can try again, or reload if the problem persists.",

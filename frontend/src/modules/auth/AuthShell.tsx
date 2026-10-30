@@ -14,15 +14,17 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
       <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">{title}</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>{title}</h1>
+          </CardTitle>
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
         <CardContent>{children}</CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

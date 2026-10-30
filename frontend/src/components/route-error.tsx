@@ -22,10 +22,12 @@ export function RouteError() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm" role="alert">
         <CardHeader>
-          <CardTitle className="text-xl">{t("errorBoundary.title")}</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>{t("errorBoundary.title")}</h1>
+          </CardTitle>
           <CardDescription>
             {error instanceof ApiError ? error.detail : t("errorBoundary.body")}
           </CardDescription>
@@ -34,6 +36,6 @@ export function RouteError() {
           <Button onClick={() => void retry()}>{t("errorBoundary.retry")}</Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

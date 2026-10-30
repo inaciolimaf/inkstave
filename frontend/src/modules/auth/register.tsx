@@ -62,11 +62,13 @@ export function RegisterPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
       <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">{t("register.title")}</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>{t("register.title")}</h1>
+          </CardTitle>
           <CardDescription>{t("register.description")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,6 +150,6 @@ export function RegisterPage() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }
