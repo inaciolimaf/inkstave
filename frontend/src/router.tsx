@@ -1,68 +1,47 @@
 import { Navigate, type RouteObject, createBrowserRouter, createMemoryRouter } from "react-router-dom";
 
-import { PublicOnly, RequireAuth } from "@/auth/require-auth";
 import { RouteError } from "@/components/route-error";
 import { Loading } from "@/components/states";
-import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
-import { MagicLinkPage } from "@/features/auth/MagicLinkPage";
-import { ResendVerificationPage } from "@/features/auth/ResendVerificationPage";
-import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
-import { VerifyEmailPage } from "@/features/auth/VerifyEmailPage";
-import { LandingPage } from "@/features/landing/landing-page";
-import { ProjectsPage } from "@/features/projects/projects-page";
-import { ConfirmEmailPage } from "@/features/settings/ConfirmEmailPage";
-import { SettingsPage } from "@/features/settings/SettingsPage";
-import { AcceptInvitePage } from "@/features/sharing/AcceptInvitePage";
-import { EditorPage } from "@/pages/editor";
-import { LoginPage } from "@/pages/login";
-import { RegisterPage } from "@/pages/register";
-import { SetupPage } from "@/pages/setup-page";
+import { RequireAuth } from "@/modules/auth";
+import { ConfirmEmailRoute } from "@/routes/confirm-email";
+import { EditorRoute } from "@/routes/editor";
+import { ForgotPasswordRoute } from "@/routes/forgot-password";
+import { InviteRoute } from "@/routes/invite";
+import { LandingRoute } from "@/routes/landing";
+import { LoginRoute } from "@/routes/login";
+import { MagicLinkRoute } from "@/routes/magic-link";
+import { ProjectsRoute } from "@/routes/projects";
+import { RegisterRoute } from "@/routes/register";
+import { ResendVerificationRoute } from "@/routes/resend-verification";
+import { ResetPasswordRoute } from "@/routes/reset-password";
+import { SettingsRoute } from "@/routes/settings";
+import { SetupRoute } from "@/routes/setup";
+import { VerifyEmailRoute } from "@/routes/verify-email";
 
 const ROUTES: RouteObject[] = [
   // Public marketing landing page (reachable signed-out).
-  { path: "/", element: <LandingPage /> },
+  { path: "/", element: <LandingRoute /> },
   // First-run admin creation; public (reachable signed-out, no setup gate itself).
-  { path: "/setup", element: <SetupPage /> },
-  {
-    path: "/login",
-    element: (
-      <PublicOnly>
-        <LoginPage />
-      </PublicOnly>
-    ),
-  },
-  {
-    path: "/register",
-    element: (
-      <PublicOnly>
-        <RegisterPage />
-      </PublicOnly>
-    ),
-  },
+  { path: "/setup", element: <SetupRoute /> },
+  { path: "/login", element: <LoginRoute /> },
+  { path: "/register", element: <RegisterRoute /> },
   // Token-authorized; reachable signed-out (the token alone authorizes the change).
-  { path: "/settings/confirm-email", element: <ConfirmEmailPage /> },
+  { path: "/settings/confirm-email", element: <ConfirmEmailRoute /> },
   // Email link-based auth flows (spec 104). The token-authorized callbacks are
   // reachable even while signed in (a user may click a link in another tab), so
   // they are NOT wrapped in PublicOnly; only the pure request pages are.
-  { path: "/verify-email", element: <VerifyEmailPage /> },
-  { path: "/verify-email/resend", element: <ResendVerificationPage /> },
-  { path: "/magic-link", element: <MagicLinkPage /> },
-  { path: "/reset-password", element: <ResetPasswordPage /> },
-  {
-    path: "/forgot-password",
-    element: (
-      <PublicOnly>
-        <ForgotPasswordPage />
-      </PublicOnly>
-    ),
-  },
+  { path: "/verify-email", element: <VerifyEmailRoute /> },
+  { path: "/verify-email/resend", element: <ResendVerificationRoute /> },
+  { path: "/magic-link", element: <MagicLinkRoute /> },
+  { path: "/reset-password", element: <ResetPasswordRoute /> },
+  { path: "/forgot-password", element: <ForgotPasswordRoute /> },
   {
     element: <RequireAuth />,
     children: [
-      { path: "/projects", element: <ProjectsPage /> },
-      { path: "/projects/:projectId", element: <EditorPage /> },
-      { path: "/settings", element: <SettingsPage /> },
-      { path: "/invite/:token", element: <AcceptInvitePage /> },
+      { path: "/projects", element: <ProjectsRoute /> },
+      { path: "/projects/:projectId", element: <EditorRoute /> },
+      { path: "/settings", element: <SettingsRoute /> },
+      { path: "/invite/:token", element: <InviteRoute /> },
     ],
   },
   { path: "*", element: <Navigate to="/projects" replace /> },

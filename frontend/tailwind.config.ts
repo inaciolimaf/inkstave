@@ -46,7 +46,7 @@ export default {
           foreground: "hsl(var(--popover-foreground))",
         },
         // Landing-only "ink on paper" palette. The tokens are defined inside
-        // `.landing-root` (see features/landing/landing.css), so these utilities
+        // `.landing-root` (see modules/landing/landing.css), so these utilities
         // resolve only on the marketing page and never touch the app shell.
         paper: {
           DEFAULT: "hsl(var(--paper))",

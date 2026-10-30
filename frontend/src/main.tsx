@@ -3,7 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "@/App";
-import { AuthProvider } from "@/auth/auth-context";
+import { AuthProvider } from "@/modules/auth";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
 import "@/i18n/config";

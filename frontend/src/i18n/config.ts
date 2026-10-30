@@ -2,7 +2,7 @@ import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 
-import { landingEn, landingPt } from "@/features/landing/i18n";
+import { landingEn, landingPt } from "@/i18n/locales/landing";
 
 import enAgent from "./locales/en/agent";
 import enAuth from "./locales/en/auth";

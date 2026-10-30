@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -12,27 +14,27 @@ const PENDING_SIZE =
   process.env.ESLINT_STRICT === "1"
     ? []
     : [
-        "src/features/agent/AgentPanel.tsx",
-        "src/features/agent/reducer.ts",
-        "src/features/agent/useAgentChat.ts",
-        "src/features/auth/ResetPasswordPage.tsx",
-        "src/features/diff-review/DiffReviewDialog.tsx",
-        "src/features/diff-review/useDiffReview.ts",
-        "src/features/editor/autosave/use-document-autosave.ts",
-        "src/features/editor/codemirror-editor.tsx",
-        "src/features/editor/editor-pane.tsx",
-        "src/features/editor/editor-workspace.tsx",
-        "src/features/file-tree/file-tree-node.tsx",
-        "src/features/file-tree/file-tree-panel.tsx",
-        "src/features/landing/agent-demo.tsx",
-        "src/features/pdf-preview/PdfToolbar.tsx",
-        "src/features/pdf-preview/PreviewPane.tsx",
-        "src/features/pdf-preview/hooks/useCompile.ts",
-        "src/features/projects/import-project-dialog.tsx",
-        "src/features/sharing/MembersList.tsx",
-        "src/pages/login.tsx",
-        "src/pages/register.tsx",
-        "src/pages/setup-page.tsx",
+        "src/modules/agent/AgentPanel.tsx",
+        "src/modules/agent/reducer.ts",
+        "src/modules/agent/useAgentChat.ts",
+        "src/modules/auth/ResetPasswordPage.tsx",
+        "src/modules/diff-review/DiffReviewDialog.tsx",
+        "src/modules/diff-review/useDiffReview.ts",
+        "src/modules/editor/autosave/use-document-autosave.ts",
+        "src/modules/editor/codemirror-editor.tsx",
+        "src/modules/editor/editor-pane.tsx",
+        "src/modules/editor/editor-workspace.tsx",
+        "src/modules/file-tree/file-tree-node.tsx",
+        "src/modules/file-tree/file-tree-panel.tsx",
+        "src/modules/landing/agent-demo.tsx",
+        "src/modules/pdf-preview/PdfToolbar.tsx",
+        "src/modules/pdf-preview/PreviewPane.tsx",
+        "src/modules/pdf-preview/hooks/useCompile.ts",
+        "src/modules/projects/import-project-dialog.tsx",
+        "src/modules/sharing/MembersList.tsx",
+        "src/modules/auth/login.tsx",
+        "src/modules/auth/register.tsx",
+        "src/modules/auth/setup/setup-page.tsx",
       ];
 
 // What already has a helper or a token is not rewritten by hand. Each group has one allowed file:
@@ -79,6 +81,20 @@ function reuseRules(...allowed) {
   return ["error", ...groups.flatMap(([, rules]) => rules)];
 }
 
+// A module imports another only through its index.ts. A pattern on `modules/**` would not catch a
+// relative `../other/x`, so that case is a regex built from the folder list.
+const MODULES = readdirSync("src/modules");
+const BOUNDARY_MESSAGE = "Import another module through its index.ts (`@/modules/<name>`).";
+const MODULE_BOUNDARY = {
+  patterns: [
+    { group: ["@/modules/*/**"], message: BOUNDARY_MESSAGE },
+    { regex: `^(\\.\\./)+(${MODULES.join("|")})(/|$)`, message: BOUNDARY_MESSAGE },
+  ],
+};
+const NO_MODULES = {
+  patterns: [{ group: ["@/modules", "@/modules/**"], message: "Shared code cannot depend on a module." }],
+};
+
 export default tseslint.config(
   { ignores: ["dist", "node_modules", "playwright-report", "test-results", "coverage", "src/api/types.ts"] },
   {
@@ -117,7 +133,13 @@ export default tseslint.config(
       "max-lines-per-function": ["error", { max: 100, skipBlankLines: true, skipComments: true }],
       "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
       "no-restricted-syntax": reuseRules(),
+      "no-restricted-imports": ["error", MODULE_BOUNDARY],
     },
+  },
+  {
+    files: ["src/components/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}", "src/i18n/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-imports": ["error", NO_MODULES] },
   },
   ...(PENDING_SIZE.length ? [{ files: PENDING_SIZE, rules: { "max-lines-per-function": "off" } }] : []),
   { files: ["src/lib/palettes.ts"], rules: { "no-restricted-syntax": reuseRules("color") } },

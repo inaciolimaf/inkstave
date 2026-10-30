@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { RouterProvider } from "react-router-dom";
 import { vi } from "vitest";
 
-import { AuthProvider } from "@/auth/auth-context";
+import { AuthProvider } from "@/modules/auth/auth-context";
 import { tokenStore } from "@/lib/token-store";
 import { createAppRouter } from "@/router";
 
