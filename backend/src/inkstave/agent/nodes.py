@@ -61,9 +61,7 @@ def _frame_for_llm(messages: list[LLMMessage]) -> list[LLMMessage]:
     framed: list[LLMMessage] = []
     for m in messages:
         if m.role == "tool" and m.content is not None:
-            framed.append(
-                m.model_copy(update={"content": wrap_untrusted("tool_result", m.content)})
-            )
+            framed.append(m.model_copy(update={"content": wrap_untrusted("tool_result", m.content)}))
         else:
             framed.append(m)
     return framed
@@ -172,9 +170,7 @@ def _unparsed_tool_call(response: LLMResponse) -> str | None:
 
 def _plan_update(state: AgentState, response: LLMResponse) -> dict[str, Any]:
     """The state update for a completed plan step."""
-    assistant = LLMMessage(
-        role="assistant", content=response.content, tool_calls=response.tool_calls or None
-    )
+    assistant = LLMMessage(role="assistant", content=response.content, tool_calls=response.tool_calls or None)
     update: dict[str, Any] = {
         "messages": [assistant],
         "iterations": state.get("iterations", 0) + 1,
@@ -280,9 +276,7 @@ async def _dispatch_call(
 ) -> LLMMessage:
     """Run one requested tool, emitting + auditing its call and result."""
     logger.info("agent act: running tool=%s", call.name)
-    await _emit(
-        deps.events, "tool_call", tool_call_id=call.id, name=call.name, arguments=call.arguments
-    )
+    await _emit(deps.events, "tool_call", tool_call_id=call.id, name=call.name, arguments=call.arguments)
     _audit(ctx, {"action": "tool_call", "tool_name": call.name})
 
     result = await _run_tool(registry, ctx, call)
@@ -311,8 +305,7 @@ def make_act(deps: AgentDeps) -> Any:
 
         before = len(ctx.staged_edits) if ctx is not None else 0
         results = [
-            await _dispatch_call(deps, registry, ctx, call)
-            for call in state.get("pending_tool_calls", [])
+            await _dispatch_call(deps, registry, ctx, call) for call in state.get("pending_tool_calls", [])
         ]
 
         update: dict[str, Any] = {"messages": results, "pending_tool_calls": []}

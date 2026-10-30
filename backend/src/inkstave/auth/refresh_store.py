@@ -114,15 +114,11 @@ class RefreshStore:
         actor's), who then re-authenticates. A token minted strictly after the
         cutoff would survive, but the current callers do not mint one.
         """
-        await self._redis.set(
-            self._user_revoked_key(str(user_id)), clock.now().isoformat(), ex=self._ttl
-        )
+        await self._redis.set(self._user_revoked_key(str(user_id)), clock.now().isoformat(), ex=self._ttl)
 
     async def _user_revoked_at(self, user_id: str) -> datetime | None:
         raw = await self._redis.get(self._user_revoked_key(user_id))
-        return (
-            datetime.fromisoformat(raw.decode() if isinstance(raw, bytes) else raw) if raw else None
-        )
+        return datetime.fromisoformat(raw.decode() if isinstance(raw, bytes) else raw) if raw else None
 
     async def is_user_revoked(self, record: RefreshRecord) -> bool:
         """True if the record predates a per-user revocation cutoff (spec 59)."""

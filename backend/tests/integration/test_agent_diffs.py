@@ -61,9 +61,7 @@ async def _materialize(db, seed, edits, **settings_over):
     )
 
 
-async def test_range_edit_creates_row_and_leaves_doc(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_range_edit_creates_row_and_leaves_doc(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     edit = _edit(str(seed.main_id), "range", "NEW1\nNEW2", start=3, end=5)
     diffs = await _materialize(db_session, seed, [edit])
 

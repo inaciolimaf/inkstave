@@ -26,9 +26,9 @@ def model_rates(settings: AgentSettings, model: str) -> dict[str, float]:
 
 def cost_for(settings: AgentSettings, model: str, prompt: int, completion: int) -> Decimal:
     rates = model_rates(settings, model)
-    return Decimal(prompt) / 1000 * Decimal(str(rates["input"])) + Decimal(
-        completion
-    ) / 1000 * Decimal(str(rates["output"]))
+    return Decimal(prompt) / 1000 * Decimal(str(rates["input"])) + Decimal(completion) / 1000 * Decimal(
+        str(rates["output"])
+    )
 
 
 def avg_rate_per_1k(settings: AgentSettings, model: str) -> float:

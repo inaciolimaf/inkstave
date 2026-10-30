@@ -79,18 +79,14 @@ async def _seed_retention(
     return keep, evict
 
 
-async def _assert_evicted(
-    repo: OutputRepository, backend: LocalObjectStore, rows: list[Any]
-) -> None:
+async def _assert_evicted(repo: OutputRepository, backend: LocalObjectStore, rows: list[Any]) -> None:
     for row in rows:
         assert await repo.list_for_compile(row.id) == []
         for key in await repo.storage_keys_for_compile(row.id):
             assert await backend.exists(key) is False
 
 
-async def _assert_retained(
-    repo: OutputRepository, backend: LocalObjectStore, rows: list[Any]
-) -> None:
+async def _assert_retained(repo: OutputRepository, backend: LocalObjectStore, rows: list[Any]) -> None:
     for row in rows:
         outputs = await repo.list_for_compile(row.id)
         assert outputs

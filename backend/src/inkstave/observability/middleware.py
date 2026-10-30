@@ -73,9 +73,7 @@ class RequestContextMiddleware:
         inbound = Headers(scope=scope).get(self.header_name)
         return inbound if inbound and _VALID_REQUEST_ID.match(inbound) else uuid4().hex
 
-    def _record(
-        self, scope: Scope, status_code: int, duration_s: float, error: BaseException | None
-    ) -> None:
+    def _record(self, scope: Scope, status_code: int, duration_s: float, error: BaseException | None) -> None:
         """Emit the finish log + HTTP metrics, unless the path is excluded."""
         template = _route_template(scope)
         method = scope["method"]

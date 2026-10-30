@@ -82,8 +82,6 @@ async def test_truncation_emits_synthetic_info() -> None:
 
 
 async def test_max_problems_cap_appends_omitted_info() -> None:
-    result = await _service(SAMPLE_LOG.encode(), logparse_max_problems=1).problems_for(
-        uuid4(), None
-    )
+    result = await _service(SAMPLE_LOG.encode(), logparse_max_problems=1).problems_for(uuid4(), None)
     assert len(result.problems) == 2  # 1 kept + the synthetic notice
     assert result.problems[-1].rule == "too-many-problems"

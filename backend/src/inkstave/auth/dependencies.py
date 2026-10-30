@@ -94,9 +94,7 @@ async def get_optional_user(
     return await _resolve_user(credentials.credentials, token_service, session)
 
 
-async def authenticate_ws_token(
-    token: str, token_service: TokenService, session: AsyncSession
-) -> User:
+async def authenticate_ws_token(token: str, token_service: TokenService, session: AsyncSession) -> User:
     """Validate a WebSocket auth token exactly like ``get_current_user``.
 
     Reused by spec 29's WebSocket layer. Raises :class:`NotAuthenticatedError`

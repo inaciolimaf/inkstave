@@ -104,12 +104,7 @@ def test_underfull_vbox_single_line() -> None:
 
 
 def test_file_attribution_across_includes() -> None:
-    log = (
-        "(./main.tex\n"
-        "(sections/intro.tex\n"
-        "Overfull \\hbox (3.0pt too wide) in paragraph at lines 5--6\n"
-        ")\n"
-    )
+    log = "(./main.tex\n(sections/intro.tex\nOverfull \\hbox (3.0pt too wide) in paragraph at lines 5--6\n)\n"
     p = parse_latex_log(log)[0]
     assert p.file == "sections/intro.tex"
 

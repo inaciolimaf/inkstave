@@ -57,9 +57,7 @@ def _resolve_root(input_dir: Path, main_file: str) -> str | None:
     )
     if not candidates:
         return None
-    return next(
-        (rel for rel in candidates if _declares_documentclass(input_dir / rel)), candidates[0]
-    )
+    return next((rel for rel in candidates if _declares_documentclass(input_dir / rel)), candidates[0])
 
 
 class CompileService:
@@ -90,9 +88,7 @@ class CompileService:
             address_space_bytes=s.compile_address_space_bytes,
         )
 
-    async def compile(
-        self, opts: CompileOptions, cancel: CancelToken | None = None
-    ) -> CompileResult:
+    async def compile(self, opts: CompileOptions, cancel: CancelToken | None = None) -> CompileResult:
         cancel = cancel or CancelToken()
         compile_id = opts.compile_id or uuid4()
         workdir: Path | None = None
@@ -161,9 +157,7 @@ class CompileService:
     ) -> None:
         """Hand the workdir to the caller, or delete it."""
         keep = opts.keep_workdir or (
-            result is not None
-            and result.status in _FAILED
-            and self._settings.compile_keep_workdir_on_failure
+            result is not None and result.status in _FAILED and self._settings.compile_keep_workdir_on_failure
         )
         if not keep:
             await cleanup_workdir(workdir)

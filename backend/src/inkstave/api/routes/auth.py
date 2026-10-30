@@ -45,9 +45,7 @@ if TYPE_CHECKING:
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_UNAUTHORIZED: dict[int | str, dict[str, Any]] = {
-    status.HTTP_401_UNAUTHORIZED: {"model": ErrorEnvelope}
-}
+_UNAUTHORIZED: dict[int | str, dict[str, Any]] = {status.HTTP_401_UNAUTHORIZED: {"model": ErrorEnvelope}}
 
 # Standard 400/410 envelope set for the token-consuming callback endpoints.
 _CALLBACK_ERRORS: dict[int | str, dict[str, Any]] = {
@@ -214,9 +212,7 @@ async def magic_link_callback(
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> TokenPair:
     """Consume the magic-link token and issue the real JWT access+refresh pair."""
-    return await email_auth.complete_magic_login(
-        session, token_service, refresh_store, raw_token=data.token
-    )
+    return await email_auth.complete_magic_login(session, token_service, refresh_store, raw_token=data.token)
 
 
 @router.post(
@@ -287,9 +283,7 @@ async def refresh(
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> TokenPair:
     """Rotate the presented refresh token; detect and punish reuse."""
-    return await auth_service.refresh_tokens(
-        session, token_service, refresh_store, data.refresh_token
-    )
+    return await auth_service.refresh_tokens(session, token_service, refresh_store, data.refresh_token)
 
 
 @router.post(

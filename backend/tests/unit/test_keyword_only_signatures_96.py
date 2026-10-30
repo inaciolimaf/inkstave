@@ -32,9 +32,7 @@ def test_store_refresh_ids_are_keyword_only() -> None:
 
 
 def test_snapshot_params_are_keyword_only() -> None:
-    assert _all_keyword_only(
-        CrdtStore.snapshot, ["document_id", "state", "state_vector", "upto_update_id"]
-    )
+    assert _all_keyword_only(CrdtStore.snapshot, ["document_id", "state", "state_vector", "upto_update_id"])
 
 
 def test_manager_exposes_intention_revealing_flush_methods() -> None:

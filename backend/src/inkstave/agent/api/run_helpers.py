@@ -77,9 +77,7 @@ async def _check_rate_limit(scope: RunScope, finalize: Callable[[str], Awaitable
         message="Too many agent runs. Please wait a moment.",
         retry_after=rate.retry_after,
     )
-    await scope.audit(
-        AgentAuditAction.limit_block, outcome="blocked", detail={"reason": rate.reason}
-    )
+    await scope.audit(AgentAuditAction.limit_block, outcome="blocked", detail={"reason": rate.reason})
     inc_agent_request("rate_limited")
     await finalize(AgentRunState.error.value)
     return False
@@ -96,9 +94,7 @@ async def _check_day_budget(scope: RunScope, finalize: Callable[[str], Awaitable
     )
     if budget.allowed:
         return True
-    await scope.sink.emit(
-        "error", code="agent_budget_exceeded", message="Daily usage budget exhausted."
-    )
+    await scope.sink.emit("error", code="agent_budget_exceeded", message="Daily usage budget exhausted.")
     await scope.audit(
         AgentAuditAction.budget_block,
         outcome="blocked",

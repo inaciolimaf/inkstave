@@ -78,9 +78,7 @@ async def test_body_size_limit_returns_413() -> None:
 # --- strict validation (AC4: 422 extra) ------------------------------------- #
 
 
-async def test_extra_field_is_rejected_422(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_extra_field_is_rejected_422(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers, user = await _auth(db_session)
     project = await create_project(db_session, user.id, "P")
     await db_session.commit()

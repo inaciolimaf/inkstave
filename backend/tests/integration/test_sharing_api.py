@@ -97,9 +97,7 @@ async def test_expired_invite_returns_410(
     token = (await _invite(async_client, owner_h, pid, "bob@example.com"))["token"]
 
     # Force expiry directly in the DB.
-    await db_session.execute(
-        update(ProjectInvite).values(expires_at=datetime.now(UTC) - timedelta(days=1))
-    )
+    await db_session.execute(update(ProjectInvite).values(expires_at=datetime.now(UTC) - timedelta(days=1)))
     await db_session.commit()
 
     r = await async_client.post(f"{INVITES}/{token}/accept", headers=bob_h)
@@ -117,9 +115,7 @@ async def test_expired_invite_decline_returns_410(
     token = (await _invite(async_client, owner_h, pid, "bob@example.com"))["token"]
 
     # Force expiry directly in the DB.
-    await db_session.execute(
-        update(ProjectInvite).values(expires_at=datetime.now(UTC) - timedelta(days=1))
-    )
+    await db_session.execute(update(ProjectInvite).values(expires_at=datetime.now(UTC) - timedelta(days=1)))
     await db_session.commit()
 
     r = await async_client.post(f"{INVITES}/{token}/decline", headers=bob_h)

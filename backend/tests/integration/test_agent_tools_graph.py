@@ -26,9 +26,7 @@ pytestmark = pytest.mark.integration
 __all__ = ["seed"]
 
 
-async def test_act_runs_real_tool_via_graph(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_act_runs_real_tool_via_graph(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     session = await _session(db_session, seed)
     deps = AgentDeps(
         llm=FakeLLM(script=[_tool_call("search_project", {"query": "introduction"})]),
@@ -63,9 +61,7 @@ async def test_locate_section_via_graph_is_structure_aware(
     assert match["title"] == "Introduction" and match["heading_line"] == 3
 
 
-async def test_act_unknown_tool_is_unsupported(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_act_unknown_tool_is_unsupported(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     session = await _session(db_session, seed)
     deps = AgentDeps(
         llm=FakeLLM(script=[_tool_call("ghost", {})]),
@@ -78,9 +74,7 @@ async def test_act_unknown_tool_is_unsupported(
     assert payload["ok"] is False and payload["error"]["code"] == "unsupported"  # AC8
 
 
-async def test_act_invalid_args_is_invalid_args(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_act_invalid_args_is_invalid_args(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     session = await _session(db_session, seed)
     deps = AgentDeps(
         llm=FakeLLM(script=[_tool_call("read_file", {})]),  # neither selector → invalid

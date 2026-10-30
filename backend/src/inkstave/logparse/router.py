@@ -49,9 +49,7 @@ def get_log_problems_service(
     settings: Settings = Depends(get_settings_dep),
 ) -> LogProblemsService:
     output_store = OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
-    return LogProblemsService(
-        repo=CompileRepository(session), output_store=output_store, settings=settings
-    )
+    return LogProblemsService(repo=CompileRepository(session), output_store=output_store, settings=settings)
 
 
 @router.get(

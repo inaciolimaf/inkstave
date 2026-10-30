@@ -281,15 +281,11 @@ async def run_events(
 # --- diffs ----------------------------------------------------------------- #
 
 
-@router.get(
-    "/sessions/{session_id}/diffs", response_model=list[ProposedDiffSummary], responses=_ERRORS
-)
+@router.get("/sessions/{session_id}/diffs", response_model=list[ProposedDiffSummary], responses=_ERRORS)
 async def list_diffs(
     project_id: UUID,
     session_id: UUID,
-    status_filter: Literal[
-        "proposed", "applied", "partially_applied", "rejected", "stale", "superseded"
-    ]
+    status_filter: Literal["proposed", "applied", "partially_applied", "rejected", "stale", "superseded"]
     | None = Query(None, alias="status"),
     include: str | None = Query(None),
     user: User = Depends(get_current_user),

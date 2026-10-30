@@ -106,9 +106,7 @@ class AgentMessage(UUIDPrimaryKeyMixin, Base):
     )
 
     __table_args__ = (
-        CheckConstraint(
-            "role IN ('system','user','assistant','tool')", name="agent_message_role_valid"
-        ),
+        CheckConstraint("role IN ('system','user','assistant','tool')", name="agent_message_role_valid"),
         UniqueConstraint("session_id", "seq", name="uq_agent_messages_session_seq"),
         Index("ix_agent_messages_session_id", "session_id"),
     )

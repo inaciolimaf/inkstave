@@ -101,9 +101,7 @@ class RoomManager:
             return True
         return False
 
-    def local_broadcast(
-        self, document_id: UUID, payload: bytes, exclude: str | None
-    ) -> list[Connection]:
+    def local_broadcast(self, document_id: UUID, payload: bytes, exclude: str | None) -> list[Connection]:
         """Enqueue ``payload`` to every local connection except ``exclude``.
         Returns the connections whose queue was full (to be closed as slow)."""
         room = self._rooms.get(document_id)

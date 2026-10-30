@@ -28,9 +28,7 @@ class CrdtDocumentState(Base):
     state: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     state_vector: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     seq: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=text("0"))
-    text_synced_seq: Mapped[int] = mapped_column(
-        BigInteger, nullable=False, server_default=text("0")
-    )
+    text_synced_seq: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=text("0"))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

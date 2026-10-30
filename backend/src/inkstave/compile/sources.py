@@ -54,9 +54,7 @@ class StorageFileSource:
 
     async def iter_files(self, project_id: UUID) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         by_id = await _entities_by_id(self._session, project_id)
-        files = (
-            await self._session.execute(select(File).where(File.project_id == project_id))
-        ).scalars()
+        files = (await self._session.execute(select(File).where(File.project_id == project_id))).scalars()
         for file_row in files:
             entity = by_id.get(file_row.entity_id)
             if entity is None:

@@ -50,10 +50,7 @@ async def test_sse_events_route_streams_and_closes(
     await db_session.commit()
     run_id = str(session.active_run_id)
     token = seed.headers["Authorization"].removeprefix("Bearer ")
-    path = (
-        f"{API}/{seed.project.id}/agent/sessions/{session.id}/runs/{run_id}/events"
-        f"?access_token={token}"
-    )
+    path = f"{API}/{seed.project.id}/agent/sessions/{session.id}/runs/{run_id}/events?access_token={token}"
 
     collected: list[bytes] = []
 

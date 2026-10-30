@@ -44,9 +44,7 @@ def _validate_new_password(user: User, new_password: str) -> None:
     for the token-authorized reset, so it re-validates here (raising 400, never 500).
     """
     if not PASSWORD_MIN_LENGTH <= len(new_password) <= PASSWORD_MAX_LENGTH:
-        raise BadRequestError(
-            f"Password must be {PASSWORD_MIN_LENGTH}–{PASSWORD_MAX_LENGTH} characters."
-        )
+        raise BadRequestError(f"Password must be {PASSWORD_MIN_LENGTH}–{PASSWORD_MAX_LENGTH} characters.")
     try:
         validate_password_charset(new_password)
     except ValueError as exc:

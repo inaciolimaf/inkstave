@@ -50,9 +50,7 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     return result.scalar_one_or_none()
 
 
-async def register_user(
-    session: AsyncSession, hasher: PasswordHasher, data: RegisterRequest
-) -> User:
+async def register_user(session: AsyncSession, hasher: PasswordHasher, data: RegisterRequest) -> User:
     """Create and persist a new user, or raise :class:`EmailAlreadyExistsError`."""
     email = normalise_email(data.email)
     if await email_exists(session, email):

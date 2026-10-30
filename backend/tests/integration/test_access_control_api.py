@@ -100,19 +100,13 @@ async def test_doc_and_tree_read(actors: SimpleNamespace, async_client: AsyncCli
 # --- writes: viewer 403, non-member 404, editor/owner succeed -------------- #
 
 
-async def test_project_write_is_owner_only(
-    actors: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_project_write_is_owner_only(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}"
     assert (
         await async_client.patch(url, json={"name": "New"}, headers=actors.editor)
     ).status_code == 403  # AC4 editor denied
-    assert (
-        await async_client.patch(url, json={"name": "New"}, headers=actors.viewer)
-    ).status_code == 403
-    assert (
-        await async_client.patch(url, json={"name": "New"}, headers=actors.outsider)
-    ).status_code == 404
+    assert (await async_client.patch(url, json={"name": "New"}, headers=actors.viewer)).status_code == 403
+    assert (await async_client.patch(url, json={"name": "New"}, headers=actors.outsider)).status_code == 404
     assert (
         await async_client.patch(url, json={"name": "New"}, headers=actors.owner)
     ).status_code == 200  # AC5
@@ -125,9 +119,7 @@ async def test_doc_write(actors: SimpleNamespace, async_client: AsyncClient) -> 
         await async_client.put(url, json={"content": "x", "base_version": 0}, headers=actors.viewer)
     ).status_code == 403  # AC2 INSUFFICIENT_ROLE
     assert (
-        await async_client.put(
-            url, json={"content": "x", "base_version": 0}, headers=actors.outsider
-        )
+        await async_client.put(url, json={"content": "x", "base_version": 0}, headers=actors.outsider)
     ).status_code == 404
     # editor may write
     version = (await async_client.get(url, headers=actors.editor)).json()["version"]
@@ -137,9 +129,7 @@ async def test_doc_write(actors: SimpleNamespace, async_client: AsyncClient) -> 
     assert ok.status_code == 200  # AC4 editor writes
 
 
-async def test_tree_write_is_editor_plus(
-    actors: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_tree_write_is_editor_plus(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}/tree/entities"
     body = {"type": "doc", "name": "extra.tex", "parent_id": None}
     assert (await async_client.post(url, json=body, headers=actors.viewer)).status_code == 403

@@ -51,9 +51,7 @@ async def test_persist_is_idempotent(db_session: AsyncSession, tmp_path: Path) -
     assert len(await store.list_outputs(compile_row.id)) == 4
 
 
-async def test_delete_for_compile_removes_rows_and_objects(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_delete_for_compile_removes_rows_and_objects(db_session: AsyncSession, tmp_path: Path) -> None:
     _, project, compile_row = await _seed(db_session)
     store = _store(db_session, tmp_path)
     rows = await store.persist(compile_row.id, project.id, _result(tmp_path))

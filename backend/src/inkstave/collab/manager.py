@@ -151,9 +151,7 @@ class DocumentManager:
 
     # ----------------------------------------------------------------- protocol #
 
-    async def handle_sync_step1(
-        self, document_id: UUID, state_vector: bytes
-    ) -> tuple[bytes, bytes]:
+    async def handle_sync_step1(self, document_id: UUID, state_vector: bytes) -> tuple[bytes, bytes]:
         """Return ``(sync_step2_for_client, server_sync_step1)`` as encoded messages."""
         async with self._lock(document_id):
             entry = self._require(document_id)
@@ -176,9 +174,7 @@ class DocumentManager:
         self._schedule_flush(document_id)
         return update
 
-    async def apply_server_update(
-        self, document_id: UUID, new_text: str, origin: str | None
-    ) -> bytes:
+    async def apply_server_update(self, document_id: UUID, new_text: str, origin: str | None) -> bytes:
         """Apply a server-originated text replacement as one CRDT update (restore, spec 37).
 
         Acquires the doc (loading it if no clients are connected), replaces the shared

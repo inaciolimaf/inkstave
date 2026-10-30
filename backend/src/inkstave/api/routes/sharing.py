@@ -191,9 +191,7 @@ async def accept_invite(
     return AcceptResponse(project_id=project_id, role=role)
 
 
-@invites_router.post(
-    "/{token}/decline", status_code=status.HTTP_204_NO_CONTENT, responses=_NOT_FOUND
-)
+@invites_router.post("/{token}/decline", status_code=status.HTTP_204_NO_CONTENT, responses=_NOT_FOUND)
 async def decline_invite(
     token: str,
     _user: User = Depends(get_current_user),

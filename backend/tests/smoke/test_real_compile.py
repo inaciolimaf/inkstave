@@ -37,9 +37,7 @@ class _Docs:
 
 
 class _Files:
-    async def iter_files(
-        self, project_id: object
-    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+    async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         return
         yield  # pragma: no cover
 

@@ -87,9 +87,7 @@ async def test_file_email_sender_offloads_io_and_writes_identically(
     calls = _record_to_thread(monkeypatch)
     mail_dir = tmp_path / "mail"
     sender = FileEmailSender(str(mail_dir), "noreply@inkstave.local")
-    await sender.send(
-        OutgoingEmail(to="a@b.com", subject="Hi", text_body="Body", html_body="<p>Body</p>")
-    )
+    await sender.send(OutgoingEmail(to="a@b.com", subject="Hi", text_body="Body", html_body="<p>Body</p>"))
 
     files = list(mail_dir.glob("*.json"))
     assert len(files) == 1

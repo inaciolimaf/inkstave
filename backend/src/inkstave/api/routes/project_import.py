@@ -125,9 +125,7 @@ async def _create_import(
     source_bytes: int,
 ) -> ProjectImport:
     """One transaction: create the NEW project, the import row, then enqueue."""
-    project = await project_service.create_project(
-        session, user.id, _effective_name(name, file.filename)
-    )
+    project = await project_service.create_project(session, user.id, _effective_name(name, file.filename))
     repo = ProjectImportRepository(session)
     row = await repo.create(
         project_id=project.id,

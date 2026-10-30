@@ -36,9 +36,7 @@ async def test_get_db_session_commits_on_success(db_engine: Any) -> None:
         autoflush=False,
         join_transaction_mode="create_savepoint",
     )
-    request = SimpleNamespace(
-        app=SimpleNamespace(state=SimpleNamespace(db_sessionmaker=sessionmaker))
-    )
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(db_sessionmaker=sessionmaker)))
     try:
         gen = get_db_session(request)  # type: ignore[arg-type]
         session = await anext(gen)
@@ -60,9 +58,7 @@ async def test_get_db_session_rolls_back_on_error(db_engine: Any) -> None:
         autoflush=False,
         join_transaction_mode="create_savepoint",
     )
-    request = SimpleNamespace(
-        app=SimpleNamespace(state=SimpleNamespace(db_sessionmaker=sessionmaker))
-    )
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(db_sessionmaker=sessionmaker)))
     try:
         gen = get_db_session(request)  # type: ignore[arg-type]
         session = await anext(gen)

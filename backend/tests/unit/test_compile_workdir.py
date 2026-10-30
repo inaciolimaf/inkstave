@@ -46,9 +46,7 @@ class FakeFiles:
     def __init__(self, files: list[tuple[str, bytes]]) -> None:
         self._files = files
 
-    async def iter_files(
-        self, project_id: object
-    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+    async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         for path, data in self._files:
 
             async def stream(payload: bytes = data) -> AsyncIterator[bytes]:
@@ -80,9 +78,7 @@ class _RecordingFiles:
     def __init__(self, streams: list[tuple[str, _RecordingStream]]) -> None:
         self._streams = streams
 
-    async def iter_files(
-        self, project_id: object
-    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+    async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         for path, stream in self._streams:
             yield path, stream  # type: ignore[misc]
 

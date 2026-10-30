@@ -61,18 +61,14 @@ async def test_duplicate_name_is_case_insensitive_conflict(
 # rest are length-valid but rejected by the service-layer validate_name_segment —
 # proving that guard is still wired in.
 @pytest.mark.parametrize("name", ["..", "a/b", "a\\b", "con", "with\x00nul", "", "x" * 256])
-async def test_invalid_names_rejected(
-    async_client: AsyncClient, db_session: AsyncSession, name: str
-) -> None:
+async def test_invalid_names_rejected(async_client: AsyncClient, db_session: AsyncSession, name: str) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     result = await _create(async_client, pid, headers, type_="doc", name=name)
     assert result["status"] == 422
 
 
-async def test_create_under_non_folder_parent(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_create_under_non_folder_parent(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     doc = await _create(async_client, pid, headers, type_="doc", name="parent.tex")
@@ -138,9 +134,7 @@ async def test_rename(async_client: AsyncClient, db_session: AsyncSession) -> No
         assert bad_resp.status_code == 422
 
 
-async def test_create_accepts_max_length_name(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_create_accepts_max_length_name(async_client: AsyncClient, db_session: AsyncSession) -> None:
     # A 255-char name (== MAX_TREE_ENTITY_NAME_LENGTH) is still accepted (spec 100).
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)

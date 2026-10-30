@@ -101,9 +101,7 @@ def test_metrics_module_reimport_does_not_raise() -> None:
 
 async def test_track_job_records_status_even_on_exception() -> None:
     base = (
-        REGISTRY.get_sample_value(
-            "inkstave_job_duration_seconds_count", {"job_name": "t", "status": "error"}
-        )
+        REGISTRY.get_sample_value("inkstave_job_duration_seconds_count", {"job_name": "t", "status": "error"})
         or 0.0
     )
     with pytest.raises(RuntimeError):
@@ -152,9 +150,7 @@ def _template_app() -> FastAPI:
 
 def test_route_template_returns_parameterized_template_for_matched_route() -> None:
     app = _template_app()
-    template = _route_template(
-        _scope(app, "GET", "/api/v1/projects/123e4567-e89b-12d3-a456-426614174000")
-    )
+    template = _route_template(_scope(app, "GET", "/api/v1/projects/123e4567-e89b-12d3-a456-426614174000"))
     # The bounded template — not the concrete path — keeps metric cardinality low.
     assert template == "/api/v1/projects/{project_id}"
 
@@ -179,8 +175,6 @@ def test_agent_token_helper_increments_with_model_allowlist() -> None:
     # An unknown model is bucketed to "other" to bound cardinality.
     metrics.inc_agent_tokens("prompt", "some/private-model", 3)
     assert (
-        REGISTRY.get_sample_value(
-            "inkstave_agent_tokens_total", {"direction": "prompt", "model": "other"}
-        )
+        REGISTRY.get_sample_value("inkstave_agent_tokens_total", {"direction": "prompt", "model": "other"})
         is not None
     )

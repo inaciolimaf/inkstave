@@ -190,9 +190,7 @@ class _FakeS3Client:
     def __init__(self, backing: dict[str, tuple[bytes, str | None]]) -> None:
         self._d = backing
 
-    async def put_object(
-        self, Bucket: str, Key: str, Body: bytes, ContentType: str | None = None
-    ) -> None:
+    async def put_object(self, Bucket: str, Key: str, Body: bytes, ContentType: str | None = None) -> None:
         self._d[Key] = (Body, ContentType)
 
     async def head_object(self, Bucket: str, Key: str) -> dict[str, Any]:

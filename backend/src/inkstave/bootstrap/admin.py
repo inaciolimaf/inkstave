@@ -24,9 +24,7 @@ _ADMIN_LOCK_KEY = 0x41444D4E  # "ADMN"
 
 async def admin_exists(session: AsyncSession) -> bool:
     """True if any user already carries the admin flag."""
-    count = await session.scalar(
-        select(func.count()).select_from(User).where(User.is_admin.is_(True))
-    )
+    count = await session.scalar(select(func.count()).select_from(User).where(User.is_admin.is_(True)))
     return bool(count)
 
 

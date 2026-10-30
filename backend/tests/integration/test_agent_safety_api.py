@@ -63,9 +63,7 @@ async def seed(db_session: AsyncSession) -> SimpleNamespace:
     )
 
 
-def _ctx(
-    db: AsyncSession, redis: Any, llm: FakeLLM, sink: InMemoryEventSink, settings: AgentSettings
-):
+def _ctx(db: AsyncSession, redis: Any, llm: FakeLLM, sink: InMemoryEventSink, settings: AgentSettings):
     return {
         "settings": settings,
         "session_factory": lambda: _SessionCtx(db),
@@ -202,16 +200,12 @@ async def test_internal_error_message_is_not_leaked(
     assert "secret-internal-detail-xyz" not in str(sink.events)
 
 
-async def test_audit_rows_for_a_full_run(
-    seed: SimpleNamespace, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_audit_rows_for_a_full_run(seed: SimpleNamespace, db_session: AsyncSession, redis: Any) -> None:
     settings = AgentSettings()
     sink = InMemoryEventSink(str(seed.run_id))
     llm = FakeLLM(
         script=[
-            _tool_call(
-                "propose_edit", {"doc_id": str(seed.main_id), "mode": "full", "new_text": "new\n"}
-            )
+            _tool_call("propose_edit", {"doc_id": str(seed.main_id), "mode": "full", "new_text": "new\n"})
         ]
     )
 

@@ -21,11 +21,7 @@ class ReadFileArgs(BaseModel):
     def _one_selector(self) -> ReadFileArgs:
         if (self.doc_id is None) == (self.path is None):
             raise ValueError("provide exactly one of doc_id or path")
-        if (
-            self.start_line is not None
-            and self.end_line is not None
-            and self.end_line < self.start_line
-        ):
+        if self.start_line is not None and self.end_line is not None and self.end_line < self.start_line:
             raise ValueError("end_line must be >= start_line")
         return self
 
@@ -91,13 +87,9 @@ class ReadFileTool(Tool):
         return ToolResult.success(**result)
 
 
-def _doc_id_for_path(
-    entities: list[TreeEntity], paths: dict[UUID, str], path: str | None
-) -> str | None:
+def _doc_id_for_path(entities: list[TreeEntity], paths: dict[UUID, str], path: str | None) -> str | None:
     """The id of the document at `path`, or ``None`` when there is none."""
-    target = next(
-        (e for e in entities if paths[e.id] == path and e.type == TreeEntityType.doc), None
-    )
+    target = next((e for e in entities if paths[e.id] == path and e.type == TreeEntityType.doc), None)
     return None if target is None else str(target.id)
 
 

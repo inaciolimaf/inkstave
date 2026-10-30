@@ -40,9 +40,7 @@ class AgentTurnResult:
 def _to_llm_message(
     role: str, content: str | None, tool_calls: object, tool_call_id: str | None
 ) -> LLMMessage:
-    calls = (
-        [ToolCall.model_validate(tc) for tc in tool_calls] if isinstance(tool_calls, list) else None
-    )
+    calls = [ToolCall.model_validate(tc) for tc in tool_calls] if isinstance(tool_calls, list) else None
     return LLMMessage(
         role=role,  # type: ignore[arg-type]
         content=content,
@@ -51,16 +49,12 @@ def _to_llm_message(
     )
 
 
-async def _build_transcript(
-    db: AsyncSession, session: AgentSession, user_message: str
-) -> list[LLMMessage]:
+async def _build_transcript(db: AsyncSession, session: AgentSession, user_message: str) -> list[LLMMessage]:
     """A freshly-computed system prompt (never persisted) + stored history + input."""
     prior = await repo.list_messages(db, session.id)
     system = build_system_prompt(PromptContext(project_id=str(session.project_id)))
     transcript: list[LLMMessage] = [LLMMessage(role="system", content=system)]
-    transcript.extend(
-        _to_llm_message(m.role, m.content, m.tool_calls, m.tool_call_id) for m in prior
-    )
+    transcript.extend(_to_llm_message(m.role, m.content, m.tool_calls, m.tool_call_id) for m in prior)
     transcript.append(LLMMessage(role="user", content=user_message))
     return transcript
 
@@ -102,9 +96,7 @@ async def _persist_produced(
             seq=first_seq + offset,
             role=message.role,
             content=message.content,
-            tool_calls=(
-                [tc.model_dump() for tc in message.tool_calls] if message.tool_calls else None
-            ),
+            tool_calls=([tc.model_dump() for tc in message.tool_calls] if message.tool_calls else None),
             tool_call_id=message.tool_call_id,
             token_usage=usage.model_dump() if offset == last_idx else None,
         )
@@ -154,9 +146,7 @@ async def run_turn(
     # 5. Persist everything the turn appended after the input transcript, in order.
     produced = result["messages"][len(transcript) :]
     usage = result.get("usage", LLMUsage())
-    last_assistant_id = await _persist_produced(
-        db, session, produced, first_seq=seq + 1, usage=usage
-    )
+    last_assistant_id = await _persist_produced(db, session, produced, first_seq=seq + 1, usage=usage)
 
     # 6. Turn the turn's staged edits into reviewable proposed diffs (spec 43). No
     #    document is mutated; the diffs are attributed to the final assistant message.

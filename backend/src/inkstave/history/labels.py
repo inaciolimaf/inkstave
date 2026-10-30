@@ -72,9 +72,7 @@ async def list_doc_labels(session: AsyncSession, doc_id: UUID) -> list[HistoryLa
     )
 
 
-async def delete_doc_label(
-    session: AsyncSession, *, project_id: UUID, doc_id: UUID, label_id: UUID
-) -> None:
+async def delete_doc_label(session: AsyncSession, *, project_id: UUID, doc_id: UUID, label_id: UUID) -> None:
     label = await session.scalar(
         select(HistoryLabel).where(
             HistoryLabel.id == label_id,
@@ -149,9 +147,7 @@ async def delete_project_label(session: AsyncSession, *, project_id: UUID, label
     await session.flush()
 
 
-async def get_project_label(
-    session: AsyncSession, *, project_id: UUID, label_id: UUID
-) -> HistoryLabel:
+async def get_project_label(session: AsyncSession, *, project_id: UUID, label_id: UUID) -> HistoryLabel:
     label = await session.scalar(
         select(HistoryLabel).where(
             HistoryLabel.id == label_id,

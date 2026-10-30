@@ -74,9 +74,7 @@ class UnauthorizedError(AppError):
         headers: dict[str, str] | None = None,
     ) -> None:
         # A 401 always advertises the scheme to use to authenticate.
-        super().__init__(
-            message, details=details, headers=headers or {"WWW-Authenticate": "Bearer"}
-        )
+        super().__init__(message, details=details, headers=headers or {"WWW-Authenticate": "Bearer"})
 
 
 class ForbiddenError(AppError):

@@ -34,9 +34,7 @@ def _hit(entity_id: object, path: str, line: int, snippet: str, kind: str) -> di
     }
 
 
-def _doc_matches(
-    entity_id: object, path: str, content: str, needle: str
-) -> list[dict[str, object]]:
+def _doc_matches(entity_id: object, path: str, content: str, needle: str) -> list[dict[str, object]]:
     """Path-, section- and content-level hits for one document."""
     hits: list[dict[str, object]] = []
     if needle in path.lower():

@@ -79,9 +79,7 @@ def require_capability(cap: Capability) -> Callable[..., Awaitable[Project]]:
         project, role = await _resolve(request, session, user.id, project_id)
         if project is None or role is None:
             raise ProjectNotFoundError()  # 404 — missing project or non-member
-        if cap not in capabilities_for(
-            role, compile_for_viewers=settings.compile_allowed_for_viewers
-        ):
+        if cap not in capabilities_for(role, compile_for_viewers=settings.compile_allowed_for_viewers):
             raise InsufficientRoleError()  # 403
         return project
 

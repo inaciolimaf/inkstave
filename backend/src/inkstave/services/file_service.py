@@ -161,9 +161,7 @@ async def upload_file(
 
     # Create the file tree entity first (validates name, resolves the folder
     # parent, and rejects duplicate sibling names).
-    entity = await tree_service.create_entity(
-        session, project_id, TreeEntityType.file, name, parent_id
-    )
+    entity = await tree_service.create_entity(session, project_id, TreeEntityType.file, name, parent_id)
     key = _storage_key(project_id, entity.id)
 
     # Extension allow-list (spec 52): reject before reading the body.
@@ -209,9 +207,7 @@ async def open_file_content(
     return file_row, stream
 
 
-async def delete_file(
-    session: AsyncSession, store: ObjectStore, project_id: UUID, entity_id: UUID
-) -> None:
+async def delete_file(session: AsyncSession, store: ObjectStore, project_id: UUID, entity_id: UUID) -> None:
     await get_file(session, project_id, entity_id)
     # Removes the tree entity (cascades the files row) and deletes the blob.
     await tree_service.delete_entity(session, project_id, entity_id, store=store)

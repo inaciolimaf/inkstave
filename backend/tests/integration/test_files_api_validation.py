@@ -63,9 +63,7 @@ async def test_disallowed_mime(
     assert resp.json()["error"]["type"] == "unsupported_media_type"
 
 
-async def test_invalid_name(
-    client_store: tuple[AsyncClient, ObjectStore], db_session: AsyncSession
-) -> None:
+async def test_invalid_name(client_store: tuple[AsyncClient, ObjectStore], db_session: AsyncSession) -> None:
     client, store = client_store
     headers = await _auth(db_session)
     pid = await _project(client, headers)

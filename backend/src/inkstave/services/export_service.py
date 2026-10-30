@@ -81,9 +81,7 @@ async def _doc_sizes(session: AsyncSession, project_id: UUID) -> dict[UUID, int]
 async def _file_rows(session: AsyncSession, project_id: UUID) -> dict[UUID, tuple[str | None, int]]:
     rows = (
         await session.execute(
-            select(File.entity_id, File.storage_key, File.size_bytes).where(
-                File.project_id == project_id
-            )
+            select(File.entity_id, File.storage_key, File.size_bytes).where(File.project_id == project_id)
         )
     ).all()
     return {eid: (key, int(size)) for eid, key, size in rows}
@@ -104,9 +102,7 @@ def _plan_entry(
     return ExportEntry(path, entity.type, entity.id, key, size)
 
 
-async def build_export_plan(
-    session: AsyncSession, project_id: UUID, settings: Settings
-) -> list[ExportEntry]:
+async def build_export_plan(session: AsyncSession, project_id: UUID, settings: Settings) -> list[ExportEntry]:
     """Build the deterministic, root-relative export plan and enforce the size cap."""
     entities = await tree_service.get_tree(session, project_id)
     by_id = {e.id: e for e in entities}

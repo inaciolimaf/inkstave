@@ -67,9 +67,7 @@ async def list_projects(
 ) -> tuple[list[Project], int]:
     base = (Project.owner_id == owner_id, Project.deleted_at.is_(None))
 
-    total = (
-        await session.execute(select(func.count()).select_from(Project).where(*base))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(Project).where(*base))).scalar_one()
 
     rows = (
         await session.execute(
@@ -83,9 +81,7 @@ async def list_projects(
     return list(rows), int(total)
 
 
-async def rename_project(
-    session: AsyncSession, owner_id: UUID, project_id: UUID, name: str
-) -> Project:
+async def rename_project(session: AsyncSession, owner_id: UUID, project_id: UUID, name: str) -> Project:
     project = await get_owned_project(session, owner_id, project_id)
     project.name = name
     # clock_timestamp() (wall clock) is strictly monotonic even within a single

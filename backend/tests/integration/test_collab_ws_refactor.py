@@ -64,9 +64,7 @@ async def _setup(db_session: AsyncSession) -> tuple[User, Project, TreeEntity, s
 async def _update_count(db_session: AsyncSession, document_id: UUID) -> int:
     return int(
         await db_session.scalar(
-            select(func.count())
-            .select_from(CrdtUpdate)
-            .where(CrdtUpdate.document_id == document_id)
+            select(func.count()).select_from(CrdtUpdate).where(CrdtUpdate.document_id == document_id)
         )
         or 0
     )
@@ -76,9 +74,7 @@ def _path(project_id: Any, document_id: Any) -> str:
     return f"/ws/collab/projects/{project_id}/documents/{document_id}"
 
 
-async def test_reconnect_resyncs_and_converges(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_reconnect_resyncs_and_converges(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
     path = _path(project.id, entity.id)

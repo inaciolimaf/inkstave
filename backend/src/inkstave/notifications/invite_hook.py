@@ -40,9 +40,7 @@ async def notify_invite(
     # (the SPA route ``/invite/{token}``); use it rather than app_base_url (spec 68 #127).
     accept_url = f"{settings.frontend_url.rstrip('/')}/invite/{raw_token}"
 
-    invitee = await session.scalar(
-        select(User).where(func.lower(User.email) == invite.email.strip().lower())
-    )
+    invitee = await session.scalar(select(User).where(func.lower(User.email) == invite.email.strip().lower()))
     if invitee is not None:
         await NotificationService(session).create(
             user_id=invitee.id,

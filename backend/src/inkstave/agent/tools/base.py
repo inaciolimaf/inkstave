@@ -24,9 +24,7 @@ if TYPE_CHECKING:
 
     from inkstave.agent.settings import AgentSettings
 
-ErrorCode = Literal[
-    "not_found", "forbidden", "invalid_args", "too_large", "unsupported", "internal"
-]
+ErrorCode = Literal["not_found", "forbidden", "invalid_args", "too_large", "unsupported", "internal"]
 
 
 @dataclass

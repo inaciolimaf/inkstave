@@ -107,9 +107,7 @@ async def test_not_a_document_for_file_entity(db_session: AsyncSession) -> None:
     await db_session.flush()
     project = await create_project(db_session, user.id, "P")
     root = await ensure_root(db_session, project.id)
-    file_entity = await create_entity(
-        db_session, project.id, TreeEntityType.file, "logo.png", root.id
-    )
+    file_entity = await create_entity(db_session, project.id, TreeEntityType.file, "logo.png", root.id)
     with pytest.raises(NotADocumentError):
         await get_document(db_session, project.id, file_entity.id)
     with pytest.raises(NotADocumentError):

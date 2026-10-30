@@ -64,9 +64,7 @@ async def _frames(
             return
 
 
-async def sse_stream(
-    redis: Redis, run_id: UUID | str, heartbeat_seconds: int
-) -> AsyncIterator[bytes]:
+async def sse_stream(redis: Redis, run_id: UUID | str, heartbeat_seconds: int) -> AsyncIterator[bytes]:
     """Forward a run's events as SSE frames, replaying the terminal for late subscribers."""
     pubsub = redis.pubsub()
     await pubsub.subscribe(run_channel(run_id))

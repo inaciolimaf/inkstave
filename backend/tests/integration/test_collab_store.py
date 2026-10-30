@@ -117,9 +117,7 @@ async def test_compaction_truncates_log_and_preserves_text(db_session: AsyncSess
     assert seq == new_seq
 
 
-async def test_append_is_constant_cost(
-    db_session: AsyncSession, query_counter: dict[str, int]
-) -> None:
+async def test_append_is_constant_cost(db_session: AsyncSession, query_counter: dict[str, int]) -> None:
     doc_id = await _make_doc(db_session)
     store = CrdtStore(_factory(db_session))
     update = _updates(YDocument().get_state(), ["x"])[0]

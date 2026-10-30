@@ -176,9 +176,7 @@ def _pending_user() -> Any:
 async def test_confirm_email_change_succeeds_just_before_expiry() -> None:
     user = _pending_user()
     session = FakeEmailSession(user=user)
-    result = await confirm_email_change(
-        session, token="raw", clock=FrozenClock(BASE + timedelta(seconds=99))
-    )
+    result = await confirm_email_change(session, token="raw", clock=FrozenClock(BASE + timedelta(seconds=99)))
     assert result.email == "new@example.com" and result.email_confirmed is True
 
 
@@ -186,6 +184,4 @@ async def test_confirm_email_change_fails_after_expiry() -> None:
     user = _pending_user()
     session = FakeEmailSession(user=user)
     with pytest.raises(GoneError):
-        await confirm_email_change(
-            session, token="raw", clock=FrozenClock(BASE + timedelta(seconds=101))
-        )
+        await confirm_email_change(session, token="raw", clock=FrozenClock(BASE + timedelta(seconds=101)))

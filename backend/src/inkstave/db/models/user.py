@@ -40,9 +40,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
-    email_confirmed: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("false")
-    )
+    email_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
     # Profile + preferences (spec 59).
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -54,9 +52,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # the raw token; the active email is unchanged until the token is confirmed.
     pending_email: Mapped[str | None] = mapped_column(CITEXT, nullable=True)
     email_change_token_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
-    email_change_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    email_change_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     projects: Mapped[list[Project]] = relationship(
         back_populates="owner", cascade="all, delete-orphan", passive_deletes=True

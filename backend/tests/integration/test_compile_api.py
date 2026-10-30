@@ -42,9 +42,7 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str]) -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"])
 
 
 def _url(pid: str) -> str:

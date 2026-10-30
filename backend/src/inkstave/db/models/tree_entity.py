@@ -57,9 +57,7 @@ class TreeEntity(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     is_root: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
     project: Mapped[Project] = relationship(back_populates="tree_entities")
-    parent: Mapped[TreeEntity | None] = relationship(
-        back_populates="children", remote_side="TreeEntity.id"
-    )
+    parent: Mapped[TreeEntity | None] = relationship(back_populates="children", remote_side="TreeEntity.id")
     children: Mapped[list[TreeEntity]] = relationship(
         back_populates="parent",
         cascade="all, delete-orphan",

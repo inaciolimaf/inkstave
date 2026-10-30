@@ -190,9 +190,7 @@ class HistoryCaptureService:
             return
         chunk.sealed = True
         await session.flush()  # free the partial-unique open-chunk index
-        await self._new_chunk(
-            session, pending.project_id, doc_id, replica.get_state(), base_version=version
-        )
+        await self._new_chunk(session, pending.project_id, doc_id, replica.get_state(), base_version=version)
 
     async def flush_doc(self, *, doc_id: UUID, reason: FlushReason) -> None:
         async with self._lock(doc_id):
@@ -239,9 +237,7 @@ class HistoryCaptureService:
         replica = self._replicas.get(doc_id)
         if replica is None:
             if open_chunk is not None:
-                replica = await reconstruct_doc(
-                    session, self._store, doc_id, open_chunk.end_version
-                )
+                replica = await reconstruct_doc(session, self._store, doc_id, open_chunk.end_version)
             else:
                 replica = YDocument()
             self._replicas[doc_id] = replica
@@ -250,9 +246,7 @@ class HistoryCaptureService:
     async def _open_chunk(self, session: AsyncSession, doc_id: UUID) -> HistoryChunk | None:
         return (
             await session.execute(
-                select(HistoryChunk).where(
-                    HistoryChunk.doc_id == doc_id, HistoryChunk.sealed.is_(False)
-                )
+                select(HistoryChunk).where(HistoryChunk.doc_id == doc_id, HistoryChunk.sealed.is_(False))
             )
         ).scalar_one_or_none()
 
@@ -292,9 +286,7 @@ class HistoryCaptureService:
     def _is_oversized(self, payload: bytes) -> bool:
         return len(payload) > self._settings.history_inline_max_bytes
 
-    async def _store_payload(
-        self, payload: bytes, offload: bool
-    ) -> tuple[bytes | None, str | None]:
+    async def _store_payload(self, payload: bytes, offload: bool) -> tuple[bytes | None, str | None]:
         if not offload:
             return payload, None
         key = f"{self._settings.history_blob_prefix}{uuid.uuid4().hex}"
@@ -303,9 +295,7 @@ class HistoryCaptureService:
 
     async def _insert_update(self, session: AsyncSession, entry: _UpdateEntry) -> None:
         """Persist one history update, offloading an oversized payload to the store."""
-        inline, blob_key = await self._store_payload(
-            entry.payload, self._is_oversized(entry.payload)
-        )
+        inline, blob_key = await self._store_payload(entry.payload, self._is_oversized(entry.payload))
         session.add(
             HistoryUpdate(
                 chunk_id=entry.chunk.id,

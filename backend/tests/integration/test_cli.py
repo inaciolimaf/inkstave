@@ -98,18 +98,14 @@ async def test_doctor_reports_each_failure() -> None:
 
 async def test_send_test_email_renders_and_sends_via_injected_sender() -> None:
     sender = _FakeSender()
-    rc = await cli._cmd_send_test_email(
-        to="dev@example.com", template="email_verification", sender=sender
-    )
+    rc = await cli._cmd_send_test_email(to="dev@example.com", template="email_verification", sender=sender)
     assert rc == 0
     assert len(sender.sent) == 1
 
 
 async def test_send_test_email_rejects_unknown_template() -> None:
     sender = _FakeSender()
-    rc = await cli._cmd_send_test_email(
-        to="dev@example.com", template="no-such-template", sender=sender
-    )
+    rc = await cli._cmd_send_test_email(to="dev@example.com", template="no-such-template", sender=sender)
     assert rc == 1
     assert sender.sent == []
 

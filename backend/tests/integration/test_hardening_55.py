@@ -49,9 +49,7 @@ async def test_agent_job_binds_and_clears_context(monkeypatch: pytest.MonkeyPatc
 
     token = request_id_var.set("outer")
     try:
-        await jobs.run_agent_turn(
-            {}, session_id="s", run_id="r", user_message="m", request_id="req-123"
-        )
+        await jobs.run_agent_turn({}, session_id="s", run_id="r", user_message="m", request_id="req-123")
         assert seen["request_id"] == "req-123"  # request id chained into the job
         assert request_id_var.get() == "outer"  # restored after — no leak to next job
     finally:
@@ -100,10 +98,7 @@ def _has_rate_limit(route: APIRoute) -> bool:
 def test_every_sensitive_route_is_rate_limited() -> None:
     app = create_app()
     by_key = {
-        (method, r.path): r
-        for r in app.routes
-        if isinstance(r, APIRoute)
-        for method in (r.methods or set())
+        (method, r.path): r for r in app.routes if isinstance(r, APIRoute) for method in (r.methods or set())
     }
     missing: list[tuple[str, str]] = []
     for key in _SENSITIVE:

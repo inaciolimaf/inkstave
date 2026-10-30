@@ -89,23 +89,17 @@ def _service(db_session: AsyncSession, store: LocalObjectStore, runner: FakeRunn
     )
 
 
-async def test_assembles_docs_and_files_then_succeeds(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_assembles_docs_and_files_then_succeeds(db_session: AsyncSession, tmp_path: Path) -> None:
     store = LocalObjectStore(tmp_path / "blobs", 65536)
     project = await _seed_project(db_session, store)
 
     runner = FakeRunner(
-        RunOutcome(
-            exit_code=0, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=5
-        ),
+        RunOutcome(exit_code=0, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=5),
         {"main.pdf": b"%PDF-1.7", "main.log": b"ok"},
     )
     cid = uuid4()
     service = _service(db_session, store, runner, tmp_path)
-    result = await service.compile(
-        CompileOptions(project_id=project.id, compile_id=cid, keep_workdir=True)
-    )
+    result = await service.compile(CompileOptions(project_id=project.id, compile_id=cid, keep_workdir=True))
 
     assert result.status is CompileStatus.SUCCESS
     assert result.pdf is not None
@@ -119,9 +113,7 @@ async def test_default_cleanup_removes_workdir(db_session: AsyncSession, tmp_pat
     store = LocalObjectStore(tmp_path / "blobs", 65536)
     project = await _seed_project(db_session, store)
     runner = FakeRunner(
-        RunOutcome(
-            exit_code=0, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=5
-        ),
+        RunOutcome(exit_code=0, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=5),
         {"main.pdf": b"%PDF"},
     )
     cid = uuid4()

@@ -48,9 +48,7 @@ async def test_register_success(async_client: AsyncClient, db_session: AsyncSess
     assert hasher.verify("secret123", user.hashed_password) is True
 
 
-async def test_register_duplicate_is_conflict(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_register_duplicate_is_conflict(async_client: AsyncClient, db_session: AsyncSession) -> None:
     first = {"email": "bob@ex.com", "password": "secret123", "display_name": "Bob"}
     assert (await async_client.post(REGISTER_URL, json=first)).status_code == 201
 

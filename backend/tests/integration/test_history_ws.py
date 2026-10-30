@@ -38,9 +38,7 @@ async def _history_rows(db_session: AsyncSession, doc_id: Any) -> int:
     return int(await db_session.scalar(stmt))
 
 
-async def test_ws_edit_is_captured_on_room_close(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_ws_edit_is_captured_on_room_close(app: Any, db_session: AsyncSession, redis: Any) -> None:
     # High debounce so capture buffers (never fires the idle timer mid-test).
     install_collab(app, db_session, redis, history_debounce_ms=10_000_000)
     project, entity, token = await _setup(db_session)

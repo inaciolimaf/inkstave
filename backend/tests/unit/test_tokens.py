@@ -132,6 +132,4 @@ def test_decode_accepts_a_previous_secret_during_rotation() -> None:
     assert claims["type"] == "access"
 
     with pytest.raises(TokenError):
-        svc.decode_token(
-            _sign("an-entirely-unknown-secret-aaaaaaaaaaaa", rotated.jwt_issuer), "access"
-        )
+        svc.decode_token(_sign("an-entirely-unknown-secret-aaaaaaaaaaaa", rotated.jwt_issuer), "access")

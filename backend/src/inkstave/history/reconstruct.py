@@ -63,9 +63,7 @@ async def _update_payload(store: ObjectStore, row: HistoryUpdate) -> bytes:
     return await _read_blob(store, key)
 
 
-async def reconstruct_doc(
-    session: AsyncSession, store: ObjectStore, doc_id: UUID, version: int
-) -> YDocument:
+async def reconstruct_doc(session: AsyncSession, store: ObjectStore, doc_id: UUID, version: int) -> YDocument:
     chunk = (
         await session.execute(
             select(HistoryChunk)
@@ -98,9 +96,7 @@ async def reconstruct_doc(
     return doc
 
 
-async def reconstruct_state(
-    session: AsyncSession, store: ObjectStore, doc_id: UUID, version: int
-) -> bytes:
+async def reconstruct_state(session: AsyncSession, store: ObjectStore, doc_id: UUID, version: int) -> bytes:
     return (await reconstruct_doc(session, store, doc_id, version)).get_state()
 
 
@@ -109,9 +105,7 @@ async def load_current_state(session: AsyncSession, doc_id: UUID) -> bytes:
     state_row = await session.get(CrdtDocumentState, doc_id)
     updates = (
         await session.execute(
-            select(CrdtUpdate.update)
-            .where(CrdtUpdate.document_id == doc_id)
-            .order_by(CrdtUpdate.id)
+            select(CrdtUpdate.update).where(CrdtUpdate.document_id == doc_id).order_by(CrdtUpdate.id)
         )
     ).scalars()
     parts: list[bytes] = []

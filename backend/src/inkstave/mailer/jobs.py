@@ -28,9 +28,7 @@ async def send_email_job(
     sender = ctx.get("email_sender") or get_email_sender(settings)
     subject, text_body, html_body = render_email(template, context)
     try:
-        await sender.send(
-            OutgoingEmail(to=to, subject=subject, text_body=text_body, html_body=html_body)
-        )
+        await sender.send(OutgoingEmail(to=to, subject=subject, text_body=text_body, html_body=html_body))
     except Exception:
         logger.exception("email_send_failed: template=%s to=%s", template, to)
         raise  # let ARQ retry

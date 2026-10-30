@@ -93,9 +93,7 @@ async def _post_import(
     return await client.post("/api/v1/projects/import", files=files, data=data, headers=headers)
 
 
-async def _run_job(
-    db_session: AsyncSession, store: ObjectStore, redis: Any, import_id: str
-) -> None:
+async def _run_job(db_session: AsyncSession, store: ObjectStore, redis: Any, import_id: str) -> None:
     ctx = {
         "settings": get_settings(),
         "redis": redis,
@@ -187,9 +185,7 @@ async def test_import_oversize_413_and_no_orphan_blob(
     assert len(enqueuer.calls) == 0
 
 
-async def test_requires_auth(
-    async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore
-) -> None:
+async def test_requires_auth(async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore) -> None:
     resp = await _post_import(async_client, {}, make_zip({"main.tex": b"x"}))
     assert resp.status_code == 401
 
@@ -346,9 +342,7 @@ async def test_ownership_defence_marks_error(
     redis: Any,
 ) -> None:
     headers = await _auth(db_session)
-    body = (
-        await _post_import(async_client, headers, make_zip({"main.tex": b"\\documentclass{a}"}))
-    ).json()
+    body = (await _post_import(async_client, headers, make_zip({"main.tex": b"\\documentclass{a}"}))).json()
     pid, iid = body["project_id"], body["import_id"]
 
     # Soft-delete the project out from under the requester before the job runs.
@@ -356,9 +350,7 @@ async def test_ownership_defence_marks_error(
 
     from inkstave.db.models.project import Project
 
-    await db_session.execute(
-        update(Project).where(Project.id == UUID(pid)).values(deleted_at=func.now())
-    )
+    await db_session.execute(update(Project).where(Project.id == UUID(pid)).values(deleted_at=func.now()))
     await db_session.commit()
 
     await _run_job(db_session, store, redis, iid)
@@ -401,18 +393,10 @@ async def test_latest_404_then_returns(
 ) -> None:
     headers = await _auth(db_session)
     # A project with no import.
-    pid = (await async_client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()[
-        "id"
-    ]
-    assert (
-        await async_client.get(f"/api/v1/projects/{pid}/import", headers=headers)
-    ).status_code == 404
+    pid = (await async_client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
+    assert (await async_client.get(f"/api/v1/projects/{pid}/import", headers=headers)).status_code == 404
 
-    body = (
-        await _post_import(async_client, headers, make_zip({"main.tex": b"\\documentclass{a}"}))
-    ).json()
-    latest = await async_client.get(
-        f"/api/v1/projects/{body['project_id']}/import", headers=headers
-    )
+    body = (await _post_import(async_client, headers, make_zip({"main.tex": b"\\documentclass{a}"}))).json()
+    latest = await async_client.get(f"/api/v1/projects/{body['project_id']}/import", headers=headers)
     assert latest.status_code == 200
     assert latest.json()["import_id"] == body["import_id"]

@@ -92,9 +92,7 @@ async def _labels_for_versions(
         return {}
     rows = (
         await session.execute(
-            select(HistoryLabel).where(
-                HistoryLabel.doc_id == doc_id, HistoryLabel.version.in_(versions)
-            )
+            select(HistoryLabel).where(HistoryLabel.doc_id == doc_id, HistoryLabel.version.in_(versions))
         )
     ).scalars()
     out: dict[int, list[LabelBrief]] = {}
@@ -157,9 +155,7 @@ async def get_diff(
     limit = settings.history_diff_max_bytes
     base: dict[str, object] = {"from": from_v, "to": to_value}
     if len(from_text.encode("utf-8")) > limit or len(to_text.encode("utf-8")) > limit:
-        return DiffResponse.model_validate(
-            {**base, "binary": False, "too_large": True, "hunks": []}
-        )
+        return DiffResponse.model_validate({**base, "binary": False, "too_large": True, "hunks": []})
     if is_binary(from_text) or is_binary(to_text):
         return DiffResponse.model_validate({**base, "binary": True, "hunks": []})
 

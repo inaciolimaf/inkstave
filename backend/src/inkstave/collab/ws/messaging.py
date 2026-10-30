@@ -68,9 +68,7 @@ def _utcnow() -> datetime:
 
 async def _handle_step1(parsed: SyncStep1, conn: Connection, components: CollabComponents) -> None:
     """Answer a client's SyncStep1 and, once per connection, send ours."""
-    step2, server_step1 = await components.manager.handle_sync_step1(
-        conn.document_id, parsed.state_vector
-    )
+    step2, server_step1 = await components.manager.handle_sync_step1(conn.document_id, parsed.state_vector)
     conn.try_enqueue(step2)
     # Spec 29 §5.2.1: send our SyncStep1 "if not already". The handshake already
     # enqueued the server's step1 once, so skip the duplicate here.
@@ -109,9 +107,7 @@ async def _handle_update(
         await _force_close(conn, CLOSE_BAD_MESSAGE)
         return False
     try:
-        relayable = await components.manager.handle_update(
-            conn.document_id, parsed.update, origin=conn.id
-        )
+        relayable = await components.manager.handle_update(conn.document_id, parsed.update, origin=conn.id)
     except UpdateTooLarge:
         await _force_close(conn, CLOSE_BAD_MESSAGE)
         return False
@@ -120,9 +116,7 @@ async def _handle_update(
     return True
 
 
-async def _handle_awareness(
-    parsed: AwarenessMessage, conn: Connection, components: CollabComponents
-) -> None:
+async def _handle_awareness(parsed: AwarenessMessage, conn: Connection, components: CollabComponents) -> None:
     if conn.awareness_client_id is None:
         conn.awareness_client_id = _first_awareness_client(parsed.update)
     relayable = await components.manager.handle_awareness(conn.document_id, parsed.update)
@@ -154,9 +148,7 @@ def _frame_rejection(data: bytes | None, ws: CollabWsSettings, limiter: _RateLim
     return None
 
 
-async def _receive_loop(
-    conn: Connection, components: CollabComponents, ws: CollabWsSettings
-) -> None:
+async def _receive_loop(conn: Connection, components: CollabComponents, ws: CollabWsSettings) -> None:
     limiter = _RateLimiter(ws.max_msgs_per_sec)
     websocket = conn.websocket
     while not conn.closed:

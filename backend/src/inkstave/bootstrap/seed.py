@@ -86,9 +86,7 @@ async def seed_demo(
 
     sections = await create_entity(session, project.id, TreeEntityType.folder, "sections", None)
     await session.flush()
-    intro_doc = await create_entity(
-        session, project.id, TreeEntityType.doc, "intro.tex", sections.id
-    )
+    intro_doc = await create_entity(session, project.id, TreeEntityType.doc, "intro.tex", sections.id)
     await set_content_from_collab(session, intro_doc.id, _INTRO_TEX)
 
     refs_doc = await create_entity(session, project.id, TreeEntityType.doc, "references.bib", None)

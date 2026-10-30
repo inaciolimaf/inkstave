@@ -59,9 +59,7 @@ async def compact_history(ctx: dict[str, Any], doc_id: str | None = None) -> dic
 async def _docs_needing_compaction(session: AsyncSession, min_updates: int) -> list[UUID]:
     rows = (
         await session.execute(
-            select(HistoryUpdate.doc_id)
-            .group_by(HistoryUpdate.doc_id)
-            .having(func.count() >= min_updates)
+            select(HistoryUpdate.doc_id).group_by(HistoryUpdate.doc_id).having(func.count() >= min_updates)
         )
     ).scalars()
     return list(rows)
@@ -212,9 +210,7 @@ async def _seal_open_tail(
     """
     open_chunk = (
         await session.execute(
-            select(HistoryChunk).where(
-                HistoryChunk.doc_id == doc_id, HistoryChunk.sealed.is_(False)
-            )
+            select(HistoryChunk).where(HistoryChunk.doc_id == doc_id, HistoryChunk.sealed.is_(False))
         )
     ).scalar_one_or_none()
     if open_chunk is None:
@@ -222,9 +218,7 @@ async def _seal_open_tail(
 
     update_count = int(
         await session.scalar(
-            select(func.count())
-            .select_from(HistoryUpdate)
-            .where(HistoryUpdate.chunk_id == open_chunk.id)
+            select(func.count()).select_from(HistoryUpdate).where(HistoryUpdate.chunk_id == open_chunk.id)
         )
         or 0
     )

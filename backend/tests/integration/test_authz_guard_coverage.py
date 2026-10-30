@@ -54,9 +54,7 @@ def _calls(dependant: Any) -> Iterator[Any]:
 
 
 def _has_capability_guard(route: APIRoute) -> bool:
-    return any(
-        getattr(c, "__authz_capability__", None) is not None for c in _calls(route.dependant)
-    )
+    return any(getattr(c, "__authz_capability__", None) is not None for c in _calls(route.dependant))
 
 
 def test_every_project_scoped_route_is_guarded() -> None:

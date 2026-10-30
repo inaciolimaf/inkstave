@@ -39,9 +39,7 @@ async def _auth(db_session: AsyncSession) -> tuple[dict[str, str], UUID]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str], name: str = "P") -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": name}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": name}, headers=headers)).json()["id"])
 
 
 async def _entity(
@@ -59,9 +57,7 @@ async def _entity(
     return str(resp.json()["id"])
 
 
-async def _set_doc(
-    client: AsyncClient, pid: str, headers: dict[str, str], doc_id: str, content: str
-) -> None:
+async def _set_doc(client: AsyncClient, pid: str, headers: dict[str, str], doc_id: str, content: str) -> None:
     resp = await client.put(
         f"/api/v1/projects/{pid}/documents/{doc_id}",
         json={"content": content, "base_version": 0},
@@ -70,9 +66,7 @@ async def _set_doc(
     assert resp.status_code == 200, resp.text
 
 
-async def _upload(
-    client: AsyncClient, pid: str, headers: dict[str, str], name: str, content: bytes
-) -> str:
+async def _upload(client: AsyncClient, pid: str, headers: dict[str, str], name: str, content: bytes) -> str:
     files = {"file": (name, content, "image/png")}
     resp = await client.post(f"/api/v1/projects/{pid}/files", files=files, headers=headers)
     assert resp.status_code == 201, resp.text
@@ -151,9 +145,7 @@ async def test_non_member_gets_404(
     assert resp.json()["error"]["type"] == "project_not_found"
 
 
-async def test_requires_auth(
-    async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore
-) -> None:
+async def test_requires_auth(async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore) -> None:
     headers, _ = await _auth(db_session)
     pid = await _project(async_client, headers)
     assert (await async_client.get(f"/api/v1/projects/{pid}/export.zip")).status_code == 401
@@ -321,15 +313,11 @@ async def test_export_import_round_trip(
     headers, _ = await _auth(db_session)
     pid = await _project(async_client, headers, "Original")
     await _seed_tree(async_client, pid, headers)
-    zip_bytes = (
-        await async_client.get(f"/api/v1/projects/{pid}/export.zip", headers=headers)
-    ).content
+    zip_bytes = (await async_client.get(f"/api/v1/projects/{pid}/export.zip", headers=headers)).content
 
     new_pid, iid = await _import_inline(async_client, db_session, store, redis, headers, zip_bytes)
 
-    status = (
-        await async_client.get(f"/api/v1/projects/{new_pid}/import/{iid}", headers=headers)
-    ).json()
+    status = (await async_client.get(f"/api/v1/projects/{new_pid}/import/{iid}", headers=headers)).json()
     assert status["status"] == "success"
 
     tree = (await async_client.get(f"/api/v1/projects/{new_pid}/tree", headers=headers)).json()

@@ -27,9 +27,7 @@ class _AccessLog:
     def __init__(self) -> None:
         self._buf = io.StringIO()
         self._handler = logging.StreamHandler(self._buf)
-        self._handler.setFormatter(
-            JsonLogFormatter(service="inkstave-backend", env="test", log_stacks=True)
-        )
+        self._handler.setFormatter(JsonLogFormatter(service="inkstave-backend", env="test", log_stacks=True))
         self._logger = logging.getLogger("inkstave.access")
 
     def __enter__(self) -> _AccessLog:
@@ -76,9 +74,7 @@ async def test_request_id_roundtrip_and_finish_log(async_client: AsyncClient) ->
 
 
 async def test_malformed_inbound_request_id_is_replaced(async_client: AsyncClient) -> None:
-    resp = await async_client.get(
-        "/api/v1/openapi.json", headers={"X-Request-ID": "bad id with spaces!!"}
-    )
+    resp = await async_client.get("/api/v1/openapi.json", headers={"X-Request-ID": "bad id with spaces!!"})
     assert resp.headers["X-Request-ID"] != "bad id with spaces!!"  # AC2
     assert len(resp.headers["X-Request-ID"]) == 32  # a fresh uuid4 hex
 
@@ -123,9 +119,7 @@ async def test_authenticated_finish_log_auto_propagates_user_id(
     assert f["request_id"] == "auth-req-9"  # consistent correlation id
 
 
-async def test_finish_log_http_path_is_route_template_not_raw_id(
-    app: Any, async_client: AsyncClient
-) -> None:
+async def test_finish_log_http_path_is_route_template_not_raw_id(app: Any, async_client: AsyncClient) -> None:
     """Spec 55 §5.1: http.path is the matched route template, never the raw id-bearing
     URL (a cardinality/PII risk). Register a parameterized route on the app under test."""
     from uuid import uuid4

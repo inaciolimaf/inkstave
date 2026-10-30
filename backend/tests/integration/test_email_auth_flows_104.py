@@ -45,9 +45,7 @@ def emails(app: Any) -> FakeEmailEnqueuer:
     return fake
 
 
-async def _user(
-    db: AsyncSession, *, email: str = "owner@example.com", confirmed: bool = False
-) -> User:
+async def _user(db: AsyncSession, *, email: str = "owner@example.com", confirmed: bool = False) -> User:
     hasher = build_password_hasher(get_settings())
     user = User(
         email=normalise_email(email),
@@ -132,9 +130,7 @@ async def test_resend_confirmed_user_enqueues_zero(
     async_client: AsyncClient, db_session: AsyncSession, emails: FakeEmailEnqueuer
 ) -> None:
     await _user(db_session, email="conf@example.com", confirmed=True)
-    resp = await async_client.post(
-        f"{AUTH}/verify-email/resend", json={"email": "conf@example.com"}
-    )
+    resp = await async_client.post(f"{AUTH}/verify-email/resend", json={"email": "conf@example.com"})
     assert resp.status_code == 202
     assert emails.calls == []  # already confirmed → silent, no spam
 
@@ -151,9 +147,7 @@ async def test_resend_unconfirmed_enqueues_one(
     async_client: AsyncClient, db_session: AsyncSession, emails: FakeEmailEnqueuer
 ) -> None:
     await _user(db_session, email="unconf@example.com", confirmed=False)
-    resp = await async_client.post(
-        f"{AUTH}/verify-email/resend", json={"email": "unconf@example.com"}
-    )
+    resp = await async_client.post(f"{AUTH}/verify-email/resend", json={"email": "unconf@example.com"})
     assert resp.status_code == 202
     assert len(emails.calls) == 1
     assert emails.calls[0]["template"] == "email_verification"
@@ -312,9 +306,7 @@ async def test_login_verified_email_flag(
     monkeypatch.setenv("REQUIRE_VERIFIED_EMAIL_TO_LOGIN", "true" if require_verified else "false")
     get_settings.cache_clear()
     await _user(db_session, email="flag@example.com", confirmed=False)
-    resp = await async_client.post(
-        f"{AUTH}/login", json={"email": "flag@example.com", "password": PASSWORD}
-    )
+    resp = await async_client.post(f"{AUTH}/login", json={"email": "flag@example.com", "password": PASSWORD})
     if require_verified:
         assert resp.status_code == 401
     else:

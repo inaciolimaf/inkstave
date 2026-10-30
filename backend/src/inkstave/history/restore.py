@@ -177,9 +177,7 @@ async def restore_project(
     for doc_id_str, version in markers.items():
         doc_id = UUID(doc_id_str)
         if version < 1:
-            results.append(
-                DocRestoreResult(doc_id=doc_id, status="skipped", reason="no history at label")
-            )
+            results.append(DocRestoreResult(doc_id=doc_id, status="skipped", reason="no history at label"))
             continue
         try:
             res = await restore_document(
@@ -191,9 +189,7 @@ async def restore_project(
                 target_version=version,
                 author_id=author_id,
             )
-            results.append(
-                DocRestoreResult(doc_id=doc_id, status="restored", new_version=res.new_version)
-            )
+            results.append(DocRestoreResult(doc_id=doc_id, status="restored", new_version=res.new_version))
         except Exception as exc:  # broad on purpose: report the failure, do not abort the sweep
             results.append(DocRestoreResult(doc_id=doc_id, status="error", reason=str(exc)))
     return ProjectRestoreResponse(results=results)

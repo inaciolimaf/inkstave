@@ -101,9 +101,7 @@ def _edit_update(open_state: bytes, new_text: str) -> bytes:
 
 
 async def _content(db_session: AsyncSession, doc_id: UUID) -> str:
-    return (
-        await db_session.scalar(select(Document.content).where(Document.entity_id == doc_id))
-    ) or ""
+    return (await db_session.scalar(select(Document.content).where(Document.entity_id == doc_id))) or ""
 
 
 async def test_seeds_crdt_from_spec13_content(db_session: AsyncSession) -> None:

@@ -91,9 +91,7 @@ async def _run(deps: AgentDeps) -> AgentState:
 
 
 def _tool_response(_msgs: list[LLMMessage]) -> LLMResponse:
-    return LLMResponse(
-        tool_calls=[ToolCall(id="c1", name="ghost", arguments={})], finish_reason="tool_calls"
-    )
+    return LLMResponse(tool_calls=[ToolCall(id="c1", name="ghost", arguments={})], finish_reason="tool_calls")
 
 
 async def test_hallucinated_tool_is_marked_unavailable_and_terminates() -> None:

@@ -104,9 +104,7 @@ async def _handshake_and_sync(ws: ASGIWebSocketClient) -> YDocument:
 # --- AC1–AC4: auth rejection before accept, no room, no manager acquire ------ #
 
 
-async def test_missing_token_rejected_4401_no_room(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_missing_token_rejected_4401_no_room(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     project, entity, _ = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id)) as ws:  # no ?token=
@@ -115,14 +113,10 @@ async def test_missing_token_rejected_4401_no_room(
     assert entity.id not in components.manager.load_count  # AC4 — never acquired
 
 
-async def test_malformed_token_rejected_4401(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_malformed_token_rejected_4401(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     project, entity, _ = await _setup(db_session)
-    async with ASGIWebSocketClient(
-        app, _path(project.id, entity.id), query="token=not-a-jwt"
-    ) as ws:
+    async with ASGIWebSocketClient(app, _path(project.id, entity.id), query="token=not-a-jwt") as ws:
         assert await ws.close_code() == CLOSE_UNAUTHORIZED  # AC2
     assert components.rooms.room_count() == 0
     assert entity.id not in components.manager.load_count
@@ -147,17 +141,13 @@ async def test_expired_token_rejected_4401(app: Any, db_session: AsyncSession, r
         Settings(_env_file=None, access_token_ttl_seconds=-1)  # type: ignore[call-arg]
     )
     expired_token, _ = expired_service.create_access_token(user)
-    async with ASGIWebSocketClient(
-        app, _path(project.id, entity.id), query=f"token={expired_token}"
-    ) as ws:
+    async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={expired_token}") as ws:
         assert await ws.close_code() == CLOSE_UNAUTHORIZED  # AC3 (expiry enforced)
     assert components.rooms.room_count() == 0
     assert entity.id not in components.manager.load_count
 
 
-async def test_non_member_4403_and_unknown_4404(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_non_member_4403_and_unknown_4404(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     # Authenticated non-member of an existing project/doc → 4403.
@@ -166,9 +156,7 @@ async def test_non_member_4403_and_unknown_4404(
     ) as ws:
         assert await ws.close_code() == CLOSE_FORBIDDEN  # AC5
     # Valid token, unknown project/doc ids → 4404.
-    async with ASGIWebSocketClient(
-        app, _path(uuid4(), uuid4()), query=f"token={tokens['editor']}"
-    ) as ws:
+    async with ASGIWebSocketClient(app, _path(uuid4(), uuid4()), query=f"token={tokens['editor']}") as ws:
         assert await ws.close_code() == CLOSE_NOT_FOUND  # AC5
 
 
@@ -196,9 +184,7 @@ async def test_reconnect_resyncs_seeded_text_losslessly(
     assert len(resynced.text) == len("alpha")
 
 
-async def test_two_editors_converge_after_drop(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_two_editors_converge_after_drop(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     path = _path(project.id, entity.id)
@@ -237,9 +223,7 @@ async def test_two_editors_converge_after_drop(
 # --- AC8: viewer read-only (drops writes, still reads) ----------------------- #
 
 
-async def test_viewer_write_dropped_but_reads(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_viewer_write_dropped_but_reads(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     path = _path(project.id, entity.id)

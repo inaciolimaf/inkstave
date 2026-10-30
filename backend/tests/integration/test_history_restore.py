@@ -113,9 +113,7 @@ async def test_restore_creates_new_version_non_destructive(
 
     # AC6b: the live text now equals version 1 — diff(v1, current) is empty.
     diff = (
-        await async_client.get(
-            _url(hist.pid, hist.doc_id, "diff?from=1&to=current"), headers=hist.editor_h
-        )
+        await async_client.get(_url(hist.pid, hist.doc_id, "diff?from=1&to=current"), headers=hist.editor_h)
     ).json()
     changed = [s for h in diff["hunks"] for s in h["segments"] if s["type"] != "context"]
     assert changed == []
@@ -150,9 +148,7 @@ async def test_restore_atomic_on_room_failure(
     )
     assert r.status_code == 409  # AC12
     assert await _max_version(db_session, hist.doc_uuid) == before  # no new version
-    label = await db_session.scalar(
-        select(HistoryLabel).where(HistoryLabel.name == "should-not-exist")
-    )
+    label = await db_session.scalar(select(HistoryLabel).where(HistoryLabel.name == "should-not-exist"))
     assert label is None  # no label created
 
 

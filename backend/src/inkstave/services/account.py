@@ -101,9 +101,7 @@ async def start_email_change(
     return raw_token
 
 
-async def confirm_email_change(
-    session: AsyncSession, *, token: str, clock: Clock = SYSTEM_CLOCK
-) -> User:
+async def confirm_email_change(session: AsyncSession, *, token: str, clock: Clock = SYSTEM_CLOCK) -> User:
     """Swap email ← pending_email if the (single-use, unexpired) token matches."""
     token_hash = hash_token(token)
     user = await session.scalar(select(User).where(User.email_change_token_hash == token_hash))

@@ -130,8 +130,7 @@ def compute_diff(
     b = proposed.splitlines()
     matcher = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
     hunks = [
-        _hunk(index, group, a, b)
-        for index, group in enumerate(matcher.get_grouped_opcodes(context), start=1)
+        _hunk(index, group, a, b) for index, group in enumerate(matcher.get_grouped_opcodes(context), start=1)
     ]
     if not hunks:
         return "", [], {"additions": 0, "deletions": 0, "hunk_count": 0}

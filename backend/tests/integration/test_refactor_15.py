@@ -60,9 +60,7 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str]) -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"])
 
 
 async def _create_entity(
@@ -130,9 +128,7 @@ async def test_file_get_is_few_queries(
         headers = await _auth(db_session)
         pid = await _project(async_client, headers)
         files = {"file": ("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, "image/png")}
-        upload = await async_client.post(
-            f"/api/v1/projects/{pid}/files", files=files, headers=headers
-        )
+        upload = await async_client.post(f"/api/v1/projects/{pid}/files", files=files, headers=headers)
         assert upload.status_code == 201
         eid = upload.json()["entity_id"]
 
@@ -226,9 +222,7 @@ async def test_move_name_race_maps_to_409(
 # --- Ownership = existence (404, never 403) across resource types (AC2) ----- #
 
 
-async def test_ownership_is_404_across_resources(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_ownership_is_404_across_resources(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers_a = await _auth(db_session)
     headers_b = await _auth(db_session)
     pid = await _project(async_client, headers_a)

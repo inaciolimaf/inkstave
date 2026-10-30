@@ -10,9 +10,7 @@ _PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"disregard\s+(the\s+)?(above|previous|system|prior)", re.I),
     re.compile(r"^\s*system\s*:", re.I | re.M),
     re.compile(r"you\s+are\s+now\s+", re.I),
-    re.compile(
-        r"(reveal|print|show|repeat)\s+(your|the)\s+(system\s+)?(prompt|instructions)", re.I
-    ),
+    re.compile(r"(reveal|print|show|repeat)\s+(your|the)\s+(system\s+)?(prompt|instructions)", re.I),
     re.compile(r"new\s+(system\s+)?instructions\s*:", re.I),
     re.compile(r"override\s+(your|the)\s+(rules|instructions|guardrails)", re.I),
 ]

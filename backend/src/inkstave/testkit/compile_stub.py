@@ -79,9 +79,7 @@ def build_minimal_pdf(text: str = "Inkstave E2E") -> bytes:
     out += b"0000000000 65535 f \n"
     for off in offsets:
         out += f"{off:010d} 00000 n \n".encode("latin-1")
-    out += (f"trailer\n<< /Size {count} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n").encode(
-        "latin-1"
-    )
+    out += (f"trailer\n<< /Size {count} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n").encode("latin-1")
     return bytes(out)
 
 

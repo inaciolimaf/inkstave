@@ -175,9 +175,7 @@ async def _run_scoped(
 
     # acquire_run lives inside the try so any failure during setup still releases
     # the concurrency slot and streams a terminal error (no stuck "running" run).
-    await acquire_run(
-        scope.redis, user_id=scope.user_id, project_id=scope.project_id, now=scope.now
-    )
+    await acquire_run(scope.redis, user_id=scope.user_id, project_id=scope.project_id, now=scope.now)
     try:
         await _execute_turn(scope, session, run_id=run_id, user_message=user_message, llm=llm)
     except asyncio.CancelledError:
@@ -198,9 +196,7 @@ async def _run_scoped(
         await release_run(scope.redis, user_id=scope.user_id)
 
 
-async def _run_agent_turn(
-    ctx: dict[str, Any], *, session_id: str, run_id: str, user_message: str
-) -> None:
+async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, user_message: str) -> None:
     # The shared ARQ ctx carries the compile ``Settings`` under "settings" (compile/
     # history/mailer jobs need it); the agent turn needs ``AgentSettings``. The
     # worker provides those under "agent_settings"; tests that hand-build a ctx put

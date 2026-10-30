@@ -67,9 +67,7 @@ async def test_ws_auth_failure_logs_warning_and_closes(
 
     assert ws.closed_code == CLOSE_UNAUTHORIZED  # close behaviour unchanged
     warnings = [
-        r
-        for r in caplog.records
-        if r.name == "inkstave.collab.ws.router" and r.levelno == logging.WARNING
+        r for r in caplog.records if r.name == "inkstave.collab.ws.router" and r.levelno == logging.WARNING
     ]
     assert warnings, "an auth-failure WARNING should be logged"
     rec = warnings[0]

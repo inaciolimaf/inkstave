@@ -79,9 +79,7 @@ async def enqueue_compile(
     # Materialise open CRDT rooms so the worker compiles the current text, not the
     # debounced-stale documents.content column (spec 28).
     await flush_open_project_docs(getattr(request.app.state, "collab", None), session, project.id)
-    coordinator = CompileCoordinator(
-        settings=settings, repo=CompileRepository(session), enqueuer=enqueuer
-    )
+    coordinator = CompileCoordinator(settings=settings, repo=CompileRepository(session), enqueuer=enqueuer)
     row = await coordinator.request_compile(
         project_id=project.id,
         user_id=user.id,
@@ -149,9 +147,7 @@ async def cancel_compile(
     # Signal a running worker, and abort a still-queued compile directly.
     await request_cancel(redis, compile_id, settings.compile_cancel_flag_ttl_s)
     if current is CompileJobStatus.QUEUED:
-        await repo.update(
-            row, status=CompileJobStatus.CANCELLED.value, finished_at=datetime.now(UTC)
-        )
+        await repo.update(row, status=CompileJobStatus.CANCELLED.value, finished_at=datetime.now(UTC))
         await publish_status(redis, compile_id, status_payload(row))
     return CompileStatusResponse.model_validate(row)
 
@@ -202,9 +198,7 @@ async def get_output_pdf(
 
     spec = parse_range(request.headers.get("range"), obj.size)
     if spec is RangeResult.UNSATISFIABLE:
-        return Response(
-            status_code=416, headers={**headers, "Content-Range": f"bytes */{obj.size}"}
-        )
+        return Response(status_code=416, headers={**headers, "Content-Range": f"bytes */{obj.size}"})
     if spec is RangeResult.FULL:
         return StreamingResponse(
             obj.stream(),

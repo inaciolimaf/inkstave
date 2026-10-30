@@ -35,9 +35,7 @@ async def test_session_create_authz(
         f"{API}/{seed.project.id}/agent/sessions", json={}, headers=outsider_h
     )
     assert forbidden.status_code == 403  # non-member
-    missing = await async_client.post(
-        f"{API}/{uuid4()}/agent/sessions", json={}, headers=seed.headers
-    )
+    missing = await async_client.post(f"{API}/{uuid4()}/agent/sessions", json={}, headers=seed.headers)
     assert missing.status_code == 404  # unknown project
 
 

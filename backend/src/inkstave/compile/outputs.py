@@ -123,9 +123,7 @@ class OutputStore:
     def _key(self, project_id: UUID, compile_id: UUID, name: str) -> str:
         return f"{self._settings.compile_output_prefix}/{project_id}/{compile_id}/{name}"
 
-    async def persist(
-        self, compile_id: UUID, project_id: UUID, result: CompileResult
-    ) -> list[CompileOutput]:
+    async def persist(self, compile_id: UUID, project_id: UUID, result: CompileResult) -> list[CompileOutput]:
         """Copy every artifact into storage and upsert its metadata row. Idempotent."""
         rows: list[CompileOutput] = []
         for artifact in result.artifacts:

@@ -26,9 +26,7 @@ def scan_headings(content: str) -> list[Heading]:
     for i, line in enumerate(content.splitlines()):
         match = _HEADING_RE.search(line)
         if match:
-            headings.append(
-                Heading(level=match.group(1), title=match.group("title").strip(), line=i)
-            )
+            headings.append(Heading(level=match.group(1), title=match.group("title").strip(), line=i))
     return headings
 
 

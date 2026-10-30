@@ -48,9 +48,7 @@ async def list_messages(db: AsyncSession, session_id: UUID) -> list[AgentMessage
 
 
 async def next_seq(db: AsyncSession, session_id: UUID) -> int:
-    value = await db.scalar(
-        select(func.max(AgentMessage.seq)).where(AgentMessage.session_id == session_id)
-    )
+    value = await db.scalar(select(func.max(AgentMessage.seq)).where(AgentMessage.session_id == session_id))
     return 0 if value is None else int(value) + 1
 
 

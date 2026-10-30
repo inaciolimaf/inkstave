@@ -39,9 +39,9 @@ async def test_job_persists_outputs_and_cleans_workdir(
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
 
     async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
-        await OutputStore(
-            storage=backend, repo=OutputRepository(session), settings=settings
-        ).persist(cid, pid, res)
+        await OutputStore(storage=backend, repo=OutputRepository(session), settings=settings).persist(
+            cid, pid, res
+        )
 
     ctx = {
         "settings": settings,
@@ -65,9 +65,9 @@ def _ordered_persist_hook(backend: LocalObjectStore, settings: Settings, order: 
     """A persist hook that records when it ran, relative to the publish spy."""
 
     async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
-        await OutputStore(
-            storage=backend, repo=OutputRepository(session), settings=settings
-        ).persist(cid, pid, res)
+        await OutputStore(storage=backend, repo=OutputRepository(session), settings=settings).persist(
+            cid, pid, res
+        )
         order.append("persist")
 
     return persist
@@ -99,9 +99,7 @@ async def test_job_persists_before_terminal_status_event(
         "redis": redis,
         "session_factory": lambda: _SessionCtx(db_session),
         "make_compile_service": lambda _s: _StubService(result),
-        "persist_hook": _ordered_persist_hook(
-            LocalObjectStore(tmp_path / "blobs", 65536), settings, order
-        ),
+        "persist_hook": _ordered_persist_hook(LocalObjectStore(tmp_path / "blobs", 65536), settings, order),
     }
     monkey = pytest.MonkeyPatch()
     monkey.setattr(jobs_module, "publish_status", spy_publish)

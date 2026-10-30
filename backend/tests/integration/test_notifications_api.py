@@ -26,9 +26,7 @@ async def _auth(db_session: AsyncSession) -> tuple[Any, dict[str, str]]:
 
 
 async def _notify(db_session: AsyncSession, user_id: Any, **payload: Any) -> Any:
-    n = await NotificationService(db_session).create(
-        user_id=user_id, type="generic", payload=payload
-    )
+    n = await NotificationService(db_session).create(user_id=user_id, type="generic", payload=payload)
     await db_session.commit()
     return n
 
@@ -44,9 +42,7 @@ async def test_list_and_unread_count(async_client: AsyncClient, db_session: Asyn
     assert count == {"count": 2}
 
 
-async def test_mark_read_read_all_and_dismiss(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_mark_read_read_all_and_dismiss(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user, headers = await _auth(db_session)
     a = await _notify(db_session, user.id, msg="a")
     await _notify(db_session, user.id, msg="b")

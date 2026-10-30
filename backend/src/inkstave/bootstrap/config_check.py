@@ -47,21 +47,15 @@ def validate_required_runtime(env: Mapping[str, str] | None = None) -> list[str]
 
     database_url = (source.get("DATABASE_URL") or "").strip()
     if not database_url:
-        problems.append(
-            "DATABASE_URL: must be set (e.g. postgresql+asyncpg://user:pass@host:5432/db)"
-        )
+        problems.append("DATABASE_URL: must be set (e.g. postgresql+asyncpg://user:pass@host:5432/db)")
     elif not database_url.startswith(_DB_PREFIXES):
-        problems.append(
-            f"DATABASE_URL: must start with 'postgresql' (got {_scheme(database_url)!r})"
-        )
+        problems.append(f"DATABASE_URL: must start with 'postgresql' (got {_scheme(database_url)!r})")
 
     redis_url = (source.get("REDIS_URL") or "").strip()
     if not redis_url:
         problems.append("REDIS_URL: must be set (e.g. redis://localhost:6379/0)")
     elif not redis_url.startswith(_REDIS_PREFIXES):
-        problems.append(
-            f"REDIS_URL: must start with 'redis://' or 'rediss://' (got {_scheme(redis_url)!r})"
-        )
+        problems.append(f"REDIS_URL: must start with 'redis://' or 'rediss://' (got {_scheme(redis_url)!r})")
 
     return problems
 

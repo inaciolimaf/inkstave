@@ -34,9 +34,7 @@ _MAIN = "\n".join(
 
 
 async def _member(db: AsyncSession, pid: UUID, uid: UUID, role: str) -> None:
-    db.add(
-        ProjectMembership(project_id=pid, user_id=uid, role=role, status=MembershipStatus.active)
-    )
+    db.add(ProjectMembership(project_id=pid, user_id=uid, role=role, status=MembershipStatus.active))
     await db.flush()
 
 
@@ -51,9 +49,7 @@ async def seed(db_session: AsyncSession) -> SimpleNamespace:
     viewer = await UserFactory.create(db_session)
     await _member(db_session, project.id, viewer.id, MembershipRole.viewer)
     await db_session.commit()
-    return SimpleNamespace(
-        project_id=project.id, owner=owner, editor=editor, viewer=viewer, main_id=main.id
-    )
+    return SimpleNamespace(project_id=project.id, owner=owner, editor=editor, viewer=viewer, main_id=main.id)
 
 
 def _ctx(db: AsyncSession, pid: UUID, uid: UUID, **over: Any) -> ToolContext:

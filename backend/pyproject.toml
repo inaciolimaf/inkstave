@@ -56,7 +56,7 @@ dev = [
 # A uv.lock is committed alongside this file.
 
 [tool.ruff]
-line-length = 100
+line-length = 110
 target-version = "py312"
 # Forward-looking: Alembic migrations (added in spec 03) are not linted.
 # Deliberately `extend-exclude` (not a plain `exclude`): plain `exclude` would

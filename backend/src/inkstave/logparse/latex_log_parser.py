@@ -141,9 +141,7 @@ def _warning_head(line: str) -> tuple[str, str, str | None] | None:
     return None
 
 
-def _fold_continuations(
-    lines: list[str], idx: int, prefix: str | None
-) -> tuple[list[str], list[str], int]:
+def _fold_continuations(lines: list[str], idx: int, prefix: str | None) -> tuple[list[str], list[str], int]:
     """Fold continuation lines ("(name) …") for package/font warnings."""
     parts: list[str] = []
     raw = [lines[idx]]
@@ -256,9 +254,7 @@ def _problem_at(lines: list[str], idx: int, current: str | None) -> tuple[Proble
     return None if box is None else (box, 1)
 
 
-def parse_latex_log(
-    text: str, *, root_file: str | None = None, wrap_width: int = 79
-) -> list[Problem]:
+def parse_latex_log(text: str, *, root_file: str | None = None, wrap_width: int = 79) -> list[Problem]:
     """Parse LaTeX log ``text`` into ordered problems.
 
     Pure and total over content — never raises on weird logs; only raises

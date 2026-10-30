@@ -75,9 +75,7 @@ async def get_tree(
     projects (≤ cap) return exactly the same rows as before.
     """
     cap = max_nodes if max_nodes is not None else get_settings().tree_max_nodes
-    rows = await session.execute(
-        select(TreeEntity).where(TreeEntity.project_id == project_id).limit(cap + 1)
-    )
+    rows = await session.execute(select(TreeEntity).where(TreeEntity.project_id == project_id).limit(cap + 1))
     entities = list(rows.scalars())
     if len(entities) > cap:
         raise TreeTooLargeError()
@@ -88,9 +86,7 @@ async def ensure_root(session: AsyncSession, project_id: UUID) -> TreeEntity:
     """Return the project's root folder, creating it if absent (idempotent)."""
     existing = (
         await session.execute(
-            select(TreeEntity).where(
-                TreeEntity.project_id == project_id, TreeEntity.is_root.is_(True)
-            )
+            select(TreeEntity).where(TreeEntity.project_id == project_id, TreeEntity.is_root.is_(True))
         )
     ).scalar_one_or_none()
     if existing is not None:
@@ -127,9 +123,7 @@ async def get_entity(
     """
     entity = (
         await session.execute(
-            select(TreeEntity).where(
-                TreeEntity.id == entity_id, TreeEntity.project_id == project_id
-            )
+            select(TreeEntity).where(TreeEntity.id == entity_id, TreeEntity.project_id == project_id)
         )
     ).scalar_one_or_none()
     if entity is None:
@@ -171,9 +165,7 @@ async def is_descendant(
         SELECT 1 FROM subtree WHERE id = :cand LIMIT 1
         """
     )
-    row = (
-        await session.execute(sql, {"anc": ancestor_id, "pid": project_id, "cand": candidate_id})
-    ).first()
+    row = (await session.execute(sql, {"anc": ancestor_id, "pid": project_id, "cand": candidate_id})).first()
     return row is not None
 
 
@@ -215,14 +207,10 @@ async def create_entity(
     return entity
 
 
-async def _get_entity_as_parent(
-    session: AsyncSession, project_id: UUID, parent_id: UUID
-) -> TreeEntity:
+async def _get_entity_as_parent(session: AsyncSession, project_id: UUID, parent_id: UUID) -> TreeEntity:
     parent = (
         await session.execute(
-            select(TreeEntity).where(
-                TreeEntity.id == parent_id, TreeEntity.project_id == project_id
-            )
+            select(TreeEntity).where(TreeEntity.id == parent_id, TreeEntity.project_id == project_id)
         )
     ).scalar_one_or_none()
     if parent is None:
@@ -232,9 +220,7 @@ async def _get_entity_as_parent(
     return parent
 
 
-async def rename_entity(
-    session: AsyncSession, project_id: UUID, entity_id: UUID, name: str
-) -> TreeEntity:
+async def rename_entity(session: AsyncSession, project_id: UUID, entity_id: UUID, name: str) -> TreeEntity:
     entity = await _get_entity(session, project_id, entity_id)
     if entity.is_root:
         raise RootImmutableError()
@@ -276,9 +262,7 @@ async def move_entity(
     return entity
 
 
-async def _file_keys_in_subtree(
-    session: AsyncSession, project_id: UUID, entity_id: UUID
-) -> list[str]:
+async def _file_keys_in_subtree(session: AsyncSession, project_id: UUID, entity_id: UUID) -> list[str]:
     sql = text(
         """
         WITH RECURSIVE subtree AS (

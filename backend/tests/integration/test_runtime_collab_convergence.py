@@ -83,9 +83,7 @@ async def test_concurrent_edits_converge(app: Any, db_session: AsyncSession, red
         await mgr.release(doc_id)
 
 
-async def test_offline_client_merges_on_reconnect(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_offline_client_merges_on_reconnect(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     _owner, _project, entity = await _empty_doc(db_session)
     doc_id = entity.id
@@ -123,9 +121,7 @@ async def test_offline_client_merges_on_reconnect(
         await mgr.release(doc_id)
 
 
-async def test_converged_text_visible_to_bridge(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_converged_text_visible_to_bridge(app: Any, db_session: AsyncSession, redis: Any) -> None:
     # Tiny debounce so the bridge flush resolves fast; we also force-flush below.
     components = install_collab(app, db_session, redis, collab_text_flush_debounce_ms=10)
     _owner, _project, entity = await _empty_doc(db_session)

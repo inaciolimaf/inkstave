@@ -148,8 +148,7 @@ class OpenRouterLLMClient:
             # would silently end as a plain-text answer with no proposed edit and no
             # error. Mark it as an error and log the raw message so we can diagnose.
             logger.warning(
-                "openrouter: finish_reason=tool_calls but no parseable tool_calls "
-                "(model=%s); raw message=%r",
+                "openrouter: finish_reason=tool_calls but no parseable tool_calls (model=%s); raw message=%r",
                 self._model,
                 choice.message,
             )
@@ -183,9 +182,7 @@ class OpenRouterLLMClient:
             tool_calls=tool_calls,
             usage=_usage_of(resp.usage) or LLMUsage(),
             finish_reason=(
-                "error"
-                if self._check_tool_calls(choice, tool_calls, had_error)
-                else choice.finish_reason
+                "error" if self._check_tool_calls(choice, tool_calls, had_error) else choice.finish_reason
             ),
         )
 

@@ -39,30 +39,22 @@ async def test_list_versions(hist: SimpleNamespace, async_client: AsyncClient) -
 async def test_versions_pagination_and_gaps(
     hist: SimpleNamespace, async_client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    r = await async_client.get(
-        _hist_url(hist.pid, hist.doc_id, "versions?limit=2"), headers=hist.owner_h
-    )
+    r = await async_client.get(_hist_url(hist.pid, hist.doc_id, "versions?limit=2"), headers=hist.owner_h)
     body = r.json()
     assert [v["version"] for v in body["versions"]] == [3, 2]
     assert body["has_more"] is True and body["next_before"] == 2
 
     # Simulate a compaction gap: delete version 2's update row.
     await db_session.execute(
-        delete(HistoryUpdate).where(
-            HistoryUpdate.doc_id == hist.doc_uuid, HistoryUpdate.version == 2
-        )
+        delete(HistoryUpdate).where(HistoryUpdate.doc_id == hist.doc_uuid, HistoryUpdate.version == 2)
     )
     await db_session.commit()
     r2 = await async_client.get(_hist_url(hist.pid, hist.doc_id, "versions"), headers=hist.owner_h)
     assert [v["version"] for v in r2.json()["versions"]] == [3, 1]  # gap tolerated (AC2)
 
 
-async def test_list_updates_range_and_bad_range(
-    hist: SimpleNamespace, async_client: AsyncClient
-) -> None:
-    r = await async_client.get(
-        _hist_url(hist.pid, hist.doc_id, "updates?from=1&to=2"), headers=hist.viewer_h
-    )
+async def test_list_updates_range_and_bad_range(hist: SimpleNamespace, async_client: AsyncClient) -> None:
+    r = await async_client.get(_hist_url(hist.pid, hist.doc_id, "updates?from=1&to=2"), headers=hist.viewer_h)
     assert [u["version"] for u in r.json()["updates"]] == [1, 2]  # ascending
     bad = await async_client.get(
         _hist_url(hist.pid, hist.doc_id, "updates?from=3&to=1"), headers=hist.viewer_h

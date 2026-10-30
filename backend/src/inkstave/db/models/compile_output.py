@@ -52,9 +52,7 @@ class CompileOutput(UUIDPrimaryKeyMixin, Base):
     )
 
     __table_args__ = (
-        CheckConstraint(
-            "kind IN ('pdf','log','synctex','aux','other')", name="compile_output_kind_valid"
-        ),
+        CheckConstraint("kind IN ('pdf','log','synctex','aux','other')", name="compile_output_kind_valid"),
         UniqueConstraint("compile_id", "name", name="uq_compile_output_name"),
         Index("ix_compile_outputs_compile_id", "compile_id"),
         Index("ix_compile_outputs_project_created", "project_id", "created_at"),

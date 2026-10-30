@@ -86,9 +86,7 @@ async def _build_sealed_chunk(
     return svc
 
 
-async def test_compaction_merges_and_is_idempotent(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_compaction_merges_and_is_idempotent(db_session: AsyncSession, tmp_path: Path) -> None:
     project_id, doc_id = await _make_doc(db_session)
     store = LocalObjectStore(tmp_path, 65536)
     svc = await _build_sealed_chunk(db_session, store, project_id, doc_id)

@@ -55,9 +55,7 @@ def _rlimit_preexec(limits: ResourceLimits) -> Callable[[], None] | None:
         if limits.cpu_seconds is not None:
             resource.setrlimit(resource.RLIMIT_CPU, (limits.cpu_seconds, limits.cpu_seconds))
         if limits.address_space_bytes is not None:
-            resource.setrlimit(
-                resource.RLIMIT_AS, (limits.address_space_bytes, limits.address_space_bytes)
-            )
+            resource.setrlimit(resource.RLIMIT_AS, (limits.address_space_bytes, limits.address_space_bytes))
 
     return _apply
 
@@ -155,9 +153,7 @@ class _ProcessWatch:
     process its own way before `reap()` collects whatever it produced.
     """
 
-    def __init__(
-        self, proc: asyncio.subprocess.Process, limits: ResourceLimits, start: float
-    ) -> None:
+    def __init__(self, proc: asyncio.subprocess.Process, limits: ResourceLimits, start: float) -> None:
         self._proc = proc
         self._limits = limits
         self._start = start
@@ -190,13 +186,9 @@ class _ProcessWatch:
             stdout, stderr = await self._comm
         except Exception:  # pragma: no cover - defensive
             stdout, stderr = b"", b""
-        return self._outcome(
-            stdout, stderr, timed_out=not self._cancelled, cancelled=self._cancelled
-        )
+        return self._outcome(stdout, stderr, timed_out=not self._cancelled, cancelled=self._cancelled)
 
-    def _outcome(
-        self, stdout: bytes, stderr: bytes, *, timed_out: bool, cancelled: bool
-    ) -> RunOutcome:
+    def _outcome(self, stdout: bytes, stderr: bytes, *, timed_out: bool, cancelled: bool) -> RunOutcome:
         return RunOutcome(
             exit_code=self._proc.returncode,
             stdout=_cap(stdout, self._limits.max_stdout_bytes),

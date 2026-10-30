@@ -60,9 +60,7 @@ async def _seed(db_session: AsyncSession):
 async def test_creates_and_enqueues(db_session: AsyncSession) -> None:
     user, project = await _seed(db_session)
     enq = FakeEnqueuer()
-    coord = CompileCoordinator(
-        settings=_settings(), repo=CompileRepository(db_session), enqueuer=enq
-    )
+    coord = CompileCoordinator(settings=_settings(), repo=CompileRepository(db_session), enqueuer=enq)
     row = await coord.request_compile(
         project_id=project.id, user_id=user.id, main_file="main.tex", force=False
     )
@@ -76,9 +74,7 @@ async def test_coalesce_returns_inflight(db_session: AsyncSession) -> None:
     repo = CompileRepository(db_session)
     existing = await repo.create(project_id=project.id, requested_by=user.id, main_file="main.tex")
     enq = FakeEnqueuer()
-    coord = CompileCoordinator(
-        settings=_settings(compile_debounce_coalesce=True), repo=repo, enqueuer=enq
-    )
+    coord = CompileCoordinator(settings=_settings(compile_debounce_coalesce=True), repo=repo, enqueuer=enq)
     row = await coord.request_compile(
         project_id=project.id, user_id=user.id, main_file="main.tex", force=False
     )
@@ -111,9 +107,7 @@ async def test_project_concurrency_cap_raises(db_session: AsyncSession) -> None:
         enqueuer=FakeEnqueuer(),
     )
     with pytest.raises(CompileConcurrencyError):
-        await coord.request_compile(
-            project_id=project.id, user_id=user.id, main_file="main.tex", force=True
-        )
+        await coord.request_compile(project_id=project.id, user_id=user.id, main_file="main.tex", force=True)
 
 
 async def test_user_concurrency_cap_raises(db_session: AsyncSession) -> None:
@@ -122,16 +116,12 @@ async def test_user_concurrency_cap_raises(db_session: AsyncSession) -> None:
     repo = CompileRepository(db_session)
     await repo.create(project_id=other.id, requested_by=user.id, main_file="main.tex")
     coord = CompileCoordinator(
-        settings=_settings(
-            compile_max_concurrent_per_project=10, compile_max_concurrent_per_user=1
-        ),
+        settings=_settings(compile_max_concurrent_per_project=10, compile_max_concurrent_per_user=1),
         repo=repo,
         enqueuer=FakeEnqueuer(),
     )
     with pytest.raises(CompileConcurrencyError):
-        await coord.request_compile(
-            project_id=project.id, user_id=user.id, main_file="main.tex", force=True
-        )
+        await coord.request_compile(project_id=project.id, user_id=user.id, main_file="main.tex", force=True)
 
 
 # --- CompileRepository unit tests (issue 79 / spec 22 §8) ------------------- #

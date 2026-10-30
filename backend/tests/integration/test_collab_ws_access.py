@@ -68,9 +68,7 @@ def _path(project_id: Any, document_id: Any) -> str:
     return f"/ws/collab/projects/{project_id}/documents/{document_id}"
 
 
-async def test_non_member_join_rejected_4403(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_non_member_join_rejected_4403(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     async with ASGIWebSocketClient(
@@ -107,9 +105,7 @@ async def test_viewer_update_is_dropped(app: Any, db_session: AsyncSession, redi
     assert count == 0
 
 
-async def test_viewer_receives_editor_updates(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_viewer_receives_editor_updates(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     path = _path(project.id, entity.id)
@@ -129,14 +125,10 @@ async def test_viewer_receives_editor_updates(
         assert local.text == "editor edit"
 
 
-async def test_editor_update_applies_and_persists(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_editor_update_applies_and_persists(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
-    async with ASGIWebSocketClient(
-        app, _path(project.id, entity.id), query=f"token={tokens['editor']}"
-    ) as e:
+    async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={tokens['editor']}") as e:
         await e.expect_accept()
         await e.receive_bytes()
         await e.send_bytes(make_update("editor wrote this"))
@@ -148,7 +140,5 @@ async def test_editor_update_applies_and_persists(
         assert count >= 1  # AC8 applied + persisted
 
         await components.manager.flush(entity.id)
-        content = await db_session.scalar(
-            select(Document.content).where(Document.entity_id == entity.id)
-        )
+        content = await db_session.scalar(select(Document.content).where(Document.entity_id == entity.id))
         assert content == "editor wrote this"

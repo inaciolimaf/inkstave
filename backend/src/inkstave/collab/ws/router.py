@@ -164,9 +164,7 @@ async def collab_ws(
     )
     # Observability (spec 51): bind WS context + track the active-connections gauge for
     # the whole connection; track_ws/clear_context in finally so a crash never leaks them.
-    ctx_tokens = bind_context(
-        ws_session_id=uuid4().hex, user_id=str(user.id), project_id=str(project_id)
-    )
+    ctx_tokens = bind_context(ws_session_id=uuid4().hex, user_id=str(user.id), project_id=str(project_id))
     try:
         with track_ws("collab"):
             await _serve(components, conn)

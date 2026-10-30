@@ -48,9 +48,7 @@ async def test_non_owner_owner_only_endpoints_403(
     ).status_code == 403
     assert (await async_client.get(f"{PROJECTS}/{pid}/invites", headers=bob_h)).status_code == 403
     assert (
-        await async_client.patch(
-            f"{PROJECTS}/{pid}/members/{bob_id}", json={"role": "viewer"}, headers=bob_h
-        )
+        await async_client.patch(f"{PROJECTS}/{pid}/members/{bob_id}", json={"role": "viewer"}, headers=bob_h)
     ).status_code == 403
     # Remove-other and transfer are owner-only too.
     assert (
@@ -80,9 +78,7 @@ async def test_invite_already_member_409(
     assert r.status_code == 409 and r.json()["error"]["type"] == "already_member"  # AC10
 
 
-async def test_cross_project_isolation_404(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_cross_project_isolation_404(async_client: AsyncClient, db_session: AsyncSession) -> None:
     _, a_h = await _auth(db_session)
     _, b_h = await _auth(db_session)
     pid_a = await _project(async_client, a_h)

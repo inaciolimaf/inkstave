@@ -63,9 +63,7 @@ class NotificationService:
                 await self._session.flush()
                 return existing
 
-        notification = Notification(
-            user_id=user_id, type=type, payload=payload, expires_at=expires_at
-        )
+        notification = Notification(user_id=user_id, type=type, payload=payload, expires_at=expires_at)
         self._session.add(notification)
         await self._session.flush()
         return notification
@@ -131,9 +129,7 @@ class NotificationService:
 
     async def _owned(self, user_id: UUID, notification_id: UUID) -> Notification:
         notification = await self._session.scalar(
-            select(Notification).where(
-                Notification.id == notification_id, Notification.user_id == user_id
-            )
+            select(Notification).where(Notification.id == notification_id, Notification.user_id == user_id)
         )
         if notification is None:
             raise NotificationNotFoundError()

@@ -19,9 +19,7 @@ from inkstave.agent.context.models import (
     StructureNode,
 )
 
-_SECTION_RE = re.compile(
-    r"\\(part|chapter|section|subsection|subsubsection|paragraph|subparagraph)(\*)?"
-)
+_SECTION_RE = re.compile(r"\\(part|chapter|section|subsection|subsubsection|paragraph|subparagraph)(\*)?")
 _BEGIN_RE = re.compile(r"\\begin\s*\{([^}]*)\}")
 _END_RE = re.compile(r"\\end\s*\{([^}]*)\}")
 _INPUT_RE = re.compile(r"\\(input|include|subfile)\s*\{([^}]*)\}")
@@ -280,9 +278,7 @@ def _to_node(sec: _Sec, file_path: str) -> StructureNode:
     )
 
 
-def _preamble_node(
-    file_path: str, lines: list[str], body_start_line: int | None
-) -> StructureNode | None:
+def _preamble_node(file_path: str, lines: list[str], body_start_line: int | None) -> StructureNode | None:
     """Everything before ``\\begin{document}``, or ``None`` when there is no preamble."""
     if not body_start_line or body_start_line <= 1:
         return None

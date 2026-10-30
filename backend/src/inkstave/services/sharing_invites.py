@@ -41,9 +41,7 @@ if TYPE_CHECKING:
 
 async def _reject_if_member(session: AsyncSession, project_id: UUID, email: str) -> None:
     """409 if the email already belongs to an active member of the project."""
-    user = (
-        await session.execute(select(User).where(func.lower(User.email) == email))
-    ).scalar_one_or_none()
+    user = (await session.execute(select(User).where(func.lower(User.email) == email))).scalar_one_or_none()
     if user is None:
         return
     member = await membership_of(session, project_id, user.id)
@@ -51,9 +49,7 @@ async def _reject_if_member(session: AsyncSession, project_id: UUID, email: str)
         raise AlreadyMemberError()
 
 
-async def _pending_invite(
-    session: AsyncSession, project_id: UUID, email: str
-) -> ProjectInvite | None:
+async def _pending_invite(session: AsyncSession, project_id: UUID, email: str) -> ProjectInvite | None:
     return (
         await session.execute(
             select(ProjectInvite).where(
@@ -100,9 +96,7 @@ async def create_invite(
     return invite, raw_token
 
 
-async def list_invites(
-    session: AsyncSession, project_id: UUID, actor_id: UUID
-) -> list[ProjectInvite]:
+async def list_invites(session: AsyncSession, project_id: UUID, actor_id: UUID) -> list[ProjectInvite]:
     await require_owner(session, project_id, actor_id)
     rows = (
         await session.execute(
@@ -117,9 +111,7 @@ async def list_invites(
     return list(rows)
 
 
-async def revoke_invite(
-    session: AsyncSession, project_id: UUID, actor_id: UUID, invite_id: UUID
-) -> None:
+async def revoke_invite(session: AsyncSession, project_id: UUID, actor_id: UUID, invite_id: UUID) -> None:
     await require_owner(session, project_id, actor_id)
     invite = (
         await session.execute(
@@ -139,18 +131,14 @@ async def revoke_invite(
 
 async def _invite_by_token(session: AsyncSession, raw_token: str) -> ProjectInvite:
     invite = (
-        await session.execute(
-            select(ProjectInvite).where(ProjectInvite.token_hash == hash_token(raw_token))
-        )
+        await session.execute(select(ProjectInvite).where(ProjectInvite.token_hash == hash_token(raw_token)))
     ).scalar_one_or_none()
     if invite is None:
         raise InviteNotFoundError()
     return invite
 
 
-async def get_invite_preview(
-    session: AsyncSession, raw_token: str
-) -> tuple[ProjectInvite, Project, User]:
+async def get_invite_preview(session: AsyncSession, raw_token: str) -> tuple[ProjectInvite, Project, User]:
     invite = await _invite_by_token(session, raw_token)
     if invite.status != InviteStatus.pending or invite.expires_at < _now():
         raise InviteGoneError()
@@ -165,9 +153,7 @@ async def get_invite_preview(
     return invite, project, inviter
 
 
-async def _already_accepted(
-    session: AsyncSession, invite: ProjectInvite, actor: User
-) -> tuple[UUID, str]:
+async def _already_accepted(session: AsyncSession, invite: ProjectInvite, actor: User) -> tuple[UUID, str]:
     """Idempotent re-accept: succeeds only while the membership is still active."""
     member = await membership_of(session, invite.project_id, actor.id)
     if member is not None and member.status == MembershipStatus.active:
@@ -185,9 +171,7 @@ async def _require_pending(session: AsyncSession, invite: ProjectInvite) -> None
     raise InviteGoneError()
 
 
-async def _grant_membership(
-    session: AsyncSession, invite: ProjectInvite, actor: User
-) -> ProjectMembership:
+async def _grant_membership(session: AsyncSession, invite: ProjectInvite, actor: User) -> ProjectMembership:
     """Create or re-activate the actor's membership; an owner keeps their role."""
     member = await membership_of(session, invite.project_id, actor.id)
     if member is None:

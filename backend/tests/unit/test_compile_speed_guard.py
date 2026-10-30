@@ -28,9 +28,7 @@ def _limits() -> ResourceLimits:
 
 
 async def test_real_runner_is_blocked_in_fast_tier(tmp_path: Path) -> None:
-    runner = LocalTectonicRunner(
-        bin_path="tectonic", cache_dir=tmp_path, bundle_url=None, offline=True
-    )
+    runner = LocalTectonicRunner(bin_path="tectonic", cache_dir=tmp_path, bundle_url=None, offline=True)
     with pytest.raises(RuntimeError, match="Real Tectonic compile"):
         await runner.run(
             workdir=tmp_path,

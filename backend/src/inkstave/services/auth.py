@@ -29,8 +29,7 @@ if TYPE_CHECKING:
 # A fixed valid argon2id hash. When the email is unknown we still run a verify
 # against this dummy so the response timing does not reveal user existence.
 _DUMMY_HASH = (
-    "$argon2id$v=19$m=65536,t=3,p=4$cF5MiWJGhHDA671dONGDCQ$"
-    "YQw+PB8wiO1F5J5FKpXwV2abCar+N5OwX9W6/SmiqmE"
+    "$argon2id$v=19$m=65536,t=3,p=4$cF5MiWJGhHDA671dONGDCQ$YQw+PB8wiO1F5J5FKpXwV2abCar+N5OwX9W6/SmiqmE"
 )
 
 logger = logging.getLogger(__name__)
@@ -56,9 +55,7 @@ async def authenticate_user(
 ) -> User | None:
     """Return the user for valid credentials, else ``None`` (constant-time)."""
     normalised = normalise_email(email)
-    user = (
-        await session.execute(select(User).where(User.email == normalised))
-    ).scalar_one_or_none()
+    user = (await session.execute(select(User).where(User.email == normalised))).scalar_one_or_none()
 
     if user is None:
         # Spend comparable time so a missing user is not faster than a wrong one.
@@ -123,16 +120,12 @@ async def _validate_refresh(refresh_store: RefreshStore, claims: dict[str, Any])
     jti, family_id = claims["jti"], claims["family_id"]
     record = await refresh_store.get_refresh(jti)
     if record is None or await refresh_store.is_family_revoked(family_id):
-        logger.warning(
-            "auth refresh rejected: missing or family-revoked", extra={"user_id": claims["sub"]}
-        )
+        logger.warning("auth refresh rejected: missing or family-revoked", extra={"user_id": claims["sub"]})
         raise RefreshError(_INVALID_REFRESH)
     if record.rotated:
         # Replay of an already-used token -> revoke the entire family. This is the
         # high-value signal: a rotated token resurfacing means a stolen-token replay.
-        logger.warning(
-            "refresh token reuse detected; revoking family", extra={"user_id": record.user_id}
-        )
+        logger.warning("refresh token reuse detected; revoking family", extra={"user_id": record.user_id})
         await refresh_store.revoke_family(family_id)
         raise RefreshError(_REUSE_DETECTED)
     # Per-user cutoff: a password change (spec 59) invalidates tokens issued before it.
@@ -168,9 +161,7 @@ async def refresh_tokens(
     return TokenPair(access_token=access_token, refresh_token=new_refresh, expires_in=expires_in)
 
 
-async def logout(
-    token_service: TokenService, refresh_store: RefreshStore, refresh_token: str
-) -> None:
+async def logout(token_service: TokenService, refresh_store: RefreshStore, refresh_token: str) -> None:
     """Revoke the token's family. Idempotent: invalid tokens are a no-op."""
     try:
         claims = token_service.decode_token(refresh_token, "refresh")

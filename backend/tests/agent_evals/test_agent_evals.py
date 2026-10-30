@@ -106,18 +106,14 @@ async def test_eval_propose_edit_yields_valid_diff(
             )
         ]
     )
-    result = await run_turn(
-        session=project.session, user_message="tweak intro", deps=deps, db=db_session
-    )
+    result = await run_turn(session=project.session, user_message="tweak intro", deps=deps, db=db_session)
     assert len(result.proposed_diffs) == 1
     diff = result.proposed_diffs[0].diff_text
     assert diff.startswith("--- a/main.tex\n+++ b/main.tex\n@@ ")
     assert "+The introduction MOTIVATES the work." in diff
 
 
-async def test_eval_budget_blocks_over_cap(
-    project: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_eval_budget_blocks_over_cap(project: SimpleNamespace, db_session: AsyncSession) -> None:
     """AC7c — a per-run budget stops the turn gracefully."""
     deps = _deps(
         [_tool_call("read_file", {"doc_id": str(project.main_id)}, usage=100)] * 5,
@@ -143,9 +139,7 @@ async def test_eval_injection_does_not_change_behaviour(
     assert "IGNORE ALL PREVIOUS" in after.content  # untouched
 
 
-async def test_eval_disallowed_tool_is_flagged(
-    project: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_eval_disallowed_tool_is_flagged(project: SimpleNamespace, db_session: AsyncSession) -> None:
     """AC5/AC7 — a tool call outside the allow-list is rejected and flagged."""
     deps = _deps(
         [
@@ -157,8 +151,7 @@ async def test_eval_disallowed_tool_is_flagged(
     flagged = [
         e
         for e in result.audit_events
-        if e["action"] == "injection_flagged"
-        and (e.get("detail") or {}).get("reason") == "disallowed_tool"
+        if e["action"] == "injection_flagged" and (e.get("detail") or {}).get("reason") == "disallowed_tool"
     ]
     assert flagged  # the disallowed tool produced an injection_flagged audit event
     assert result.error is None  # the run continued/finished gracefully
@@ -179,9 +172,7 @@ async def test_eval_never_auto_applies(project: SimpleNamespace, db_session: Asy
             )
         ]
     )
-    result = await run_turn(
-        session=project.session, user_message="rewrite", deps=deps, db=db_session
-    )
+    result = await run_turn(session=project.session, user_message="rewrite", deps=deps, db=db_session)
     assert len(result.proposed_diffs) == 1  # a proposal was created
     after = (await get_document(db_session, project.proj.id, project.main_id)).content
     assert after == before  # but the document was NOT changed

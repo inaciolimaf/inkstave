@@ -62,9 +62,7 @@ async def _seed(
 ):
     project = await create_project(db_session, UUID(owner_id), "P")
     repo = CompileRepository(db_session)
-    row = await repo.create(
-        project_id=project.id, requested_by=UUID(owner_id), main_file="main.tex"
-    )
+    row = await repo.create(project_id=project.id, requested_by=UUID(owner_id), main_file="main.tex")
     await repo.update(row, status="failure")
 
     result = CompileResult(

@@ -105,9 +105,7 @@ class Settings(
         secret = self.jwt_secret or ""
         weak = {"changeme", "secret", "dev", "development", "test", "insecure", "default", "key"}
         if len(secret.encode()) < 32 or secret.lower() in weak:
-            raise ValueError(
-                "JWT_SECRET must be a strong, non-default value (>=32 bytes) in production"
-            )
+            raise ValueError("JWT_SECRET must be a strong, non-default value (>=32 bytes) in production")
         return self
 
     @model_validator(mode="after")
@@ -144,9 +142,7 @@ class Settings(
         # The engine's own timeout must fire first (clean TIMEOUT result) before
         # the ARQ job is killed mid-flight (mirrors Overleaf's lock>compile rule).
         if self.compile_job_timeout_s <= self.tectonic_compile_timeout_s:
-            raise ValueError(
-                "COMPILE_JOB_TIMEOUT_S must be strictly greater than TECTONIC_COMPILE_TIMEOUT_S"
-            )
+            raise ValueError("COMPILE_JOB_TIMEOUT_S must be strictly greater than TECTONIC_COMPILE_TIMEOUT_S")
         return self
 
 

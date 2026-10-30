@@ -76,9 +76,7 @@ async def test_issue_invalidates_older_same_purpose_tokens(db_session: AsyncSess
     assert first.token.consumed_at is not None
     with pytest.raises(BadRequestError):
         await consume_token(db_session, raw_token=first.raw, purpose="magic_login", clock=clock)
-    consumed = await consume_token(
-        db_session, raw_token=second.raw, purpose="magic_login", clock=clock
-    )
+    consumed = await consume_token(db_session, raw_token=second.raw, purpose="magic_login", clock=clock)
     assert consumed.id == second.token.id
 
 
@@ -94,9 +92,7 @@ async def test_consume_happy_path_then_single_use(db_session: AsyncSession) -> N
         clock=clock,
     )
 
-    row = await consume_token(
-        db_session, raw_token=issued.raw, purpose="password_reset", clock=clock
-    )
+    row = await consume_token(db_session, raw_token=issued.raw, purpose="password_reset", clock=clock)
     assert row.consumed_at == clock.now()
     # Replay → BadRequest (single-use).
     with pytest.raises(BadRequestError):
@@ -142,9 +138,7 @@ async def test_consume_expired_is_gone_and_not_consumed(db_session: AsyncSession
     assert row is not None and row.consumed_at is None
 
 
-async def test_raw_token_never_logged(
-    db_session: AsyncSession, caplog: pytest.LogCaptureFixture
-) -> None:
+async def test_raw_token_never_logged(db_session: AsyncSession, caplog: pytest.LogCaptureFixture) -> None:
     clock = FrozenClock()
     user = await _user(db_session)
     with caplog.at_level(logging.INFO):

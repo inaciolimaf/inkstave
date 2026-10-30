@@ -32,9 +32,7 @@ __all__ = ["hist"]
 
 
 async def test_diff_between_versions(hist: SimpleNamespace, async_client: AsyncClient) -> None:
-    r = await async_client.get(
-        _hist_url(hist.pid, hist.doc_id, "diff?from=1&to=2"), headers=hist.viewer_h
-    )
+    r = await async_client.get(_hist_url(hist.pid, hist.doc_id, "diff?from=1&to=2"), headers=hist.viewer_h)
     assert r.status_code == 200
     body = r.json()
     assert body["binary"] is False and body["from"] == 1 and body["to"] == 2
@@ -102,16 +100,12 @@ async def test_diff_missing_version_404(hist: SimpleNamespace, async_client: Asy
     assert r.status_code == 404
 
 
-async def test_diff_size_guard_413(
-    hist: SimpleNamespace, db_session: AsyncSession, tmp_path: Any
-) -> None:
+async def test_diff_size_guard_413(hist: SimpleNamespace, db_session: AsyncSession, tmp_path: Any) -> None:
     # Service-level: a tiny HISTORY_DIFF_MAX_BYTES routes to the 413/too_large path (AC11).
     from inkstave.history.read import get_diff
 
     tiny = get_settings().model_copy(update={"history_diff_max_bytes": 1})
-    result = await get_diff(
-        db_session, hist.comp.history._store, tiny, hist.doc_uuid, from_v=1, to=2
-    )
+    result = await get_diff(db_session, hist.comp.history._store, tiny, hist.doc_uuid, from_v=1, to=2)
     assert result.too_large is True and result.hunks == []
 
 

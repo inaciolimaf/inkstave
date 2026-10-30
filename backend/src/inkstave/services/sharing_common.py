@@ -59,18 +59,14 @@ def generate_token() -> str:
 
 async def _active_project(session: AsyncSession, project_id: UUID) -> Project:
     project = (
-        await session.execute(
-            select(Project).where(Project.id == project_id, Project.deleted_at.is_(None))
-        )
+        await session.execute(select(Project).where(Project.id == project_id, Project.deleted_at.is_(None)))
     ).scalar_one_or_none()
     if project is None:
         raise ProjectNotFoundError()
     return project
 
 
-async def membership_of(
-    session: AsyncSession, project_id: UUID, user_id: UUID
-) -> ProjectMembership | None:
+async def membership_of(session: AsyncSession, project_id: UUID, user_id: UUID) -> ProjectMembership | None:
     return (
         await session.execute(
             select(ProjectMembership).where(
@@ -81,9 +77,7 @@ async def membership_of(
     ).scalar_one_or_none()
 
 
-async def require_member(
-    session: AsyncSession, project_id: UUID, user_id: UUID
-) -> ProjectMembership:
+async def require_member(session: AsyncSession, project_id: UUID, user_id: UUID) -> ProjectMembership:
     """Active member of a live project, else 404 (existence not leaked)."""
     await _active_project(session, project_id)
     membership = await membership_of(session, project_id, user_id)
@@ -92,9 +86,7 @@ async def require_member(
     return membership
 
 
-async def require_owner(
-    session: AsyncSession, project_id: UUID, user_id: UUID
-) -> ProjectMembership:
+async def require_owner(session: AsyncSession, project_id: UUID, user_id: UUID) -> ProjectMembership:
     """Owner of a live project: 404 for non-members, 403 for non-owner members."""
     membership = await require_member(session, project_id, user_id)
     if membership.role != MembershipRole.owner:

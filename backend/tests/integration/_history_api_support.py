@@ -43,9 +43,7 @@ async def _user(db_session: AsyncSession) -> tuple[Any, dict[str, str]]:
 
 async def _member(db_session: AsyncSession, pid: UUID, user_id: UUID, role: str) -> None:
     db_session.add(
-        ProjectMembership(
-            project_id=pid, user_id=user_id, role=role, status=MembershipStatus.active
-        )
+        ProjectMembership(project_id=pid, user_id=user_id, role=role, status=MembershipStatus.active)
     )
     await db_session.commit()
 

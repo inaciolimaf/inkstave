@@ -129,9 +129,7 @@ async def _write_documents(
     return paths
 
 
-async def _write_files(
-    input_dir: Path, project_id: UUID, files: FileSource, budget: _Budget
-) -> list[str]:
+async def _write_files(input_dir: Path, project_id: UUID, files: FileSource, budget: _Budget) -> list[str]:
     paths: list[str] = []
     async for rel, stream in files.iter_files(project_id):
         dest = safe_join(input_dir, rel)

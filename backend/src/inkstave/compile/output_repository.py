@@ -84,15 +84,11 @@ class OutputRepository:
         ).scalar_one_or_none()
 
     async def delete_for_compile(self, compile_id: UUID) -> None:
-        await self._session.execute(
-            delete(CompileOutput).where(CompileOutput.compile_id == compile_id)
-        )
+        await self._session.execute(delete(CompileOutput).where(CompileOutput.compile_id == compile_id))
         await self._session.flush()
 
     async def delete_for_project(self, project_id: UUID) -> None:
-        await self._session.execute(
-            delete(CompileOutput).where(CompileOutput.project_id == project_id)
-        )
+        await self._session.execute(delete(CompileOutput).where(CompileOutput.project_id == project_id))
         await self._session.flush()
 
     async def storage_keys_for_compile(self, compile_id: UUID) -> list[str]:

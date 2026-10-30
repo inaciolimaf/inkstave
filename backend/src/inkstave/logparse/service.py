@@ -24,9 +24,7 @@ class LogNotAvailable(Exception):
 
 
 class LogProblemsService:
-    def __init__(
-        self, *, repo: CompileRepository, output_store: OutputStore, settings: Settings
-    ) -> None:
+    def __init__(self, *, repo: CompileRepository, output_store: OutputStore, settings: Settings) -> None:
         self._repo = repo
         self._store = output_store
         self._settings = settings

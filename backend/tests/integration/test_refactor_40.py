@@ -107,9 +107,7 @@ async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_p
         lambda: _SessionCtx(db_session), LocalObjectStore(tmp_path, 65536), _settings(tmp_path)
     )
     ed = _Editor()
-    await svc.capture_update(
-        project_id=pid, doc_id=doc_id, update=ed.update("x\n"), author_id=None, at=_NOW
-    )
+    await svc.capture_update(project_id=pid, doc_id=doc_id, update=ed.update("x\n"), author_id=None, at=_NOW)
     await svc.flush_doc(doc_id=doc_id, reason="manual")
     chunk_id = await db_session.scalar(select(HistoryChunk.id).where(HistoryChunk.doc_id == doc_id))
 
@@ -135,14 +133,10 @@ async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_p
 # --- compaction preserves reconstructed state (AC4) ------------------------ #
 
 
-async def test_compact_preserves_reconstructed_state(
-    db_session: AsyncSession, tmp_path: Any
-) -> None:
+async def test_compact_preserves_reconstructed_state(db_session: AsyncSession, tmp_path: Any) -> None:
     pid, doc_id = await _doc(db_session)
     # Small chunk size forces a seal; high merge bytes makes compaction merge.
-    settings = _settings(
-        tmp_path, history_chunk_max_updates=3, history_compact_merge_bytes=1_000_000
-    )
+    settings = _settings(tmp_path, history_chunk_max_updates=3, history_compact_merge_bytes=1_000_000)
     store = LocalObjectStore(tmp_path, 65536)
     svc = HistoryCaptureService(lambda: _SessionCtx(db_session), store, settings)
 

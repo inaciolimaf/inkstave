@@ -49,9 +49,7 @@ http_request_duration = _metric(
 ws_connections_active = _metric(
     Gauge, "inkstave_ws_connections_active", "Active WebSocket connections", labelnames=("kind",)
 )
-ws_messages = _metric(
-    Counter, "inkstave_ws_messages", "WebSocket messages", labelnames=("direction", "kind")
-)
+ws_messages = _metric(Counter, "inkstave_ws_messages", "WebSocket messages", labelnames=("direction", "kind"))
 compile_duration = _metric(
     Histogram,
     "inkstave_compile_duration_seconds",
@@ -64,9 +62,7 @@ agent_tokens = _metric(
     Counter, "inkstave_agent_tokens", "Agent LLM tokens", labelnames=("direction", "model")
 )
 agent_requests = _metric(Counter, "inkstave_agent_requests", "Agent runs", labelnames=("status",))
-job_queue_depth = _metric(
-    Gauge, "inkstave_job_queue_depth", "Pending jobs in a queue", labelnames=("queue",)
-)
+job_queue_depth = _metric(Gauge, "inkstave_job_queue_depth", "Pending jobs in a queue", labelnames=("queue",))
 job_duration = _metric(
     Histogram,
     "inkstave_job_duration_seconds",

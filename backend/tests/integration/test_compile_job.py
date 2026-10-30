@@ -28,9 +28,7 @@ from tests.integration._compile_job_support import (
 pytestmark = pytest.mark.integration
 
 
-async def test_compile_job_records_metrics_and_binds_context(
-    db_session: AsyncSession, redis: Any
-) -> None:
+async def test_compile_job_records_metrics_and_binds_context(db_session: AsyncSession, redis: Any) -> None:
     from prometheus_client import REGISTRY
 
     cid = await _new_compile(db_session)
@@ -103,9 +101,7 @@ async def test_unexpected_exception_is_error_status(db_session: AsyncSession, re
 
     async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None: ...
 
-    await run_compile(
-        _ctx(db_session, redis, StubService(raises=RuntimeError("boom")), persist), str(cid)
-    )
+    await run_compile(_ctx(db_session, redis, StubService(raises=RuntimeError("boom")), persist), str(cid))
     row = await CompileRepository(db_session).get_by_id(cid)
     assert row is not None
     assert row.status == "error"
@@ -117,7 +113,5 @@ def test_run_compile_job_does_not_auto_retry() -> None:
     # transient error — max_tries == 1.
     from inkstave.compile.worker import WorkerSettings
 
-    run_compile_func = next(
-        f for f in WorkerSettings.functions if getattr(f, "name", None) == "run_compile"
-    )
+    run_compile_func = next(f for f in WorkerSettings.functions if getattr(f, "name", None) == "run_compile")
     assert run_compile_func.max_tries == 1

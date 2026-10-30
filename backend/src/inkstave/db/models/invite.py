@@ -41,9 +41,7 @@ class ProjectInvite(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # SHA-256 hex of the opaque bearer token; the raw token is returned only at
     # creation time and never persisted (see docs/adr/0033-collaborators-sharing.md).
     token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    status: Mapped[str] = mapped_column(
-        String(16), nullable=False, server_default=InviteStatus.pending.value
-    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default=InviteStatus.pending.value)
     invited_by: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),

@@ -64,9 +64,7 @@ def _components(request: Request) -> CollabComponents | None:
 async def _verify_doc(session: AsyncSession, project_id: UUID, doc_id: UUID) -> None:
     """404 (anti-enumeration) if the doc is not a document of this project."""
     exists = await session.scalar(
-        select(Document.entity_id).where(
-            Document.entity_id == doc_id, Document.project_id == project_id
-        )
+        select(Document.entity_id).where(Document.entity_id == doc_id, Document.project_id == project_id)
     )
     if exists is None:
         raise ProjectNotFoundError()
@@ -161,9 +159,7 @@ async def restore_whole_project(
     session: AsyncSession = Depends(get_db_session),
     store: ObjectStore = Depends(_store),
 ) -> ProjectRestoreResponse:
-    label = await labels_service.get_project_label(
-        session, project_id=project.id, label_id=body.label_id
-    )
+    label = await labels_service.get_project_label(session, project_id=project.id, label_id=body.label_id)
     return await restore_project(
         session,
         _components(request),
@@ -210,8 +206,7 @@ async def get_labels(
 ) -> list[LabelRead]:
     await _verify_doc(session, project.id, doc_id)
     return [
-        LabelRead.model_validate(label)
-        for label in await labels_service.list_doc_labels(session, doc_id)
+        LabelRead.model_validate(label) for label in await labels_service.list_doc_labels(session, doc_id)
     ]
 
 
@@ -227,9 +222,7 @@ async def delete_label(
     session: AsyncSession = Depends(get_db_session),
 ) -> None:
     await _verify_doc(session, project.id, doc_id)
-    await labels_service.delete_doc_label(
-        session, project_id=project.id, doc_id=doc_id, label_id=label_id
-    )
+    await labels_service.delete_doc_label(session, project_id=project.id, doc_id=doc_id, label_id=label_id)
 
 
 @router.post(

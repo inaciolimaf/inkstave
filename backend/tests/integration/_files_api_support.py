@@ -89,14 +89,10 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str]) -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"])
 
 
-async def _entity(
-    client: AsyncClient, pid: str, headers: dict[str, str], type_: str, name: str
-) -> str:
+async def _entity(client: AsyncClient, pid: str, headers: dict[str, str], type_: str, name: str) -> str:
     resp = await client.post(
         f"/api/v1/projects/{pid}/tree/entities",
         json={"type": type_, "name": name},
@@ -122,9 +118,7 @@ async def _upload(
         data["name"] = name
     if parent_id is not None:
         data["parent_id"] = parent_id
-    return await client.post(
-        f"/api/v1/projects/{pid}/files", files=files, data=data, headers=headers
-    )
+    return await client.post(f"/api/v1/projects/{pid}/files", files=files, data=data, headers=headers)
 
 
 def _files(pid: str) -> str:

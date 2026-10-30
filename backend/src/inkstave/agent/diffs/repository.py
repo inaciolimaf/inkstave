@@ -27,9 +27,7 @@ class NewDiff:
     base_hash: str
     diff_text: str = ""
     hunks: list[dict[str, Any]] = field(default_factory=list)
-    stats: dict[str, int] = field(
-        default_factory=lambda: {"additions": 0, "deletions": 0, "hunk_count": 0}
-    )
+    stats: dict[str, int] = field(default_factory=lambda: {"additions": 0, "deletions": 0, "hunk_count": 0})
     status: str = ProposedDiffStatus.proposed.value
     rationale: str | None = None
 
@@ -57,9 +55,7 @@ async def mark_superseded(db: AsyncSession, *, session_id: UUID, doc_id: UUID) -
 
 async def list_for_session(db: AsyncSession, session_id: UUID) -> list[ProposedDiff]:
     rows = await db.execute(
-        select(ProposedDiff)
-        .where(ProposedDiff.session_id == session_id)
-        .order_by(ProposedDiff.created_at)
+        select(ProposedDiff).where(ProposedDiff.session_id == session_id).order_by(ProposedDiff.created_at)
     )
     return list(rows.scalars())
 

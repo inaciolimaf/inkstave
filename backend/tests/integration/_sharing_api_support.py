@@ -54,9 +54,7 @@ async def _project(client: AsyncClient, headers: dict[str, str], name: str = "Pa
 async def _invite(
     client: AsyncClient, headers: dict[str, str], pid: str, email: str, role: str = "editor"
 ) -> dict[str, Any]:
-    r = await client.post(
-        f"{PROJECTS}/{pid}/invites", json={"email": email, "role": role}, headers=headers
-    )
+    r = await client.post(f"{PROJECTS}/{pid}/invites", json={"email": email, "role": role}, headers=headers)
     assert r.status_code == 201, r.text
     return r.json()
 

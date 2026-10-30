@@ -420,9 +420,7 @@ async def _import_text(
     state: _Reconstruction,
 ) -> None:
     """Create one document from a text entry, or count it as skipped if oversized."""
-    raw = await asyncio.to_thread(
-        _read_member_bounded, zf, entry.zip_name, settings.import_max_file_bytes
-    )
+    raw = await asyncio.to_thread(_read_member_bounded, zf, entry.zip_name, settings.import_max_file_bytes)
     content = decode_text(raw)
     if len(content.encode("utf-8")) > settings.max_document_bytes:
         state.outcome.skipped += 1
@@ -449,16 +447,12 @@ async def reconstruct_tree(
     state = _Reconstruction(ImportOutcome(skipped=plan.skipped))
 
     for entry in plan.entries:
-        parent_id = await _ensure_folder(
-            session, project_id, entry.parts[:-1], state.cache, state.outcome
-        )
+        parent_id = await _ensure_folder(session, project_id, entry.parts[:-1], state.cache, state.outcome)
         if entry.classification == "text":
             await _import_text(session, project_id, parent_id, zf, entry, settings, state)
             continue
         try:
-            await _import_binary(
-                session, store, project_id, parent_id, entry.parts[-1], zf, entry, settings
-            )
+            await _import_binary(session, store, project_id, parent_id, entry.parts[-1], zf, entry, settings)
             state.outcome.files_created += 1
         except _SkipEntry:
             state.outcome.skipped += 1
@@ -489,9 +483,7 @@ async def _import_binary(
     # Validate the sniffed type BEFORE creating any entity, so a rejected binary
     # leaves no orphan tree node behind.
     content_type = sniff_content_type(data[: settings.storage_stream_chunk_bytes], None)
-    if content_type not in settings.allowed_upload_mime or not content_matches_extension(
-        name, content_type
-    ):
+    if content_type not in settings.allowed_upload_mime or not content_matches_extension(name, content_type):
         raise _SkipEntry()
 
     pos = {"i": 0}

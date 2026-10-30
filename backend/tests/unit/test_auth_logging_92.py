@@ -127,12 +127,8 @@ def _records(caplog: pytest.LogCaptureFixture, logger: str) -> list[logging.LogR
 async def test_failed_login_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     session = FakeAuthSession(user=None)
     with caplog.at_level(logging.DEBUG), pytest.raises(InvalidCredentialsError):
-        await login(
-            session, FakeHasher(ok=False), FakeTokenService(), FakeRefreshStore(), _login_data()
-        )
-    warnings = [
-        r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.WARNING
-    ]
+        await login(session, FakeHasher(ok=False), FakeTokenService(), FakeRefreshStore(), _login_data())
+    warnings = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.WARNING]
     assert warnings, "a WARNING should be logged on failed login"
     assert PASSWORD not in caplog.text and "u@example.com" not in caplog.text
 
@@ -156,9 +152,7 @@ async def test_refresh_reuse_logs_warning(caplog: pytest.LogCaptureFixture) -> N
     with caplog.at_level(logging.WARNING), pytest.raises(RefreshError):
         await refresh_tokens(FakeAuthSession(), FakeTokenService(), store, REFRESH_RAW)
     assert store.revoked_family == str(_FAMILY)  # family was revoked (behaviour unchanged)
-    warnings = [
-        r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.WARNING
-    ]
+    warnings = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.WARNING]
     assert any("reuse detected" in r.getMessage() for r in warnings)
     assert REFRESH_RAW not in caplog.text
 
@@ -230,18 +224,14 @@ async def test_register_success_logs_info(caplog: pytest.LogCaptureFixture) -> N
 async def test_register_duplicate_precheck_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING), pytest.raises(EmailAlreadyExistsError):
         await register_user(FakeUserSession(exists=True), FakeHasher(), _reg_data())
-    warnings = [
-        r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.WARNING
-    ]
+    warnings = [r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.WARNING]
     assert warnings and PASSWORD not in caplog.text
 
 
 async def test_register_integrity_race_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING), pytest.raises(EmailAlreadyExistsError):
         await register_user(FakeUserSession(flush_raises=True), FakeHasher(), _reg_data())
-    warnings = [
-        r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.WARNING
-    ]
+    warnings = [r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.WARNING]
     assert warnings and PASSWORD not in caplog.text
 
 

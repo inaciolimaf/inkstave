@@ -50,9 +50,7 @@ _SP_PER_PT = 65536.0
 
 # <type><tag>,<line>[,<column>]:<h>,<v>[:<W>,<H>,<D>] — anchored at the line start;
 # trailing data (e.g. a kern's single width value) is intentionally not captured.
-_RECORD_RE = re.compile(
-    r"^([\[(hvxkg$])(\d+),(\d+)(?:,(\d+))?:(-?\d+),(-?\d+)(?::(-?\d+),(-?\d+),(-?\d+))?"
-)
+_RECORD_RE = re.compile(r"^([\[(hvxkg$])(\d+),(\d+)(?:,(\d+))?:(-?\d+),(-?\d+)(?::(-?\d+),(-?\d+),(-?\d+))?")
 
 
 class SyncTexParseError(ValueError):
@@ -87,9 +85,7 @@ class _Leaf:
     depth: float
 
     def contains(self, h: float, v: float) -> bool:
-        return (self.h <= h <= self.h + self.width) and (
-            self.v - self.height <= v <= self.v + self.depth
-        )
+        return (self.h <= h <= self.h + self.width) and (self.v - self.height <= v <= self.v + self.depth)
 
     @property
     def area(self) -> float:

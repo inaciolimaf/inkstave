@@ -61,9 +61,7 @@ def _fit(chunk: ContextChunk, remaining: int, count: TokenCounter) -> ContextChu
         kept.append(line)
     if not kept:
         return None
-    return chunk.model_copy(
-        update={"text": "\n".join(kept) + _TRUNCATION_MARKER, "truncated": True}
-    )
+    return chunk.model_copy(update={"text": "\n".join(kept) + _TRUNCATION_MARKER, "truncated": True})
 
 
 def _target_chunk(
@@ -134,6 +132,4 @@ def select_context(
         chosen.append(fitted)
         used += token_count(fitted.text)
 
-    return ContextBundle(
-        goal=goal, chunks=chosen, estimated_tokens=used, budget_tokens=budget_tokens
-    )
+    return ContextBundle(goal=goal, chunks=chosen, estimated_tokens=used, budget_tokens=budget_tokens)

@@ -56,15 +56,10 @@ class CompileCoordinator:
             >= self._settings.compile_max_concurrent_per_project
         ):
             raise CompileConcurrencyError()
-        if (
-            await self._repo.count_active_for_user(user_id)
-            >= self._settings.compile_max_concurrent_per_user
-        ):
+        if await self._repo.count_active_for_user(user_id) >= self._settings.compile_max_concurrent_per_user:
             raise CompileConcurrencyError()
 
-        row = await self._repo.create(
-            project_id=project_id, requested_by=user_id, main_file=main_file
-        )
+        row = await self._repo.create(project_id=project_id, requested_by=user_id, main_file=main_file)
         job_id = await self._enqueuer.enqueue(row.id)
         if job_id is not None:
             await self._repo.update(row, job_id=job_id)

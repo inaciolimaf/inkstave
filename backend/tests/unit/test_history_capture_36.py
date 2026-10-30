@@ -58,9 +58,7 @@ async def test_timer_rearms_on_each_update(monkeypatch: pytest.MonkeyPatch) -> N
     pid, did = uuid4(), uuid4()
     at = datetime.now(UTC)
     for i in range(3):
-        await svc.capture_update(
-            project_id=pid, doc_id=did, update=bytes([i]), author_id=None, at=at
-        )
+        await svc.capture_update(project_id=pid, doc_id=did, update=bytes([i]), author_id=None, at=at)
 
     assert clock.arms == 3  # the debounce timer was (re)armed on every update
     assert clock.cancels == 2  # each re-arm first cancels the prior pending timer
@@ -82,9 +80,7 @@ async def test_threshold_forces_flush(monkeypatch: pytest.MonkeyPatch) -> None:
     at = datetime.now(UTC)
     # Two updates stay buffered (below the threshold of 3); the third trips it.
     for i in range(3):
-        await svc.capture_update(
-            project_id=pid, doc_id=did, update=bytes([i]), author_id=None, at=at
-        )
+        await svc.capture_update(project_id=pid, doc_id=did, update=bytes([i]), author_id=None, at=at)
 
     assert flushes == ["threshold"]  # exactly one forced flush, at the threshold
 

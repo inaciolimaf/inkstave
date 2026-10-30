@@ -73,12 +73,8 @@ def test_no_inline_secret_literals(compose: dict) -> None:
         items = env.items() if isinstance(env, dict) else (e.split("=", 1) for e in env)
         for key, value in items:
             value = "" if value is None else str(value)
-            if any(h in key.lower() for h in _SECRET_HINT) or any(
-                h in value.lower() for h in _SECRET_HINT
-            ):
-                assert "${" in value or value == "", (
-                    f"{name}.{key} bakes a secret literal: {value!r}"
-                )
+            if any(h in key.lower() for h in _SECRET_HINT) or any(h in value.lower() for h in _SECRET_HINT):
+                assert "${" in value or value == "", f"{name}.{key} bakes a secret literal: {value!r}"
 
 
 def test_expected_named_volumes_declared(compose: dict) -> None:
@@ -140,9 +136,7 @@ def test_nginx_spa_fallback() -> None:
 
 def test_dockerignore_excludes_secrets_tests_caches() -> None:
     body = _DOCKERIGNORE.read_text("utf-8")
-    patterns = [
-        line.strip() for line in body.splitlines() if line.strip() and not line.startswith("#")
-    ]
+    patterns = [line.strip() for line in body.splitlines() if line.strip() and not line.startswith("#")]
     assert ".env" in patterns
     assert any("node_modules" in p for p in patterns)
     assert any(".venv" in p for p in patterns)

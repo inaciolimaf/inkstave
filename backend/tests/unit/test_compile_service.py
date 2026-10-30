@@ -29,9 +29,7 @@ class FakeDocs:
 
 
 class FakeFiles:
-    async def iter_files(
-        self, project_id: object
-    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+    async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         return
         yield  # pragma: no cover
 
@@ -99,9 +97,7 @@ async def test_latex_error_is_failure(tmp_path: Path) -> None:
 
 async def test_timeout_outcome(tmp_path: Path) -> None:
     runner = FakeRunner(
-        RunOutcome(
-            exit_code=None, stdout="", stderr="", timed_out=True, cancelled=False, duration_ms=1
-        )
+        RunOutcome(exit_code=None, stdout="", stderr="", timed_out=True, cancelled=False, duration_ms=1)
     )
     service = build_service(tmp_path, runner, [("main.tex", "hi")])
     result = await service.compile(CompileOptions(project_id=uuid4()))
@@ -123,9 +119,7 @@ async def test_cancelled_while_running_maps_to_cancelled(tmp_path: Path) -> None
     # is actually invoked and returns RunOutcome(cancelled=True)) must map to
     # CANCELLED via _build_result — distinct from test_cancelled_before_run, which
     # short-circuits with runner.calls == 0.
-    outcome = RunOutcome(
-        exit_code=None, stdout="", stderr="", timed_out=False, cancelled=True, duration_ms=7
-    )
+    outcome = RunOutcome(exit_code=None, stdout="", stderr="", timed_out=False, cancelled=True, duration_ms=7)
     runner = FakeRunner(outcome)
     service = build_service(tmp_path, runner, [("main.tex", "hi")])
     result = await service.compile(CompileOptions(project_id=uuid4()))
@@ -145,21 +139,15 @@ async def test_cleanup_default_removes_workdir(tmp_path: Path) -> None:
     ("outcome", "expected"),
     [
         (
-            RunOutcome(
-                exit_code=1, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=3
-            ),
+            RunOutcome(exit_code=1, stdout="", stderr="", timed_out=False, cancelled=False, duration_ms=3),
             CompileStatus.FAILURE,
         ),
         (
-            RunOutcome(
-                exit_code=None, stdout="", stderr="", timed_out=True, cancelled=False, duration_ms=3
-            ),
+            RunOutcome(exit_code=None, stdout="", stderr="", timed_out=True, cancelled=False, duration_ms=3),
             CompileStatus.TIMEOUT,
         ),
         (
-            RunOutcome(
-                exit_code=None, stdout="", stderr="", timed_out=False, cancelled=True, duration_ms=3
-            ),
+            RunOutcome(exit_code=None, stdout="", stderr="", timed_out=False, cancelled=True, duration_ms=3),
             CompileStatus.CANCELLED,
         ),
     ],
@@ -193,18 +181,14 @@ async def test_keep_workdir_retains_and_reports(tmp_path: Path) -> None:
     runner = FakeRunner(ok_outcome(), {"main.pdf": b"%PDF"})
     cid = uuid4()
     service = build_service(tmp_path, runner, [("main.tex", "hi")])
-    result = await service.compile(
-        CompileOptions(project_id=uuid4(), compile_id=cid, keep_workdir=True)
-    )
+    result = await service.compile(CompileOptions(project_id=uuid4(), compile_id=cid, keep_workdir=True))
     assert (tmp_path / str(cid)).exists()
     assert result.workdir == tmp_path / str(cid)
 
 
 async def test_input_limit_short_circuits_before_runner(tmp_path: Path) -> None:
     runner = FakeRunner(ok_outcome())
-    service = build_service(
-        tmp_path, runner, [("a.tex", "a"), ("b.tex", "b")], compile_max_input_files=1
-    )
+    service = build_service(tmp_path, runner, [("a.tex", "a"), ("b.tex", "b")], compile_max_input_files=1)
     result = await service.compile(CompileOptions(project_id=uuid4()))
     assert result.status is CompileStatus.SYSTEM_ERROR
     assert runner.calls == 0

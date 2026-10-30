@@ -60,9 +60,7 @@ def serialize_state(state: AgentState) -> dict[str, Any]:
 def deserialize_state(data: dict[str, Any]) -> AgentState:
     state: AgentState = {
         "messages": [LLMMessage.model_validate(m) for m in data.get("messages", [])],
-        "pending_tool_calls": [
-            ToolCall.model_validate(tc) for tc in data.get("pending_tool_calls", [])
-        ],
+        "pending_tool_calls": [ToolCall.model_validate(tc) for tc in data.get("pending_tool_calls", [])],
         "iterations": data.get("iterations", 0),
         "total_tokens": data.get("total_tokens", 0),
         "usage": LLMUsage.model_validate(data.get("usage", {})),

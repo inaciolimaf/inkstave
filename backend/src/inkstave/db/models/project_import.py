@@ -69,9 +69,7 @@ class ProjectImport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     requested_by: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=ProjectImportStatus.QUEUED
-    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=ProjectImportStatus.QUEUED)
     source_key: Mapped[str] = mapped_column(String(512), nullable=False)
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)

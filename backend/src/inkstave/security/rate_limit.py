@@ -126,9 +126,7 @@ async def _enforce(
         return
     _set_headers(response, result)
     if not result.allowed:
-        raise RateLimitError(
-            result.retry_after, limit=result.limit, remaining=0, reset=result.reset
-        )
+        raise RateLimitError(result.retry_after, limit=result.limit, remaining=0, reset=result.reset)
 
 
 def rate_limit(policy: RateLimitPolicy) -> Callable[..., Awaitable[None]]:
@@ -169,9 +167,7 @@ def rate_limit_named(name: str) -> Callable[..., Awaitable[None]]:
     return dependency
 
 
-def _scope_id(
-    policy: RateLimitPolicy, request: Request, user: User | None, settings: Settings
-) -> str:
+def _scope_id(policy: RateLimitPolicy, request: Request, user: User | None, settings: Settings) -> str:
     ip = client_ip(request, settings) if settings.trust_proxy_headers else _raw_ip(request)
     if policy.key == "ip":
         return ip

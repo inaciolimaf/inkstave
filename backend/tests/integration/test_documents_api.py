@@ -25,14 +25,10 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str]) -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"])
 
 
-async def _entity(
-    client: AsyncClient, pid: str, headers: dict[str, str], type_: str, name: str
-) -> str:
+async def _entity(client: AsyncClient, pid: str, headers: dict[str, str], type_: str, name: str) -> str:
     resp = await client.post(
         f"/api/v1/projects/{pid}/tree/entities",
         json={"type": type_, "name": name},
@@ -45,9 +41,7 @@ def _doc_url(pid: str, eid: str) -> str:
     return f"/api/v1/projects/{pid}/documents/{eid}"
 
 
-async def test_new_doc_has_empty_content(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_new_doc_has_empty_content(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     eid = await _entity(async_client, pid, headers, "doc", "main.tex")
@@ -59,9 +53,7 @@ async def test_new_doc_has_empty_content(
     assert body["size_bytes"] == 0
 
 
-async def test_replace_increments_version(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_replace_increments_version(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     eid = await _entity(async_client, pid, headers, "doc", "main.tex")
@@ -108,9 +100,7 @@ async def test_no_lost_update(async_client: AsyncClient, db_session: AsyncSessio
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     eid = await _entity(async_client, pid, headers, "doc", "main.tex")
-    await async_client.put(
-        _doc_url(pid, eid), json={"content": "v1", "base_version": 0}, headers=headers
-    )
+    await async_client.put(_doc_url(pid, eid), json={"content": "v1", "base_version": 0}, headers=headers)
 
     first = await async_client.put(
         _doc_url(pid, eid), json={"content": "a", "base_version": 1}, headers=headers
@@ -137,9 +127,7 @@ async def test_content_too_large(
     assert resp.json()["error"]["type"] == "content_too_large"
 
 
-async def test_non_doc_entity_is_conflict(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_non_doc_entity_is_conflict(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     folder = await _entity(async_client, pid, headers, "folder", "figs")
@@ -162,9 +150,7 @@ async def test_file_entity_is_conflict(async_client: AsyncClient, db_session: As
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     root = await ensure_root(db_session, _UUID(pid))
-    file_entity = await create_entity(
-        db_session, _UUID(pid), TreeEntityType.file, "logo.png", root.id
-    )
+    file_entity = await create_entity(db_session, _UUID(pid), TreeEntityType.file, "logo.png", root.id)
     await db_session.commit()
     file_eid = str(file_entity.id)
     get_resp = await async_client.get(_doc_url(pid, file_eid), headers=headers)
@@ -212,9 +198,7 @@ async def test_ownership_isolation(async_client: AsyncClient, db_session: AsyncS
     eid = await _entity(async_client, pid, headers_a, "doc", "main.tex")
     for call in (
         async_client.get(_doc_url(pid, eid), headers=headers_b),
-        async_client.put(
-            _doc_url(pid, eid), json={"content": "x", "base_version": 0}, headers=headers_b
-        ),
+        async_client.put(_doc_url(pid, eid), json={"content": "x", "base_version": 0}, headers=headers_b),
     ):
         resp = await call
         assert resp.status_code == 404
@@ -228,19 +212,13 @@ async def test_requires_auth(async_client: AsyncClient, db_session: AsyncSession
     assert (await async_client.get(_doc_url(pid, eid))).status_code == 401
 
 
-async def test_delete_entity_cascades_content(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_delete_entity_cascades_content(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     eid = await _entity(async_client, pid, headers, "doc", "main.tex")
-    await async_client.put(
-        _doc_url(pid, eid), json={"content": "x", "base_version": 0}, headers=headers
-    )
+    await async_client.put(_doc_url(pid, eid), json={"content": "x", "base_version": 0}, headers=headers)
 
-    deleted = await async_client.delete(
-        f"/api/v1/projects/{pid}/tree/entities/{eid}", headers=headers
-    )
+    deleted = await async_client.delete(f"/api/v1/projects/{pid}/tree/entities/{eid}", headers=headers)
     assert deleted.status_code == 204
 
     # The content row is gone via the FK cascade.

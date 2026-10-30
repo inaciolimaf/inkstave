@@ -65,8 +65,7 @@ def redact(value: Any) -> Any:
     """Recursively replace denylisted keys' values with a redaction marker."""
     if isinstance(value, dict):
         return {
-            k: (_REDACTED if isinstance(k, str) and _is_secret(k) else redact(v))
-            for k, v in value.items()
+            k: (_REDACTED if isinstance(k, str) and _is_secret(k) else redact(v)) for k, v in value.items()
         }
     if isinstance(value, (list, tuple)):
         return [redact(v) for v in value]
@@ -84,9 +83,7 @@ class JsonLogFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         data: dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=UTC)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat().replace("+00:00", "Z"),
             "level": record.levelname.lower(),
             "logger": record.name,
             "message": record.getMessage(),

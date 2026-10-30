@@ -90,9 +90,7 @@ def _ordinal_match(query: str, sections: list[StructureNode]) -> SectionMatch | 
     return None
 
 
-def _exact_score(
-    title: str, label: str, query: str, concepts: set[str]
-) -> tuple[float, str] | None:
+def _exact_score(title: str, label: str, query: str, concepts: set[str]) -> tuple[float, str] | None:
     """The first exact/synonym rule that fires, or ``None`` to fall through to fuzzy."""
     if title and query == title:
         return 1.0, "exact title"
@@ -138,9 +136,7 @@ def locate_section(project_map: ProjectMap, query: str) -> list[SectionMatch]:
     q_tokens = set(q.split())
     matches = [
         SectionMatch(node=node, score=score, reason=reason)
-        for node, (score, reason) in (
-            (node, _score_node(node, q, concepts, q_tokens)) for node in sections
-        )
+        for node, (score, reason) in ((node, _score_node(node, q, concepts, q_tokens)) for node in sections)
         if score > 0
     ]
     matches.sort(key=lambda m: m.score, reverse=True)

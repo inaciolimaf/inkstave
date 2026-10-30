@@ -28,17 +28,13 @@ __all__ = ["hist"]
 
 async def test_labels_crud_and_duplicate(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     url = _hist_url(hist.pid, hist.doc_id, "labels")
-    created = await async_client.post(
-        url, json={"version": 2, "name": "submitted"}, headers=hist.editor_h
-    )
+    created = await async_client.post(url, json={"version": 2, "name": "submitted"}, headers=hist.editor_h)
     assert created.status_code == 201 and created.json()["name"] == "submitted"
 
     listed = (await async_client.get(url, headers=hist.viewer_h)).json()
     assert [label["name"] for label in listed] == ["submitted"]
 
-    dup = await async_client.post(
-        url, json={"version": 3, "name": "submitted"}, headers=hist.editor_h
-    )
+    dup = await async_client.post(url, json={"version": 3, "name": "submitted"}, headers=hist.editor_h)
     assert dup.status_code == 409  # AC10 duplicate
 
     label_id = created.json()["id"]
@@ -60,9 +56,7 @@ async def test_label_shows_in_versions(hist: SimpleNamespace, async_client: Asyn
 # --- auth ------------------------------------------------------------------ #
 
 
-async def test_viewer_cannot_label_or_restore(
-    hist: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_viewer_cannot_label_or_restore(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     label = await async_client.post(
         _hist_url(hist.pid, hist.doc_id, "labels"),
         json={"version": 1, "name": "x"},
@@ -76,9 +70,7 @@ async def test_viewer_cannot_label_or_restore(
 
 
 async def test_non_member_gets_404(hist: SimpleNamespace, async_client: AsyncClient) -> None:
-    r = await async_client.get(
-        _hist_url(hist.pid, hist.doc_id, "versions"), headers=hist.outsider_h
-    )
+    r = await async_client.get(_hist_url(hist.pid, hist.doc_id, "versions"), headers=hist.outsider_h)
     assert r.status_code == 404  # AC8 non-member, no existence leak
 
 

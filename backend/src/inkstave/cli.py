@@ -164,9 +164,7 @@ async def _cmd_send_test_email(*, to: str, template: str, sender: object | None 
     settings = get_settings()
     active = sender if sender is not None else get_email_sender(settings)
     try:
-        subject, text_body, html_body = render_email(
-            template, _test_email_context(settings.app_base_url)
-        )
+        subject, text_body, html_body = render_email(template, _test_email_context(settings.app_base_url))
         await active.send(  # type: ignore[attr-defined]
             OutgoingEmail(to=to, subject=subject, text_body=text_body, html_body=html_body)
         )
@@ -249,9 +247,7 @@ def _build_parser() -> argparse.ArgumentParser:
     seed_parser.add_argument("--force", action="store_true", help="allow seeding in production")
     sub.add_parser("check-config", help="validate env/secrets; non-zero exit on error")
     sub.add_parser("doctor", help="config + Postgres/Redis reachability; non-zero on any failure")
-    mail_parser = sub.add_parser(
-        "send-test-email", help="send one test email via the configured backend"
-    )
+    mail_parser = sub.add_parser("send-test-email", help="send one test email via the configured backend")
     mail_parser.add_argument("--to", required=True, help="recipient address")
     mail_parser.add_argument(
         "--template",
@@ -277,9 +273,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "doctor": lambda _a: asyncio.run(_cmd_doctor()),
         "bootstrap-admin": lambda _a: _run_bootstrap_admin(),
         "seed": lambda a: asyncio.run(_cmd_seed(demo=a.demo, force=a.force)),
-        "send-test-email": lambda a: asyncio.run(
-            _cmd_send_test_email(to=a.to, template=a.template)
-        ),
+        "send-test-email": lambda a: asyncio.run(_cmd_send_test_email(to=a.to, template=a.template)),
     }
     handler = commands.get(args.command)
     if handler is None:  # pragma: no cover - argparse requires a known subcommand

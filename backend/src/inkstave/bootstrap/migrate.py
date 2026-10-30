@@ -38,9 +38,7 @@ def _alembic_config(ini: Path | None = None) -> Config:
 
 def _sync_dsn(database_url: str) -> str:
     """A psycopg2 (sync) DSN for the advisory-lock connection."""
-    return normalize_async_dsn(database_url).replace(
-        "postgresql+asyncpg://", "postgresql+psycopg2://"
-    )
+    return normalize_async_dsn(database_url).replace("postgresql+asyncpg://", "postgresql+psycopg2://")
 
 
 def script_head(ini: Path | None = None) -> str | None:
@@ -56,9 +54,7 @@ def release_advisory_lock(conn: Connection, key: int = MIGRATION_LOCK_KEY) -> No
     conn.exec_driver_sql("SELECT pg_advisory_unlock(%(k)s)", {"k": key})
 
 
-def run_upgrade(
-    settings: Settings, *, ini: Path | None = None, lock_key: int = MIGRATION_LOCK_KEY
-) -> None:
+def run_upgrade(settings: Settings, *, ini: Path | None = None, lock_key: int = MIGRATION_LOCK_KEY) -> None:
     """Upgrade the database to head under the advisory lock (run-once safe).
 
     Synchronous on purpose: Alembic's env.py runs its own ``asyncio.run``, so this

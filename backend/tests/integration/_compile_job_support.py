@@ -34,9 +34,7 @@ class _SessionCtx:
 
 
 class StubService:
-    def __init__(
-        self, result: CompileResult | None = None, *, raises: Exception | None = None
-    ) -> None:
+    def __init__(self, result: CompileResult | None = None, *, raises: Exception | None = None) -> None:
         self._result = result
         self._raises = raises
         self.cancel_seen = False

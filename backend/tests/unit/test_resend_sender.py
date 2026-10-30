@@ -141,9 +141,7 @@ async def test_cli_send_test_email_pass(capsys: pytest.CaptureFixture[str]) -> N
 async def test_cli_send_test_email_fail_nonzero(capsys: pytest.CaptureFixture[str]) -> None:
     from inkstave.cli import _cmd_send_test_email
 
-    rc = await _cmd_send_test_email(
-        to="a@b.com", template="email_verification", sender=_RaisingSender()
-    )
+    rc = await _cmd_send_test_email(to="a@b.com", template="email_verification", sender=_RaisingSender())
     assert rc == 1
     err = capsys.readouterr().err
     assert "FAIL" in err and "Traceback" not in err

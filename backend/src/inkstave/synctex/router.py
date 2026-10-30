@@ -70,9 +70,7 @@ def get_synctex_service(
     settings: Settings = Depends(get_settings_dep),
 ) -> SyncTexService:
     output_store = OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
-    return SyncTexService(
-        repo=CompileRepository(session), output_store=output_store, settings=settings
-    )
+    return SyncTexService(repo=CompileRepository(session), output_store=output_store, settings=settings)
 
 
 @router.get(

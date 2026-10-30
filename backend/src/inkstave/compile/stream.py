@@ -47,9 +47,7 @@ def _is_terminal(payload: dict[str, Any]) -> bool:
     return is_terminal(CompileJobStatus(payload["status"]))
 
 
-async def _frames(
-    pubsub: Any, initial: dict[str, Any], keepalive_seconds: int
-) -> AsyncIterator[bytes]:
+async def _frames(pubsub: Any, initial: dict[str, Any], keepalive_seconds: int) -> AsyncIterator[bytes]:
     """The snapshot frame, then one frame per transition / keep-alive until terminal."""
     yield _sse("status", initial)
     if _is_terminal(initial):

@@ -123,9 +123,7 @@ def test_user_guide_states_agent_needs_approval() -> None:
 
 def test_admin_guide_documents_every_env_var() -> None:
     env = (_ROOT / ".env.example").read_text("utf-8")
-    names = {
-        m.group(1) for line in env.splitlines() if (m := re.match(r"^([A-Z][A-Z0-9_]*)=", line))
-    }
+    names = {m.group(1) for line in env.splitlines() if (m := re.match(r"^([A-Z][A-Z0-9_]*)=", line))}
     guide = (_DOCS / "admin-guide.md").read_text("utf-8")
     undocumented = sorted(n for n in names if f"`{n}`" not in guide)
     assert undocumented == [], f"env vars missing from the admin guide: {undocumented}"

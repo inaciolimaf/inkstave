@@ -28,8 +28,6 @@ async def agent_audit_cleanup(ctx: dict[str, Any]) -> dict[str, int]:
         return {"pruned": 0}
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
     async with ctx["session_factory"]() as session:
-        result = await session.execute(
-            delete(AgentAuditLog).where(AgentAuditLog.created_at < cutoff)
-        )
+        result = await session.execute(delete(AgentAuditLog).where(AgentAuditLog.created_at < cutoff))
         await session.commit()
         return {"pruned": int(result.rowcount or 0)}

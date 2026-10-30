@@ -31,9 +31,7 @@ class RecordingRedis:
         self.closed = True
 
 
-async def test_lifespan_opens_and_disposes(
-    _template_db: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_lifespan_opens_and_disposes(_template_db: str, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = RecordingRedis()
 
     async def _fake_pool(_url: str) -> RecordingRedis:

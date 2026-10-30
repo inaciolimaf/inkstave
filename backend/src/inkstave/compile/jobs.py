@@ -235,9 +235,7 @@ def _log_non_success(job: _Job) -> None:
     )
 
 
-async def _compile_once(
-    ctx: dict[str, Any], session: Any, cid: UUID, compile_id: str
-) -> dict[str, Any]:
+async def _compile_once(ctx: dict[str, Any], session: Any, cid: UUID, compile_id: str) -> dict[str, Any]:
     """The compile job proper: settle-or-run one row, inside the caller's session."""
     repo = CompileRepository(session)
     row = await repo.get_by_id(cid)
@@ -279,7 +277,5 @@ async def _run_compile_body(ctx: dict[str, Any], compile_id: str) -> dict[str, A
             await cleanup_workdir(workdir_path)
 
 
-async def noop_persist_hook(
-    session: Any, compile_id: UUID, project_id: UUID, result: CompileResult
-) -> None:
+async def noop_persist_hook(session: Any, compile_id: UUID, project_id: UUID, result: CompileResult) -> None:
     """No-op output-persistence seam (replaced by spec 23's OutputStore)."""

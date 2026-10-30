@@ -42,9 +42,7 @@ from inkstave.services import account
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-_UNAUTHORIZED: dict[int | str, dict[str, Any]] = {
-    status.HTTP_401_UNAUTHORIZED: {"model": ErrorEnvelope}
-}
+_UNAUTHORIZED: dict[int | str, dict[str, Any]] = {status.HTTP_401_UNAUTHORIZED: {"model": ErrorEnvelope}}
 
 
 def _auth_password_rate_limit() -> Any:
@@ -61,9 +59,7 @@ def _auth_password_rate_limit() -> Any:
     ) -> None:
         if not settings.rate_limit_enabled:
             return
-        policy = policy_from_setting(
-            "auth_password", settings.rate_limit_auth_password, "user_or_ip"
-        )
+        policy = policy_from_setting("auth_password", settings.rate_limit_auth_password, "user_or_ip")
         scope_id = (
             f"user:{user.id}"
             if user is not None
@@ -74,9 +70,7 @@ def _auth_password_rate_limit() -> Any:
         except Exception:
             return  # fail open: a limiter outage must not lock out legitimate traffic
         if not result.allowed:
-            raise RateLimitError(
-                result.retry_after, limit=result.limit, remaining=0, reset=result.reset
-            )
+            raise RateLimitError(result.retry_after, limit=result.limit, remaining=0, reset=result.reset)
 
     # Marker so the spec-55 guard-coverage audit detects the policy on the route.
     dependency.__rate_limit__ = "auth_password"  # type: ignore[attr-defined]

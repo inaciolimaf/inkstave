@@ -26,9 +26,7 @@ OnMessage = Callable[[bytes, str | None], Awaitable[None]]
 
 def encode_envelope(instance_id: str, origin_conn_id: str, payload: bytes) -> bytes:
     return (
-        write_message(instance_id.encode())
-        + write_message(origin_conn_id.encode())
-        + write_message(payload)
+        write_message(instance_id.encode()) + write_message(origin_conn_id.encode()) + write_message(payload)
     )
 
 

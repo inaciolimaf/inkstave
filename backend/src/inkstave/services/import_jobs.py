@@ -65,9 +65,7 @@ async def import_project_zip(
     """Observability wrapper (spec 51): bind job context + track the job."""
     job_id = str(ctx.get("job_id") or import_id)
     rid = request_id or str(ctx.get("request_id") or uuid4().hex)
-    tokens = bind_context(
-        job_id=job_id, job_name="import_project_zip", request_id=rid, trace_id=rid
-    )
+    tokens = bind_context(job_id=job_id, job_name="import_project_zip", request_id=rid, trace_id=rid)
     try:
         async with track_job("import_project_zip"):
             return await _run_import_body(ctx, import_id)
@@ -84,9 +82,7 @@ async def _still_owned(session: Any, row: Any) -> bool:
     return True
 
 
-async def _import_archive(
-    session: Any, store: Any, row: Any, settings: Any, iid: UUID
-) -> dict[str, Any]:
+async def _import_archive(session: Any, store: Any, row: Any, settings: Any, iid: UUID) -> dict[str, Any]:
     """Stage + process the archive, turning every failure into terminal row fields."""
     tmp_path = Path(settings.import_workdir_root) / f"{iid}.zip"
     try:
@@ -128,9 +124,7 @@ class _Import:
         await publish_status(self.redis, self.iid, status_payload(self.row))
 
 
-async def _import_once(
-    ctx: dict[str, Any], session: Any, iid: UUID, import_id: str
-) -> dict[str, Any]:
+async def _import_once(ctx: dict[str, Any], session: Any, iid: UUID, import_id: str) -> dict[str, Any]:
     """Settle-or-run one import row, inside the caller's session."""
     repo = ProjectImportRepository(session)
     row = await repo.get_by_id(iid)
@@ -196,14 +190,10 @@ async def _process_archive(
         raise InvalidZipError("The uploaded file is not a valid zip archive.") from exc
     with zf:
         plan = plan_entries(zf, limits_from_settings(settings))
-        outcome = await reconstruct_tree(
-            session, store, row.project_id, zf, plan, settings=settings
-        )
+        outcome = await reconstruct_tree(session, store, row.project_id, zf, plan, settings=settings)
 
     await session.execute(
-        update(Project)
-        .where(Project.id == row.project_id)
-        .values(root_doc_id=outcome.root_doc_entity_id)
+        update(Project).where(Project.id == row.project_id).values(root_doc_id=outcome.root_doc_entity_id)
     )
 
     entries_total = len(plan.entries) + plan.skipped
