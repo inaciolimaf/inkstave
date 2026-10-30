@@ -9,8 +9,8 @@ Inkstave is a from-scratch, real-time collaborative LaTeX editor with a built-in
 AI writing agent. It is **inspired by** Overleaf Community Edition but shares
 **no code** with it. See `README.md` for the product overview and stack.
 
-This project follows the **`project-standard`** skill
-(`~/.claude/skills/project-standard/`), except where "Deviations from the standard"
+This project follows the **`project-standard`** and **`frontend-standard`** skills
+(`~/.claude/skills/`; the visual identity is spec 106), except where "Deviations from the standard"
 below says otherwise. A change to the standard (lint, tests, docker, CI, documentation)
 applies in both places: here and in the skill.
 
@@ -128,7 +128,7 @@ frontend/
   src/api/          generated OpenAPI types
   src/components/ src/lib/ src/i18n/
   tests/            cross-cutting Vitest suites (router, boundaries, e2e route list, contrast, CSS rules)
-  e2e/              Playwright: routes.spec.ts, mobile.spec.ts, flows/
+  e2e/              Playwright: routes.spec.ts, mobile.spec.ts, a11y.spec.ts, flows/
 infra/              nginx config, Tectonic package set and sandbox image
 scripts/            function-size lint, timing, dependency audit, bundle budget
 tools/              docs_coverage.py (`make docs`)
@@ -228,6 +228,7 @@ Each one is deliberate. Remove the line when the deviation ends.
 |---|---|---|
 | Folders `backend/` and `frontend/` | `api/`, `web/` | Dockerfiles, compose files, CI, the pnpm workspace and every spec use these names; renaming buys nothing a reader needs |
 | Package `inkstave` | package `api` | Console script `inkstave`, `python -m inkstave.cli` and the `arq inkstave...` worker path are typed and deployed, so the operations rule keeps them |
+| `.dark` class on `<html>` | `data-theme` | Tailwind 3 `darkMode: class` and spec 59's `useApplyTheme` already use it; the rule it serves, the app's choice over the system, is met |
 | `react-router-dom` | TanStack Router | Every route and the tests are built on it; a router swap is a full frontend migration with no change for users |
 | Tailwind 3, Vite 5 | Tailwind 4, Vite 6 | The shadcn/ui setup and `frontend/tailwind.config.ts` are on Tailwind 3; major upgrades are a separate change with visual risk |
 | `specs/NN-slug/` with `README.md` + `spec.md` | `specs/NN-name.md` | Over 100 specs already exist in this shape, separating the prompt from the requirements; specs are history |

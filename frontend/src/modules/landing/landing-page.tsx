@@ -18,7 +18,7 @@ import { LandingNav } from "./landing-nav";
  */
 export function LandingPage() {
   return (
-    <div className="landing-root min-h-screen antialiased">
+    <div className="landing-root min-h-dvh antialiased">
       <LandingNav />
       <main>
         <Hero />

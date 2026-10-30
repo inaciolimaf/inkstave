@@ -19,7 +19,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | `frontend/src/api/types.ts` | Generated from `docs/api/openapi.json` by `openapi-typescript`; never edited |
 | `frontend/src/api/models.ts` | `Schemas`, the short name for `components["schemas"]` |
 | `frontend/src/lib` | Shared helpers: formatting, shortcuts, downloads, palettes, validation, media query |
-| `frontend/src/components` | Shared UI: `states.tsx`, `route-error.tsx`, `error-boundary.tsx`, `inkstave-logo.tsx` |
+| `frontend/src/components` | Shared UI: `app-shell.tsx`, `states.tsx`, `route-error.tsx`, `error-boundary.tsx`, `inkstave-logo.tsx` |
 | `frontend/src/i18n/config.ts` | The global i18next instance and `NAMESPACES` |
 | `frontend/src/i18n/locales` | `en/`, `pt/` and `landing.ts` |
 | `frontend/src/routes` | 14 thin route components, one per screen, each loaded on demand by `lazy` in `router.tsx` |
@@ -348,3 +348,32 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
   translating it.
 - **Dead code.** `useDocument` in `frontend/src/modules/editor/use-document.ts` has no caller; only `documentKey` is
   used. `onReviewProposal` in `EditorWorkspace` is an empty callback.
+
+## Frontend standard
+
+The `frontend-standard` skill applies, with the identity in `specs/106-visual-identity-manuscript/spec.md`.
+
+- **Shell.** `AppShell` (`frontend/src/components/app-shell.tsx`) is the root route's element. It renders a
+  skip link, moves focus to the screen's `h1` (or `main`) when the pathname changes, and sets
+  `document.title` from the route's `handle.title`, a key of the `common` namespace. Screens render one
+  `main` and one `h1` and never manage focus or the title. `RouteError` sits on a pathless child of the
+  root, so errors render inside the shell.
+- **Colour.** Components use roles only (`success`, `warning`, `error-soft`, `error-text`, `backdrop`,
+  `page`); values live in `frontend/src/index.css`. An overlay on the PDF page or in the editor uses a
+  translucent solid (`warning/30`), because the PDF page is white in both themes. Text uses `error-text`,
+  never `destructive`. Landing colours are tokens scoped to `.landing-root`.
+- **Focus.** One solid `:focus-visible` outline in `frontend/src/index.css`; components add no rings. Menu
+  items show focus with `focus:bg-accent`, and tree rows draw the outline from their focused `treeitem`.
+- **Motion.** Durations are `duration-fast|base|slow`, or `var(--motion-*)` in CodeMirror themes, mirrored in
+  `frontend/src/lib/motion.ts`. Reduced motion is global in `frontend/src/index.css`.
+- **Fonts.** Self-hosted from Fontsource, latin and latin-ext only. `frontend/src/fonts.ts` registers
+  JetBrains Mono and upright Newsreader; Inter and Newsreader italics load with the landing chunk.
+
+| Rule | Guarantee |
+|---|---|
+| Initial JS at most 250,000 bytes gzip | `make web-budget` (`scripts/check-bundle.mjs`), in CI |
+| Only cheap properties animate | `frontend/tests/keyframes.test.ts` |
+| Text 4.5:1, focus and control borders 3:1, both themes | `frontend/tests/contrast.test.ts` |
+| No `100vh`, `h-screen` or `min-h-screen` | `frontend/tests/css-rules.test.ts` |
+| No raw Tailwind hue | `palette` group in `frontend/eslint.config.js` |
+| Axe over every route, both themes; one `main`, one `h1` | `frontend/e2e/a11y.spec.ts` |

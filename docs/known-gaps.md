@@ -21,6 +21,20 @@ files with a function over 100 lines. *Why:* each needs splitting into named hoo
 which is behavior-sensitive work done file by file. `ESLINT_STRICT=1` shows the real state. The backend has
 no such list.
 
+### Frontend standard
+
+**`frontend/e2e/a11y.spec.ts` never ran against the real stack.** *Why:* this machine has no Redis. A stub
+run of the same axe tags found only the colour contrast failures fixed since, and that run was not
+repeated after the fix. CI will be its first real run, and its cost against the 2-minute budget is unknown.
+
+**The type scale tokens exist but screens do not use them yet, and field metrics are not collected.**
+*Why:* sizes move screen by screen under spec 106; `web-vitals` waits for real users.
+
+**The landing still loops and animates paint.** `float-soft`, `pulse-dot`, `cursor-bob` and the agent demo
+loop forever; `.ink-underline` transitions `background-size`; `transition-all` animates `box-shadow`.
+`drift` is unused. *Why:* the motion rule says only loading loops, but removing them is a design decision
+for the user.
+
 ### Compile sandbox
 
 **`COMPILE_RUNNER=sandbox` is unproven and probably does not work as deployed.** All four doubts come from
