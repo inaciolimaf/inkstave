@@ -77,7 +77,7 @@ export function PasswordSection() {
               aria-invalid={mismatch}
               required
             />
-            {mismatch && <p className="text-sm text-destructive">{t("password.mismatch")}</p>}
+            {mismatch && <p className="text-sm text-error-text">{t("password.mismatch")}</p>}
           </div>
           <Button type="submit" disabled={busy || !current || !next || next !== confirm}>
             {busy ? t("password.changing") : t("password.submit")}

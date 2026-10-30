@@ -76,7 +76,7 @@ function ToolActivityRow({ item }: { item: Extract<TranscriptItem, { kind: "tool
     ) : item.status === "ok" ? (
       <Check className="size-3.5 text-success-text" aria-hidden="true" />
     ) : (
-      <X className="size-3.5 text-destructive" aria-hidden="true" />
+      <X className="size-3.5 text-error-text" aria-hidden="true" />
     );
   return (
     <div className="mr-auto max-w-[85%] rounded-md border text-xs" data-status={item.status}>
@@ -190,7 +190,7 @@ export function AgentTranscript({
             return <DiffProposalCard key={item.id} item={item} onReviewProposal={onReviewProposal} />;
           }
           return (
-            <div key={item.id} className="text-xs text-destructive" role="alert">
+            <div key={item.id} className="text-xs text-error-text" role="alert">
               {item.message}
             </div>
           );

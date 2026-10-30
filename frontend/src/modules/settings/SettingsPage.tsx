@@ -13,7 +13,7 @@ export function SettingsPage() {
   const { t } = useTranslation("settings");
   const navigate = useNavigate();
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
+    <main className="mx-auto max-w-2xl space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t("page.title")}</h1>
         <Button variant="ghost" onClick={() => navigate("/projects")}>
@@ -25,6 +25,6 @@ export function SettingsPage() {
       <EmailSection />
       <PasswordSection />
       <DangerZone />
-    </div>
+    </main>
   );
 }

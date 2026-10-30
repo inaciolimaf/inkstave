@@ -180,7 +180,7 @@ export function PreviewPane({
   } else if (pdfDoc.error) {
     body = (
       <Centered label={t("loading.pdfErrorLabel")}>
-        <p className="text-destructive">{pdfDoc.error}</p>
+        <p className="text-error-text">{pdfDoc.error}</p>
       </Centered>
     );
   } else if (pdfDoc.pdf) {

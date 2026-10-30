@@ -32,7 +32,7 @@ export function UploadList({
           <div className="flex items-center justify-between gap-2">
             <span className="truncate">{u.name}</span>
             <div className="flex items-center gap-1">
-              <span className={u.status === "error" ? "text-destructive" : "text-muted-foreground"}>
+              <span className={u.status === "error" ? "text-error-text" : "text-muted-foreground"}>
                 {u.status === "error"
                   ? t("uploadStatus.failed")
                   : u.status === "done"

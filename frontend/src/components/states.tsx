@@ -28,7 +28,7 @@ export function ErrorState({
 }) {
   const { t } = useTranslation("common");
   return (
-    <div className={cn("flex items-center gap-2 text-sm text-destructive", className)} role="alert">
+    <div className={cn("flex items-center gap-2 text-sm text-error-text", className)} role="alert">
       {message ?? t("state.error")}
       <Button size="sm" variant="outline" onClick={() => onRetry()}>
         {t("action.retry")}

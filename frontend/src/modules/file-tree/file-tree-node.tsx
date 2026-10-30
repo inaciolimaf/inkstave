@@ -54,7 +54,7 @@ function InlineRenameInput({ node }: { node: TreeNode }) {
         onBlur={commit}
       />
       {error && (
-        <span role="alert" className="whitespace-nowrap text-xs text-destructive">
+        <span role="alert" className="whitespace-nowrap text-xs text-error-text">
           {error}
         </span>
       )}
@@ -91,7 +91,7 @@ function NodeMenuItems({
       <Separator />
       <Item
         onSelect={() => ctx.onMenuAction("delete", node)}
-        className="text-destructive focus:text-destructive"
+        className="text-error-text focus:text-error-text"
       >
         {t("common:action.delete")}
       </Item>

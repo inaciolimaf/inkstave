@@ -90,7 +90,7 @@ export function LogPanel({
         className="max-h-48 overflow-auto bg-muted/40 px-3 py-2 font-mono text-xs whitespace-pre-wrap"
       >
         {loading && <span className="text-muted-foreground">{t("log.loadingLog")}</span>}
-        {error && <span className="text-destructive">{error}</span>}
+        {error && <span className="text-error-text">{error}</span>}
         {!loading &&
           !error &&
           (log ? log : <span className="text-muted-foreground">{t("log.noLogOutput")}</span>)}

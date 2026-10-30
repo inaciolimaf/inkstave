@@ -51,7 +51,7 @@ function ProjectListError({ onRetry }: { onRetry: () => void }) {
       role="alert"
       className="flex flex-col items-center gap-3 rounded-lg border border-destructive/40 p-12 text-center"
     >
-      <p className="text-sm text-destructive">{t("list.loadError")}</p>
+      <p className="text-sm text-error-text">{t("list.loadError")}</p>
       <Button variant="outline" onClick={onRetry}>
         {t("common:action.retry")}
       </Button>

@@ -19,7 +19,7 @@ const SEVERITY_META: Record<
   ProblemSeverity,
   { labelKey: string; Icon: typeof AlertCircle; className: string }
 > = {
-  error: { labelKey: "problems.errors", Icon: AlertCircle, className: "text-destructive" },
+  error: { labelKey: "problems.errors", Icon: AlertCircle, className: "text-error-text" },
   warning: { labelKey: "problems.warnings", Icon: AlertTriangle, className: "text-warning-text" },
   info: { labelKey: "problems.typesetting", Icon: Info, className: "text-muted-foreground" },
 };

@@ -62,7 +62,7 @@
   /* Ink — reuses the app's navy as the darkest value, then softer greys. */
   --ink: 222 47% 11%;
   --ink-soft: 221 19% 31%;
-  --ink-faint: 220 13% 49%;
+  --ink-faint: 220 13% 44%;
 
   /* Hairline rules — the quiet structural lines of an editorial layout. */
   --rule: 36 22% 84%;

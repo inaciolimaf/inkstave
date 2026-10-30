@@ -66,7 +66,7 @@ export function CreateEntityDialog({
               onChange={(e) => setName(e.target.value)}
             />
             {name && error && (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-xs text-error-text">
                 {error}
               </p>
             )}

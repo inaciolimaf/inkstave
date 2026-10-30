@@ -55,11 +55,13 @@ export function LoginPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-muted/30 p-4">
       <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">{t("login.title")}</CardTitle>
+          <CardTitle className="text-xl">
+            <h1>{t("login.title")}</h1>
+          </CardTitle>
           <CardDescription>{t("login.description")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -137,6 +139,6 @@ export function LoginPage() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

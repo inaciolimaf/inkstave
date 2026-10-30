@@ -51,7 +51,7 @@ export function FileTreeBody({
 
       {isError && (
         <div role="alert" className="space-y-2 p-3 text-center text-sm">
-          <p className="text-destructive">{t("loadError")}</p>
+          <p className="text-error-text">{t("loadError")}</p>
           <Button variant="outline" size="sm" onClick={onRetry}>
             {t("common:action.retry")}
           </Button>

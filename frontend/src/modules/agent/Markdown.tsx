@@ -6,7 +6,8 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 const components: Components = {
-  h1: (p) => <h1 className="mt-3 mb-1 text-base font-semibold" {...p} />,
+  // A message sits under the screen's own `h1`, which must stay the only one.
+  h1: (p) => <h2 className="mt-3 mb-1 text-base font-semibold" {...p} />,
   h2: (p) => <h2 className="mt-3 mb-1 text-sm font-semibold" {...p} />,
   h3: (p) => <h3 className="mt-2 mb-1 text-sm font-semibold" {...p} />,
   p: (p) => <p className="my-1 leading-relaxed" {...p} />,

@@ -36,7 +36,7 @@ export function HistoryLabels({
             <button
               type="button"
               aria-label={t("labels.remove", { name: label.name })}
-              className="rounded-sm hover:text-destructive"
+              className="rounded-sm hover:text-error-text"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(label.id);

@@ -76,7 +76,7 @@ function NotificationRow({
         <button
           type="button"
           aria-label={t("dismiss")}
-          className="text-muted-foreground hover:text-destructive"
+          className="text-muted-foreground hover:text-error-text"
           onClick={() => onDismiss(notification.id)}
         >
           <X className="size-4" />

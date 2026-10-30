@@ -77,10 +77,10 @@ export function InviteForm({
         </Button>
       </form>
       {email.length > 0 && !emailValid && (
-        <p className="text-sm text-destructive">{t("invite.invalidEmail")}</p>
+        <p className="text-sm text-error-text">{t("invite.invalidEmail")}</p>
       )}
       {inviteError && (
-        <p id="invite-error" className="text-sm text-destructive" role="alert">
+        <p id="invite-error" className="text-sm text-error-text" role="alert">
           {inviteError}
         </p>
       )}

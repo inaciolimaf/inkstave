@@ -80,9 +80,7 @@ export default {
         },
         rule: "hsl(var(--rule))",
       },
-      // Extra families used only on the landing (applied via `font-serif` /
-      // `font-mono`). `sans` is intentionally left as the Tailwind default so
-      // the existing app keeps its system font stack.
+      // `sans` stays the Tailwind default: the app keeps its system stack until the pilot of spec 106.
       fontFamily: {
         serif: ['"Newsreader Variable"', "Georgia", "Cambria", "serif"],
         mono: ['"JetBrains Mono Variable"', "ui-monospace", "SFMono-Regular", "monospace"],

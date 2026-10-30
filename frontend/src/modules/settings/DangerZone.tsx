@@ -47,7 +47,7 @@ export function DangerZone() {
   return (
     <Card className="border-destructive/50">
       <CardHeader>
-        <CardTitle className="text-destructive">{t("danger.title")}</CardTitle>
+        <CardTitle className="text-error-text">{t("danger.title")}</CardTitle>
         <CardDescription>{t("danger.description")}</CardDescription>
       </CardHeader>
       <CardContent>

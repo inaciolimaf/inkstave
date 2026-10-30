@@ -40,6 +40,8 @@ const PENDING_SIZE =
 // What already has a helper or a token is not rewritten by hand. Each group has one allowed file:
 // the one that implements the thing.
 const HEX_COLOR = "/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-zA-Z_-])/";
+const RAW_PALETTE =
+  "/(^|[\\s:])(bg|text|border|ring|fill|stroke)-(white|black|(red|rose|orange|amber|yellow|green|emerald|teal|sky|blue|indigo|violet|purple|pink|gray|slate|zinc|neutral|stone)-[0-9]+)/";
 const REUSE_RULES = {
   color: [
     {
@@ -49,6 +51,16 @@ const REUSE_RULES = {
     {
       selector: `TemplateElement[value.raw=${HEX_COLOR}]`,
       message: "Use a design token; fixed content colours live in src/lib/palettes.ts.",
+    },
+  ],
+  palette: [
+    {
+      selector: `Literal[value=${RAW_PALETTE}]`,
+      message: "Use a role token (success, warning, error-text, backdrop, page) instead of a Tailwind hue.",
+    },
+    {
+      selector: `TemplateElement[value.raw=${RAW_PALETTE}]`,
+      message: "Use a role token (success, warning, error-text, backdrop, page) instead of a Tailwind hue.",
     },
   ],
   number: [

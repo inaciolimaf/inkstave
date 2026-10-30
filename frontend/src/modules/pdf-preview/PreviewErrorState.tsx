@@ -32,9 +32,9 @@ export function PreviewErrorState({
       role="alert"
       className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm"
     >
-      <AlertTriangle className="size-8 text-destructive" aria-hidden="true" />
+      <AlertTriangle className="size-8 text-error-text" aria-hidden="true" />
       <div className="space-y-1">
-        <p className="font-medium text-destructive">{t(copy.title)}</p>
+        <p className="font-medium text-error-text">{t(copy.title)}</p>
         <p className="text-muted-foreground">{detail || t(copy.message)}</p>
       </div>
       <div className="flex items-center gap-2">

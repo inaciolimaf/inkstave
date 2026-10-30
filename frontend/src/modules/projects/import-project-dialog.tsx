@@ -127,7 +127,7 @@ export function ImportProjectDialog({
 
           {state.phase === "failed" && errorText && (
             <div className="space-y-2" role="alert">
-              <p className="text-sm text-destructive">{errorText}</p>
+              <p className="text-sm text-error-text">{errorText}</p>
               {state.projectId && (
                 <Button type="button" variant="outline" size="sm" onClick={() => void onDeleteEmpty()}>
                   {t("import.deleteEmpty")}

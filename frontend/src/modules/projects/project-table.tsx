@@ -64,7 +64,7 @@ export function RowActionsMenu({ project, onOpen, onRename, onDelete }: { projec
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => onDelete(project)}
-          className="text-destructive focus:text-destructive"
+          className="text-error-text focus:text-error-text"
         >
           <Trash2 />
           {t("common:action.delete")}
