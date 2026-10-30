@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { Rule } from "@/components/manuscript";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { hasCapability, usePermissions } from "@/modules/sharing";
 
@@ -43,7 +44,7 @@ export function HistoryPanel({
     }
   };
 
-  // The selected version's labels also appear as badges in the detail header (§5.3.4);
+  // The selected version's labels also appear in the detail header (§5.3.4);
   // reuse the timeline's already-fetched versions cache rather than a second request.
   const versionsQuery = useVersions(projectId, docId, open);
   const selectedVersion =
@@ -62,11 +63,12 @@ export function HistoryPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-4 sm:max-w-3xl">
         <SheetHeader>
-          <SheetTitle>{t("panel.title")}</SheetTitle>
-          <SheetDescription>{t("panel.description")}</SheetDescription>
+          <SheetTitle className="font-serif text-title font-medium">{t("panel.title")}</SheetTitle>
+          <SheetDescription className="sr-only">{t("panel.description")}</SheetDescription>
         </SheetHeader>
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
-          <div className="overflow-auto pr-1">
+        <Rule />
+        <div className="grid min-h-0 flex-1 grid-rows-2 gap-3 sm:grid-cols-2 sm:grid-rows-1">
+          <div className="min-h-0 overflow-auto pr-1">
             <HistoryTimeline
               projectId={projectId}
               docId={docId}
@@ -78,9 +80,9 @@ export function HistoryPanel({
               onDeleteLabel={onDeleteLabel}
             />
           </div>
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-md border">
+          <div className="flex min-h-0 flex-col overflow-hidden border-t border-border-strong sm:border-l sm:border-t-0 sm:pl-3">
             {canWrite && primary !== null && (
-              <div className="border-b p-2">
+              <div className="border-b border-border py-2">
                 <RestoreVersionButton version={primary} restore={restore} />
               </div>
             )}

@@ -51,7 +51,7 @@ export function ReadonlyCodePreview({ value }: { value: string }) {
       data-testid="preview-editor"
       aria-label={t("filePreview")}
       aria-readonly="true"
-      className="max-h-72 overflow-auto rounded-md border bg-muted/30 text-xs [&_.cm-editor]:bg-transparent"
+      className="mt-2 max-h-72 overflow-auto text-small [&_.cm-editor]:bg-transparent [&_.cm-scroller]:font-mono"
     />
   );
 }

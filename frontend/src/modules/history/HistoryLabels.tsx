@@ -1,9 +1,8 @@
-/** Inline label badges with add/delete for editors/owners (spec 38). */
+/** Inline labels, as plain text, with add/delete for editors/owners (spec 38). */
 import { Tag, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,15 +27,15 @@ export function HistoryLabels({
   const [name, setName] = useState("");
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center gap-x-2">
       {labels.map((label) => (
-        <Badge key={label.id} variant="secondary" className="gap-1">
+        <span key={label.id} className="inline-flex items-center text-small">
           {label.name}
           {canWrite && (
             <button
               type="button"
               aria-label={t("labels.remove", { name: label.name })}
-              className="rounded-sm hover:text-error-text"
+              className="inline-flex size-6 items-center justify-center rounded-sm hover:text-error-text"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(label.id);
@@ -45,7 +44,7 @@ export function HistoryLabels({
               <X className="size-3" />
             </button>
           )}
-        </Badge>
+        </span>
       ))}
       {canWrite && (
         <Popover open={open} onOpenChange={setOpen}>
@@ -53,7 +52,7 @@ export function HistoryLabels({
             <Button
               size="icon"
               variant="ghost"
-              className="size-5"
+              className="size-6"
               aria-label={t("labels.addToVersion", { version })}
               onClick={(e) => e.stopPropagation()}
             >
