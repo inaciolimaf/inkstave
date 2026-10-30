@@ -16,7 +16,7 @@ export function EditorRoute() {
   });
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-dvh flex-col">
       <header className="flex items-center justify-between gap-4 border-b px-4 py-2">
         <div className="flex min-w-0 items-center gap-2.5">
           <Link to="/projects" aria-label="Inkstave" className="shrink-0 hover:opacity-80">

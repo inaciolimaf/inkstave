@@ -6,9 +6,7 @@ import { useAuth } from "./auth-context";
 import { useSetupStatus } from "./setup/useSetupStatus";
 
 function Centered({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center text-muted-foreground">{children}</div>
-  );
+  return <div className="flex min-h-dvh items-center justify-center text-muted-foreground">{children}</div>;
 }
 
 /**

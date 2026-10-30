@@ -20,7 +20,7 @@ interface State {
 // eslint-disable-next-line react-refresh/only-export-components -- helper for the class boundary below
 function DefaultFallback({ onReset }: { onReset: () => void }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm" role="alert">
         <CardHeader>
           <CardTitle className="text-xl">{i18n.t("common:errorBoundary.title")}</CardTitle>

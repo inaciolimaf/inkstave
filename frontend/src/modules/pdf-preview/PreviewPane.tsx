@@ -228,7 +228,7 @@ export function PreviewPane({
             className="rounded p-1 text-muted-foreground hover:text-foreground/80"
           >
             <ChevronRight
-              className={cn("size-4 transition-transform", !outputCollapsed && "rotate-90")}
+              className={cn("size-4 transition-transform duration-fast", !outputCollapsed && "rotate-90")}
               aria-hidden="true"
             />
           </button>

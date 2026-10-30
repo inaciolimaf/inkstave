@@ -74,7 +74,7 @@ function ToolActivityRow({ item }: { item: Extract<TranscriptItem, { kind: "tool
     item.status === "running" ? (
       <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
     ) : item.status === "ok" ? (
-      <Check className="size-3.5 text-green-600" aria-hidden="true" />
+      <Check className="size-3.5 text-success-text" aria-hidden="true" />
     ) : (
       <X className="size-3.5 text-destructive" aria-hidden="true" />
     );

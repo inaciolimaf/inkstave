@@ -11,8 +11,8 @@ import { useDiff } from "./useHistory";
 
 const MARKER: Record<SegmentType, string> = { added: "+", removed: "-", context: " " };
 const ROW_CLASS: Record<SegmentType, string> = {
-  added: "bg-green-500/15 text-green-700 dark:text-green-300",
-  removed: "bg-red-500/15 text-red-700 dark:text-red-300",
+  added: "bg-success-soft text-success-text",
+  removed: "bg-error-soft text-error-text",
   context: "text-muted-foreground",
 };
 

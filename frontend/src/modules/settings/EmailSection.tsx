@@ -43,7 +43,9 @@ export function EmailSection() {
         <CardDescription>
           {t("email.current")} <span className="font-medium">{user?.email}</span>
           {user?.pending_email && (
-            <span className="ml-1 text-amber-600">{t("email.pending", { email: user.pending_email })}</span>
+            <span className="ml-1 text-warning-text">
+              {t("email.pending", { email: user.pending_email })}
+            </span>
           )}
         </CardDescription>
       </CardHeader>

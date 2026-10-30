@@ -51,7 +51,7 @@ export function CollabEditor({
         {!session.synced && <span className="text-muted-foreground">{t("collab.syncing")}</span>}
         {session.readOnly && (
           <span
-            className="rounded bg-amber-500/15 px-1.5 py-0.5 font-medium text-amber-600 dark:text-amber-400"
+            className="rounded bg-warning-soft px-1.5 py-0.5 font-medium text-warning-text"
             aria-live="polite"
           >
             {t("collab.viewOnly")}
