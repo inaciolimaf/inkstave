@@ -9,6 +9,50 @@ Inkstave is a from-scratch, real-time collaborative LaTeX editor with a built-in
 AI writing agent. It is **inspired by** Overleaf Community Edition but shares
 **no code** with it. See `README.md` for the product overview and stack.
 
+This project follows the **`project-standard`** skill
+(`~/.claude/skills/project-standard/`), except where "Deviations from the standard"
+below says otherwise. A change to the standard (lint, tests, docker, CI, documentation)
+applies in both places: here and in the skill.
+
+## Documentation — read first, update together
+
+- **`docs/system/`** explains the system as it is: one file per domain, index in
+  `docs/system/README.md`. Before touching a domain, read its file.
+- **Every change to the system updates the documentation in the same commit**: route,
+  table, flow, rule, environment variable, new, removed or renamed file → the domain's
+  file. New domain → new file + a line in the index.
+- **Keep the `.md` files tidy**: when passing through a documentation file (including
+  this `CLAUDE.md`, the `README.md` and the specs), fix what is outdated, duplicated or
+  confusing, even if it is not part of the task.
+- **This `CLAUDE.md` updates too**: new command, new convention, discovered pitfall,
+  structure change → it goes here in the same commit.
+- `specs/` is what was asked and why, and `docs/adr/` records past decisions. Both are
+  history: they are not rewritten, and divergence from the code is recorded in
+  `docs/system/`.
+- `docs/known-gaps.md` lists what is knowingly unfinished. Resolving a gap removes its
+  entry in the same commit.
+- A new environment variable also goes in `.env.example` and the table in
+  `docs/admin-guide.md`; a test fails otherwise.
+- Guarantee: `make docs` (in CI).
+
+## Language
+
+- **The code is all in English**: identifiers, file and folder names, database tables
+  and columns, API routes and fields, error types, comments, docstrings, documentation
+  (`docs/`, specs, this file, README) and commit messages.
+- **Only what a person reads in the product changes language.** The product is bilingual,
+  English and Portuguese: interface text lives in the react-i18next locale files, one
+  namespace per feature. Backend error messages and e-mails are English-only for now
+  (`docs/known-gaps.md`).
+- **The English interface strings must stay byte-identical**: tests assert on them.
+- **Every domain name comes from `docs/glossary.md`** (domain term → name in code →
+  Portuguese product term). A new term enters the glossary in the same commit that
+  introduces it.
+- **Never renamed**: environment variables configured on a server (the settings field may
+  have another name and read the variable by alias; a new variable comes with a safe
+  default or with a notice to the server owner listing what to configure), CLI commands
+  and Makefile targets (only by agreement), past commits.
+
 ## The golden rules
 
 1. **Implement specs strictly in order.** The source of truth is `specs/`.
@@ -53,15 +97,147 @@ so.
 
 ## Repository conventions
 
-- Backend lives in `backend/`, frontend in `frontend/`, CRDT websocket layer in
-  `collab/` (or inside `backend/` per the real-time spec), infra in `infra/`.
-- Python: format with `ruff format`, lint with `ruff`, type-check with `mypy`/
-  `pyright` (whichever spec 02/04 establishes). Async-first.
+- Backend lives in `backend/` (package `inkstave`, a modular monolith:
+  `src/inkstave/core`, `src/inkstave/infra`, `src/inkstave/modules/<domain>`), frontend in
+  `frontend/`, infra in `infra/`. The CRDT WebSocket layer runs inside the backend, in
+  `backend/src/inkstave/modules/collab/`; the top-level `collab/` folder holds no code.
+- Python: format with `ruff format`, lint with `ruff`, type-check with strict `mypy`
+  (`make types`; run from the repository root, `mypy backend/src` reads no configuration).
+  Async-first.
 - TypeScript: ESLint + Prettier; strict mode on.
 - Migrations: every schema change ships an Alembic migration. Never edit a
   released migration; add a new one.
 - Secrets come from environment variables / `.env`; never hard-code them. An
   `.env.example` documents every variable.
+
+## Where things are
+
+```
+backend/
+  src/inkstave/
+    core/           settings, database, HTTP middleware, errors, logging, observability
+    infra/          Redis, cache, object storage, mailer
+    modules/        admin, agent, auth, collab, compile, history, notifications, projects
+    app.py router.py worker.py cli.py main.py models.py    composition root
+  migrations/       Alembic
+  tests/            unit/, integration/, golden/, smoke/, agent_evals/, fixtures/, factories/
+  scripts/          OpenAPI export, test budget, e2e database reset
+frontend/
+  src/modules/      one folder per domain, with a public index.ts
+  src/routes/       screens, assembled from the modules
+  src/api/          generated OpenAPI types
+  src/components/ src/lib/ src/i18n/
+  tests/            cross-cutting Vitest suites (router, boundaries, e2e route list)
+  e2e/              Playwright: routes.spec.ts, mobile.spec.ts, flows/
+infra/              nginx config, Tectonic package set and sandbox image
+scripts/            function-size lint, timing, dependency audit
+tools/              docs_coverage.py (`make docs`)
+docs/               system/ (the system as it is), glossary, known gaps, guides, adr/, api/
+specs/              NN-slug/README.md (prompt) and spec.md (requirements)
+```
+
+## Commands
+
+`make` with no target lists everything. The `Makefile` is the source of truth; CI runs its
+targets, so what passes here passes there.
+
+| Command | Does |
+|---|---|
+| `make install` | backend and frontend dependencies, from the lockfiles |
+| `make up` / `make up-d` | dev stack in Docker with hot reload |
+| `make docker-up` | only Postgres + Redis, for running the apps on the host |
+| `make migrate` | apply migrations |
+| `make lint` | ruff, format check, function and file size ceilings, import contracts |
+| `make boundaries` | import contracts only |
+| `make format` | ruff format |
+| `make types` | strict mypy |
+| `make docs` | coverage and live paths of `docs/system/` |
+| `make test` | backend unit + integration |
+| `make coverage` | the same, with the coverage floor |
+| `make test-unit` / `make test-integration` | the two tiers as CI splits them |
+| `make budget` | gate the 2-minute budget |
+| `make web-types` | regenerate `docs/api/openapi.json` and `frontend/src/api/types.ts` |
+| `make web-test` | eslint, prettier check, `tsc -b`, Vitest |
+| `make web-coverage` | Vitest with the coverage floor |
+| `make web-build` | production bundle |
+| `make e2e-infra` | throwaway Postgres + Redis for Playwright |
+| `make e2e-smoke` | the in-budget Playwright tier (what CI runs) |
+| `make e2e` / `make mobile` / `make e2e-flows` / `make e2e-all` | routes / 390x844 / journeys / smoke plus `@full` |
+| `make up-prod` | production stack; it publishes no host port, see `docs/admin-guide.md` |
+
+Tests for one area: `cd backend && uv run pytest tests/unit/test_x.py`,
+`pnpm -C frontend exec vitest run src/modules/x`.
+
+## Local environment
+
+- `TEST_DATABASE_URL` must point at a disposable database: the harness drops and recreates
+  it, with a suffix per xdist worker. Tests that need Postgres skip when it is unreachable.
+- No test reads the machine's `.env`: `backend/tests/fixtures/env.py` isolates the
+  environment before collection.
+- Never run the real LLM or real Tectonic from the fast tiers. `LLM_STUB=true` and
+  `COMPILE_MODE=mock` are the deterministic paths.
+
+## Code rules
+
+**Lint and types.** ruff with `line-length = 110`, strict mypy, at most 30 lines per function
+and 300 per file (`scripts/lint_function_length.py`), cyclomatic complexity at most 6, at
+most 7 arguments. Details: `~/.claude/skills/project-standard/references/lint-and-types.md`.
+An ignore always carries its reason in a comment.
+
+**Backend.** Layers go modules → infra → core, and modules follow the order in
+`backend/pyproject.toml`; `make boundaries` enforces it, with a public interface in each
+module's `__init__.py`. `backend/tests/unit/test_architecture.py` only lets the list of
+exceptions shrink. Only the session dependency commits. Routers do HTTP only. Nothing blocks
+the event loop. Every wait has a deadline. Settings come from the cached `get_settings()`.
+
+**Frontend.** TypeScript strict. API types are generated (`make web-types`) and the generated
+file is never edited. Modules are imported through their `index.ts`. Every interface string
+goes through i18n, in both languages. Screens must fit 390 px.
+
+## Tests
+
+Pyramid: unit (no database; a unit test that uses it fails collection), integration (marker
+`integration`, one transaction per test with rollback), golden (real SyncTeX and LaTeX logs),
+Vitest, Playwright. A bug comes with a test. Slow work is marked `@slow` and stays out of the
+default run. Details: `docs/system/overview.md`.
+
+## Workflow
+
+1. Read the domain's `docs/system/` file.
+2. Change + test + documentation (+ glossary if there is a new term).
+3. Run what you touched: `make lint types docs` + the area's tests.
+4. Commit a Conventional Commit in English that describes the behavior.
+
+**Large change** (more than ~15 files or more than one area): subagents in parallel by
+disjoint files (worktrees when they edit existing code); the main agent integrates and
+verifies.
+
+## Deploy
+
+Coolify or any Docker host, from `docker-compose.prod.yml`, with a one-shot
+`inkstave migrate` before the app starts. The full variable list and boot refusals are in
+`docs/admin-guide.md`. There is no `docker-compose-coolify.yml` or `docs/deploy-coolify.md`
+yet (`docs/known-gaps.md`).
+
+## Deviations from the standard
+
+Each one is deliberate. Remove the line when the deviation ends.
+
+| Deviation | Standard | Reason |
+|---|---|---|
+| Folders `backend/` and `frontend/` | `api/`, `web/` | Dockerfiles, compose files, CI, the pnpm workspace and every spec use these names; renaming buys nothing a reader needs |
+| Package `inkstave` | package `api` | Console script `inkstave`, `python -m inkstave.cli` and the `arq inkstave...` worker path are typed and deployed, so the operations rule keeps them |
+| `react-router-dom` | TanStack Router | Every route and the tests are built on it; a router swap is a full frontend migration with no change for users |
+| Tailwind 3, Vite 5 | Tailwind 4, Vite 6 | The shadcn/ui setup and `frontend/tailwind.config.ts` are on Tailwind 3; major upgrades are a separate change with visual risk |
+| `specs/NN-slug/` with `README.md` + `spec.md` | `specs/NN-name.md` | Over 100 specs already exist in this shape, separating the prompt from the requirements; specs are history |
+| nginx serves the frontend | Caddy | User decision: leave as is |
+| Docker left untouched for now | `docker-compose-coolify.yml`, the standard's Dockerfiles | Alignment deferred by the user; only documentation records the differences |
+| `justfile` kept, as delegates to `make` | Makefile only | `just` is an accepted tool (ADR 0001) and its recipes are commands people type; the Makefile stays the source of truth |
+| Alpine base images | `python:3.12-slim` | The tech stack above mandates Alpine |
+| `C901` max 6 and the `PLR09xx` family | `PLR0913` only | Stricter on purpose: ADR 0106 |
+| stdlib `logging` with `python-json-logger` as a dependency | structlog | Logging runs on stdlib `logging` with the project's own formatter, correlation and redaction in `backend/src/inkstave/core/observability/`; a swap changes no behavior. `python-json-logger` serves only the older `backend/src/inkstave/core/logging.py` path |
+| API errors as a JSON `error` envelope | problem+json | Clients and tests depend on the envelope; it is a contract change |
+| `B008` kept on, FastAPI markers listed in `extend-immutable-calls` | `Annotated` dependencies | About 276 `x = Depends(...)` sites; churning every route was not worth it in the alignment pass |
 
 ## Git commits
 
