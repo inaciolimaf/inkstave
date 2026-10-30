@@ -79,7 +79,7 @@ describe("HistoryDiffView", () => {
     expect(await screen.findByText("new line")).toBeInTheDocument();
     const removed = document.querySelector('[data-type="removed"]');
     const added = document.querySelector('[data-type="added"]');
-    expect(removed?.textContent).toContain("-"); // marker, not colour-only
+    expect(removed?.textContent).toContain("\u2212"); // marker, not colour-only
     expect(added?.textContent).toContain("+");
   });
 

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { Rule } from "@/components/manuscript";
 import { ErrorState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -67,7 +68,7 @@ export function DiffReviewDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="flex max-h-[85vh] max-w-3xl flex-col gap-3"
+        className="flex max-h-[85vh] max-w-3xl flex-col gap-3 p-4 sm:p-6"
         onInteractOutside={(e) => {
           // Ignore interactions that originate inside a nested confirmation
           // dialog (the apply-confirm / discard AlertDialogs portal *outside*
@@ -90,10 +91,10 @@ export function DiffReviewDialog({
         }}
       >
         <DialogDescription className="sr-only">{t("description")}</DialogDescription>
-        <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0">
-          <DialogTitle>{t("title")}</DialogTitle>
-          <div className="flex items-center gap-2 pr-6">
-            <span className="text-sm text-muted-foreground">
+        <DialogHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 pr-6 text-left">
+          <DialogTitle className="font-serif text-title font-medium">{t("title")}</DialogTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-small tabular-nums text-muted-foreground">
               {t("accepted", { accepted: r.counts.accepted, total: r.counts.total })}
             </span>
             <Button
@@ -105,8 +106,9 @@ export function DiffReviewDialog({
             </Button>
           </div>
         </DialogHeader>
+        <Rule />
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-auto">
+        <div className="min-h-0 flex-1 divide-y divide-border-strong overflow-auto pr-1">
           {r.loading ? (
             <div className="space-y-2" aria-busy="true">
               <Skeleton className="h-6" />
@@ -115,7 +117,7 @@ export function DiffReviewDialog({
           ) : r.isError ? (
             <ErrorState message={t("loadError")} onRetry={() => void r.refetch()} />
           ) : !r.proposal || r.proposal.files.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noChanges")}</p>
+            <p className="text-body text-muted-foreground">{t("noChanges")}</p>
           ) : r.applyPhase === "error" ? (
             <ApplyResultAlert
               title={t("applyResult.errorTitle")}

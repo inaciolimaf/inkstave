@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 
 import { HistoryLabels } from "./HistoryLabels";
-import { absoluteTime, initials, relativeTime } from "./format";
+import { absoluteTime, relativeTime } from "./format";
 import type { Version } from "./types";
 import { useVersions } from "./useHistory";
 
@@ -45,32 +45,28 @@ function VersionRow({
         }
       }}
       className={cn(
-        "cursor-pointer rounded-md border p-2 text-sm focus-visible:-outline-offset-2",
-        selected && "border-primary bg-primary/5",
-        compared && !selected && "border-primary/50 bg-primary/5",
+        "cursor-pointer border-l-2 border-transparent py-2 pl-2 pr-1 text-body focus-visible:-outline-offset-2",
+        selected && "border-foreground",
+        compared && !selected && "border-dashed border-foreground",
       )}
     >
       <div className="flex items-center gap-2">
-        <span
-          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium"
-          aria-hidden="true"
-        >
-          {version.author ? initials(version.author.name) : "?"}
-        </span>
         <span className="mr-auto truncate font-medium">
           {version.author?.name ?? t("timeline.unknownAuthor")}
         </span>
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground">{relativeTime(version.timestamp)}</span>
+              <span className="whitespace-nowrap text-small tabular-nums text-muted-foreground">
+                {relativeTime(version.timestamp)}
+              </span>
             </TooltipTrigger>
             <TooltipContent>{absoluteTime(version.timestamp)}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
       <div className="mt-1 flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-small tabular-nums text-muted-foreground">
           v{version.version} · {t("timeline.changes", { count: version.opCount })}
         </span>
         <HistoryLabels
@@ -120,10 +116,10 @@ export function HistoryTimeline({
       {(data) => {
         const versions = data.pages.flatMap((page) => page.versions);
         if (versions.length === 0) {
-          return <p className="text-sm text-muted-foreground">{t("timeline.empty")}</p>;
+          return <p className="text-body text-muted-foreground">{t("timeline.empty")}</p>;
         }
         return (
-          <div className="space-y-2" role="list" aria-label={t("timeline.ariaLabel")}>
+          <div className="divide-y divide-border" role="list" aria-label={t("timeline.ariaLabel")}>
             {versions.map((version) => (
               <div role="listitem" key={version.version}>
                 <VersionRow
@@ -139,7 +135,7 @@ export function HistoryTimeline({
             ))}
             {query.hasNextPage && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 className="w-full"
                 disabled={query.isFetchingNextPage}
