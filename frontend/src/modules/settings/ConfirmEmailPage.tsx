@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthShell } from "@/modules/auth";
 import { ApiError } from "@/lib/api-client";
 
 import { confirmEmailChange } from "./api";
@@ -35,24 +35,19 @@ export function ConfirmEmailPage() {
   }, [token, t]);
 
   return (
-    <main className="mx-auto max-w-md p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h1>{t("confirmEmail.title")}</h1>
-          </CardTitle>
-          <CardDescription>
-            {state.kind === "loading" && t("confirmEmail.confirming")}
-            {state.kind === "done" && t("confirmEmail.done", { email: state.email })}
-            {state.kind === "error" && state.message}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link to="/settings">{t("confirmEmail.goToSettings")}</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </main>
+    <AuthShell
+      title={t("confirmEmail.title")}
+      description={
+        <>
+          {state.kind === "loading" && t("confirmEmail.confirming")}
+          {state.kind === "done" && t("confirmEmail.done", { email: state.email })}
+          {state.kind === "error" && state.message}
+        </>
+      }
+    >
+      <Button asChild className="w-full">
+        <Link to="/settings">{t("confirmEmail.goToSettings")}</Link>
+      </Button>
+    </AuthShell>
   );
 }

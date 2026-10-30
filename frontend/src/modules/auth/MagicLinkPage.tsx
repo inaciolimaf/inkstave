@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
 
-import { AuthShell } from "./AuthShell";
+import { AuthFoot, AuthLink, AuthShell } from "./AuthShell";
 import { EmailRequestForm } from "./EmailRequestForm";
 import { completeMagicLink, requestMagicLink } from "./api";
 
@@ -39,7 +39,7 @@ function MagicLinkCallback({ token }: { token: string }) {
   if (state.kind === "loading") {
     return (
       <AuthShell title={t("magicLink.requestTitle")}>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+        <p className="flex items-center gap-2 text-body text-muted-foreground" role="status">
           <Loader2 className="size-4 animate-spin" />
           {t("magicLink.verifying")}
         </p>
@@ -75,11 +75,9 @@ export function MagicLinkPage() {
         successMessage={t("magicLink.requestSuccess")}
         request={requestMagicLink}
       />
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-          {t("magicLink.backToLogin")}
-        </Link>
-      </p>
+      <AuthFoot>
+        <AuthLink to="/login">{t("magicLink.backToLogin")}</AuthLink>
+      </AuthFoot>
     </AuthShell>
   );
 }

@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 
-import { AuthShell } from "./AuthShell";
+import { AuthFoot, AuthLink, AuthShell } from "./AuthShell";
 import { EmailRequestForm } from "./EmailRequestForm";
 import { requestPasswordReset } from "./api";
 
@@ -14,11 +13,9 @@ export function ForgotPasswordPage() {
         successMessage={t("forgotPassword.success")}
         request={requestPasswordReset}
       />
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-          {t("forgotPassword.backToLogin")}
-        </Link>
-      </p>
+      <AuthFoot>
+        <AuthLink to="/login">{t("forgotPassword.backToLogin")}</AuthLink>
+      </AuthFoot>
     </AuthShell>
   );
 }

@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useRouteError } from "react-router-dom";
 
+import { ErrataSlip } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-client";
 
 export function RouteError() {
@@ -22,20 +22,10 @@ export function RouteError() {
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-sm" role="alert">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>{t("errorBoundary.title")}</h1>
-          </CardTitle>
-          <CardDescription>
-            {error instanceof ApiError ? error.detail : t("errorBoundary.body")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-2">
-          <Button onClick={() => void retry()}>{t("errorBoundary.retry")}</Button>
-        </CardContent>
-      </Card>
-    </main>
+    <ErrataSlip
+      title={t("errorBoundary.title")}
+      body={error instanceof ApiError ? error.detail : t("errorBoundary.body")}
+      actions={<Button onClick={() => void retry()}>{t("errorBoundary.retry")}</Button>}
+    />
   );
 }

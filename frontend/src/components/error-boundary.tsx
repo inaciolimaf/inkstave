@@ -1,8 +1,8 @@
 /** App-root React error boundary (spec 64): a friendly fallback, never a white screen. */
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+import { ErrataSlip } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 // Use the i18n instance directly (not the useTranslation hook): the fallback may
 // render when the surrounding tree is unhealthy, so we avoid extra hook context.
 import i18n from "@/i18n/config";
@@ -20,22 +20,18 @@ interface State {
 // eslint-disable-next-line react-refresh/only-export-components -- helper for the class boundary below
 function DefaultFallback({ onReset }: { onReset: () => void }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-sm" role="alert">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>{i18n.t("common:errorBoundary.title")}</h1>
-          </CardTitle>
-          <CardDescription>{i18n.t("common:errorBoundary.body")}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-2">
+    <ErrataSlip
+      title={i18n.t("common:errorBoundary.title")}
+      body={i18n.t("common:errorBoundary.body")}
+      actions={
+        <>
           <Button onClick={onReset}>{i18n.t("common:errorBoundary.retry")}</Button>
           <Button variant="outline" onClick={() => window.location.reload()}>
             {i18n.t("common:errorBoundary.reload")}
           </Button>
-        </CardContent>
-      </Card>
-    </main>
+        </>
+      }
+    />
   );
 }
 

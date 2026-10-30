@@ -43,7 +43,7 @@ export function InviteForm({
         }}
       >
         <div className="flex-1">
-          <label htmlFor="invite-email" className="text-sm font-medium">
+          <label htmlFor="invite-email" className="text-body font-medium">
             {t("invite.label")}
           </label>
           <Input
@@ -57,10 +57,11 @@ export function InviteForm({
             }}
             aria-invalid={(email.length > 0 && !emailValid) || inviteError !== null}
             aria-describedby={inviteError ? "invite-error" : undefined}
+            className="border-border-strong"
           />
         </div>
         <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as InviteRole)}>
-          <SelectTrigger className="w-28 capitalize" aria-label={t("invite.roleLabel")}>
+          <SelectTrigger className="w-28 border-border-strong capitalize" aria-label={t("invite.roleLabel")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -77,10 +78,10 @@ export function InviteForm({
         </Button>
       </form>
       {email.length > 0 && !emailValid && (
-        <p className="text-sm text-error-text">{t("invite.invalidEmail")}</p>
+        <p className="text-body text-error-text">{t("invite.invalidEmail")}</p>
       )}
       {inviteError && (
-        <p id="invite-error" className="text-sm text-error-text" role="alert">
+        <p id="invite-error" className="text-body text-error-text" role="alert">
           {inviteError}
         </p>
       )}

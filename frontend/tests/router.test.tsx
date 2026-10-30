@@ -35,6 +35,9 @@ describe("createAppRouter", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
     expect(screen.queryByText(/Unexpected Application Error/)).not.toBeInTheDocument();
+    expectOneManuscript();
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Something went wrong");
 
     healthy = true;
     await user.click(screen.getByRole("button", { name: "Try again" }));
@@ -48,5 +51,8 @@ describe("createAppRouter", () => {
     fakeApi({ "GET /setup/status": { needs_setup: false } });
     await renderScreen("/no-such-page");
     expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    expectOneManuscript();
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
 });

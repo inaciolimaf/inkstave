@@ -1,4 +1,5 @@
 /** The module's public interface: other modules and routes import only from here. */
+export { AuthShell } from "./AuthShell";
 export { ForgotPasswordPage } from "./ForgotPasswordPage";
 export { MagicLinkPage } from "./MagicLinkPage";
 export { ResendVerificationPage } from "./ResendVerificationPage";

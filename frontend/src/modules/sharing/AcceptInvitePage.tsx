@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthShell } from "@/modules/auth";
 import { ApiError } from "@/lib/api-client";
 
 import { acceptInvite, declineInvite, getInvitePreview } from "./api";
@@ -38,60 +38,46 @@ export function AcceptInvitePage() {
 
   const gone = preview.error instanceof ApiError && preview.error.status === 410;
 
+  if (preview.data) {
+    return (
+      <AuthShell
+        title={t("accept.invitedTo", { projectName: preview.data.projectName })}
+        description={
+          <>
+            {t("accept.invitedBy", { inviterName: preview.data.inviterName })}
+            <strong>{t(`role.${preview.data.role}`)}</strong>.
+          </>
+        }
+      >
+        <div className="flex gap-2">
+          <Button onClick={() => accept.mutate()} disabled={accept.isPending}>
+            {t("accept.accept")}
+          </Button>
+          <Button variant="outline" onClick={() => decline.mutate()} disabled={decline.isPending}>
+            {t("accept.decline")}
+          </Button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (gone) {
+    return (
+      <AuthShell title={t("accept.unavailableTitle")} description={t("accept.unavailableDescription")}>
+        <Button onClick={() => navigate("/projects")}>{t("accept.backToProjects")}</Button>
+      </AuthShell>
+    );
+  }
+
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
-      {!preview.data && !gone && <h1 className="sr-only">{t("common:title.invite")}</h1>}
-      <Card className="w-full max-w-md">
-        {preview.isLoading && (
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            {t("accept.loading")}
-          </CardContent>
-        )}
-
-        {gone && (
-          <>
-            <CardHeader>
-              <CardTitle>
-                <h1>{t("accept.unavailableTitle")}</h1>
-              </CardTitle>
-              <CardDescription>{t("accept.unavailableDescription")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={() => navigate("/projects")}>
-                {t("accept.backToProjects")}
-              </Button>
-            </CardContent>
-          </>
-        )}
-
-        {preview.isError && !gone && (
-          <CardContent className="py-10 text-center text-sm text-error-text" role="alert">
-            {t("accept.notFound")}
-          </CardContent>
-        )}
-
-        {preview.data && (
-          <>
-            <CardHeader>
-              <CardTitle>
-                <h1>{t("accept.invitedTo", { projectName: preview.data.projectName })}</h1>
-              </CardTitle>
-              <CardDescription>
-                {t("accept.invitedBy", { inviterName: preview.data.inviterName })}
-                <strong>{t(`role.${preview.data.role}`)}</strong>.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex gap-2">
-              <Button onClick={() => accept.mutate()} disabled={accept.isPending}>
-                {t("accept.accept")}
-              </Button>
-              <Button variant="outline" onClick={() => decline.mutate()} disabled={decline.isPending}>
-                {t("accept.decline")}
-              </Button>
-            </CardContent>
-          </>
-        )}
-      </Card>
-    </main>
+    <AuthShell title={t("common:title.invite")}>
+      {preview.isError ? (
+        <p className="text-body text-error-text" role="alert">
+          {t("accept.notFound")}
+        </p>
+      ) : (
+        <p className="text-body text-muted-foreground">{t("accept.loading")}</p>
+      )}
+    </AuthShell>
   );
 }
