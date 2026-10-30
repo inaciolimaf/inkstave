@@ -10,7 +10,7 @@ import pytest
 from inkstave.config import Settings
 from inkstave.logparse.models import ProblemSeverity
 from inkstave.logparse.service import LogNotAvailableError, LogProblemsService
-from tests.logparse_fixtures import SAMPLE_LOG
+from tests.golden.logparse_fixtures import SAMPLE_LOG
 
 
 class _Row:

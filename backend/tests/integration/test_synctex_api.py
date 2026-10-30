@@ -20,7 +20,7 @@ from inkstave.dependencies import get_object_store
 from inkstave.services.project import create_project
 from inkstave.storage.local import LocalObjectStore
 from tests.factories import UserFactory
-from tests.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
+from tests.golden.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
 
 pytestmark = pytest.mark.integration
 

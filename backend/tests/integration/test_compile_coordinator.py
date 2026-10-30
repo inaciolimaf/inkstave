@@ -1,13 +1,7 @@
-"""Unit tests for CompileCoordinator debounce/concurrency/enqueue (spec 22).
+"""Tests for CompileCoordinator debounce/concurrency/enqueue (spec 22).
 
-Classification note (issue 81): although these tests live under ``tests/unit/``
-and the coordinator's debounce/coalesce logic itself is HTTP-free, the
-coordinator's concurrency caps and coalescing are expressed *entirely* through
-``CompileRepository`` queries (active counts, in-flight lookup) against real
-rows. ``CompileRepository`` is intrinsic to the coordinator — faking it would
-just re-implement the SQL we are trying to exercise — so these tests use the
-real ``db_session`` and carry ``pytest.mark.integration`` deliberately. The
-dedicated ``CompileRepository`` tests below (issue 79) share the same rationale.
+The coordinator's concurrency caps and coalescing are expressed entirely through
+``CompileRepository`` queries against real rows, so these tests use the real ``db_session``.
 """
 
 from __future__ import annotations

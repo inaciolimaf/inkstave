@@ -15,7 +15,7 @@ import pytest
 import inkstave.app as appmod
 from inkstave.app import create_app
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("test_database_env")]
 
 
 class RecordingRedis:

@@ -22,6 +22,8 @@ behaviour. The failure-mode fake classes are re-exported here so existing
 
 from __future__ import annotations
 
+import pytest
+
 from tests.fixtures.fakes import (
     FakeEngineBroken,
     FakeEngineOk,
@@ -50,3 +52,14 @@ __all__ = [
     "FakeRedisRaising",
     "_FakeConnection",
 ]
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """A unit test touches no database: one that needs it belongs in ``tests/integration``."""
+    offenders = [
+        item.nodeid
+        for item in items
+        if "/tests/unit/" in str(item.path) and "_template_db" in getattr(item, "fixturenames", ())
+    ]
+    if offenders:
+        raise pytest.UsageError("unit tests using the database:\n" + "\n".join(offenders))

@@ -173,6 +173,8 @@ testpaths = ["tests"]
 # under-2-minute wall-clock budget. conftest provisions per-worker databases via
 # PYTEST_XDIST_WORKER, so parallel execution is isolation-safe.
 addopts = "-q --strict-markers -n auto --durations=15 -m 'not slow and not e2e and not live'"
+# A deprecated API the project itself calls fails the suite instead of a future upgrade.
+filterwarnings = ["error::DeprecationWarning:inkstave.*"]
 markers = [
     "slow: heavier tests excluded from the default fast run",
     "integration: tests requiring the test database / wired app",
@@ -186,6 +188,7 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
+skip_covered = true
 # Non-aspirational gate satisfied by the current code; raised as coverage grows.
 fail_under = 80
 

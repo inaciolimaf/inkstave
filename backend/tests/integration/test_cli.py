@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from inkstave import cli
 from inkstave.bootstrap.seed import DEMO_EMAIL
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("test_database_env")]
 
 
 class _FakeSender:

@@ -200,6 +200,7 @@ async def test_collaborators_list_query_count_is_bounded(
 # --- DB connection pool: config + no leak (AC8) ----------------------------- #
 
 
+@pytest.mark.usefixtures("_template_db", "test_database_env")
 async def test_db_pool_uses_config_and_returns_to_baseline(settings_override: Any) -> None:
     settings = settings_override
     engine, sessionmaker = create_engine_and_sessionmaker(settings)

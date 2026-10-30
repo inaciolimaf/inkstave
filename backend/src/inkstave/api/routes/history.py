@@ -120,7 +120,7 @@ async def get_history_diff(
         except ValueError as exc:
             raise BadRequestError("`to` must be a version number or 'current'.") from exc
     result = await get_diff(session, store, settings, doc_id, from_v=from_, to=target)
-    code = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE if result.too_large else status.HTTP_200_OK
+    code = status.HTTP_413_CONTENT_TOO_LARGE if result.too_large else status.HTTP_200_OK
     return JSONResponse(result.model_dump(by_alias=True), status_code=code)
 
 

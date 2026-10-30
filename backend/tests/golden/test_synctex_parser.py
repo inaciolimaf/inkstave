@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from inkstave.synctex.parser import SyncTexIndex, SyncTexParseError, normalise_path
-from tests.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
+from tests.golden.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
 
 TOL = 1.0  # ±1 pt tolerance (spec criterion 1)
 

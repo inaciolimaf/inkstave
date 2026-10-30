@@ -23,7 +23,8 @@ from inkstave.compile.outputs import OutputStore
 from inkstave.compile.packages import load_package_config
 from inkstave.compile.result import CompileResult
 from inkstave.compile.retention import cleanup_compile_outputs
-from inkstave.compile.runner import LocalTectonicRunner, SandboxCaps, SandboxedTectonicRunner
+from inkstave.compile.runner import LocalTectonicRunner
+from inkstave.compile.sandbox import SandboxCaps, SandboxedTectonicRunner
 from inkstave.compile.service import CompileService
 from inkstave.compile.sources import DbDocumentSource, StorageFileSource
 from inkstave.config import get_settings

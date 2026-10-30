@@ -7,11 +7,8 @@ from inkstave.compile.result import (
     CompileStatus,
     RunOutcome,
 )
-from inkstave.compile.runner import (
-    LocalTectonicRunner,
-    SandboxedTectonicRunner,
-    TectonicRunner,
-)
+from inkstave.compile.runner import LocalTectonicRunner, TectonicRunner
+from inkstave.compile.sandbox import SandboxedTectonicRunner
 from inkstave.compile.service import CompileOptions, CompileService
 
 __all__ = [

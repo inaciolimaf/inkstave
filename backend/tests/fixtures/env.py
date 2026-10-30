@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
+from pydantic import AliasChoices
 from sqlalchemy.engine import make_url
 
 from inkstave.config import Settings, get_settings
@@ -18,12 +19,32 @@ from inkstave.db.engine import normalize_async_dsn
 from inkstave.logging import set_request_id
 from tests.fixtures.paths import DEFAULT_TEST_DB
 
-# --------------------------------------------------------------------------- #
-# Environment / settings
-# --------------------------------------------------------------------------- #
+# A test that did not ask for the database must not find one by accident: port 1 refuses.
+UNREACHABLE_DATABASE_URL = "postgresql+asyncpg://nobody:nobody@127.0.0.1:1/unreachable"
 
 
-def _test_database_url() -> str:
+def _env_names(name: str, alias: Any) -> set[str]:
+    """Every environment variable one ``Settings`` field can be read from."""
+    aliases = alias.choices if isinstance(alias, AliasChoices) else [alias]
+    return {name.upper(), *(a.upper() for a in aliases if isinstance(a, str))}
+
+
+def _isolate_environment() -> None:
+    """Keep the machine's configuration out of the suite.
+
+    Runs when this plugin is imported, before collection: ``inkstave.compile.worker``
+    reads the settings at import time, so a session fixture would be too late.
+    """
+    Settings.model_config["env_file"] = None
+    for name, field in Settings.model_fields.items():
+        for variable in _env_names(name, field.validation_alias):
+            os.environ.pop(variable, None)
+
+
+_isolate_environment()
+
+
+def test_database_url() -> str:
     """The DSN for this worker's database.
 
     Under pytest-xdist (spec 53), each worker uses its own database (suffixed by the
@@ -40,7 +61,7 @@ def _test_database_url() -> str:
 def _test_overrides() -> dict[str, str]:
     """The environment every test runs under."""
     return {
-        "DATABASE_URL": _test_database_url(),
+        "DATABASE_URL": UNREACHABLE_DATABASE_URL,
         "ENVIRONMENT": "test",
         # Spec 51 §5.6 mandates the test profile force LOG_LEVEL=warning (LOG_FORMAT=json,
         # OTEL_ENABLED=false, METRICS_PUBLIC=true already come from config defaults).
@@ -62,9 +83,9 @@ def _test_overrides() -> dict[str, str]:
 def _configure_test_env() -> Iterator[None]:
     """Force test settings for the whole session.
 
-    Points the app and Alembic at ``TEST_DATABASE_URL`` and selects readable,
-    non-JSON logs. Individual unit tests may still construct ``Settings`` with
-    explicit overrides (``_env_file=None`` + monkeypatched env).
+    Selects readable, non-JSON logs and leaves ``DATABASE_URL`` unreachable; the fixtures
+    that need the test database point it there through ``test_database_env``. Individual
+    unit tests may still construct ``Settings`` with explicit overrides.
     """
     overrides = _test_overrides()
     previous = {key: os.environ.get(key) for key in overrides}
@@ -79,6 +100,15 @@ def _configure_test_env() -> Iterator[None]:
             else:
                 os.environ[key] = value
         get_settings.cache_clear()
+
+
+@pytest.fixture
+def test_database_env(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Point ``DATABASE_URL`` at this worker's test database for one test."""
+    url = test_database_url()
+    monkeypatch.setenv("DATABASE_URL", url)
+    get_settings.cache_clear()
+    return url
 
 
 @pytest.fixture(autouse=True)
@@ -134,7 +164,7 @@ def _no_real_network() -> Iterator[None]:
     import socket
 
     allowed = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
-    db_host = make_url(os.environ.get("DATABASE_URL", "")).host
+    db_host = make_url(test_database_url()).host
     if db_host:
         allowed.add(db_host)
     real_getaddrinfo = socket.getaddrinfo

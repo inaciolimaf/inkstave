@@ -14,7 +14,7 @@ import pytest
 
 from inkstave.compile.errors import CompileError
 from inkstave.compile.limits import CancelToken, ResourceLimits
-from inkstave.compile.runner import SandboxCaps, SandboxedTectonicRunner, validate_main_file
+from inkstave.compile.sandbox import SandboxCaps, SandboxedTectonicRunner, validate_main_file
 
 
 def _limits(*, address_space_bytes: int | None = 2_147_483_648) -> ResourceLimits:

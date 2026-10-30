@@ -20,7 +20,7 @@ from inkstave.dependencies import get_object_store
 from inkstave.services.project import create_project
 from inkstave.storage.local import LocalObjectStore
 from tests.factories import UserFactory
-from tests.logparse_fixtures import SAMPLE_LOG
+from tests.golden.logparse_fixtures import SAMPLE_LOG
 
 pytestmark = pytest.mark.integration
 

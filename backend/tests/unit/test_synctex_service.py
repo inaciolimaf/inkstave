@@ -9,7 +9,7 @@ import pytest
 
 from inkstave.config import Settings
 from inkstave.synctex.service import SyncTexNotAvailableError, SyncTexService
-from tests.synctex_fixtures import SINGLE_FILE, gz
+from tests.golden.synctex_fixtures import SINGLE_FILE, gz
 
 
 class _Row:
