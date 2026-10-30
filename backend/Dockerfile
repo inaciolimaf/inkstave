@@ -7,9 +7,9 @@
 #
 #   docker build --network=host -f backend/Dockerfile -t inkstave-backend .
 #
-# The `--network=host` is required: the Tectonic cache-warmup step (below) must reach
-# an IPv6-advertising CDN that the default build bridge can't route. Compose builds set
-# this via `build.network: host`.
+# `--network=host` lets the Tectonic cache-warmup step (below) reach an IPv6-advertising
+# CDN that the default build bridge can't route. The dev compose sets it through
+# `build.network: host`; the production compose does not, and the warmup tolerates a miss.
 
 # --- Stage 1: builder — resolve the locked runtime deps into a venv ----------- #
 FROM python:3.12-alpine AS builder
@@ -73,10 +73,12 @@ ENV PATH=/opt/venv/bin:$PATH \
 # IMPORTANT: this step needs network egress that can actually reach the bundle CDN.
 # Tectonic's CDN (relay/data1.fullyjustified.net, an Azure Front Door) advertises an
 # IPv6 address; the default Docker build bridge has no IPv6 route, so Tectonic picks
-# IPv6 first and aborts with "couldn't get it from the internet". The build is run on
-# the host network instead (compose `build.network: host`; for a bare build pass
-# `--network=host`) so it inherits the host's working connectivity. Runs as root
-# (still pre-USER); the cache dir is then handed to the non-root runtime user.
+# IPv6 first and aborts with "couldn't get it from the internet". The dev compose and
+# a bare `--network=host` build use the host network to avoid that; the production
+# compose cannot, so a failed warmup warns instead of failing the build. The image then
+# has no baked cache, this layer stays cached without one, and the first runtime
+# compiles download the bundle and may time out; `--no-cache` retries the warmup.
+# Runs as root (still pre-USER); the cache dir is then handed to the non-root user.
 RUN <<'WARM'
 set -eu
 mkdir -p /var/cache/tectonic
@@ -86,7 +88,9 @@ cat > /tmp/warmup.tex <<'TEX'
 cache warmup
 \end{document}
 TEX
-tectonic -X compile /tmp/warmup.tex --outdir /tmp
+if ! tectonic -X compile /tmp/warmup.tex --outdir /tmp; then
+  echo "WARNING: Tectonic cache warmup failed; the first compiles will download the bundle at runtime." >&2
+fi
 rm -rf /tmp/warmup.tex /tmp/warmup.pdf /tmp/warmup.log /tmp/warmup.synctex.gz
 chown -R inkstave:inkstave /var/cache/tectonic
 WARM

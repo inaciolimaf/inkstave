@@ -51,6 +51,11 @@ are outside this pass.
 
 ### Deployment
 
+**The production image may ship without a Tectonic cache.** `docker-compose.prod.yml` builds without the host
+network, so where the build bridge has no IPv6 route the warmup in `backend/Dockerfile` warns and continues, and
+the first compiles download the bundle at runtime and may time out. *Why:* Compose refuses `build.network: host`
+without the `network.host` entitlement, which Coolify does not pass. Look for the warning in the build log.
+
 **No `docker-compose-coolify.yml` or `docs/deploy-coolify.md`.** *Why:* user decision, not yet.
 `docker-compose.prod.yml` is the only production file, publishes no host port and has no migrate step.
 
