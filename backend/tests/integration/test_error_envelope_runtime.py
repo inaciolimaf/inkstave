@@ -16,9 +16,9 @@ from fastapi import APIRouter
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.services.document_service import ContentTooLargeError
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.projects.content.documents import ContentTooLargeError
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

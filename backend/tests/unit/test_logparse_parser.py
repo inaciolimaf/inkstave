@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.logparse.latex_log_parser import parse_latex_log
-from inkstave.logparse.models import ProblemSeverity
+from inkstave.modules.compile.logparse.latex_log_parser import parse_latex_log
+from inkstave.modules.compile.logparse.models import ProblemSeverity
 from tests.golden.logparse_fixtures import wrap79
 
 

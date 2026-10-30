@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from inkstave.compile.packages import (
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.compile.running.packages import (
     PackageConfigError,
     build_prewarm_document,
     load_package_config,
 )
-from inkstave.config import get_settings
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PACKAGES_TOML = REPO_ROOT / "infra" / "tectonic" / "packages.toml"

@@ -15,9 +15,9 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.auth.dependencies import NotAuthenticatedError
-from inkstave.collab.ws import router as ws_router
-from inkstave.collab.ws.rooms import CLOSE_UNAUTHORIZED
+from inkstave.modules.auth.deps import NotAuthenticatedError
+from inkstave.modules.collab.ws import router as ws_router
+from inkstave.modules.collab.ws.rooms import CLOSE_UNAUTHORIZED
 
 
 class FakeWS:
@@ -67,7 +67,9 @@ async def test_ws_auth_failure_logs_warning_and_closes(
 
     assert ws.closed_code == CLOSE_UNAUTHORIZED  # close behaviour unchanged
     warnings = [
-        r for r in caplog.records if r.name == "inkstave.collab.ws.router" and r.levelno == logging.WARNING
+        r
+        for r in caplog.records
+        if r.name == "inkstave.modules.collab.ws.router" and r.levelno == logging.WARNING
     ]
     assert warnings, "an auth-failure WARNING should be logged"
     rec = warnings[0]

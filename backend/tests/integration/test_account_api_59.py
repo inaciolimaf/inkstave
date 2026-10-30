@@ -13,12 +13,12 @@ from httpx import AsyncClient
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.user import User
-from inkstave.dependencies import get_email_enqueuer
-from inkstave.services.user import normalise_email
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.models.user import User
 
 pytestmark = pytest.mark.integration
 

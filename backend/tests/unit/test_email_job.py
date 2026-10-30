@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from inkstave.config import get_settings
-from inkstave.mailer.jobs import send_email_job
-from inkstave.mailer.sender import OutgoingEmail
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.mailer.jobs import send_email_job
+from inkstave.infra.mailer.sender import OutgoingEmail
 
 
 class _CapturingSender:

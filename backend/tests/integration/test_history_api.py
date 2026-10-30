@@ -13,7 +13,7 @@ from httpx import AsyncClient
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.history import HistoryUpdate
+from inkstave.modules.history.models import HistoryUpdate
 
 from ._history_api_support import _hist_url, hist
 

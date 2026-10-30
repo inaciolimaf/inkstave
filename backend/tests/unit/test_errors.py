@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from inkstave.errors import (
+from inkstave.core.errors import (
     AppError,
     BadRequestError,
     ConflictError,

@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from inkstave.auth.rate_limit import client_ip, parse_rate_limit, rate_limit
-from inkstave.config import Settings
-from inkstave.errors import RateLimitError
+from inkstave.core.config.settings import Settings
+from inkstave.core.errors import RateLimitError
+from inkstave.modules.auth.throttling.limiter import client_ip, parse_rate_limit, rate_limit
 
 
 def _settings(**overrides: Any) -> Settings:

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from inkstave.agent.context import (
+from inkstave.modules.agent.context import (
     build_project_map,
     estimate_tokens,
     locate_section,
     parse_latex_structure,
     select_context,
 )
-from inkstave.agent.context.models import StructureKind
+from inkstave.modules.agent.context.models import StructureKind
 
 _DOC = "\n".join(
     [

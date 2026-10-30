@@ -17,11 +17,11 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.compile.packages import load_package_config
-from inkstave.compile.result import CompileStatus
-from inkstave.compile.runner import LocalTectonicRunner
-from inkstave.compile.service import CompileOptions, CompileService
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.running.packages import load_package_config
+from inkstave.modules.compile.running.result import CompileStatus
+from inkstave.modules.compile.running.runner import LocalTectonicRunner
+from inkstave.modules.compile.running.service import CompileOptions, CompileService
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_REAL_COMPILE") != "1" or shutil.which("tectonic") is None,

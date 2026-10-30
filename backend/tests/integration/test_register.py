@@ -9,9 +9,9 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.config import get_settings
-from inkstave.db.models.user import User
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.models.user import User
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -93,7 +93,7 @@ async def test_register_integrity_race_yields_conflict(
     await db_session.commit()
 
     # Force the pre-check to miss so the INSERT races into the unique constraint.
-    import inkstave.services.user as user_service
+    import inkstave.modules.auth.accounts.users as user_service
 
     async def _never_exists(*_a: Any, **_k: Any) -> bool:
         return False

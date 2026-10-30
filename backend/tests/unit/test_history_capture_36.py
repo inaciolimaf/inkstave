@@ -18,8 +18,8 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.config import Settings
-from inkstave.history.capture import HistoryCaptureService
+from inkstave.core.config.settings import Settings
+from inkstave.modules.history.versions.capture import HistoryCaptureService
 
 
 def _settings(**over: object) -> Settings:
@@ -53,7 +53,7 @@ async def test_timer_rearms_on_each_update(monkeypatch: pytest.MonkeyPatch) -> N
     clock = _FakeClock()
     svc = _make_service(history_flush_max_buffer=1000)  # high so threshold never trips
     # Replace the real loop timer with the fake clock's call_later.
-    monkeypatch.setattr("inkstave.history.capture.asyncio.get_running_loop", lambda: clock)
+    monkeypatch.setattr("inkstave.modules.history.versions.capture.asyncio.get_running_loop", lambda: clock)
 
     pid, did = uuid4(), uuid4()
     at = datetime.now(UTC)
@@ -67,7 +67,7 @@ async def test_timer_rearms_on_each_update(monkeypatch: pytest.MonkeyPatch) -> N
 async def test_threshold_forces_flush(monkeypatch: pytest.MonkeyPatch) -> None:
     clock = _FakeClock()
     svc = _make_service(history_flush_max_buffer=3)
-    monkeypatch.setattr("inkstave.history.capture.asyncio.get_running_loop", lambda: clock)
+    monkeypatch.setattr("inkstave.modules.history.versions.capture.asyncio.get_running_loop", lambda: clock)
 
     flushes: list[str] = []
 

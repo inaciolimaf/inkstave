@@ -7,18 +7,14 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from inkstave.agent.tools import default_registry
-from inkstave.agent.tools._latex import match_score, scan_headings, section_range
-from inkstave.agent.tools.base import ToolContext
-from inkstave.agent.tools.list_tree import ListTreeArgs
-from inkstave.agent.tools.locate_section import LocateSectionArgs
-from inkstave.agent.tools.propose_edit import ProposeEditArgs
-from inkstave.agent.tools.read_file import ReadFileArgs
-from inkstave.agent.tools.search_project import (
-    _PAYLOAD_SOFT_CAP,
-    _SNIPPET_MAX,
-    SearchProjectArgs,
-)
+from inkstave.modules.agent.tools import default_registry
+from inkstave.modules.agent.tools._latex import match_score, scan_headings, section_range
+from inkstave.modules.agent.tools.base import ToolContext
+from inkstave.modules.agent.tools.list_tree import ListTreeArgs
+from inkstave.modules.agent.tools.locate_section import LocateSectionArgs
+from inkstave.modules.agent.tools.propose_edit import ProposeEditArgs
+from inkstave.modules.agent.tools.read_file import ReadFileArgs
+from inkstave.modules.agent.tools.search_project import _PAYLOAD_SOFT_CAP, _SNIPPET_MAX, SearchProjectArgs
 
 _DOC = "\n".join(
     [
@@ -103,8 +99,8 @@ def _patch_search_corpus(monkeypatch: pytest.MonkeyPatch, content: str) -> UUID:
     """Point search_project at a synthetic single-document corpus."""
     from dataclasses import dataclass
 
-    from inkstave.agent.tools import search_project as sp
-    from inkstave.db.models.tree_entity import TreeEntityType
+    from inkstave.modules.agent.tools import search_project as sp
+    from inkstave.modules.projects.models.tree_entity import TreeEntityType
 
     @dataclass
     class _Entity:
@@ -134,7 +130,7 @@ async def test_search_project_caps_snippet_and_truncates_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """search_project caps snippets at 240 chars and soft-caps the payload (AC 2)."""
-    from inkstave.agent.tools import search_project as sp
+    from inkstave.modules.agent.tools import search_project as sp
 
     # Synthetic in-memory corpus: many long lines all containing the needle, so the
     # bounded-payload loop must trip the 8 KB soft cap (each match ~ snippet + 64

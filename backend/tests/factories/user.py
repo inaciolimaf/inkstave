@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.user import User
+from inkstave.modules.auth.models.user import User
 
 
 class UserFactory:

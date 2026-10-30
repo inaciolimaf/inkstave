@@ -9,15 +9,11 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.invite import InviteStatus, ProjectInvite
-from inkstave.db.models.membership import (
-    MembershipRole,
-    MembershipStatus,
-    ProjectMembership,
-)
-from inkstave.schemas.sharing import InviteCreate
-from inkstave.services import sharing
-from inkstave.services.project import create_project
+from inkstave.modules.projects import sharing
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.invite import InviteStatus, ProjectInvite
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.schemas.sharing import InviteCreate
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration  # touches the DB

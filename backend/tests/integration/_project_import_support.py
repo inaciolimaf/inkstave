@@ -10,11 +10,12 @@ from uuid import UUID
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.dependencies import get_import_enqueuer, get_object_store
-from inkstave.services.import_jobs import import_project_zip
-from inkstave.storage.base import ObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.base import ObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.projects.deps import get_import_enqueuer
+from inkstave.modules.projects.transfer.jobs import import_project_zip
 from tests.factories import UserFactory
 from tests.integration._files_api_support import InMemoryObjectStore
 

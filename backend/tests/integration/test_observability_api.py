@@ -11,10 +11,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.observability.log import JsonLogFormatter
-from inkstave.observability.tracing import current_trace_id
+from inkstave.core.config.settings import get_settings
+from inkstave.core.observability.log import JsonLogFormatter
+from inkstave.core.observability.tracing import current_trace_id
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.conftest import FakeRedisRaising
 from tests.factories import UserFactory
 

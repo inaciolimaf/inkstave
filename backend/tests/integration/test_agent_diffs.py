@@ -7,16 +7,16 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.diffs import materialize_diffs
-from inkstave.agent.diffs import repository as diff_repo
-from inkstave.agent.diffs.models import ProposedDiffStatus
-from inkstave.agent.edits import EditMode, StagedEdit
-from inkstave.agent.settings import AgentSettings
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import get_document, set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.diffs import materialize_diffs
+from inkstave.modules.agent.diffs import repository as diff_repo
+from inkstave.modules.agent.diffs.models import ProposedDiffStatus
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.graph.edits import EditMode, StagedEdit
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

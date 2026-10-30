@@ -10,10 +10,11 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.dependencies import get_compile_enqueuer, get_email_enqueuer
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.deps import get_compile_enqueuer
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

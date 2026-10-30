@@ -12,11 +12,11 @@ from uuid import UUID
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.coordinator import CompileConcurrencyError, CompileCoordinator
-from inkstave.compile.repository import CompileRepository
-from inkstave.config import Settings
-from inkstave.db.models.compile import CompileJobStatus
-from inkstave.services.project import create_project
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.models.compile import CompileJobStatus
+from inkstave.modules.compile.queue.coordinator import CompileConcurrencyError, CompileCoordinator
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

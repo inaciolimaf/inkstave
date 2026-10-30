@@ -11,7 +11,7 @@ from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.config import get_settings
+from inkstave.core.config.settings import get_settings
 
 pytestmark = pytest.mark.integration
 

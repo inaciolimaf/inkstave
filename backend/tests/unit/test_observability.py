@@ -10,11 +10,11 @@ import pytest
 from fastapi import FastAPI
 from prometheus_client import REGISTRY
 
-from inkstave.observability import metrics
-from inkstave.observability.context import bind_context, clear_context, current_context
-from inkstave.observability.log import JsonLogFormatter, redact
-from inkstave.observability.metrics import track_job, track_ws
-from inkstave.observability.middleware import _UNMATCHED, _route_template
+from inkstave.core.observability import metrics
+from inkstave.core.observability.context import bind_context, clear_context, current_context
+from inkstave.core.observability.log import JsonLogFormatter, redact
+from inkstave.core.observability.metrics import track_job, track_ws
+from inkstave.core.observability.middleware import _UNMATCHED, _route_template
 
 
 def _record(name: str = "test.logger", msg: str = "hi", **extra: object) -> logging.LogRecord:

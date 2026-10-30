@@ -11,7 +11,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from inkstave.agent.api.jobs import agent_audit_cleanup
+from inkstave.modules.agent.runs.jobs import agent_audit_cleanup
 
 
 async def test_cleanup_is_noop_when_retention_unset() -> None:
@@ -36,7 +36,7 @@ async def test_cleanup_is_noop_when_retention_negative() -> None:
 
 
 def test_cleanup_is_registered_on_the_worker() -> None:
-    from inkstave.compile.worker import WorkerSettings
+    from inkstave.worker import WorkerSettings
 
     names = {getattr(f, "name", None) for f in WorkerSettings.functions}
     assert "agent_audit_cleanup" in names

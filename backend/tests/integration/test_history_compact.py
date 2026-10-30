@@ -11,16 +11,16 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import get_settings
-from inkstave.db.models.history import HistoryUpdate
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.history.capture import HistoryCaptureService
-from inkstave.history.jobs import compact_history
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.history.models import HistoryUpdate
+from inkstave.modules.history.versions.capture import HistoryCaptureService
+from inkstave.modules.history.versions.jobs import compact_history
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

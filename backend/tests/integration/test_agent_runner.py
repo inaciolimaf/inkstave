@@ -6,12 +6,12 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as repo
-from inkstave.agent.deps import AgentDeps
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.runner import run_turn
-from inkstave.agent.settings import AgentSettings
-from inkstave.services.project import create_project
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import repository as repo
+from inkstave.modules.agent.graph.agent_deps import AgentDeps
+from inkstave.modules.agent.graph.runner import run_turn
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

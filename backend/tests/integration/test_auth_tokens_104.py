@@ -14,12 +14,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.auth_token import AuthToken
-from inkstave.db.models.user import User
-from inkstave.errors import BadRequestError, GoneError
-from inkstave.mailer.templates import render_email
-from inkstave.services.auth_tokens import consume_token, issue_token
-from inkstave.services.sharing_common import hash_token
+from inkstave.core.errors import BadRequestError, GoneError
+from inkstave.infra.mailer.templates import render_email
+from inkstave.modules.auth.credentials.auth_tokens import consume_token, issue_token
+from inkstave.modules.auth.models.auth_token import AuthToken
+from inkstave.modules.auth.models.user import User
+from inkstave.modules.projects.sharing.common import hash_token
 from tests.factories.user import UserFactory
 from tests.unit._clock import FrozenClock
 

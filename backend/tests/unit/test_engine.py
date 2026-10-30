@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.config import Settings
-from inkstave.db.engine import create_engine_and_sessionmaker
+from inkstave.core.config.settings import Settings
+from inkstave.core.db.engine import create_engine_and_sessionmaker
 
 
 async def test_create_engine_and_sessionmaker_uses_async_driver(

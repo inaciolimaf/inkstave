@@ -5,12 +5,8 @@ from __future__ import annotations
 import asyncio
 from uuid import UUID, uuid4
 
-from inkstave.collab.ws.rooms import (
-    CLOSE_SLOW_CONSUMER,
-    Connection,
-    RoomManager,
-)
-from inkstave.collab.ws.router import _force_close, _make_forwarder
+from inkstave.modules.collab.ws.rooms import CLOSE_SLOW_CONSUMER, Connection, RoomManager
+from inkstave.modules.collab.ws.router import _force_close, _make_forwarder
 
 
 class _FakeWS:

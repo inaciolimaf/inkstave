@@ -10,15 +10,15 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import OutputStore
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileArtifact, CompileResult, CompileStatus
-from inkstave.config import Settings, get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.services.project import create_project
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 from tests.golden.logparse_fixtures import SAMPLE_LOG
 

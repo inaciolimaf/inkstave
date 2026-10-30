@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pycrdt import Awareness, Doc
 
-from inkstave.collab.awareness import AwarenessRegistry
+from inkstave.modules.collab.crdt.awareness import AwarenessRegistry
 
 
 def _client_update(state: dict[str, object]) -> tuple[int, bytes]:

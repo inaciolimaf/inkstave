@@ -16,8 +16,8 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.ping import Ping
-from inkstave.db.session import get_db_session
+from inkstave.core.db.session import get_db_session
+from inkstave.modules.admin.models import Ping
 from tests.factories import PingFactory
 
 pytestmark = pytest.mark.integration

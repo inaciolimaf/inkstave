@@ -10,12 +10,12 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.notification import Notification
-from inkstave.dependencies import get_email_enqueuer
-from inkstave.notifications.service import NotificationService
-from inkstave.services.project import create_project
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.notifications.inbox.service import NotificationService
+from inkstave.modules.notifications.models import Notification
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

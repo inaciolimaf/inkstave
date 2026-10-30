@@ -10,15 +10,15 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.tools.list_tree import ListTreeArgs, ListTreeTool
-from inkstave.agent.tools.locate_section import LocateSectionArgs, LocateSectionTool
-from inkstave.agent.tools.propose_edit import ProposeEditArgs, ProposeEditTool
-from inkstave.agent.tools.read_file import ReadFileArgs, ReadFileTool
-from inkstave.agent.tools.search_project import SearchProjectArgs, SearchProjectTool
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import get_document, set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.agent.tools.list_tree import ListTreeArgs, ListTreeTool
+from inkstave.modules.agent.tools.locate_section import LocateSectionArgs, LocateSectionTool
+from inkstave.modules.agent.tools.propose_edit import ProposeEditArgs, ProposeEditTool
+from inkstave.modules.agent.tools.read_file import ReadFileArgs, ReadFileTool
+from inkstave.modules.agent.tools.search_project import SearchProjectArgs, SearchProjectTool
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 from ._agent_tools_support import _ctx, seed

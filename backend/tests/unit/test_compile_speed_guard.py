@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from inkstave.compile.limits import CancelToken, ResourceLimits
-from inkstave.compile.runner import LocalTectonicRunner
+from inkstave.modules.compile.running.limits import CancelToken, ResourceLimits
+from inkstave.modules.compile.running.runner import LocalTectonicRunner
 
 
 def _limits() -> ResourceLimits:

@@ -9,15 +9,15 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.llm.base import LLMResponse, ToolCall
-from inkstave.agent.settings import AgentSettings
-from inkstave.agent.tools.base import ToolContext
-from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.llm.base import LLMResponse, ToolCall
+from inkstave.modules.agent.tools.base import ToolContext
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 _MAIN = "\n".join(

@@ -14,9 +14,9 @@ import pytest
 from pydantic import AliasChoices
 from sqlalchemy.engine import make_url
 
-from inkstave.config import Settings, get_settings
-from inkstave.db.engine import normalize_async_dsn
-from inkstave.logging import set_request_id
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.core.db.engine import normalize_async_dsn
+from inkstave.core.logging import set_request_id
 from tests.fixtures.paths import DEFAULT_TEST_DB
 
 # A test that did not ask for the database must not find one by accident: port 1 refuses.
@@ -32,7 +32,7 @@ def _env_names(name: str, alias: Any) -> set[str]:
 def _isolate_environment() -> None:
     """Keep the machine's configuration out of the suite.
 
-    Runs when this plugin is imported, before collection: ``inkstave.compile.worker``
+    Runs when this plugin is imported, before collection: ``inkstave.worker``
     reads the settings at import time, so a session fixture would be too late.
     """
     Settings.model_config["env_file"] = None
@@ -135,7 +135,7 @@ def _no_real_compile() -> Iterator[None]:
         yield
         return
 
-    from inkstave.compile.runner import LocalTectonicRunner
+    from inkstave.modules.compile.running.runner import LocalTectonicRunner
 
     async def _blocked(_self: object, **_kw: object) -> None:
         raise RuntimeError(

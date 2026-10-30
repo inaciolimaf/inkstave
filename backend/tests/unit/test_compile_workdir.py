@@ -8,15 +8,15 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.compile.errors import InputLimitError, UnsafePathError
-from inkstave.compile.limits import ResourceLimits
-from inkstave.compile.workdir import (
+from inkstave.modules.compile.assembly.workdir import (
     assemble_inputs,
     cleanup_workdir,
     collect_outputs,
     create_workdir,
     safe_join,
 )
+from inkstave.modules.compile.running.errors import InputLimitError, UnsafePathError
+from inkstave.modules.compile.running.limits import ResourceLimits
 
 
 def _limits(**over: int | None) -> ResourceLimits:

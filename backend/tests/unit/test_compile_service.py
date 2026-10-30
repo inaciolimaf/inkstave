@@ -8,11 +8,11 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.compile.limits import CancelToken
-from inkstave.compile.packages import load_package_config
-from inkstave.compile.result import CompileStatus, RunOutcome
-from inkstave.compile.service import CompileOptions, CompileService
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.running.limits import CancelToken
+from inkstave.modules.compile.running.packages import load_package_config
+from inkstave.modules.compile.running.result import CompileStatus, RunOutcome
+from inkstave.modules.compile.running.service import CompileOptions, CompileService
 
 
 def make_settings(tmp_path: Path, **over: object) -> Settings:

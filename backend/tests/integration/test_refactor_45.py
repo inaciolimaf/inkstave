@@ -9,19 +9,19 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.deps import AgentDeps
-from inkstave.agent.llm.base import LLMResponse, LLMUsage, ToolCall
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.runner import run_turn
-from inkstave.agent.settings import AgentSettings
-from inkstave.agent.tools import default_registry
-from inkstave.agent.tools.base import ToolContext
-from inkstave.agent.tools.read_file import ReadFileArgs, ReadFileTool
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import get_document, set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.graph.agent_deps import AgentDeps
+from inkstave.modules.agent.graph.runner import run_turn
+from inkstave.modules.agent.llm.base import LLMResponse, LLMUsage, ToolCall
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.tools import default_registry
+from inkstave.modules.agent.tools.base import ToolContext
+from inkstave.modules.agent.tools.read_file import ReadFileArgs, ReadFileTool
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

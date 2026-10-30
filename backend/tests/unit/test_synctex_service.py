@@ -7,8 +7,8 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.config import Settings
-from inkstave.synctex.service import SyncTexNotAvailableError, SyncTexService
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.synctex.service import SyncTexNotAvailableError, SyncTexService
 from tests.golden.synctex_fixtures import SINGLE_FILE, gz
 
 

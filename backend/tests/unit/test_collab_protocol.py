@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from inkstave.collab.protocol import (
+from inkstave.modules.collab.crdt.protocol import (
     AwarenessMessage,
     SyncStep1,
     SyncStep2,

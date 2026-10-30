@@ -8,8 +8,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from inkstave.app import create_app
-from inkstave.config import get_settings
-from inkstave.errors import NotFoundError
+from inkstave.core.config.settings import get_settings
+from inkstave.core.errors import NotFoundError
 
 pytestmark = pytest.mark.integration
 

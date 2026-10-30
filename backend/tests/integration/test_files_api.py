@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.storage.base import ObjectStore
+from inkstave.infra.storage.base import ObjectStore
 
 from ._files_api_support import (
     PNG,

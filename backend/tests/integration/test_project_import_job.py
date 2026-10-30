@@ -14,7 +14,7 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.storage.base import ObjectStore
+from inkstave.infra.storage.base import ObjectStore
 from tests.integration._project_import_support import (
     PNG,
     FakeImportEnqueuer,
@@ -193,14 +193,14 @@ async def test_ownership_defence_marks_error(
     # Soft-delete the project out from under the requester before the job runs.
     from sqlalchemy import func, update
 
-    from inkstave.db.models.project import Project
+    from inkstave.modules.projects.models.project import Project
 
     await db_session.execute(update(Project).where(Project.id == UUID(pid)).values(deleted_at=func.now()))
     await db_session.commit()
 
     await run_job(db_session, store, redis, iid)
     # Status read directly (the project is soft-deleted, so the API 404s).
-    from inkstave.services.import_repository import ProjectImportRepository
+    from inkstave.modules.projects.transfer.repository import ProjectImportRepository
 
     row = await ProjectImportRepository(db_session).get_by_id(UUID(iid))
     assert row is not None
@@ -211,7 +211,7 @@ async def test_sse_stream_emits_snapshot_then_terminal(redis: Any) -> None:
     """AC11 — the SSE stream yields a snapshot, then transitions, then closes (no hang)."""
     from uuid import uuid4
 
-    from inkstave.services.import_stream import publish_status, sse_stream
+    from inkstave.modules.projects.transfer.stream import publish_status, sse_stream
 
     iid = uuid4()
 

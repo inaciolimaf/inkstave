@@ -7,9 +7,9 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.config import Settings
-from inkstave.logparse.models import ProblemSeverity
-from inkstave.logparse.service import LogNotAvailableError, LogProblemsService
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.logparse.models import ProblemSeverity
+from inkstave.modules.compile.logparse.service import LogNotAvailableError, LogProblemsService
 from tests.golden.logparse_fixtures import SAMPLE_LOG
 
 

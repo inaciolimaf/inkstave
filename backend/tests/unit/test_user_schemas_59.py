@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from inkstave.schemas.user import (
+from inkstave.modules.auth.schemas.user import (
     FONT_SIZE_MAX,
     FONT_SIZE_MIN,
     ChangePasswordRequest,

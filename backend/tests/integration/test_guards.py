@@ -12,14 +12,10 @@ from fastapi import Depends
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.dependencies import (
-    NotAuthenticatedError,
-    authenticate_ws_token,
-    get_optional_user,
-)
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.user import User
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.deps import NotAuthenticatedError, authenticate_ws_token, get_optional_user
+from inkstave.modules.auth.models.user import User
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -197,7 +193,7 @@ async def test_login_rate_limit_fails_open_when_redis_errors(
     fails open over HTTP, so login proceeds to normal auth handling (not 429)."""
     import logging
 
-    from inkstave.auth import rate_limit as auth_rate_limit
+    from inkstave.modules.auth.throttling import limiter as auth_rate_limit
 
     get_settings.cache_clear()
     # A limit so low that a *working* limiter would 429 on the second request.

@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.protocol import SyncStep2, SyncUpdate, read_message
-from inkstave.collab.ydocument import YDocument
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import read_content_for_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.collab.crdt.protocol import SyncStep2, SyncUpdate, read_message
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import read_content_for_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import (
     ASGIWebSocketClient,
     apply_update_message,
@@ -150,8 +150,8 @@ async def test_converged_text_visible_to_bridge(app: Any, db_session: AsyncSessi
 async def test_relay_excludes_origin(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     owner, project, entity = await _empty_doc(db_session)
-    from inkstave.auth.tokens import build_token_service
-    from inkstave.config import get_settings
+    from inkstave.core.config.settings import get_settings
+    from inkstave.modules.auth.credentials.tokens import build_token_service
 
     token, _ = build_token_service(get_settings()).create_access_token(owner)
     path = f"/ws/collab/projects/{project.id}/documents/{entity.id}"

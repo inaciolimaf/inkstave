@@ -15,10 +15,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-import inkstave.db.models  # noqa: F401  (populate Base.metadata with all models)
-from inkstave.config import get_settings
-from inkstave.db.base import Base
-from inkstave.db.engine import normalize_async_dsn
+import inkstave.models  # noqa: F401  (populate Base.metadata with all models)
+from inkstave.core.config.settings import get_settings
+from inkstave.core.db.base import Base
+from inkstave.core.db.engine import normalize_async_dsn
 
 config = context.config
 

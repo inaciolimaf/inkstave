@@ -12,12 +12,12 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.bootstrap.admin import admin_exists, ensure_initial_admin
-from inkstave.bootstrap.migrate import is_database_at_head, run_upgrade
-from inkstave.bootstrap.seed import DEMO_EMAIL, seed_demo
-from inkstave.config import Settings, get_settings
-from inkstave.db.models.user import User
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.modules.admin.provisioning.admin import admin_exists, ensure_initial_admin
+from inkstave.modules.admin.provisioning.migrate import is_database_at_head, run_upgrade
+from inkstave.modules.admin.provisioning.seed import DEMO_EMAIL, seed_demo
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.models.user import User
 
 pytestmark = pytest.mark.integration
 

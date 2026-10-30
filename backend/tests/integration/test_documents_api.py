@@ -9,9 +9,9 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.document import Document
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.projects.models.document import Document
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -144,8 +144,8 @@ async def test_file_entity_is_conflict(async_client: AsyncClient, db_session: As
     """
     from uuid import UUID as _UUID
 
-    from inkstave.db.models.tree_entity import TreeEntityType
-    from inkstave.services.tree_service import create_entity, ensure_root
+    from inkstave.modules.projects.models.tree_entity import TreeEntityType
+    from inkstave.modules.projects.tree.service import create_entity, ensure_root
 
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)

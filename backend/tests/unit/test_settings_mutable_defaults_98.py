@@ -11,8 +11,8 @@ from typing import Any
 
 import pytest
 
-from inkstave.agent.settings import AgentSettings
-from inkstave.config import Settings
+from inkstave.core.config.agent import AgentSettings
+from inkstave.core.config.settings import Settings
 
 _EXTS = [
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".bib",

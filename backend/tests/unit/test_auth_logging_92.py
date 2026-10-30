@@ -15,16 +15,16 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from inkstave.services import auth as auth_svc
-from inkstave.services import user as user_svc
-from inkstave.services.auth import (
+from inkstave.modules.auth.accounts import login as auth_svc
+from inkstave.modules.auth.accounts import users as user_svc
+from inkstave.modules.auth.accounts.login import (
     InvalidCredentialsError,
     RefreshError,
     login,
     logout,
     refresh_tokens,
 )
-from inkstave.services.user import EmailAlreadyExistsError, register_user
+from inkstave.modules.auth.accounts.users import EmailAlreadyExistsError, register_user
 
 PASSWORD = "hunter2-super-secret-pw"
 ACCESS_RAW = "ACCESS-TOKEN-RAW-VALUE"
@@ -128,7 +128,9 @@ async def test_failed_login_logs_warning(caplog: pytest.LogCaptureFixture) -> No
     session = FakeAuthSession(user=None)
     with caplog.at_level(logging.DEBUG), pytest.raises(InvalidCredentialsError):
         await login(session, FakeHasher(ok=False), FakeTokenService(), FakeRefreshStore(), _login_data())
-    warnings = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.WARNING]
+    warnings = [
+        r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.WARNING
+    ]
     assert warnings, "a WARNING should be logged on failed login"
     assert PASSWORD not in caplog.text and "u@example.com" not in caplog.text
 
@@ -140,7 +142,7 @@ async def test_successful_login_logs_info_without_secrets(caplog: pytest.LogCapt
             session, FakeHasher(ok=True), FakeTokenService(), FakeRefreshStore(), _login_data()
         )
     assert pair.access_token == ACCESS_RAW
-    infos = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.INFO]
+    infos = [r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.INFO]
     assert any("login ok" in r.getMessage() for r in infos)
     assert PASSWORD not in caplog.text
     assert ACCESS_RAW not in caplog.text and REFRESH_RAW not in caplog.text
@@ -152,7 +154,9 @@ async def test_refresh_reuse_logs_warning(caplog: pytest.LogCaptureFixture) -> N
     with caplog.at_level(logging.WARNING), pytest.raises(RefreshError):
         await refresh_tokens(FakeAuthSession(), FakeTokenService(), store, REFRESH_RAW)
     assert store.revoked_family == str(_FAMILY)  # family was revoked (behaviour unchanged)
-    warnings = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.WARNING]
+    warnings = [
+        r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.WARNING
+    ]
     assert any("reuse detected" in r.getMessage() for r in warnings)
     assert REFRESH_RAW not in caplog.text
 
@@ -163,7 +167,7 @@ async def test_successful_refresh_logs_info(caplog: pytest.LogCaptureFixture) ->
     with caplog.at_level(logging.INFO):
         await refresh_tokens(FakeAuthSession(user=_user()), FakeTokenService(), store, REFRESH_RAW)
     assert store.rotated_jti == "jti-1"
-    infos = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.INFO]
+    infos = [r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.INFO]
     assert any("refresh rotated" in r.getMessage() for r in infos)
     assert REFRESH_RAW not in caplog.text and ACCESS_RAW not in caplog.text
 
@@ -173,7 +177,7 @@ async def test_logout_logs_info(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO):
         await logout(FakeTokenService(), store, REFRESH_RAW)
     assert store.revoked_family == str(_FAMILY)
-    infos = [r for r in _records(caplog, "inkstave.services.auth") if r.levelno == logging.INFO]
+    infos = [r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.INFO]
     assert any("logout" in r.getMessage() for r in infos)
     assert REFRESH_RAW not in caplog.text
 
@@ -216,7 +220,7 @@ def _reg_data() -> Any:
 async def test_register_success_logs_info(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.INFO):
         await register_user(FakeUserSession(), FakeHasher(), _reg_data())
-    infos = [r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.INFO]
+    infos = [r for r in _records(caplog, "inkstave.modules.auth.accounts.users") if r.levelno == logging.INFO]
     assert any("user registered" in r.getMessage() for r in infos)
     assert PASSWORD not in caplog.text and "new@example.com" not in caplog.text
 
@@ -224,14 +228,18 @@ async def test_register_success_logs_info(caplog: pytest.LogCaptureFixture) -> N
 async def test_register_duplicate_precheck_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING), pytest.raises(EmailAlreadyExistsError):
         await register_user(FakeUserSession(exists=True), FakeHasher(), _reg_data())
-    warnings = [r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.WARNING]
+    warnings = [
+        r for r in _records(caplog, "inkstave.modules.auth.accounts.users") if r.levelno == logging.WARNING
+    ]
     assert warnings and PASSWORD not in caplog.text
 
 
 async def test_register_integrity_race_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING), pytest.raises(EmailAlreadyExistsError):
         await register_user(FakeUserSession(flush_raises=True), FakeHasher(), _reg_data())
-    warnings = [r for r in _records(caplog, "inkstave.services.user") if r.levelno == logging.WARNING]
+    warnings = [
+        r for r in _records(caplog, "inkstave.modules.auth.accounts.users") if r.levelno == logging.WARNING
+    ]
     assert warnings and PASSWORD not in caplog.text
 
 
@@ -241,8 +249,8 @@ async def test_register_integrity_race_logs_warning(caplog: pytest.LogCaptureFix
 async def test_rate_limit_body_parse_fallback_logs_and_uses_ip(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    from inkstave.auth.rate_limit import _identity
-    from inkstave.config import get_settings
+    from inkstave.core.config.settings import get_settings
+    from inkstave.modules.auth.throttling.limiter import _identity
 
     class BadRequest:
         client = SimpleNamespace(host="203.0.113.7")
@@ -262,5 +270,5 @@ async def test_rate_limit_body_parse_fallback_logs_and_uses_ip(
 
 
 def test_modules_have_loggers() -> None:
-    assert auth_svc.logger.name == "inkstave.services.auth"
-    assert user_svc.logger.name == "inkstave.services.user"
+    assert auth_svc.logger.name == "inkstave.modules.auth.accounts.login"
+    assert user_svc.logger.name == "inkstave.modules.auth.accounts.users"

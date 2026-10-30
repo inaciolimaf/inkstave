@@ -13,8 +13,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import inkstave.agent.tools as tools_pkg
-from inkstave.agent.tools import default_registry
+import inkstave.modules.agent.tools as tools_pkg
+from inkstave.modules.agent.tools import default_registry
 
 # Outbound-network clients no agent tool may import.
 _FORBIDDEN_TOP_LEVEL = {

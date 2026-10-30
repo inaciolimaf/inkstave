@@ -1,0 +1,83 @@
+"""propose_edit tool (spec 42): stage an edit intent (never applies, never diffs)."""
+
+from __future__ import annotations
+
+import uuid
+
+from pydantic import BaseModel, Field, model_validator
+
+from inkstave.core.invariants import require
+from inkstave.modules.agent.graph.edits import EditMode, StagedEdit
+from inkstave.modules.agent.tools._common import resolve_document
+from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
+
+
+class ProposeEditArgs(BaseModel):
+    doc_id: str
+    mode: EditMode
+    new_text: str
+    start_line: int | None = Field(default=None, ge=0)
+    end_line: int | None = Field(default=None, ge=0)
+    rationale: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _range_fields(self) -> ProposeEditArgs:
+        if self.mode == EditMode.range and (self.start_line is None or self.end_line is None):
+            raise ValueError("range mode requires start_line and end_line")
+        return self
+
+
+class ProposeEditTool(Tool):
+    name = "propose_edit"
+    description = "Stage a proposed change to a document for the user to review. Does not apply it."
+    Args = ProposeEditArgs
+
+    async def run(self, args: ProposeEditArgs, ctx: ToolContext) -> ToolResult:  # type: ignore[override]
+        if (denied := await authorize(ctx, require_write=True)) is not None:
+            return ToolResult(ok=False, error=denied)
+
+        if len(args.new_text) > ctx.settings.agent_tool_edit_max_chars:
+            return ToolResult.failure("invalid_args", "new_text exceeds the maximum size.")
+
+        resolved = await resolve_document(ctx, args.doc_id)
+        if not isinstance(resolved, tuple):
+            return ToolResult(ok=False, error=resolved)
+        _entity, document, path = resolved
+
+        if not _range_within_bounds(args, document.content):
+            return ToolResult.failure("invalid_args", "range is outside the document's bounds.")
+
+        staged = _stage(args, path, str(document.version))
+        ctx.staged_edits.append(staged)  # consumed by spec 43; the document is NOT changed
+        return ToolResult.success(
+            edit_id=staged.edit_id,
+            doc_id=args.doc_id,
+            path=path,
+            mode=args.mode.value,
+            base_version=staged.base_version,
+            staged=True,
+        )
+
+
+def _range_within_bounds(args: ProposeEditArgs, content: str) -> bool:
+    """For `mode=range`, whether the requested lines exist in the document."""
+    if args.mode != EditMode.range:
+        return True
+    # Both bounds are guaranteed by the model validator for `mode=range`.
+    start = require(args.start_line, "range edit reached the tool without start_line")
+    end = require(args.end_line, "range edit reached the tool without end_line")
+    return start <= end and end <= len(content.splitlines())
+
+
+def _stage(args: ProposeEditArgs, path: str, base_version: str) -> StagedEdit:
+    return StagedEdit(
+        edit_id=uuid.uuid4().hex,
+        doc_id=args.doc_id,
+        path=path,
+        base_version=base_version,
+        mode=args.mode,
+        new_text=args.new_text,
+        start_line=args.start_line,
+        end_line=args.end_line,
+        rationale=args.rationale,
+    )

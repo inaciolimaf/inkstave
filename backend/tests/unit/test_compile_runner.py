@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from inkstave.compile.runner import LocalTectonicRunner
+from inkstave.modules.compile.running.runner import LocalTectonicRunner
 
 
 def _runner(*, offline: bool = False, bundle_url: str | None = None) -> LocalTectonicRunner:

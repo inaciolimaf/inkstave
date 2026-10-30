@@ -10,17 +10,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.awareness import AwarenessRegistry
-from inkstave.collab.content_bridge import ContentBridge
-from inkstave.collab.manager import CollabSettings, DocumentManager
-from inkstave.collab.store import CrdtStore
-from inkstave.collab.ydocument import YDocument
-from inkstave.db.models.crdt import CrdtDocumentState
-from inkstave.db.models.document import Document
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.collab.crdt.awareness import AwarenessRegistry
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtDocumentState
+from inkstave.modules.collab.rooms.content_bridge import ContentBridge
+from inkstave.modules.collab.rooms.manager import CollabSettings, DocumentManager
+from inkstave.modules.collab.rooms.store import CrdtStore
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import session_factory
 from tests.factories import UserFactory
 

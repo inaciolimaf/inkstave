@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
-from inkstave.config import Settings
-from inkstave.services.file_service import FileTooLargeError
-from inkstave.storage.base import ObjectNotFoundError
-from inkstave.storage.factory import get_object_store
-from inkstave.storage.local import LocalObjectStore
-from inkstave.storage.s3 import S3ObjectStore
+from inkstave.core.config.settings import Settings
+from inkstave.infra.storage.base import ObjectNotFoundError
+from inkstave.infra.storage.factory import get_object_store
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.infra.storage.s3 import S3ObjectStore
+from inkstave.modules.projects.content.files import FileTooLargeError
 
 
 async def _collect(stream: AsyncIterator[bytes]) -> bytes:

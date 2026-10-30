@@ -1,6 +1,6 @@
 """FrozenClock test helper (spec 94 §5.5).
 
-Satisfies the :class:`inkstave.time.Clock` protocol, returns a fixed tz-aware UTC
+Satisfies the :class:`inkstave.core.time.Clock` protocol, returns a fixed tz-aware UTC
 time, and can be advanced so tests can step across an ``exp``/cutoff boundary
 without any real sleep.
 """

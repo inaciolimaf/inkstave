@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from inkstave.db.models.ping import Ping
+from inkstave.modules.admin.models import Ping
 from tests.factories import PingFactory
 
 

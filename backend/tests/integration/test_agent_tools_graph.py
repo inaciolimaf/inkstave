@@ -11,13 +11,13 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.deps import AgentDeps
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.runner import run_turn
-from inkstave.agent.settings import AgentSettings
-from inkstave.agent.tools import default_registry
-from inkstave.services.document_service import get_document
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.graph.agent_deps import AgentDeps
+from inkstave.modules.agent.graph.runner import run_turn
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.tools import default_registry
+from inkstave.modules.projects.content.documents import get_document
 
 from ._agent_tools_support import _session, _tool_call, seed
 

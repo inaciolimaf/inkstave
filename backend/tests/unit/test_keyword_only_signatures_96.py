@@ -12,10 +12,10 @@ import inspect
 from collections.abc import Callable
 from typing import Any
 
-from inkstave.auth.refresh_store import RefreshStore
 from inkstave.cli import _cmd_seed
-from inkstave.collab.manager import DocumentManager
-from inkstave.collab.store import CrdtStore
+from inkstave.modules.auth.credentials.refresh_store import RefreshStore
+from inkstave.modules.collab.rooms.manager import DocumentManager
+from inkstave.modules.collab.rooms.store import CrdtStore
 
 
 def _all_keyword_only(func: Callable[..., Any], names: list[str]) -> bool:

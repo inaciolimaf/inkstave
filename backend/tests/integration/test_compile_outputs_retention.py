@@ -12,11 +12,11 @@ from typing import Any
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import OutputStore
-from inkstave.config import Settings
-from inkstave.services.project import create_project
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 from tests.integration._compile_outputs_support import (
     _compile_with_output,
@@ -97,7 +97,7 @@ async def test_cleanup_compile_outputs_job_evicts(db_session: AsyncSession, tmp_
     """AC10 end-to-end: invoke ``cleanup_compile_outputs(ctx)`` itself (not just
     the repo helper) and assert evicted compiles lose both their storage objects
     and their ``compile_outputs`` rows, while retained compiles keep theirs."""
-    from inkstave.compile.retention import cleanup_compile_outputs
+    from inkstave.modules.compile.queue.retention import cleanup_compile_outputs
 
     user = await UserFactory.create(db_session)
     await db_session.flush()

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.authorization.capabilities import Capability, capabilities_for
-from inkstave.db.models.membership import MembershipRole
+from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
+from inkstave.modules.projects.models.membership import MembershipRole
 
 C = Capability
 

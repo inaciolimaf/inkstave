@@ -16,9 +16,9 @@ import sys
 
 
 async def _run() -> int:
-    from inkstave.agent.llm.base import LLMMessage
-    from inkstave.agent.llm.openrouter import OpenRouterLLMClient
-    from inkstave.agent.settings import get_agent_settings
+    from inkstave.core.config.agent import get_agent_settings
+    from inkstave.modules.agent.llm.base import LLMMessage
+    from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
 
     client = OpenRouterLLMClient(get_agent_settings())
     print(f"Calling {client.model} via OpenRouter…")

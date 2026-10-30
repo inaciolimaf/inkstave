@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pytest
 
-from inkstave.config import get_settings
-from inkstave.mailer.sender import (
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.mailer.sender import (
     ConsoleEmailSender,
     FileEmailSender,
     OutgoingEmail,
     SmtpEmailSender,
     get_email_sender,
 )
-from inkstave.mailer.templates import UnknownTemplateError, render_email
+from inkstave.infra.mailer.templates import UnknownTemplateError, render_email
 
 
 def _settings(**over: object):

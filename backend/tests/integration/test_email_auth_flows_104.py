@@ -16,12 +16,12 @@ from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.config import get_settings
-from inkstave.db.models.auth_token import AuthToken
-from inkstave.db.models.user import User
-from inkstave.dependencies import get_email_enqueuer
-from inkstave.services.user import normalise_email
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.models.auth_token import AuthToken
+from inkstave.modules.auth.models.user import User
 
 pytestmark = pytest.mark.integration
 
@@ -279,7 +279,7 @@ async def test_reset_password_weak_is_400(
 async def test_magic_link_request_rate_limited(
     async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from inkstave.config import get_settings as _gs
+    from inkstave.core.config.settings import get_settings as _gs
 
     _gs.cache_clear()
     monkeypatch.setenv("RATE_LIMIT_MAGIC_LINK", "2/3600")

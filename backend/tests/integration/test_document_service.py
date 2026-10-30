@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import (
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import (
     ContentTooLargeError,
     NotADocumentError,
     VersionConflictError,
@@ -14,8 +14,8 @@ from inkstave.services.document_service import (
     get_document,
     replace_content,
 )
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity, ensure_root
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity, ensure_root
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -75,7 +75,7 @@ async def test_replace_with_stale_version_conflicts(db_session: AsyncSession) ->
 
 
 async def test_content_too_large(db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
-    from inkstave.config import get_settings
+    from inkstave.core.config.settings import get_settings
 
     monkeypatch.setenv("MAX_DOCUMENT_BYTES", "10")
     get_settings.cache_clear()

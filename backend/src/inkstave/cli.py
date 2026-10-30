@@ -21,16 +21,16 @@ import sys
 from collections.abc import Awaitable, Callable, Sequence
 from typing import TYPE_CHECKING
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.bootstrap.admin import ensure_initial_admin
-from inkstave.bootstrap.config_check import format_config_problems, validate_config
-from inkstave.bootstrap.migrate import run_upgrade
-from inkstave.bootstrap.seed import seed_demo
-from inkstave.config import get_settings
-from inkstave.db.engine import create_engine_and_sessionmaker
+from inkstave.core.config.settings import get_settings
+from inkstave.core.db.engine import create_engine_and_sessionmaker
+from inkstave.modules.admin.provisioning.admin import ensure_initial_admin
+from inkstave.modules.admin.provisioning.config_check import format_config_problems, validate_config
+from inkstave.modules.admin.provisioning.migrate import run_upgrade
+from inkstave.modules.admin.provisioning.seed import seed_demo
+from inkstave.modules.auth.credentials.password import build_password_hasher
 
 if TYPE_CHECKING:
-    from inkstave.config import Settings
+    from inkstave.core.config.settings import Settings
 
 # A dependency probe returns True when the service is reachable. Injectable so the
 # fast test tier passes fakes and never touches a real Postgres/Redis.
@@ -56,7 +56,7 @@ def _cmd_check_config() -> int:
 
 async def _default_db_check(settings: Settings) -> bool:
     """Real Postgres probe: ``SELECT 1`` honouring the readiness timeout."""
-    from inkstave.db.engine import check_db
+    from inkstave.core.db.engine import check_db
 
     if not settings.database_url:
         return False
@@ -69,7 +69,7 @@ async def _default_db_check(settings: Settings) -> bool:
 
 async def _default_redis_check(settings: Settings) -> bool:
     """Real Redis probe: ``PING`` honouring the readiness timeout."""
-    from inkstave.redis_client import create_redis_pool, ping_redis
+    from inkstave.infra.redis import create_redis_pool, ping_redis
 
     redis = await create_redis_pool(settings.redis_url)
     try:
@@ -158,8 +158,8 @@ async def _cmd_send_test_email(*, to: str, template: str, sender: object | None 
     transport (Mailpit/Resend/SMTP) without a running worker. ``sender`` is
     injectable so the fast test tier passes a fake and never opens a connection.
     """
-    from inkstave.mailer.sender import OutgoingEmail, get_email_sender
-    from inkstave.mailer.templates import UnknownTemplateError, render_email
+    from inkstave.infra.mailer.sender import OutgoingEmail, get_email_sender
+    from inkstave.infra.mailer.templates import UnknownTemplateError, render_email
 
     settings = get_settings()
     active = sender if sender is not None else get_email_sender(settings)

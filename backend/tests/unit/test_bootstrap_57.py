@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from inkstave.bootstrap import migrate
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.admin.provisioning import migrate
 
 _STRONG_SECRET = "x" * 40
 
@@ -154,7 +154,9 @@ async def test_strict_mode_refuses_to_start_when_db_behind_head(
         return False
 
     monkeypatch.setattr(app_module, "is_database_at_head", _not_at_head, raising=False)
-    monkeypatch.setattr("inkstave.bootstrap.migrate.is_database_at_head", _not_at_head, raising=False)
+    monkeypatch.setattr(
+        "inkstave.modules.admin.provisioning.migrate.is_database_at_head", _not_at_head, raising=False
+    )
     settings = Settings(_env_file=None, migrate_on_start=False)  # type: ignore[arg-type]
 
     with pytest.raises(RuntimeError, match="not at the latest migration"):
@@ -165,7 +167,7 @@ async def test_strict_mode_refuses_to_start_when_db_behind_head(
 
 
 async def test_seed_demo_refuses_in_production() -> None:
-    from inkstave.bootstrap.seed import seed_demo
+    from inkstave.modules.admin.provisioning.seed import seed_demo
 
     settings = Settings(_env_file=None, **_prod())  # type: ignore[arg-type]
     with pytest.raises(RuntimeError, match="production"):

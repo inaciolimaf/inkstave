@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from httpx import AsyncClient
 
-from inkstave.dependencies import get_email_enqueuer
+from inkstave.infra.deps import get_email_enqueuer
 
 pytestmark = pytest.mark.integration
 

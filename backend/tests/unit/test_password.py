@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.auth.credentials.password import build_password_hasher
 
 
 def test_hash_is_phc_string_and_not_plaintext(settings_override: Settings) -> None:

@@ -12,10 +12,10 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.storage.base import ObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.base import ObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.factories import UserFactory
 from tests.integration._files_api_support import InMemoryObjectStore
 
@@ -202,14 +202,14 @@ async def test_exports_flushed_current_content(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """AC4 — the CRDT flush runs before the read, so exported text is current."""
-    from inkstave.api.routes import projects as projects_routes
+    from inkstave.modules.projects.routes import projects as projects_routes
 
     headers, _ = await _auth(db_session)
     pid = await _project(async_client, headers)
     ids = await _seed_tree(async_client, pid, headers)
 
     async def fake_flush(_collab: Any, session: Any, project_id: Any) -> None:
-        from inkstave.services.document_service import set_content_from_collab
+        from inkstave.modules.projects.content.documents import set_content_from_collab
 
         await set_content_from_collab(session, UUID(ids["main.tex"]), "FLUSHED LIVE TEXT")
 
@@ -224,8 +224,8 @@ async def test_exports_flushed_current_content(
 
 
 async def test_builder_yields_multiple_chunks(db_session: AsyncSession, store: ObjectStore) -> None:
-    from inkstave.db.models.tree_entity import TreeEntityType
-    from inkstave.services.export_service import ExportEntry, stream_project_zip
+    from inkstave.modules.projects.models.tree_entity import TreeEntityType
+    from inkstave.modules.projects.transfer.export import ExportEntry, stream_project_zip
 
     # A plan with two file entries; the fake store returns each as a stream so the
     # builder drains the buffer per entry → more than one yielded chunk.
@@ -259,7 +259,7 @@ class _SessionCtx:
 
 def _override_enqueuer(async_client: AsyncClient) -> None:
     """The import endpoint enqueues; this test runs the job inline instead."""
-    from inkstave.dependencies import get_import_enqueuer
+    from inkstave.modules.projects.deps import get_import_enqueuer
 
     class _Fake:
         async def enqueue(self, import_id: Any) -> str | None:
@@ -278,7 +278,7 @@ async def _import_inline(
     zip_bytes: bytes,
 ) -> tuple[str, str]:
     """POST the archive, then run the enqueued import job inline. Returns (pid, iid)."""
-    from inkstave.services.import_jobs import import_project_zip
+    from inkstave.modules.projects.transfer.jobs import import_project_zip
 
     imp = await async_client.post(
         "/api/v1/projects/import",

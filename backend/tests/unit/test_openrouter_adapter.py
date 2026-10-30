@@ -14,10 +14,10 @@ from typing import Any
 import httpx
 import pytest
 
-from inkstave.agent.llm.base import LLMClient, LLMError, LLMMessage, ToolSpec
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.llm.openrouter import OpenRouterLLMClient
-from inkstave.agent.settings import AgentSettings
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.llm.base import LLMClient, LLMError, LLMMessage, ToolSpec
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
 
 DUMMY_KEY = "dummy-key-not-real"
 

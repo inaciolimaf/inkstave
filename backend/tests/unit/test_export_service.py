@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from inkstave.services.export_service import content_disposition, zip_filename_for
+from inkstave.modules.projects.transfer.export import content_disposition, zip_filename_for
 
 
 def test_zip_filename_sanitizes_quotes_slashes_and_crlf() -> None:

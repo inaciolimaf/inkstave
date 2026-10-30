@@ -15,8 +15,8 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from inkstave.db.models.ping import Ping
-from inkstave.db.session import get_db_session
+from inkstave.core.db.session import get_db_session
+from inkstave.modules.admin.models import Ping
 
 pytestmark = pytest.mark.integration
 

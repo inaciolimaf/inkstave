@@ -8,17 +8,17 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.packages import load_package_config
-from inkstave.compile.result import CompileStatus, RunOutcome
-from inkstave.compile.service import CompileOptions, CompileService
-from inkstave.compile.sources import DbDocumentSource, StorageFileSource
-from inkstave.config import Settings
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services import file_service
-from inkstave.services.document_service import replace_content
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity, ensure_root
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.compile.assembly.sources import DbDocumentSource, StorageFileSource
+from inkstave.modules.compile.running.packages import load_package_config
+from inkstave.modules.compile.running.result import CompileStatus, RunOutcome
+from inkstave.modules.compile.running.service import CompileOptions, CompileService
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content import files as file_service
+from inkstave.modules.projects.content.documents import replace_content
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity, ensure_root
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

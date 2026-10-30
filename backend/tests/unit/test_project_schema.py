@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from inkstave.schemas.project import ProjectCreate, ProjectRename
+from inkstave.modules.projects.schemas.project import ProjectCreate, ProjectRename
 
 
 @pytest.mark.parametrize("schema", [ProjectCreate, ProjectRename])

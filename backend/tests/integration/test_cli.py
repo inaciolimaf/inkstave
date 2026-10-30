@@ -17,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from inkstave import cli
-from inkstave.bootstrap.seed import DEMO_EMAIL
+from inkstave.modules.admin.provisioning.seed import DEMO_EMAIL
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("test_database_env")]
 

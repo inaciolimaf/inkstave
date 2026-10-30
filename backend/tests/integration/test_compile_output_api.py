@@ -9,14 +9,14 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import OutputStore
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileArtifact, CompileResult, CompileStatus
-from inkstave.config import Settings, get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -73,9 +73,9 @@ async def _seed_compile(
 ):
     from uuid import UUID
 
-    project = await __import__("inkstave.services.project", fromlist=["create_project"]).create_project(
-        db_session, UUID(owner_id), "P"
-    )
+    project = await __import__(
+        "inkstave.modules.projects.catalog.service", fromlist=["create_project"]
+    ).create_project(db_session, UUID(owner_id), "P")
     row = await CompileRepository(db_session).create(
         project_id=project.id, requested_by=UUID(owner_id), main_file="main.tex"
     )

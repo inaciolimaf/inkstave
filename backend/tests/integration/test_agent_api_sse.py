@@ -9,8 +9,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.api.events import RedisEventSink, run_channel
-from inkstave.agent.models import AgentRunState
+from inkstave.modules.agent.models import AgentRunState
+from inkstave.modules.agent.runs.events import RedisEventSink, run_channel
 
 from ._agent_api_support import API, _auth, _make_session, seed
 

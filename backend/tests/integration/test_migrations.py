@@ -15,7 +15,7 @@ from alembic.migration import MigrationContext
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from inkstave.db.base import Base
+from inkstave.core.db.base import Base
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("test_database_env")]
 

@@ -15,12 +15,12 @@ from uuid import uuid4
 import jwt
 import pytest
 
-from inkstave.auth.refresh_store import build_refresh_store
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.errors import GoneError
-from inkstave.services.account import confirm_email_change, start_email_change
-from inkstave.time import SYSTEM_CLOCK, Clock, SystemClock
+from inkstave.core.config.settings import get_settings
+from inkstave.core.errors import GoneError
+from inkstave.core.time import SYSTEM_CLOCK, Clock, SystemClock
+from inkstave.modules.auth.accounts.account import confirm_email_change, start_email_change
+from inkstave.modules.auth.credentials.refresh_store import build_refresh_store
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.unit._clock import FrozenClock
 
 BASE = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)

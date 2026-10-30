@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from inkstave.middleware import RequestIdMiddleware
+from inkstave.core.http.middleware import RequestIdMiddleware
 
 HEADER = "x-request-id"
 

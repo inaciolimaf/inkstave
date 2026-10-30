@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from inkstave.config import Settings, get_settings
+from inkstave.core.config.settings import Settings, get_settings
 from tests.fixtures.env import UNREACHABLE_DATABASE_URL
 
 

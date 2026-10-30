@@ -9,19 +9,19 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.api.events import InMemoryEventSink
-from inkstave.agent.llm.base import LLMResponse, ToolCall
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.models import AgentRunState, AgentSession
-from inkstave.agent.settings import AgentSettings
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.dependencies import get_agent_enqueuer
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.agent import AgentSettings
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.agent.deps import get_agent_enqueuer
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.llm.base import LLMResponse, ToolCall
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.models import AgentRunState, AgentSession
+from inkstave.modules.agent.runs.events import InMemoryEventSink
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 API = "/api/v1/projects"

@@ -9,10 +9,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.compile.stream import publish_status
-from inkstave.config import get_settings
-from inkstave.dependencies import get_compile_enqueuer
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.deps import get_compile_enqueuer
+from inkstave.modules.compile.queue.stream import publish_status
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -147,7 +147,7 @@ async def test_requires_auth(
 
 async def test_sse_stream_emits_snapshot_then_transitions(redis: Any) -> None:
     """Exercise the SSE generator directly (avoids in-process httpx stream deadlock)."""
-    from inkstave.compile.stream import sse_stream
+    from inkstave.modules.compile.queue.stream import sse_stream
 
     cid = uuid4()
 

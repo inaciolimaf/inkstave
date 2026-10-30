@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.services.safe_path import InvalidNameError, validate_name_segment
+from inkstave.modules.projects.tree.safe_path import InvalidNameError, validate_name_segment
 
 
 @pytest.mark.parametrize(

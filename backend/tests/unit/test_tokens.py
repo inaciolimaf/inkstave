@@ -8,9 +8,9 @@ from uuid import UUID, uuid4
 import jwt
 import pytest
 
-from inkstave.auth.tokens import TokenError, build_token_service
-from inkstave.config import Settings, get_settings
-from inkstave.db.models.user import User
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.modules.auth.credentials.tokens import TokenError, build_token_service
+from inkstave.modules.auth.models.user import User
 
 
 def _user(*, is_admin: bool = False) -> User:

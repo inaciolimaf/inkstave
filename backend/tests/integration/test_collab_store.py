@@ -9,12 +9,12 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.store import CrdtStore
-from inkstave.collab.ydocument import YDocument
-from inkstave.db.models.crdt import CrdtUpdate
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtUpdate
+from inkstave.modules.collab.rooms.store import CrdtStore
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

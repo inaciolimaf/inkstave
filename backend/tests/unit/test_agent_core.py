@@ -5,15 +5,15 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from inkstave.agent import graph as graph_mod
-from inkstave.agent import nodes as nodes_mod
-from inkstave.agent.deps import AgentDeps
-from inkstave.agent.graph import build_graph
-from inkstave.agent.llm.base import LLMMessage, LLMResponse, LLMUsage, ToolCall
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.prompts import PromptContext, build_system_prompt
-from inkstave.agent.settings import AgentSettings
-from inkstave.agent.state import AgentState, deserialize_state, serialize_state
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import builder as graph_mod
+from inkstave.modules.agent.graph import nodes as nodes_mod
+from inkstave.modules.agent.graph.agent_deps import AgentDeps
+from inkstave.modules.agent.graph.builder import build_graph
+from inkstave.modules.agent.graph.prompts import PromptContext, build_system_prompt
+from inkstave.modules.agent.graph.state import AgentState, deserialize_state, serialize_state
+from inkstave.modules.agent.llm.base import LLMMessage, LLMResponse, LLMUsage, ToolCall
+from inkstave.modules.agent.llm.fake import FakeLLM
 
 
 def test_state_serialization_round_trips() -> None:
@@ -60,7 +60,7 @@ def test_nodes_and_graph_do_not_import_openai() -> None:
 
 def test_only_openrouter_imports_openai() -> None:
     # Spec 45 AC2: no module in the agent package imports openai except the wrapper.
-    import inkstave.agent as agent_pkg
+    import inkstave.modules.agent as agent_pkg
 
     root = Path(agent_pkg.__file__).parent
     offenders = [

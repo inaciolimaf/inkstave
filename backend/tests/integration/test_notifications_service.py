@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.notifications.service import NotificationNotFoundError, NotificationService
+from inkstave.modules.notifications.inbox.service import NotificationNotFoundError, NotificationService
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

@@ -10,11 +10,11 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.api.events import InMemoryEventSink, request_cancel
-from inkstave.agent.api.jobs import run_agent_turn
-from inkstave.agent.diffs import repository as diff_repo
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.models import AgentSession
+from inkstave.modules.agent.diffs import repository as diff_repo
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.models import AgentSession
+from inkstave.modules.agent.runs.events import InMemoryEventSink, request_cancel
+from inkstave.modules.agent.runs.jobs import run_agent_turn
 
 from ._agent_api_support import API, _job_ctx, _make_session, _tool_call, seed
 
@@ -142,7 +142,7 @@ async def test_internal_error_emits_single_error(
     async def boom(**_kwargs: Any) -> Any:
         raise RuntimeError("kaboom")
 
-    monkeypatch.setattr("inkstave.agent.api.jobs.run_turn", boom)
+    monkeypatch.setattr("inkstave.modules.agent.runs.jobs.run_turn", boom)
     llm = FakeLLM(script=[FakeLLM.respond_text("x")])
 
     # Must NOT raise — the worker survives (AC7).

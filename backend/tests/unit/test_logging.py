@@ -6,7 +6,7 @@ import io
 import json
 import logging
 
-from inkstave.logging import RequestIdFilter, build_formatter, set_request_id
+from inkstave.core.logging import RequestIdFilter, build_formatter, set_request_id
 
 
 def _emit_one(message: str) -> str:

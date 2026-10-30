@@ -5,13 +5,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import (
-    create_entity,
-    ensure_root,
-    is_descendant,
-)
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity, ensure_root, is_descendant
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration

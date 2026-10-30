@@ -9,7 +9,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.dependencies import get_object_store
+from inkstave.infra.deps import get_object_store
 from tests.integration._tree_api_support import (
     InMemoryObjectStore,
     _auth,

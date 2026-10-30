@@ -7,7 +7,7 @@ import logging
 
 import pytest
 
-from inkstave import background
+from inkstave.core import tasks as background
 
 
 async def test_spawn_holds_the_task_until_it_finishes() -> None:
@@ -28,7 +28,7 @@ async def test_spawn_logs_a_failure(caplog: pytest.LogCaptureFixture) -> None:
     async def fails() -> None:
         raise ValueError("boom")
 
-    with caplog.at_level(logging.ERROR, logger="inkstave.background"):
+    with caplog.at_level(logging.ERROR, logger="inkstave.core.tasks"):
         task = background.spawn(fails(), name="doomed")
         await asyncio.wait([task])
         await asyncio.sleep(0)

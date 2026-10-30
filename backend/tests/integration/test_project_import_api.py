@@ -14,8 +14,8 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.config import get_settings
-from inkstave.storage.base import ObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.storage.base import ObjectStore
 from tests.integration._project_import_support import (
     FakeImportEnqueuer,
     auth,

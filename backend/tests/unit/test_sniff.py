@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.services.file_service import sniff_content_type
+from inkstave.modules.projects.content.files import sniff_content_type
 
 
 @pytest.mark.parametrize(

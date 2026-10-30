@@ -9,10 +9,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -152,7 +152,7 @@ async def test_create_name_race_maps_to_409(
     await _create_entity(async_client, pid, headers, "doc", "race.tex")
 
     # Force the pre-check to miss so the INSERT races into the unique index.
-    import inkstave.services.tree_service as tree_service
+    import inkstave.modules.projects.tree.service as tree_service
 
     async def _never(*_a: Any, **_k: Any) -> bool:
         return False
@@ -175,7 +175,7 @@ async def test_rename_name_race_maps_to_409(
     await _create_entity(async_client, pid, headers, "doc", "taken.tex")
     other = await _create_entity(async_client, pid, headers, "doc", "other.tex")
 
-    import inkstave.services.tree_service as tree_service
+    import inkstave.modules.projects.tree.service as tree_service
 
     async def _never(*_a: Any, **_k: Any) -> bool:
         return False
@@ -204,7 +204,7 @@ async def test_move_name_race_maps_to_409(
         headers=headers,
     )
 
-    import inkstave.services.tree_service as tree_service
+    import inkstave.modules.projects.tree.service as tree_service
 
     async def _never(*_a: Any, **_k: Any) -> bool:
         return False
@@ -244,10 +244,10 @@ async def test_ownership_is_404_across_resources(async_client: AsyncClient, db_s
 
 async def test_get_file_without_content_row_is_404(db_session: AsyncSession) -> None:
     # A `file` entity created without an upload (no `files` row) reports 404.
-    from inkstave.db.models.tree_entity import TreeEntityType
-    from inkstave.services.file_service import get_file
-    from inkstave.services.project import create_project
-    from inkstave.services.tree_service import EntityNotFoundError, create_entity, ensure_root
+    from inkstave.modules.projects.catalog.service import create_project
+    from inkstave.modules.projects.content.files import get_file
+    from inkstave.modules.projects.models.tree_entity import TreeEntityType
+    from inkstave.modules.projects.tree.service import EntityNotFoundError, create_entity, ensure_root
 
     user = await UserFactory.create(db_session)
     await db_session.flush()

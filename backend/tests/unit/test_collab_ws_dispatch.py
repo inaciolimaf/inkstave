@@ -6,16 +6,16 @@ import asyncio
 from typing import Any
 from uuid import uuid4
 
-from inkstave.collab.protocol import (
+from inkstave.modules.collab.crdt.protocol import (
     SyncUpdate,
     encode_awareness,
     encode_sync_step1,
     encode_update,
     read_message,
 )
-from inkstave.collab.ws.components import CollabWsSettings
-from inkstave.collab.ws.rooms import Connection
-from inkstave.collab.ws.router import _dispatch
+from inkstave.modules.collab.ws.components import CollabWsSettings
+from inkstave.modules.collab.ws.rooms import Connection
+from inkstave.modules.collab.ws.router import _dispatch
 
 
 class _FakeWS:

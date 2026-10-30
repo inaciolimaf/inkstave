@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.storage.local import LocalObjectStore
+from inkstave.infra.storage.local import LocalObjectStore
 from tests.integration._compile_outputs_support import (
     FILES,
     _collect,

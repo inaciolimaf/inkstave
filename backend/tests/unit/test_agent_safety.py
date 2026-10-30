@@ -8,7 +8,8 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.agent.safety import (
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.safety import (
     AgentAuditAction,
     AuditSubject,
     acquire_run,
@@ -22,7 +23,6 @@ from inkstave.agent.safety import (
     run_tokens_exceeded,
     wrap_untrusted,
 )
-from inkstave.agent.settings import AgentSettings
 
 pytestmark = pytest.mark.integration  # uses the fake redis fixture
 

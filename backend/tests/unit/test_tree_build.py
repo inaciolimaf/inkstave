@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
-from inkstave.services.tree_service import build_tree, compute_path
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.modules.projects.tree.service import build_tree, compute_path
 
 _DT = datetime(2026, 1, 1, tzinfo=UTC)
 _PID = uuid4()
