@@ -25,7 +25,7 @@ function ProjectListEmpty({ onCreate }: { onCreate: () => void }) {
       <FolderPlus className="size-10 text-muted-foreground" />
       <div>
         <p className="font-medium">{t("list.emptyTitle")}</p>
-        <p className="text-sm text-muted-foreground">{t("list.emptyDescription")}</p>
+        <p className="text-body text-muted-foreground">{t("list.emptyDescription")}</p>
       </div>
       <Button onClick={onCreate}>{t("list.createFirst")}</Button>
     </div>
@@ -36,7 +36,7 @@ function ProjectListNoResults({ term, onClear }: { term: string; onClear: () => 
   const { t } = useTranslation("projects");
   return (
     <div className="flex flex-col items-start gap-3 py-12">
-      <p className="text-sm text-muted-foreground">{t("list.noResults", { term })}</p>
+      <p className="text-body text-muted-foreground">{t("list.noResults", { term })}</p>
       <Button variant="outline" onClick={onClear}>
         {t("list.clearSearch")}
       </Button>
@@ -48,7 +48,7 @@ function ProjectListError({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation("projects");
   return (
     <div role="alert" className="flex flex-col items-start gap-3 py-12">
-      <p className="text-sm text-error-text">{t("list.loadError")}</p>
+      <p className="text-body text-error-text">{t("list.loadError")}</p>
       <Button variant="outline" onClick={onRetry}>
         {t("common:action.retry")}
       </Button>

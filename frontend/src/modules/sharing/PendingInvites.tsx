@@ -18,15 +18,15 @@ export function PendingInvites({
   const { t } = useTranslation("sharing");
   return (
     <section aria-label={t("pending.sectionLabel")} className="space-y-2">
-      <h3 className="text-sm font-medium">{t("pending.title")}</h3>
+      <h3 className="text-body font-medium">{t("pending.title")}</h3>
       {invites.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("pending.empty")}</p>
+        <p className="text-body text-muted-foreground">{t("pending.empty")}</p>
       ) : (
         <ul className="space-y-1">
           {invites.map((inv) => (
-            <li key={inv.id} className="flex items-center gap-2 text-sm">
+            <li key={inv.id} className="flex items-center gap-2 text-body">
               <span className="mr-auto truncate">{inv.email}</span>
-              <span className="text-xs capitalize text-muted-foreground">{t(`role.${inv.role}`)}</span>
+              <span className="text-small capitalize text-muted-foreground">{t(`role.${inv.role}`)}</span>
               <Button
                 size="sm"
                 variant="ghost"

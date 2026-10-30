@@ -60,7 +60,7 @@ function NotificationRow({
   const { t } = useTranslation("notifications");
   const unread = notification.readAt === null;
   return (
-    <div role="listitem" className={cn("flex gap-2 rounded-md p-2 text-sm", unread && "bg-primary/5")}>
+    <div role="listitem" className={cn("flex gap-2 rounded-md p-2 text-body", unread && "bg-primary/5")}>
       <button
         type="button"
         className="min-w-0 flex-1 text-left"
@@ -68,7 +68,7 @@ function NotificationRow({
         onClick={() => unread && onRead(notification.id)}
       >
         <span className="block break-words">{describe(notification)}</span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">
+        <span className="mt-0.5 block text-small text-muted-foreground">
           {relativeTime(notification.createdAt)}
         </span>
       </button>
@@ -76,7 +76,7 @@ function NotificationRow({
         <button
           type="button"
           aria-label={t("dismiss")}
-          className="text-muted-foreground hover:text-error-text"
+          className="text-muted-foreground hover:text-foreground"
           onClick={() => onDismiss(notification.id)}
         >
           <X className="size-4" />
@@ -124,10 +124,7 @@ export function NotificationsBell() {
         >
           <Bell className="size-5" />
           {count > 0 && (
-            <Badge
-              className="absolute -right-1 -top-1 flex size-5 items-center justify-center p-0 text-xs"
-              variant="destructive"
-            >
+            <Badge className="absolute -right-1 -top-1 flex size-5 items-center justify-center p-0 text-small">
               {count > 9 ? "9+" : count}
             </Badge>
           )}
@@ -135,9 +132,9 @@ export function NotificationsBell() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-2">
         <div className="mb-1 flex items-center justify-between px-1">
-          <span className="text-sm font-medium">{t("title")}</span>
+          <span className="text-body font-medium">{t("title")}</span>
           {count > 0 && (
-            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => readAll.mutate()}>
+            <Button size="sm" variant="ghost" className="h-6 text-small" onClick={() => readAll.mutate()}>
               {t("markAllRead")}
             </Button>
           )}
@@ -155,7 +152,7 @@ export function NotificationsBell() {
         >
           {(data) =>
             data.items.length === 0 ? (
-              <p className="p-4 text-center text-sm text-muted-foreground">{t("empty")}</p>
+              <p className="p-4 text-center text-body text-muted-foreground">{t("empty")}</p>
             ) : (
               <div className="max-h-96 space-y-1 overflow-auto" role="list" aria-label={t("title")}>
                 {data.items.map((n) => (

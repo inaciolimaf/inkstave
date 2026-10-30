@@ -4,12 +4,12 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/modules/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { changeEmail } from "./api";
 import { errMessage } from "./errMessage";
+import { SettingsSection } from "./SettingsSection";
 
 export function EmailSection() {
   const { t } = useTranslation("settings");
@@ -37,53 +37,50 @@ export function EmailSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("email.title")}</CardTitle>
-        <CardDescription>
+    <SettingsSection
+      title={t("email.title")}
+      description={
+        <>
           {t("email.current")} <span className="font-medium">{user?.email}</span>
           {user?.pending_email && (
-            <span className="ml-1 text-warning-text">
-              {t("email.pending", { email: user.pending_email })}
-            </span>
+            <span className="ml-1">{t("email.pending", { email: user.pending_email })}</span>
           )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {sentTo ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            {t("email.sentPrefix")}
-            <span className="font-medium">{sentTo}</span>
-            {t("email.sentSuffix")}
-          </p>
-        ) : (
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="new-email">{t("email.newEmail")}</Label>
-              <Input
-                id="new-email"
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="email-pw">{t("email.password")}</Label>
-              <Input
-                id="email-pw"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" disabled={busy || !newEmail.trim() || !password}>
-              {busy ? t("email.sending") : t("email.submit")}
-            </Button>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+        </>
+      }
+    >
+      {sentTo ? (
+        <p role="status" className="text-body text-muted-foreground">
+          {t("email.sentPrefix")}
+          <span className="font-medium">{sentTo}</span>
+          {t("email.sentSuffix")}
+        </p>
+      ) : (
+        <form onSubmit={submit} className="max-w-md space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="new-email">{t("email.newEmail")}</Label>
+            <Input
+              id="new-email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email-pw">{t("email.password")}</Label>
+            <Input
+              id="email-pw"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" variant="outline" disabled={busy || !newEmail.trim() || !password}>
+            {busy ? t("email.sending") : t("email.submit")}
+          </Button>
+        </form>
+      )}
+    </SettingsSection>
   );
 }

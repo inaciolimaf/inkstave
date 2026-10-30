@@ -37,7 +37,7 @@ export function MembersList({
   const { t } = useTranslation(["sharing", "common"]);
   return (
     <section aria-label={t("members.sectionLabel")} className="space-y-2">
-      <h3 className="text-sm font-medium">{t("members.title")}</h3>
+      <h3 className="text-body font-medium">{t("members.title")}</h3>
       {isLoading && (
         <div className="space-y-2" data-testid="members-loading">
           <Skeleton className="h-9 w-full" />
@@ -47,13 +47,13 @@ export function MembersList({
       {isError && <ErrorState message={t("members.loadError")} onRetry={refetch} />}
       <ul className="space-y-1">
         {members.map((m) => (
-          <li key={m.userId} className="flex items-center gap-2 text-sm">
+          <li key={m.userId} className="flex items-center gap-2 text-body">
             <div className="mr-auto min-w-0">
               <p className="truncate font-medium">
                 {m.name}
                 {m.userId === currentUserId && t("members.you")}
               </p>
-              <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+              <p className="truncate text-small text-muted-foreground">{m.email}</p>
             </div>
             {isOwner && m.role !== "owner" ? (
               <Select value={m.role} onValueChange={(v) => onChangeRole(m.userId, v as InviteRole)}>
@@ -73,7 +73,7 @@ export function MembersList({
                 </SelectContent>
               </Select>
             ) : (
-              <span className="text-xs capitalize text-muted-foreground">{t(`role.${m.role}`)}</span>
+              <span className="text-small capitalize text-muted-foreground">{t(`role.${m.role}`)}</span>
             )}
             {isOwner && m.role !== "owner" && (
               <>
