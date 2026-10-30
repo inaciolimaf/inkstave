@@ -4,11 +4,11 @@
  * email change (pending state), and gate the delete dialog. A throwaway user
  * exercises the destructive password change + re-login so User A stays usable.
  */
-import { ApiClient, uniqueId } from "./support/api";
-import { injectAuth } from "./support/auth";
-import { E2E_PASSWORD } from "./support/env";
-import { test, expect } from "./support/fixtures";
-import { EditorPage } from "./support/pages";
+import { ApiClient, uniqueId } from "../support/api";
+import { injectAuth } from "../support/auth";
+import { E2E_PASSWORD } from "../support/env";
+import { test, expect } from "../support/fixtures";
+import { EditorPage } from "../support/pages";
 
 test("profile, editor prefs, email-change and delete gating @smoke", async ({ page }) => {
   await page.goto("/settings");

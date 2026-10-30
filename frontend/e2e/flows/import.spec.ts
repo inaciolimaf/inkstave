@@ -6,9 +6,9 @@
  * The fixture is a few hundred bytes (stored, no compression); the import job runs
  * for real on the shared worker — no large archive, so it stays fast.
  */
-import { test, expect } from "./support/fixtures";
-import { DashboardPage } from "./support/pages";
-import { makeStoredZip } from "./support/zip";
+import { test, expect } from "../support/fixtures";
+import { DashboardPage } from "../support/pages";
+import { makeStoredZip } from "../support/zip";
 
 test("import a .zip → worker reconstructs → new project opens @smoke", async ({ page }) => {
   const dashboard = new DashboardPage(page);

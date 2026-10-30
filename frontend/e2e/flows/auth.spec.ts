@@ -9,9 +9,9 @@
 // clean, unauthenticated browser and drive register/login through the UI itself.
 import { expect, test } from "@playwright/test";
 
-import { uniqueId } from "./support/api";
-import { E2E_PASSWORD } from "./support/env";
-import { DashboardPage, LoginPage } from "./support/pages";
+import { uniqueId } from "../support/api";
+import { E2E_PASSWORD } from "../support/env";
+import { DashboardPage, LoginPage } from "../support/pages";
 
 test("register → land authenticated → log out → log back in @smoke", async ({ page }) => {
   const email = `${uniqueId("auth")}@example.com`;

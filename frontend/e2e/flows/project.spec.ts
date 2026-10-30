@@ -3,9 +3,9 @@
  * project from the dashboard, see it listed, rename it, confirm it persists across
  * a reload, then delete it and confirm it disappears.
  */
-import { uniqueId } from "./support/api";
-import { test, expect } from "./support/fixtures";
-import { DashboardPage } from "./support/pages";
+import { uniqueId } from "../support/api";
+import { test, expect } from "../support/fixtures";
+import { DashboardPage } from "../support/pages";
 
 test("create → rename → persist across reload → delete @smoke", async ({ page }) => {
   const name = `Proj ${uniqueId("p")}`;

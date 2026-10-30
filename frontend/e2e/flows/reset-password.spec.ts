@@ -12,9 +12,9 @@ import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { ApiClient, uniqueId } from "./support/api";
-import { e2e, E2E_PASSWORD } from "./support/env";
-import { DashboardPage, LoginPage } from "./support/pages";
+import { ApiClient, uniqueId } from "../support/api";
+import { e2e, E2E_PASSWORD } from "../support/env";
+import { DashboardPage, LoginPage } from "../support/pages";
 
 /** Poll the captured-email dir for the most recent reset link sent to `email`. */
 async function readResetToken(email: string): Promise<string> {

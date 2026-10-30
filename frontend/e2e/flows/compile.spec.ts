@@ -4,8 +4,8 @@
  * in the PDF.js preview and shows log output; a document with an injected LaTeX
  * error surfaces in the log and the problems annotations.
  */
-import { test, expect } from "./support/fixtures";
-import { EditorPage, PreviewPanel } from "./support/pages";
+import { test, expect } from "../support/fixtures";
+import { EditorPage, PreviewPanel } from "../support/pages";
 
 const ERROR_DOC = "\\documentclass{article}\n\\begin{document}\n\\inkstaveforceerror\n\\end{document}\n";
 

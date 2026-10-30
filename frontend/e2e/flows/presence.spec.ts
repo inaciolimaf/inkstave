@@ -10,9 +10,9 @@
  */
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { injectAuth } from "./support/auth";
-import { test, expect } from "./support/fixtures";
-import { EditorPage } from "./support/pages";
+import { injectAuth } from "../support/auth";
+import { test, expect } from "../support/fixtures";
+import { EditorPage } from "../support/pages";
 
 async function openDoc(context: BrowserContext, email: string, projectId: string): Promise<Page> {
   await injectAuth(context, email);

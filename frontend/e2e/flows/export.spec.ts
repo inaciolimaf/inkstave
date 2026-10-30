@@ -5,9 +5,9 @@
  */
 import { readFile } from "node:fs/promises";
 
-import { uniqueId } from "./support/api";
-import { test, expect } from "./support/fixtures";
-import { DashboardPage } from "./support/pages";
+import { uniqueId } from "../support/api";
+import { test, expect } from "../support/fixtures";
+import { DashboardPage } from "../support/pages";
 
 test("download a project as .zip from the dashboard @smoke", async ({ page, seedProject }) => {
   const name = `Export ${uniqueId("e")}`;

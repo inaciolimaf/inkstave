@@ -4,10 +4,10 @@
  * reload. The editor runs in live-CRDT mode (collab enabled), so persistence is
  * asserted by reload rather than a REST "Saved" badge.
  */
-import { ApiClient } from "./support/api";
-import { injectAuth } from "./support/auth";
-import { test, expect } from "./support/fixtures";
-import { EditorPage } from "./support/pages";
+import { ApiClient } from "../support/api";
+import { injectAuth } from "../support/auth";
+import { test, expect } from "../support/fixtures";
+import { EditorPage } from "../support/pages";
 
 test("create a .tex file, edit it, and the content survives a reload @smoke", async ({
   page,

@@ -3,8 +3,8 @@
  * snapshots; the history timeline lists versions, a diff is viewable, and
  * restoring an earlier version changes the editor content back.
  */
-import { test, expect } from "./support/fixtures";
-import { EditorPage, HistoryPanel } from "./support/pages";
+import { test, expect } from "../support/fixtures";
+import { EditorPage, HistoryPanel } from "../support/pages";
 
 test("edit → versions appear → view a diff → restore reverts the editor @smoke", async ({
   page,

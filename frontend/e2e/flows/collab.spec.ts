@@ -9,10 +9,10 @@
  */
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { ApiClient } from "./support/api";
-import { injectAuth } from "./support/auth";
-import { test, expect } from "./support/fixtures";
-import { EditorPage, ShareDialog } from "./support/pages";
+import { ApiClient } from "../support/api";
+import { injectAuth } from "../support/auth";
+import { test, expect } from "../support/fixtures";
+import { EditorPage, ShareDialog } from "../support/pages";
 
 async function openDoc(context: BrowserContext, email: string, projectId: string): Promise<Page> {
   await injectAuth(context, email);

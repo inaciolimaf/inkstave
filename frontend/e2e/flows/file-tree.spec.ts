@@ -13,8 +13,8 @@
  *    move-to-root behaviour through it for a stable assertion.
  *  - The upload uses a tiny in-memory binary via `setInputFiles` so it stays fast.
  */
-import { test, expect } from "./support/fixtures";
-import { EditorPage } from "./support/pages";
+import { test, expect } from "../support/fixtures";
+import { EditorPage } from "../support/pages";
 
 test("create folder, add+rename a doc, move it to root, upload a binary, delete the folder @smoke", async ({
   page,

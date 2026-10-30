@@ -10,9 +10,9 @@
  *   - viewer/permission edge cases (a viewer cannot edit/compile),
  *   - the existing agent-diff reject-without-applying case.
  */
-import { test, expect } from "./support/fixtures";
-import { injectAuth } from "./support/auth";
-import { AgentPanel, DiffReview, EditorPage, PreviewPanel } from "./support/pages";
+import { test, expect } from "../support/fixtures";
+import { injectAuth } from "../support/auth";
+import { AgentPanel, DiffReview, EditorPage, PreviewPanel } from "../support/pages";
 
 const APPLIED_MARKER = "rewritten by the Inkstave AI agent";
 

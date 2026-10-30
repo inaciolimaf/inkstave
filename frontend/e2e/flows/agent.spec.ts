@@ -11,8 +11,8 @@
  *   - Stop on a run shows a cancelled marker (spec 46 §8c).
  * Everything is scripted (no real LLM/Tectonic), so it stays within the budget.
  */
-import { test, expect } from "./support/fixtures";
-import { AgentPanel, DiffReview, EditorPage } from "./support/pages";
+import { test, expect } from "../support/fixtures";
+import { AgentPanel, DiffReview, EditorPage } from "../support/pages";
 
 // The stub rewrites the document to this marker text (testkit/llm_stub.py).
 const APPLIED_MARKER = "rewritten by the Inkstave AI agent";
