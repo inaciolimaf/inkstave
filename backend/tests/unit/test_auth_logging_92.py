@@ -268,7 +268,7 @@ async def test_rate_limit_body_parse_fallback_logs_and_uses_ip(
 
     settings = get_settings().model_copy(update={"trust_proxy_headers": False})
     with caplog.at_level(logging.DEBUG, logger="inkstave.ratelimit"):
-        identity = await _identity(BadRequest(), "login", settings)
+        identity = await _identity(BadRequest(), "register", settings)
     assert identity == "203.0.113.7"  # IP-only fallback, behaviour unchanged
     assert any(r.name == "inkstave.ratelimit" for r in caplog.records)
 

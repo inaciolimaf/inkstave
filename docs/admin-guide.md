@@ -108,7 +108,8 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `ACCESS_TOKEN_TTL_SECONDS` | No | `900` | access token lifetime (15 min) | backend |
 | `REFRESH_TOKEN_TTL_SECONDS` | No | `1209600` | refresh token lifetime / Redis TTL (14 days) | backend |
 | `RATE_LIMIT_ENABLED` | No | `true` | master switch for the limiter | backend |
-| `RATE_LIMIT_AUTH_LOGIN` | No | `10/300` | login cap, `<limit>/<window_seconds>` per IP+email (legacy alias: `RATE_LIMIT_LOGIN`) | backend |
+| `RATE_LIMIT_AUTH_LOGIN` | No | `10/300` | wrong passwords, `<limit>/<window_seconds>` per e-mail; success resets it (legacy alias: `RATE_LIMIT_LOGIN`) | backend |
+| `RATE_LIMIT_LOGIN_IP` | No | `50/300` | wrong passwords per IP | backend |
 | `RATE_LIMIT_REGISTER` | No | `5/3600` | per IP | backend |
 | `RATE_LIMIT_REFRESH` | No | `30/300` | per IP | backend |
 | `RATE_LIMIT_AUTH_PASSWORD` | No | `5/3600` | change-password / sensitive-auth cap, `<limit>/<window_seconds>` per user-or-IP | backend |

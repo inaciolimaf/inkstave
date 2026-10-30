@@ -33,6 +33,7 @@ from inkstave.modules.auth.schemas.auth import (
 )
 from inkstave.modules.auth.schemas.user import RegisterRequest, UserPublic
 from inkstave.modules.auth.throttling.limiter import rate_limit
+from inkstave.modules.auth.throttling.login_attempts import LoginThrottle, get_login_throttle
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -239,8 +240,7 @@ async def reset_password(
     "/login",
     response_model=TokenPair,
     summary="Log in and receive an access + refresh token pair",
-    dependencies=[Depends(rate_limit("login"))],
-    responses=_UNAUTHORIZED,
+    responses={**_UNAUTHORIZED, status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorEnvelope}},
 )
 async def login(
     data: LoginRequest,
@@ -249,20 +249,22 @@ async def login(
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
     settings: Settings = Depends(get_settings_dep),
+    throttle: LoginThrottle = Depends(get_login_throttle),
 ) -> TokenPair:
     """Authenticate credentials and issue a new token family.
 
     When ``require_verified_email_to_login`` is on (spec 104), an unconfirmed user
     is rejected; the magic-link / reset flows still let them in (they confirm).
     """
-    return await auth_service.login(
-        session,
-        hasher,
-        token_service,
-        refresh_store,
-        data,
-        require_verified_email=settings.require_verified_email_to_login,
-    )
+    async with throttle.attempt(data.email):
+        return await auth_service.login(
+            session,
+            hasher,
+            token_service,
+            refresh_store,
+            data,
+            require_verified_email=settings.require_verified_email_to_login,
+        )
 
 
 @router.post(

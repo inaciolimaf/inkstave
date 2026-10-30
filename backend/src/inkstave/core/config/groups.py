@@ -96,12 +96,14 @@ class AuthSettingsMixin:
     # Rate limiting (spec 08). Values are "<limit>/<window_seconds>". The limiter
     # fails open if Redis is unavailable.
     rate_limit_enabled: bool = True
-    # Spec 52 §5.8 names this ``RATE_LIMIT_AUTH_LOGIN``; the legacy ``RATE_LIMIT_LOGIN``
-    # name is still accepted for back-compat (spec 68 #219).
+    # Wrong passwords per e-mail. Spec 52 §5.8 names this ``RATE_LIMIT_AUTH_LOGIN``; the legacy
+    # ``RATE_LIMIT_LOGIN`` name is still accepted for back-compat (spec 68 #219).
     rate_limit_login: str = Field(
         default="10/300",
         validation_alias=AliasChoices("rate_limit_auth_login", "rate_limit_login"),
     )
+    # Wrong passwords per IP, above the per-e-mail limit: several people can share an address.
+    rate_limit_login_ip: str = "50/300"
     rate_limit_register: str = "5/3600"
     rate_limit_refresh: str = "30/300"
     # Change-password / sensitive auth endpoints (spec 52 §5.2.1): 5/hour, user_or_ip.
