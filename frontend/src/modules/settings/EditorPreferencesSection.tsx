@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "@/modules/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -14,6 +13,7 @@ import {
 
 import { putEditorPreferences } from "./api";
 import { errMessage } from "./errMessage";
+import { SettingsSection } from "./SettingsSection";
 
 export function EditorPreferencesSection() {
   const { t } = useTranslation("settings");
@@ -32,13 +32,9 @@ export function EditorPreferencesSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("editor.title")}</CardTitle>
-        <CardDescription>{t("editor.description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
+    <SettingsSection title={t("editor.title")} description={t("editor.description")}>
+      <div className="divide-y divide-border">
+        <div className="flex items-center justify-between gap-2 py-2">
           <Label htmlFor="pref-theme">{t("editor.theme")}</Label>
           <Select value={prefs.theme} onValueChange={(v) => set({ theme: v as EditorTheme })}>
             <SelectTrigger id="pref-theme" aria-label={t("editor.theme")} className="w-40">
@@ -51,7 +47,7 @@ export function EditorPreferencesSection() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 py-2">
           <Label htmlFor="pref-font">{t("editor.fontSize")}</Label>
           <Select value={String(prefs.font_size)} onValueChange={(v) => set({ font_size: Number(v) })}>
             <SelectTrigger id="pref-font" aria-label={t("editor.fontSize")} className="w-40">
@@ -66,7 +62,7 @@ export function EditorPreferencesSection() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 py-2">
           <Label htmlFor="pref-keymap">{t("editor.keymap")}</Label>
           <Select value={prefs.keymap} onValueChange={(v) => set({ keymap: v as EditorKeymap })}>
             <SelectTrigger id="pref-keymap" aria-label={t("editor.keymap")} className="w-40">
@@ -79,7 +75,7 @@ export function EditorPreferencesSection() {
             </SelectContent>
           </Select>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </SettingsSection>
   );
 }

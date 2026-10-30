@@ -114,12 +114,12 @@ export function ImportProjectDialog({
                 aria-valuenow={Math.round(state.progress * 100)}
                 value={state.progress * 100}
               />
-              <p className="text-sm text-muted-foreground">{t("import.uploading")}</p>
+              <p className="text-body text-muted-foreground">{t("import.uploading")}</p>
             </div>
           )}
 
           {state.phase === "processing" && (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <p className="flex items-center gap-2 text-body text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
               {t("import.processing")}
             </p>
@@ -127,7 +127,7 @@ export function ImportProjectDialog({
 
           {state.phase === "failed" && errorText && (
             <div className="space-y-2" role="alert">
-              <p className="text-sm text-error-text">{errorText}</p>
+              <p className="text-body text-error-text">{errorText}</p>
               {state.projectId && (
                 <Button type="button" variant="outline" size="sm" onClick={() => void onDeleteEmpty()}>
                   {t("import.deleteEmpty")}
