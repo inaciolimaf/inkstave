@@ -7,6 +7,10 @@ verifies of the others are still running.
 Success clears the e-mail's counter but only forgives its own hit on the IP's. Clearing the IP
 as well would let an attacker with one valid account reset the limit between guesses.
 
+Without trusted proxy headers, a private peer is the reverse proxy itself: every user would share
+one counter, and anyone's failures would lock everyone out. The per-IP limit then stands down and
+only the per-e-mail one applies, until ``TRUST_PROXY_HEADERS=true`` gives it real addresses.
+
 Decision: a Redis outage fails open, with a warning and a metric. Refusing logins would turn a
 cache outage into a site-wide lockout; the cost is that guessing goes unthrottled meanwhile,
 still slowed by Argon2.
@@ -14,6 +18,7 @@ still slowed by Argon2.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -36,12 +41,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger("inkstave.ratelimit")
 
 
+def _is_public(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip).is_global
+    except ValueError:
+        return False
+
+
 class LoginThrottle:
     def __init__(self, redis: Redis, settings: Settings, ip: str) -> None:
         self._redis = redis
         self._enabled = settings.rate_limit_enabled
         self._ip_key = f"ratelimit:login:ip:{ip}"
         self._ip_limit = parse_rate_limit(settings.rate_limit_login_ip)
+        self._counts_ip = settings.trust_proxy_headers or _is_public(ip)
         self._email_limit = parse_rate_limit(settings.rate_limit_login)
 
     @staticmethod
@@ -57,7 +70,8 @@ class LoginThrottle:
     async def _count(self, email: str) -> bool:
         """Count the attempt or raise 429; ``False`` when the counters are unreachable."""
         try:
-            await self._check(self._ip_key, self._ip_limit)
+            if self._counts_ip:
+                await self._check(self._ip_key, self._ip_limit)
             await self._check(self._email_key(email), self._email_limit)
         except RateLimitError:
             raise
@@ -69,8 +83,8 @@ class LoginThrottle:
     async def _forgive(self, email: str) -> None:
         try:
             await self._redis.delete(self._email_key(email))
-            if await self._redis.decr(self._ip_key) <= 0:
-                # The window may have ended meanwhile: never leave a counter without a TTL.
+            # The window may have ended meanwhile: never leave a counter without a TTL.
+            if self._counts_ip and await self._redis.decr(self._ip_key) <= 0:
                 await self._redis.delete(self._ip_key)
         except Exception:
             self._warn()

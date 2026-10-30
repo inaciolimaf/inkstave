@@ -117,7 +117,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `REFRESH_TOKEN_TTL_SECONDS` | No | `1209600` | refresh token lifetime / Redis TTL (14 days) | backend |
 | `RATE_LIMIT_ENABLED` | No | `true` | master switch for the limiter | backend |
 | `RATE_LIMIT_AUTH_LOGIN` | No | `10/300` | wrong passwords, `<limit>/<window_seconds>` per e-mail; success resets it (legacy alias: `RATE_LIMIT_LOGIN`) | backend |
-| `RATE_LIMIT_LOGIN_IP` | No | `50/300` | wrong passwords per IP | backend |
+| `RATE_LIMIT_LOGIN_IP` | No | `50/300` | wrong passwords per IP; behind a proxy it needs `TRUST_PROXY_HEADERS=true`, otherwise only the per-e-mail limit applies | backend |
 | `RATE_LIMIT_REGISTER` | No | `5/3600` | per IP | backend |
 | `RATE_LIMIT_REFRESH` | No | `30/300` | per IP | backend |
 | `RATE_LIMIT_AUTH_PASSWORD` | No | `5/3600` | change-password / sensitive-auth cap, `<limit>/<window_seconds>` per user-or-IP | backend |
@@ -342,6 +342,9 @@ section and [docs/e2e-strategy.md](e2e-strategy.md) for the mock path used in te
   healthchecks use these.
 - **Tracing** — optional OpenTelemetry (`OTEL_ENABLED=true`,
   `OTEL_EXPORTER_OTLP_ENDPOINT`); a true no-op when disabled.
+
+
+**Locking an account out.** `python -m inkstave.cli deactivate-user --email user@example.com` blocks login and ends every session. Undo it with `UPDATE users SET is_active = true`.
 
 ## Upgrades
 

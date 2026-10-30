@@ -34,6 +34,7 @@ def _limits(monkeypatch: pytest.MonkeyPatch, *, email: str = "1000/300", ip: str
     get_settings.cache_clear()
     monkeypatch.setenv("RATE_LIMIT_LOGIN", email)
     monkeypatch.setenv("RATE_LIMIT_LOGIN_IP", ip)
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", "true")
 
 
 async def test_the_right_password_is_refused_once_the_email_limit_is_reached(
@@ -144,6 +145,39 @@ async def test_a_redis_failure_while_forgiving_does_not_fail_the_login(
 
     async with throttle.attempt(EMAIL):
         monkeypatch.setattr(redis, "delete", down)
+
+
+async def test_behind_an_untrusted_proxy_the_ip_limit_stands_down(
+    async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The peer is the proxy, shared by every user: one counter would lock everybody out.
+    _limits(monkeypatch, ip="1/300")
+    monkeypatch.setenv("TRUST_PROXY_HEADERS", "false")
+
+    for name in ("a", "b", "c"):
+        assert (await _login(async_client, "wrong-pass1", f"{name}@example.com")).status_code == 401
+
+
+async def test_a_public_peer_is_limited_without_trusted_headers(redis: Any) -> None:
+    settings = get_settings().model_copy(update={"rate_limit_login_ip": "1/300"})
+    throttle = LoginThrottle(redis, settings, "8.8.8.8")
+
+    async def guess(email: str) -> None:
+        async with throttle.attempt(email):
+            raise InvalidCredentialsError()
+
+    with pytest.raises(InvalidCredentialsError):
+        await guess("a@example.com")
+    with pytest.raises(RateLimitError):
+        await guess("b@example.com")
+
+
+@pytest.mark.parametrize("peer", ["unknown", "not-an-ip", "10.0.0.5"])
+async def test_a_peer_that_is_no_public_address_never_touches_the_ip_counter(redis: Any, peer: str) -> None:
+    throttle = LoginThrottle(redis, get_settings(), peer)
+    async with throttle.attempt(EMAIL):
+        pass
+    assert await redis.exists(f"ratelimit:login:ip:{peer}") == 0
 
 
 async def test_disabled_limiter_counts_nothing(
