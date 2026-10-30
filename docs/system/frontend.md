@@ -226,7 +226,6 @@ Reuse is enforced by lint. Each rule has one allowed file:
 |---|---|---|
 | No hex colours | Design tokens | `frontend/src/lib/palettes.ts` |
 | No `toLocale*String` | `formatNumber`, `formatDate`, `formatDateTime` | `frontend/src/lib/formatting.ts` |
-| No `shadow-card` | `Card` | `frontend/src/components/ui/card.tsx` |
 | No `keydown` listener | `useShortcuts` | `frontend/src/lib/shortcuts.ts` |
 
 ### Landing styling
