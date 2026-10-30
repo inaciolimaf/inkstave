@@ -52,7 +52,7 @@ The review gate. Each item links to the code and/or test that proves it.
 - [x] Rotation guidance — below
 
 ## Dependencies
-- [x] `pip-audit` + `npm audit --audit-level=high` gate — `scripts/audit.sh`; runs in CI (spec 57)
+- [ ] `pip-audit` + `npm audit --audit-level=high` gate — `scripts/audit.sh` exists but is manual, not in CI: it fails today (open advisories; `npm audit` needs a lockfile that pnpm does not produce)
 - [x] Lockfiles pinned (`uv.lock`, `package-lock.json`); review cadence: weekly
 
 ---

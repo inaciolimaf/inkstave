@@ -2,7 +2,7 @@
 """Fail when a function body or a whole file exceeds the project's line ceilings.
 
 Ruff has no "function too long" rule (PLR0915 counts *statements*, not lines),
-so this dependency-free AST check fills the gap. It is wired into `just lint`
+so this dependency-free AST check fills the gap. It is wired into `make lint`
 and the pre-commit hooks; see docs/adr/0106-complexity-and-security-lint.md for the rationale
 behind the ceiling.
 
@@ -23,7 +23,7 @@ from pathlib import Path
 
 DEFAULT_MAX_LINES = 30
 DEFAULT_MAX_FILE_LINES = 300
-DEFAULT_PATHS = ("backend/src", "backend/tests", "backend/scripts", "scripts")
+DEFAULT_PATHS = ("backend/src", "backend/tests", "backend/scripts", "scripts", "tools")
 # Vendored / generated trees the ceiling does not apply to.
 EXCLUDED_DIRS = frozenset(
     {
@@ -53,10 +53,12 @@ def iter_python_files(paths: list[str]) -> Iterator[Path]:
 def body_start(node: FunctionDef) -> int:
     """First line of the body, skipping a leading docstring."""
     first = node.body[0]
-    if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant):
-        if isinstance(first.value.value, str):
-            return (first.end_lineno or first.lineno) + 1
-    return first.lineno
+    is_docstring = (
+        isinstance(first, ast.Expr)
+        and isinstance(first.value, ast.Constant)
+        and isinstance(first.value.value, str)
+    )
+    return (first.end_lineno or first.lineno) + 1 if is_docstring else first.lineno
 
 
 def count_body_lines(node: FunctionDef, source_lines: list[str]) -> int:
@@ -99,9 +101,7 @@ def count_file_lines(tree: ast.Module, source_lines: list[str]) -> int:
     return total
 
 
-def check_file(
-    path: Path, max_lines: int, max_file_lines: int = DEFAULT_MAX_FILE_LINES
-) -> list[str]:
+def check_file(path: Path, max_lines: int, max_file_lines: int = DEFAULT_MAX_FILE_LINES) -> list[str]:
     """Return one message per over-long function in `path`, plus one if the file is."""
     source = path.read_text(encoding="utf-8")
     try:

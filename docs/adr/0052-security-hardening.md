@@ -67,8 +67,9 @@ caveat** is documented (`docs/security-checklist.md`, README).
 ### 7. Dependency audit
 
 `scripts/audit.sh` runs `pip-audit` (backend) + `npm audit --audit-level=high`
-(frontend), failing on high/critical not in `scripts/audit-allowlist.txt`. The real
-network audit runs in CI (spec 57); the fast suite only asserts the gate exists.
+(frontend), failing on high/critical not in `scripts/audit-allowlist.txt`. It is run
+by hand, not in CI (see the script's header); the fast suite only asserts the gate
+exists.
 
 ## Consequences
 

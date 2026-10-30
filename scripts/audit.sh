@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Dependency vulnerability audit (spec 52 §5.6). Fails on high/critical advisories
-# not in the allowlist. Wired into CI (spec 57); runs the real network audit there.
+# not in the allowlist. Manual only, NOT in CI: it does not pass today (pip-audit reports
+# open advisories, and `npm audit` needs a package-lock.json this pnpm project lacks).
 #
 #   scripts/audit.sh
 #

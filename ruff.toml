@@ -1,0 +1,2 @@
+# scripts/ and tools/ follow the backend's rules, for `make lint` and pre-commit alike.
+extend = "backend/pyproject.toml"
