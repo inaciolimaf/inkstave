@@ -42,7 +42,7 @@ export function SetupPage() {
 
   if (status.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <div className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
         <div className="w-full max-w-sm space-y-3" aria-busy="true">
           <Skeleton className="h-8" />
           <Skeleton className="h-24" />
@@ -53,7 +53,7 @@ export function SetupPage() {
 
   if (status.isError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <div className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
         <Alert variant="destructive" className="w-full max-w-sm" role="alert">
           <AlertDescription>{t("setup.statusError")}</AlertDescription>
         </Alert>
@@ -99,7 +99,7 @@ export function SetupPage() {
   const pending = form.formState.isSubmitting;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-muted/30 p-4">
       <InkstaveLogo className="text-2xl" />
       <Card className="w-full max-w-sm">
         <CardHeader>

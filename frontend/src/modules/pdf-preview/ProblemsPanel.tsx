@@ -20,8 +20,8 @@ const SEVERITY_META: Record<
   { labelKey: string; Icon: typeof AlertCircle; className: string }
 > = {
   error: { labelKey: "problems.errors", Icon: AlertCircle, className: "text-destructive" },
-  warning: { labelKey: "problems.warnings", Icon: AlertTriangle, className: "text-amber-500" },
-  info: { labelKey: "problems.typesetting", Icon: Info, className: "text-sky-500" },
+  warning: { labelKey: "problems.warnings", Icon: AlertTriangle, className: "text-warning-text" },
+  info: { labelKey: "problems.typesetting", Icon: Info, className: "text-muted-foreground" },
 };
 
 function ProblemRow({

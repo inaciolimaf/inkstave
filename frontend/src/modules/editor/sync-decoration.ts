@@ -1,7 +1,7 @@
 /**
  * CodeMirror 6 extension + helpers for SyncTeX "reveal a source line" (spec 26).
  *
- * A line decoration flashes the synced line (amber, ~1.2s) and the editor scrolls
+ * A line decoration flashes the synced line (warning tint, ~1.2s) and the editor scrolls
  * to it; the flash is never the only signal (the cursor/scroll also move).
  */
 import { StateEffect, StateField } from "@codemirror/state";
@@ -36,8 +36,8 @@ const syncLineField = StateField.define<DecorationSet>({
 
 const syncFlashTheme = EditorView.baseTheme({
   ".cm-sync-flash": {
-    backgroundColor: "rgba(250, 204, 21, 0.35)",
-    transition: "background-color 300ms ease-out",
+    backgroundColor: "hsl(var(--warning) / 0.25)",
+    transition: "background-color var(--motion-base) var(--ease-out)",
   },
 });
 

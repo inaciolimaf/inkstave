@@ -165,7 +165,7 @@ export function AgentPanel({
           tabIndex={0}
           onPointerDown={onPointerDown}
           onKeyDown={onKeyDown}
-          className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize bg-transparent hover:bg-border focus-visible:bg-border focus-visible:outline-none"
+          className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize bg-transparent hover:bg-border focus-visible:bg-border"
         />
         <SheetHeader className="space-y-0 border-b p-3">
           <div className="flex items-center justify-between gap-2 pr-6">

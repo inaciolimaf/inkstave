@@ -33,7 +33,7 @@ const baseTheme = EditorView.baseTheme({
     top: "-.2em",
     left: "-.2em",
     backgroundColor: "inherit",
-    transition: "transform .3s ease-in-out",
+    transition: "transform var(--motion-base) var(--ease-in-out)",
     boxSizing: "border-box",
   },
   ".cm-ySelectionInfo": {
@@ -53,7 +53,7 @@ const baseTheme = EditorView.baseTheme({
     whiteSpace: "nowrap",
     borderRadius: "2px 2px 2px 0",
     opacity: "0",
-    transition: "opacity .3s ease-in-out",
+    transition: "opacity var(--motion-base) var(--ease-in-out)",
     transitionDelay: "0s",
   },
   ".cm-ySelectionCaret:hover > .cm-ySelectionInfo": {
@@ -64,7 +64,7 @@ const baseTheme = EditorView.baseTheme({
   // the name label at full opacity (the hover rule above wins via specificity).
   ".cm-ySelectionCaret--idle": {
     opacity: "0.35",
-    transition: "opacity .3s ease-in-out",
+    transition: "opacity var(--motion-base) var(--ease-in-out)",
   },
   ".cm-ySelectionCaret--idle > .cm-ySelectionInfo": {
     opacity: "0",

@@ -47,8 +47,8 @@ export function HunkView({
               key={i}
               className={cn(
                 "flex whitespace-pre-wrap",
-                line.type === "add" && "bg-green-500/15",
-                line.type === "del" && "bg-red-500/15",
+                line.type === "add" && "bg-success-soft",
+                line.type === "del" && "bg-error-soft",
               )}
             >
               <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">{oldLabel}</span>

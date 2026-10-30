@@ -41,7 +41,7 @@ function InlineRenameInput({ node }: { node: TreeNode }) {
         autoFocus
         aria-label={t("newNameLabel")}
         aria-invalid={error ? true : undefined}
-        className="h-6 w-full rounded border border-input bg-background px-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        className="h-6 w-full rounded border border-input bg-background px-1 text-sm"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onFocus={(e) => e.target.select()}
@@ -163,7 +163,8 @@ export function FileTreeNode({
             style={{ paddingLeft: `${depth * 16 + 4}px` }}
             className={cn(
               "group flex h-7 items-center gap-1 rounded px-1 text-sm",
-              "focus-visible:ring-1 focus-visible:ring-ring",
+              // Focus lands on the parent treeitem; outlining it would wrap the whole subtree.
+              "[:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-focus",
               selected && "bg-accent text-accent-foreground",
               focused && !selected && "bg-muted",
               isDropTarget && "ring-1 ring-primary",

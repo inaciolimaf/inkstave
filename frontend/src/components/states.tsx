@@ -9,7 +9,7 @@ export function Loading({ className }: { className?: string }) {
   const { t } = useTranslation("common");
   return (
     <div
-      className={cn("flex min-h-screen items-center justify-center text-muted-foreground", className)}
+      className={cn("flex min-h-dvh items-center justify-center text-muted-foreground", className)}
       aria-busy="true"
     >
       {t("state.loading")}

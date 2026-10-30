@@ -45,7 +45,7 @@ function VersionRow({
         }
       }}
       className={cn(
-        "cursor-pointer rounded-md border p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring",
+        "cursor-pointer rounded-md border p-2 text-sm focus-visible:-outline-offset-2",
         selected && "border-primary bg-primary/5",
         compared && !selected && "border-primary/50 bg-primary/5",
       )}

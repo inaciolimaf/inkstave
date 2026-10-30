@@ -24,7 +24,10 @@ function PresenceAvatar({ user, withTooltip = true }: { user: PresenceUser; with
     // remote-cursor fade reads (see remote-cursors.ts), so an idle peer's avatar
     // and caret dim together on other clients (spec 32 AC6).
     <Avatar
-      className={cn("size-7 border-2 bg-background ring-0 transition-opacity", user.idle && "opacity-50")}
+      className={cn(
+        "size-7 border-2 bg-background ring-0 transition-opacity duration-fast",
+        user.idle && "opacity-50",
+      )}
       style={{ borderColor: user.color }}
       aria-label={describe(user, t)}
     >
@@ -35,7 +38,7 @@ function PresenceAvatar({ user, withTooltip = true }: { user: PresenceUser; with
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring">
+        <span tabIndex={0} className="rounded-full">
           {avatar}
         </span>
       </TooltipTrigger>

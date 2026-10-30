@@ -76,14 +76,14 @@ function PdfPageView({
       ref={registerRef}
       data-page={pageNumber}
       onDoubleClick={handleDoubleClick}
-      className="relative mx-auto my-2 w-fit bg-white shadow"
+      className="relative mx-auto my-2 w-fit bg-page shadow"
       aria-label={t("viewer.page", { pageNumber })}
     >
       <canvas ref={canvasRef} className="block" />
       {overlay && (
         <div
           data-testid="sync-highlight"
-          className="pointer-events-none absolute animate-pulse rounded-sm bg-amber-300/40 ring-2 ring-amber-400"
+          className="pointer-events-none absolute rounded-sm bg-warning/30 ring-2 ring-warning"
           style={{
             left: overlay.left,
             top: overlay.top,

@@ -39,7 +39,7 @@ export function AcceptInvitePage() {
   const gone = preview.error instanceof ApiError && preview.error.status === 410;
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-dvh items-center justify-center p-4">
       <Card className="w-full max-w-md">
         {preview.isLoading && (
           <CardContent className="py-10 text-center text-sm text-muted-foreground">

@@ -103,7 +103,7 @@ export function ProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <header className="flex items-center justify-between border-b px-6 py-3">
         <InkstaveLogo />
         <div className="flex items-center gap-2">

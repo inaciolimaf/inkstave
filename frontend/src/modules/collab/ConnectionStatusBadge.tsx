@@ -8,15 +8,15 @@ import type { CollabStatus } from "./useCollabDoc";
 const STATUS_META: Record<CollabStatus, { labelKey: string; className: string }> = {
   connected: {
     labelKey: "collab.connected",
-    className: "border-green-500/30 text-green-600 dark:text-green-400",
+    className: "border-success/30 text-success-text",
   },
   connecting: {
     labelKey: "collab.connecting",
-    className: "border-amber-500/30 text-amber-600 dark:text-amber-400",
+    className: "border-warning/30 text-warning-text",
   },
   reconnecting: {
     labelKey: "collab.reconnecting",
-    className: "border-amber-500/30 text-amber-600 dark:text-amber-400",
+    className: "border-warning/30 text-warning-text",
   },
   offline: { labelKey: "collab.offline", className: "text-muted-foreground" },
 };
