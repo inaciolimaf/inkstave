@@ -54,7 +54,7 @@ export function CreateEntityDialog({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3" noValidate>
           <div className="space-y-1">
-            <label htmlFor="entity-name" className="text-sm font-medium">
+            <label htmlFor="entity-name" className="text-body font-medium">
               {t("createDialog.nameLabel")}
             </label>
             <Input
@@ -66,7 +66,7 @@ export function CreateEntityDialog({
               onChange={(e) => setName(e.target.value)}
             />
             {name && error && (
-              <p role="alert" className="text-xs text-error-text">
+              <p role="alert" className="text-small text-error-text">
                 {error}
               </p>
             )}

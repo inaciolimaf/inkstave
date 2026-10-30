@@ -30,6 +30,11 @@ import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
 
+/** A phone's toolbar is icons only: the word stays for assistive technology and as the button's name. */
+function ToolbarLabel({ children }: { children: string }) {
+  return <span className="sr-only sm:not-sr-only">{children}</span>;
+}
+
 export function EditorWorkspace({ projectId }: { projectId: string }) {
   const { t } = useTranslation("editor");
   const [selected, setSelected] = useState<TreeEntity | null>(null);
@@ -167,38 +172,38 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         {config.agentEnabled && (
           <Button
             size="sm"
-            variant={agentOpen ? "secondary" : "outline"}
+            variant={agentOpen ? "secondary" : "ghost"}
             className="ml-auto"
             aria-pressed={agentOpen}
             onClick={() => setAgentOpen((v) => !v)}
           >
             <Sparkles aria-hidden="true" className="size-4" />
-            {t("toolbar.agent")}
+            <ToolbarLabel>{t("toolbar.agent")}</ToolbarLabel>
           </Button>
         )}
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           className={config.agentEnabled ? undefined : "ml-auto"}
           disabled={openDoc?.type !== "doc"}
           onClick={() => setHistoryOpen(true)}
         >
           <History aria-hidden="true" className="size-4" />
-          {t("toolbar.history")}
+          <ToolbarLabel>{t("toolbar.history")}</ToolbarLabel>
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           disabled={downloadingId === projectId}
           aria-busy={downloadingId === projectId}
           onClick={() => void download(projectId, projectQuery.data?.name ?? "project")}
         >
           <Download aria-hidden="true" className="size-4" />
-          {t("toolbar.download")}
+          <ToolbarLabel>{t("toolbar.download")}</ToolbarLabel>
         </Button>
-        <Button size="sm" variant="outline" onClick={() => setShareOpen(true)}>
+        <Button size="sm" variant="ghost" onClick={() => setShareOpen(true)}>
           <Share2 aria-hidden="true" className="size-4" />
-          {t("toolbar.share")}
+          <ToolbarLabel>{t("toolbar.share")}</ToolbarLabel>
         </Button>
         <NotificationsBell />
       </div>
@@ -236,7 +241,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
             readOnly={readOnly}
           />
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle />
         <ResizablePanel defaultSize={48} minSize={20} className="min-h-0">
           <EditorPane
             projectId={projectId}
@@ -253,7 +258,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
             readOnly={readOnly}
           />
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle />
         <ResizablePanel defaultSize={30} minSize={0} className="min-h-0">
           <PreviewPane
             projectId={projectId}

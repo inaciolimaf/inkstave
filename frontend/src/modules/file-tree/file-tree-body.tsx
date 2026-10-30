@@ -50,7 +50,7 @@ export function FileTreeBody({
       )}
 
       {isError && (
-        <div role="alert" className="space-y-2 p-3 text-center text-sm">
+        <div role="alert" className="space-y-2 p-3 text-center text-body">
           <p className="text-error-text">{t("loadError")}</p>
           <Button variant="outline" size="sm" onClick={onRetry}>
             {t("common:action.retry")}
@@ -61,7 +61,7 @@ export function FileTreeBody({
       {ctx && root && (
         <FileTreeContext.Provider value={ctx}>
           {root.children.length === 0 ? (
-            <div className="space-y-2 p-3 text-center text-sm text-muted-foreground">
+            <div className="space-y-2 p-3 text-center text-body text-muted-foreground">
               <p>{readOnly ? t("empty.readOnly") : t("empty.editable")}</p>
               {!readOnly && (
                 <div className="flex justify-center gap-2">

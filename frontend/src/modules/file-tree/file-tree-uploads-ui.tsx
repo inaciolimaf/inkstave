@@ -28,7 +28,7 @@ export function UploadList({
   return (
     <ul className="space-y-1 border-t p-2" aria-label={t("uploadsLabel")}>
       {uploads.map((u) => (
-        <li key={u.key} className="space-y-1 text-xs">
+        <li key={u.key} className="space-y-1 text-small">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate">{u.name}</span>
             <div className="flex items-center gap-1">

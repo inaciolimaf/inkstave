@@ -34,7 +34,7 @@ export function PdfToolbar({ viewport, onDownload }: { viewport: PdfViewport; on
       >
         <ZoomOut aria-hidden="true" />
       </Button>
-      <span className="min-w-12 text-center text-xs tabular-nums" aria-label={t("toolbar.zoomLevel")}>
+      <span className="min-w-12 text-center text-small tabular-nums" aria-label={t("toolbar.zoomLevel")}>
         {zoomPercent}%
       </span>
       <Button
@@ -79,7 +79,7 @@ export function PdfToolbar({ viewport, onDownload }: { viewport: PdfViewport; on
       >
         <ChevronLeft aria-hidden="true" />
       </Button>
-      <form onSubmit={submitJump} className="flex items-center gap-1 text-xs">
+      <form onSubmit={submitJump} className="flex items-center gap-1 text-small">
         <Input
           type="text"
           inputMode="numeric"

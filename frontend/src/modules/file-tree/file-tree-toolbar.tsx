@@ -27,9 +27,7 @@ export function FileTreeToolbar({
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex items-center gap-1 border-b px-2 py-1">
-        <span className="mr-auto text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t("heading")}
-        </span>
+        <span className="mr-auto font-serif text-heading">{t("heading")}</span>
         {!readOnly &&
           actions.map(({ icon: Icon, label, run }) => (
             <Tooltip key={label}>

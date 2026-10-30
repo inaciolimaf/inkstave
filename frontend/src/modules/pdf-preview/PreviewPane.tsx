@@ -51,7 +51,7 @@ function announce(status: string, progressLabel: string | null): string {
 function Centered({ children, label }: { children: React.ReactNode; label?: string }) {
   return (
     <div
-      className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"
+      className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-body text-muted-foreground"
       aria-label={label}
     >
       {children}
@@ -244,8 +244,8 @@ export function PreviewPane({
                 onClick={() => showOutputTab(tab)}
                 className={
                   !outputCollapsed && bottomTab === tab
-                    ? "border-b-2 border-primary px-2 py-1.5 text-sm font-medium"
-                    : "border-b-2 border-transparent px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground/80"
+                    ? "border-b-2 border-primary px-2 py-1.5 text-body font-medium"
+                    : "border-b-2 border-transparent px-2 py-1.5 text-body text-muted-foreground hover:text-foreground/80"
                 }
               >
                 {tab === "problems" ? t("problems.title") : t("log.title")}

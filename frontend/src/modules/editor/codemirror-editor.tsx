@@ -19,10 +19,40 @@ import { keymapExtension } from "./keymap-extension";
 import { syncHighlightExtension } from "./sync-decoration";
 import type { EditorSettings } from "./types";
 
+const SHEET = "hsl(var(--background))";
+const TINT = "hsl(var(--foreground) / 0.05)";
+const SELECTION = "hsl(var(--foreground) / 0.16)";
+const SELECTION_SELECTORS =
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection";
+
+/**
+ * The sheet (spec 106): paper in light and carbon in dark, from the page's own tokens, which follow the
+ * same preference as `dark`. One Dark's syntax colours are a separate highlight style and stay.
+ */
+const sheetTheme = EditorView.theme({
+  "&": { backgroundColor: SHEET, color: "hsl(var(--foreground))" },
+  ".cm-gutters": {
+    backgroundColor: SHEET,
+    color: "hsl(var(--muted-foreground))",
+    borderRight: "1px solid hsl(var(--border))",
+  },
+  ".cm-activeLine": { backgroundColor: TINT },
+  ".cm-activeLineGutter": { backgroundColor: TINT },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
+  [SELECTION_SELECTORS]: { backgroundColor: SELECTION },
+});
+
+/** Listed first: an earlier extension's theme wins, so the sheet overrides One Dark's surfaces. */
+function colourTheme(dark: boolean): Extension {
+  return dark ? [sheetTheme, oneDark] : sheetTheme;
+}
+
 function fontTheme(size: number): Extension {
   return EditorView.theme({
     "&": { fontSize: `${size}px` },
-    ".cm-content": { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" },
+    ".cm-content": {
+      fontFamily: '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace',
+    },
   });
 }
 
@@ -110,7 +140,7 @@ export function CodeMirrorEditor({
         c.keys.of(keymapExtension(settings.keymap)),
         c.font.of(fontTheme(settings.fontSize)),
         c.wrap.of(settings.lineWrapping ? EditorView.lineWrapping : []),
-        c.theme.of(dark ? oneDark : []),
+        c.theme.of(colourTheme(dark)),
       ],
     });
     const view = new EditorView({ state, parent: hostRef.current! });
@@ -165,9 +195,9 @@ export function CodeMirrorEditor({
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: compartments.current.theme.reconfigure(dark ? oneDark : []),
+      effects: compartments.current.theme.reconfigure(colourTheme(dark)),
     });
   }, [dark]);
 
-  return <div ref={hostRef} className="h-full overflow-auto text-sm" data-testid="cm-host" />;
+  return <div ref={hostRef} className="h-full overflow-auto text-body" data-testid="cm-host" />;
 }

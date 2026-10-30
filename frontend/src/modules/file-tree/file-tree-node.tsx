@@ -41,7 +41,7 @@ function InlineRenameInput({ node }: { node: TreeNode }) {
         autoFocus
         aria-label={t("newNameLabel")}
         aria-invalid={error ? true : undefined}
-        className="h-6 w-full rounded border border-input bg-background px-1 text-sm"
+        className="h-6 w-full rounded border border-input bg-background px-1 text-body"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onFocus={(e) => e.target.select()}
@@ -54,7 +54,7 @@ function InlineRenameInput({ node }: { node: TreeNode }) {
         onBlur={commit}
       />
       {error && (
-        <span role="alert" className="whitespace-nowrap text-xs text-error-text">
+        <span role="alert" className="whitespace-nowrap text-small text-error-text">
           {error}
         </span>
       )}
@@ -162,10 +162,10 @@ export function FileTreeNode({
             onDoubleClick={() => ctx.onActivate(node)}
             style={{ paddingLeft: `${depth * 16 + 4}px` }}
             className={cn(
-              "group flex h-7 items-center gap-1 rounded px-1 text-sm",
+              "group flex h-7 items-center gap-1 border-l-2 border-transparent px-1 text-body",
               // Focus lands on the parent treeitem; outlining it would wrap the whole subtree.
               "[:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-focus",
-              selected && "bg-accent text-accent-foreground",
+              selected && "border-foreground font-medium",
               focused && !selected && "bg-muted",
               isDropTarget && "ring-1 ring-primary",
             )}

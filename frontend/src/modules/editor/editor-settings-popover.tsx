@@ -36,9 +36,9 @@ export function EditorSettingsPopover({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="space-y-4">
-        <p className="text-sm font-medium">{t("settings.title")}</p>
+        <p className="text-body font-medium">{t("settings.title")}</p>
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor="editor-font-size" className="text-sm">
+          <label htmlFor="editor-font-size" className="text-body">
             {t("settings.fontSize")}
           </label>
           <Select value={String(settings.fontSize)} onValueChange={(v) => onUpdate({ fontSize: Number(v) })}>
@@ -55,7 +55,7 @@ export function EditorSettingsPopover({
           </Select>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor="editor-keymap" className="text-sm">
+          <label htmlFor="editor-keymap" className="text-body">
             {t("settings.keymap")}
           </label>
           <Select value={settings.keymap} onValueChange={(v) => onUpdate({ keymap: v as EditorKeymap })}>
@@ -72,7 +72,7 @@ export function EditorSettingsPopover({
           </Select>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor="editor-wrap" className="text-sm">
+          <label htmlFor="editor-wrap" className="text-body">
             {t("settings.lineWrapping")}
           </label>
           <Switch

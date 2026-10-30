@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 import type { CollabStatus } from "./useCollabDoc";
@@ -8,15 +7,15 @@ import type { CollabStatus } from "./useCollabDoc";
 const STATUS_META: Record<CollabStatus, { labelKey: string; className: string }> = {
   connected: {
     labelKey: "collab.connected",
-    className: "border-success/30 text-success-text",
+    className: "text-success-text",
   },
   connecting: {
     labelKey: "collab.connecting",
-    className: "border-warning/30 text-warning-text",
+    className: "text-warning-text",
   },
   reconnecting: {
     labelKey: "collab.reconnecting",
-    className: "border-warning/30 text-warning-text",
+    className: "text-warning-text",
   },
   offline: { labelKey: "collab.offline", className: "text-muted-foreground" },
 };
@@ -27,14 +26,13 @@ export function ConnectionStatusBadge({ status }: { status: CollabStatus }) {
   const meta = STATUS_META[status];
   const label = t(meta.labelKey);
   return (
-    <Badge
-      variant="outline"
+    <span
       aria-live="polite"
       aria-label={t("collab.connection", { status: label })}
-      className={cn("gap-1.5", meta.className)}
+      className={cn("inline-flex items-center gap-1.5 text-small font-medium", meta.className)}
     >
       <span className="size-2 rounded-full bg-current" aria-hidden="true" />
       {label}
-    </Badge>
+    </span>
   );
 }

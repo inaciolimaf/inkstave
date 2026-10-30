@@ -68,7 +68,7 @@ export function SaveStatusIndicator({
         {label}
       </Badge>
       {status === "error" && (
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={onRetry}>
+        <Button size="sm" variant="ghost" className="h-6 px-2 text-small" onClick={onRetry}>
           {t("saveStatus.retry")}
         </Button>
       )}

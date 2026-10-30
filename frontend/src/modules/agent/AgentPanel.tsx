@@ -94,15 +94,15 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   const { t } = useTranslation("agent");
   const examples = [t("empty.example1"), t("empty.example2"), t("empty.example3")];
   return (
-    <div className="flex-1 space-y-3 p-4 text-sm text-muted-foreground">
+    <div className="flex-1 space-y-3 p-4 text-body text-muted-foreground">
       <p>{t("empty.intro")}</p>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col divide-y border-y">
         {examples.map((ex) => (
           <button
             key={ex}
             type="button"
             onClick={() => onPick(ex)}
-            className="rounded-md border px-3 py-2 text-left text-xs hover:bg-muted"
+            className="py-2 text-left text-small hover:text-foreground"
           >
             {ex}
           </button>
@@ -169,7 +169,7 @@ export function AgentPanel({
         />
         <SheetHeader className="space-y-0 border-b p-3">
           <div className="flex items-center justify-between gap-2 pr-6">
-            <SheetTitle className="truncate text-base">{title}</SheetTitle>
+            <SheetTitle className="truncate font-serif text-heading font-medium">{title}</SheetTitle>
             <div className="flex items-center gap-1">
               <Button
                 size="icon"
