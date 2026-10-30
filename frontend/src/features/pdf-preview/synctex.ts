@@ -8,26 +8,14 @@
  * is a knowing, low-risk deviation: the module is functionally identical wherever
  * it lives, and keeping it next to its callers avoids a cross-feature import hop.
  */
+import type { Schemas } from "@/api/models";
 import { ApiError, apiClient } from "@/lib/api-client";
 
-export interface SyncTexBox {
-  page: number;
-  h: number;
-  v: number;
-  width: number;
-  height: number;
-  depth: number;
-}
+export type SyncTexBox = Schemas["SyncTexBox"];
 
-export interface ForwardResult {
-  boxes: SyncTexBox[];
-}
+export type ForwardResult = Schemas["ForwardResult"];
 
-export interface InverseResult {
-  file: string;
-  line: number;
-  column: number | null;
-}
+export type InverseResult = Schemas["InverseResult"];
 
 /** Why a sync request did not yield a location — a discriminated failure. */
 export type SyncReason = "no_match" | "synctex_unavailable" | "error";

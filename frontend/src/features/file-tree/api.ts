@@ -1,23 +1,14 @@
 /** File-tree (spec 12) + binary upload (spec 14) API. Wire mapping lives here. */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
 
-import type { EntityType, TreeEntity, TreeNode } from "./types";
+import type { TreeEntity, TreeNode } from "./types";
 
-interface WireEntity {
-  id: string;
-  project_id: string;
-  parent_id: string | null;
-  type: EntityType;
-  name: string;
-  is_root: boolean;
-  path: string;
-}
+type WireEntity = Schemas["TreeEntityRead"];
 
-interface WireNode extends WireEntity {
-  children: WireNode[] | null;
-}
+type WireNode = Schemas["TreeNode"];
 
 function toEntity(w: WireEntity): TreeEntity {
   return {
@@ -35,7 +26,7 @@ function toNode(w: WireNode): TreeNode {
 }
 
 export async function getTree(projectId: string): Promise<TreeNode> {
-  const data = await apiClient.get<{ root: WireNode }>(`/api/v1/projects/${projectId}/tree`);
+  const data = await apiClient.get<Schemas["TreeRead"]>(`/api/v1/projects/${projectId}/tree`);
   return toNode(data.root);
 }
 

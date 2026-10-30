@@ -1,4 +1,5 @@
 /** First-run setup API (spec 63 → spec-57 `/api/setup` endpoints). */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 
 export interface SetupStatus {
@@ -7,7 +8,7 @@ export interface SetupStatus {
 
 /** Whether a first admin still needs to be created. */
 export async function getSetupStatus(): Promise<SetupStatus> {
-  const wire = await apiClient.get<{ needs_setup: boolean }>("/api/setup/status");
+  const wire = await apiClient.get<Schemas["SetupStatus"]>("/api/setup/status");
   return { needsSetup: wire.needs_setup };
 }
 

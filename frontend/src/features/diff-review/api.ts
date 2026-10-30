@@ -1,29 +1,12 @@
 /** Fetch a proposal's full diff via the spec-44 diffs endpoint (spec 47). */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 
-import { mapWireHunk } from "./hunks";
+import { mapWireHunk, type WireHunk } from "./hunks";
 import type { DiffProposal } from "./types";
 
-interface WireDiff {
-  id: string;
-  doc_id: string;
-  path: string;
-  base_version: string;
-  stats: { hunk_count?: number };
-  status: string;
-  created_at: string;
-  hunks:
-    | {
-        hunk_id: string;
-        header: string;
-        old_start: number;
-        old_lines: number;
-        new_start: number;
-        new_lines: number;
-        lines: { op: " " | "-" | "+"; text: string }[];
-      }[]
-    | null;
-}
+/** The backend types `hunks` as loose objects; `WireHunk` is what it writes. */
+type WireDiff = Omit<Schemas["ProposedDiffSummary"], "hunks"> & { hunks?: WireHunk[] | null };
 
 /** Load the single-file proposal identified by `proposalId` from the session's diffs. */
 export async function fetchProposal(

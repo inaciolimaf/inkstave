@@ -1,4 +1,5 @@
 /** Project API calls (spec 11). snake_case ↔ camelCase mapping lives here only. */
+import type { Schemas } from "@/api/models";
 import { config } from "@/config";
 import { apiClient } from "@/lib/api-client";
 import { sanitizeDownloadName, triggerBrowserDownload } from "@/lib/download";
@@ -6,19 +7,9 @@ import { tokenStore } from "@/lib/token-store";
 
 import type { Project } from "./types";
 
-interface ProjectWire {
-  id: string;
-  name: string;
-  owner_id: string;
-  root_doc_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
+type ProjectWire = Schemas["ProjectRead"];
 
-interface ProjectListWire {
-  items: ProjectWire[];
-  total: number;
-}
+type ProjectListWire = Schemas["ProjectList"];
 
 function toProject(wire: ProjectWire): Project {
   return {
@@ -67,25 +58,17 @@ export interface ProjectImport {
   errorMessage: string | null;
 }
 
-interface ProjectImportWire {
-  import_id: string;
-  project_id: string;
-  status: ImportStatus;
-  entries_total: number | null;
-  entries_imported: number | null;
-  error_type: string | null;
-  error_message: string | null;
-}
+type ProjectImportWire = Schemas["ProjectImportRead"];
 
 function toImport(wire: ProjectImportWire): ProjectImport {
   return {
     importId: wire.import_id,
     projectId: wire.project_id,
     status: wire.status,
-    entriesTotal: wire.entries_total,
-    entriesImported: wire.entries_imported,
-    errorType: wire.error_type,
-    errorMessage: wire.error_message,
+    entriesTotal: wire.entries_total ?? null,
+    entriesImported: wire.entries_imported ?? null,
+    errorType: wire.error_type ?? null,
+    errorMessage: wire.error_message ?? null,
   };
 }
 

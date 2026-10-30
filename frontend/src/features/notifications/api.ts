@@ -1,18 +1,12 @@
 /** Notification API calls (spec 39). */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 
 import type { AppNotification, NotificationList } from "./types";
 
 const BASE = "/api/v1/notifications";
 
-interface WireNotification {
-  id: string;
-  type: string;
-  payload: Record<string, unknown>;
-  read_at: string | null;
-  expires_at: string | null;
-  created_at: string;
-}
+type WireNotification = Schemas["NotificationRead"];
 
 function toNotification(w: WireNotification): AppNotification {
   return {
@@ -26,12 +20,12 @@ function toNotification(w: WireNotification): AppNotification {
 }
 
 export async function listNotifications(): Promise<NotificationList> {
-  const wire = await apiClient.get<{ items: WireNotification[]; unread_count: number }>(BASE);
+  const wire = await apiClient.get<Schemas["NotificationList"]>(BASE);
   return { items: wire.items.map(toNotification), unreadCount: wire.unread_count };
 }
 
 export async function fetchUnreadCount(): Promise<number> {
-  return (await apiClient.get<{ count: number }>(`${BASE}/unread-count`)).count;
+  return (await apiClient.get<Schemas["UnreadCount"]>(`${BASE}/unread-count`)).count;
 }
 
 export async function markRead(id: string): Promise<void> {
@@ -39,7 +33,7 @@ export async function markRead(id: string): Promise<void> {
 }
 
 export async function markAllRead(): Promise<number> {
-  return (await apiClient.post<{ updated: number }>(`${BASE}/read-all`, {})).updated;
+  return (await apiClient.post<Schemas["MarkAllResult"]>(`${BASE}/read-all`, {})).updated;
 }
 
 export async function dismissNotification(id: string): Promise<void> {

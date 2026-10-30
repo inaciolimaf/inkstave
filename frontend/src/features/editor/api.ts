@@ -1,20 +1,10 @@
 /** Document content API (spec 13). Wire mapping lives here. */
+import type { Schemas } from "@/api/models";
 import { ApiError, apiClient } from "@/lib/api-client";
 
 import type { DocumentContent } from "./types";
 
-interface DocumentWire {
-  entity_id: string;
-  project_id: string;
-  version: number;
-  size_bytes: number;
-  content: string;
-  updated_at: string;
-  // The backend `DocumentContentRead` wire currently omits `name` (spec 73
-  // reports this gap to the pack that owns the document schema). Mapped through
-  // when present so the frontend contract matches spec 18 §5.1.
-  name?: string;
-}
+type DocumentWire = Schemas["DocumentContentRead"];
 
 export interface ConflictInfo {
   currentVersion: number;
@@ -31,7 +21,7 @@ export class VersionConflictError extends Error {
 
 export async function getDocument(projectId: string, docId: string): Promise<DocumentContent> {
   const wire = await apiClient.get<DocumentWire>(`/api/v1/projects/${projectId}/documents/${docId}`);
-  return { id: wire.entity_id, name: wire.name, content: wire.content, version: wire.version };
+  return { id: wire.entity_id, content: wire.content, version: wire.version };
 }
 
 /**

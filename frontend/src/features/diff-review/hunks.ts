@@ -1,7 +1,7 @@
 /** Hunk parsing, application, rebase, and minimal-edit logic (spec 47). Pure. */
 import type { DiffHunk, LineType } from "./types";
 
-interface WireHunk {
+export interface WireHunk {
   hunk_id: string;
   header: string;
   old_start: number;

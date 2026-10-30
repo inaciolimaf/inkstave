@@ -1,13 +1,10 @@
-/** TypeScript mirrors of the backend Pydantic shapes (specs 06-08, 59). */
+/** App-wide API shapes, named from the generated contract (specs 06-08, 59). */
+import type { Schemas } from "@/api/models";
 
-export type EditorTheme = "light" | "dark" | "system";
-export type EditorKeymap = "default" | "vim" | "emacs";
+export type EditorTheme = Schemas["EditorPreferences"]["theme"];
+export type EditorKeymap = Schemas["EditorPreferences"]["keymap"];
 
-export interface EditorPreferences {
-  theme: EditorTheme;
-  font_size: number;
-  keymap: EditorKeymap;
-}
+export type EditorPreferences = Schemas["EditorPreferences"];
 
 export const DEFAULT_EDITOR_PREFERENCES: EditorPreferences = {
   theme: "system",
@@ -15,25 +12,9 @@ export const DEFAULT_EDITOR_PREFERENCES: EditorPreferences = {
   keymap: "default",
 };
 
-export interface UserPublic {
-  id: string;
-  email: string;
-  display_name: string;
-  is_admin: boolean;
-  email_confirmed: boolean;
-  created_at: string;
-  // Present on the /users/me self-view (spec 59); optional elsewhere.
-  avatar_url?: string | null;
-  editor_preferences?: EditorPreferences;
-  pending_email?: string | null;
-}
+export type UserPublic = Schemas["UserMe"];
 
-export interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-  token_type: "bearer";
-  expires_in: number;
-}
+export type TokenPair = Schemas["TokenPair"];
 
 /** Field-scoped validation errors keyed by field name (from a 422 envelope). */
 export type FieldErrors = Record<string, string>;

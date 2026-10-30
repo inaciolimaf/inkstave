@@ -1,4 +1,5 @@
 /** Agent chat API calls (spec 46 → spec-44 endpoints). */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
@@ -7,14 +8,7 @@ import type { ChatSession, WireDiffSummary, WireMessage } from "./types";
 
 const base = (projectId: string) => `/api/v1/projects/${projectId}/agent`;
 
-interface WireSession {
-  id: string;
-  project_id: string;
-  title: string | null;
-  run_state: string;
-  created_at: string;
-  updated_at: string;
-}
+type WireSession = Schemas["AgentSessionOut"];
 
 function toSession(w: WireSession): ChatSession {
   return {
@@ -45,12 +39,12 @@ export interface SessionDetail {
 }
 
 export async function getSession(projectId: string, sessionId: string): Promise<SessionDetail> {
-  const wire = await apiClient.get<{
-    session: WireSession;
-    messages: WireMessage[];
-    diffs: WireDiffSummary[];
-  }>(`${base(projectId)}/sessions/${sessionId}`);
-  return { session: toSession(wire.session), messages: wire.messages, diffs: wire.diffs };
+  const wire = await apiClient.get<Schemas["SessionDetailOut"]>(`${base(projectId)}/sessions/${sessionId}`);
+  return {
+    session: toSession(wire.session),
+    messages: wire.messages as WireMessage[],
+    diffs: wire.diffs as WireDiffSummary[],
+  };
 }
 
 export interface StartRunResult {
@@ -63,7 +57,7 @@ export async function startRun(
   sessionId: string,
   content: string,
 ): Promise<StartRunResult> {
-  const wire = await apiClient.post<{ run_id: string; stream_url: string }>(
+  const wire = await apiClient.post<Schemas["PostMessageOut"]>(
     `${base(projectId)}/sessions/${sessionId}/messages`,
     { content },
   );

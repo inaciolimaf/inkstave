@@ -1,4 +1,5 @@
 /** PDF-preview feature types (spec 24). Mirrors the spec-22 compile schemas. */
+import type { Schemas } from "@/api/models";
 
 /** Job lifecycle states, mirroring the backend `CompileJobStatus` enum (spec 22). */
 export type CompileJobStatus =
@@ -21,22 +22,11 @@ export interface CompileArtifact {
   content_type: string;
 }
 
-/** Status snapshot returned by `POST /compile`, `GET /compile/{id}`, and SSE. */
-export interface CompileStatus {
-  id: string;
-  project_id: string;
+/** The backend types `status` and the manifest loosely; these are the values it produces. */
+export type CompileStatus = Omit<Schemas["CompileStatusResponse"], "status" | "artifact_manifest"> & {
   status: CompileJobStatus;
-  main_file: string;
-  has_pdf: boolean;
-  created_at: string;
-  started_at: string | null;
-  finished_at: string | null;
-  duration_ms: number | null;
-  exit_code: number | null;
-  error_message: string | null;
-  log_excerpt: string | null;
-  artifact_manifest: CompileArtifact[] | null;
-}
+  artifact_manifest?: CompileArtifact[] | null;
+};
 
 export const TERMINAL_STATUSES: ReadonlySet<CompileJobStatus> = new Set([
   "success",

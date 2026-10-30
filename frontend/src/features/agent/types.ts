@@ -1,4 +1,5 @@
 /** Frontend types mirroring the spec-44 agent contract (spec 46). */
+import type { Schemas } from "@/api/models";
 
 export type ChatRole = "user" | "assistant";
 
@@ -82,20 +83,12 @@ export interface AgentEvent {
   message?: string;
 }
 
-/** Wire shape of a stored agent message (spec-44 AgentMessageOut). */
-export interface WireMessage {
-  id: string;
-  seq: number;
-  role: string;
-  content: string | null;
-  tool_calls: { id: string; name: string; arguments: unknown }[] | null;
-  tool_call_id: string | null;
-}
+/** The backend types `tool_calls` as loose objects; these are the fields the agent writes. */
+export type WireMessage = Pick<
+  Schemas["AgentMessageOut"],
+  "id" | "seq" | "role" | "content" | "tool_call_id"
+> & { tool_calls: { id: string; name: string; arguments: Record<string, unknown> }[] | null };
 
-export interface WireDiffSummary {
-  id: string;
-  doc_id: string;
-  path: string;
+export type WireDiffSummary = Pick<Schemas["ProposedDiffSummary"], "id" | "doc_id" | "path" | "status"> & {
   stats: { hunk_count?: number };
-  status: string;
-}
+};

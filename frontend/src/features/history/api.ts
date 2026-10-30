@@ -1,18 +1,12 @@
 /** History API calls (spec 38 → spec-37 endpoints). snake_case ↔ camelCase here only. */
+import type { Schemas } from "@/api/models";
 import { ApiError, apiClient } from "@/lib/api-client";
 
 import type { DiffHunk, DiffResult, HistoryLabel, RestoreResult, Version, VersionsPage } from "./types";
 
 const base = (projectId: string, docId: string) => `/api/v1/projects/${projectId}/docs/${docId}/history`;
 
-interface VersionWire {
-  version: number;
-  timestamp: string;
-  author: { id: string; name: string; email: string } | null;
-  op_count: number;
-  size: number;
-  labels: { id: string; name: string }[];
-}
+type VersionWire = Schemas["VersionEntry"];
 
 function toVersion(w: VersionWire): Version {
   return {
@@ -34,13 +28,9 @@ export async function listVersions(
   if (opts.before !== undefined) params.set("before", String(opts.before));
   if (opts.limit !== undefined) params.set("limit", String(opts.limit));
   const qs = params.toString();
-  const wire = await apiClient.get<{
-    doc_id: string;
-    current_version: number;
-    versions: VersionWire[];
-    has_more: boolean;
-    next_before: number | null;
-  }>(`${base(projectId, docId)}/versions${qs ? `?${qs}` : ""}`);
+  const wire = await apiClient.get<Schemas["VersionsResponse"]>(
+    `${base(projectId, docId)}/versions${qs ? `?${qs}` : ""}`,
+  );
   return {
     docId: wire.doc_id,
     currentVersion: wire.current_version,
@@ -102,14 +92,7 @@ export async function getDiff(
   };
 }
 
-interface LabelWire {
-  id: string;
-  name: string;
-  version: number;
-  doc_id: string | null;
-  created_by: string | null;
-  created_at: string;
-}
+type LabelWire = Schemas["LabelRead"];
 
 function toLabel(w: LabelWire): HistoryLabel {
   return {
@@ -146,12 +129,10 @@ export async function restoreVersion(
   version: number,
   labelName?: string,
 ): Promise<RestoreResult> {
-  const wire = await apiClient.post<{
-    doc_id: string;
-    restored_from_version: number;
-    new_version: number;
-    label: LabelWire | null;
-  }>(`${base(projectId, docId)}/restore`, { version, label_name: labelName });
+  const wire = await apiClient.post<Schemas["RestoreResponse"]>(`${base(projectId, docId)}/restore`, {
+    version,
+    label_name: labelName,
+  });
   return {
     docId: wire.doc_id,
     restoredFromVersion: wire.restored_from_version,

@@ -1,34 +1,22 @@
 /** Sharing API calls (spec 33). snake_case ↔ camelCase mapping lives here only. */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 
 import type { AcceptResult, Invite, InviteCreated, InvitePreview, InviteRole, Member, Role } from "./types";
 
-interface MemberWire {
-  user_id: string;
-  name: string;
-  email: string;
-  role: Role;
-  status: string;
-}
+type MemberWire = Schemas["MemberRead"];
 
-interface InviteWire {
-  id: string;
-  email: string;
-  role: InviteRole;
-  status: string;
-  expires_at: string;
-  created_at: string;
-}
+type InviteWire = Schemas["InviteRead"];
 
 function toMember(w: MemberWire): Member {
-  return { userId: w.user_id, name: w.name, email: w.email, role: w.role, status: w.status };
+  return { userId: w.user_id, name: w.name, email: w.email, role: w.role as Role, status: w.status };
 }
 
 function toInvite(w: InviteWire): Invite {
   return {
     id: w.id,
     email: w.email,
-    role: w.role,
+    role: w.role as InviteRole,
     status: w.status,
     expiresAt: w.expires_at,
     createdAt: w.created_at,
@@ -66,7 +54,7 @@ export async function createInvite(
   email: string,
   role: InviteRole,
 ): Promise<InviteCreated> {
-  const wire = await apiClient.post<InviteWire & { token: string }>(`${base(projectId)}/invites`, {
+  const wire = await apiClient.post<Schemas["InviteCreated"]>(`${base(projectId)}/invites`, {
     email,
     role,
   });
@@ -78,25 +66,19 @@ export async function revokeInvite(projectId: string, inviteId: string): Promise
 }
 
 export async function getInvitePreview(token: string): Promise<InvitePreview> {
-  const w = await apiClient.get<{
-    project_id: string;
-    project_name: string;
-    inviter_name: string;
-    role: InviteRole;
-    email: string;
-  }>(`/api/v1/invites/${token}`);
+  const w = await apiClient.get<Schemas["InvitePreview"]>(`/api/v1/invites/${token}`);
   return {
     projectId: w.project_id,
     projectName: w.project_name,
     inviterName: w.inviter_name,
-    role: w.role,
+    role: w.role as InviteRole,
     email: w.email,
   };
 }
 
 export async function acceptInvite(token: string): Promise<AcceptResult> {
-  const w = await apiClient.post<{ project_id: string; role: Role }>(`/api/v1/invites/${token}/accept`);
-  return { projectId: w.project_id, role: w.role };
+  const w = await apiClient.post<Schemas["AcceptResponse"]>(`/api/v1/invites/${token}/accept`);
+  return { projectId: w.project_id, role: w.role as Role };
 }
 
 export async function declineInvite(token: string): Promise<void> {

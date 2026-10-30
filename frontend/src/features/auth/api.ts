@@ -5,12 +5,11 @@
  * mirroring `features/settings/api.ts`. The callback endpoints surface their
  * 400 (invalid/used) vs 410 (expired) status via the thrown `ApiError`.
  */
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 import type { TokenPair, UserPublic } from "@/types";
 
-interface MessageResponse {
-  detail: string;
-}
+type MessageResponse = Schemas["MessageResponse"];
 
 export function resendVerification(email: string): Promise<MessageResponse> {
   return apiClient.post<MessageResponse>("/api/v1/auth/verify-email/resend", { email }, { auth: false });

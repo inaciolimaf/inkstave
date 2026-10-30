@@ -80,7 +80,7 @@ function reuseRules(...allowed) {
 }
 
 export default tseslint.config(
-  { ignores: ["dist", "node_modules", "playwright-report", "test-results", "coverage"] },
+  { ignores: ["dist", "node_modules", "playwright-report", "test-results", "coverage", "src/api/types.ts"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],

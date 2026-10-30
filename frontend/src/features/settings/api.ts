@@ -1,11 +1,10 @@
 /** Account-settings API calls (spec 59). Thin wrappers over the apiClient. */
 
+import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 import type { EditorPreferences, UserPublic } from "@/types";
 
-interface MessageResponse {
-  detail: string;
-}
+type MessageResponse = Schemas["MessageResponse"];
 
 export function updateProfile(patch: {
   display_name?: string;

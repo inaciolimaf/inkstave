@@ -6,27 +6,14 @@
  * `pdf-preview` feature it serves (cohesion over the literal layout), which is
  * the only consumer. `src/lib/api/problems.ts` does not exist by design.
  */
+import type { Schemas } from "@/api/models";
 import { ApiError, apiClient } from "@/lib/api-client";
 
 export type ProblemSeverity = "error" | "warning" | "info";
 
-export interface Problem {
-  severity: ProblemSeverity;
-  message: string;
-  file: string | null;
-  line: number | null;
-  end_line: number | null;
-  raw: string;
-  rule: string;
-}
+export type Problem = Schemas["Problem"];
 
-export interface CompileProblems {
-  compile_id: string;
-  errors: number;
-  warnings: number;
-  infos: number;
-  problems: Problem[];
-}
+export type CompileProblems = Schemas["CompileProblems"];
 
 export type ProblemsReason = "log_unavailable" | "error";
 
