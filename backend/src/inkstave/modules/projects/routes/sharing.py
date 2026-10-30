@@ -13,7 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.deps import get_email_enqueuer
@@ -62,7 +62,7 @@ def _member_read(info: sharing_service.MemberInfo) -> MemberRead:
 async def list_members(
     project_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[MemberRead]:
     members = await sharing_service.list_members(session, project_id, user.id)
     return [_member_read(m) for m in members]
@@ -74,7 +74,7 @@ async def change_member_role(
     user_id: UUID,
     data: MemberRoleUpdate,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> MemberRead:
     member = await sharing_service.change_role(session, project_id, user.id, user_id, data.role)
     return _member_read(member)
@@ -89,7 +89,7 @@ async def remove_member(
     project_id: UUID,
     user_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await sharing_service.remove_member(session, project_id, user.id, user_id)
 
@@ -99,7 +99,7 @@ async def transfer_ownership(
     project_id: UUID,
     data: TransferRequest,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> MemberRead:
     member = await sharing_service.transfer_ownership(session, project_id, user.id, data.to_user_id)
     return _member_read(member)
@@ -112,7 +112,7 @@ async def transfer_ownership(
 async def list_invites(
     project_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[InviteRead]:
     invites = await sharing_service.list_invites(session, project_id, user.id)
     return [InviteRead.model_validate(i) for i in invites]
@@ -128,7 +128,7 @@ async def create_invite(
     project_id: UUID,
     data: InviteCreate,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     enqueuer: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> InviteCreated:
@@ -158,7 +158,7 @@ async def revoke_invite(
     project_id: UUID,
     invite_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await sharing_service.revoke_invite(session, project_id, user.id, invite_id)
 
@@ -170,7 +170,7 @@ async def revoke_invite(
 async def get_invite_preview(
     token: str,
     _user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> InvitePreview:
     invite, project, inviter = await sharing_service.get_invite_preview(session, token)
     return InvitePreview(
@@ -186,7 +186,7 @@ async def get_invite_preview(
 async def accept_invite(
     token: str,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> AcceptResponse:
     project_id, role = await sharing_service.accept_invite(session, token, user)
     return AcceptResponse(project_id=project_id, role=role)
@@ -196,6 +196,6 @@ async def accept_invite(
 async def decline_invite(
     token: str,
     _user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await sharing_service.decline_invite(session, token)

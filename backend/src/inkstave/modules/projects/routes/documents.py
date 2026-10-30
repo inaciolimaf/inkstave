@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.modules.projects.access.capabilities import Capability
 from inkstave.modules.projects.access.deps import require_capability
@@ -40,7 +40,7 @@ write_access = require_capability(Capability.DOC_WRITE)
 async def get_content(
     entity_id: UUID,
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> DocumentContentRead:
     document = await document_service.get_document(session, project.id, entity_id)
     return DocumentContentRead.model_validate(document)
@@ -56,7 +56,7 @@ async def replace_content(
     entity_id: UUID,
     data: DocumentContentReplace,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> DocumentContentRead:
     document = await document_service.replace_content(
         session, project.id, entity_id, data.content, data.base_version

@@ -237,7 +237,7 @@ async def test_builder_yields_multiple_chunks(db_session: AsyncSession, store: O
         ExportEntry("a.png", TreeEntityType.file, uuid4(), "k1", 1000),
         ExportEntry("b.png", TreeEntityType.file, uuid4(), "k2", 1000),
     ]
-    chunks = [c async for c in stream_project_zip(plan, store, db_session, get_settings()) if c]
+    chunks = [c async for c in stream_project_zip(plan, {}, store, get_settings()) if c]
     assert len(chunks) > 1  # not one big buffer
 
 

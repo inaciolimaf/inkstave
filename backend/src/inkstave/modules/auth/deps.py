@@ -19,7 +19,7 @@ from fastapi import Depends, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from inkstave.core.config.settings import Settings
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ForbiddenError, UnauthorizedError
 from inkstave.core.observability.context import bind_context
@@ -92,7 +92,7 @@ async def _resolve_user(token: str, token_service: TokenService, session: AsyncS
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     token_service: TokenService = Depends(get_token_service),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> User:
     """Return the authenticated user, or raise 401."""
     if credentials is None or not credentials.credentials:
@@ -110,7 +110,7 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
 async def get_optional_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     token_service: TokenService = Depends(get_token_service),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> User | None:
     """Return the user if a valid token is sent, ``None`` if none is sent.
 
@@ -134,7 +134,7 @@ async def sse_user(
     access_token: str | None = Query(None),
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     token_service: TokenService = Depends(get_token_service),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> User:
     """SSE auth: token via the Authorization header **or** an ``?access_token=`` query."""
     token = (credentials.credentials if credentials else None) or access_token

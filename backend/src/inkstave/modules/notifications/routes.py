@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.modules.auth import get_current_user
 from inkstave.modules.notifications.inbox.service import NotificationService
@@ -34,7 +34,7 @@ async def list_notifications(
     before: datetime | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> NotificationList:
     service = NotificationService(session)
     items = await service.list_active(user_id=user.id, limit=limit, before=before)
@@ -47,7 +47,7 @@ async def list_notifications(
 @router.get("/unread-count", response_model=UnreadCount, summary="Unread notification count")
 async def get_unread_count(
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UnreadCount:
     return UnreadCount(count=await NotificationService(session).unread_count(user_id=user.id))
 
@@ -56,7 +56,7 @@ async def get_unread_count(
 async def mark_read(
     notification_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> NotificationRead:
     notification = await NotificationService(session).mark_read(
         user_id=user.id, notification_id=notification_id
@@ -67,7 +67,7 @@ async def mark_read(
 @router.post("/read-all", response_model=MarkAllResult, summary="Mark all read")
 async def mark_all_read(
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> MarkAllResult:
     return MarkAllResult(updated=await NotificationService(session).mark_all_read(user_id=user.id))
 
@@ -76,6 +76,6 @@ async def mark_all_read(
 async def dismiss(
     notification_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await NotificationService(session).dismiss(user_id=user.id, notification_id=notification_id)

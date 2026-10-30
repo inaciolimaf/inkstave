@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
 from inkstave.core.config.agent import get_agent_settings
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import AppError, ConflictError, ErrorEnvelope
 from inkstave.modules.agent.deps import get_agent_enqueuer
@@ -129,7 +129,7 @@ async def create_session(
     project_id: UUID,
     body: CreateSessionIn,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> AgentSessionOut:
     await _require_member(session, project_id, user.id)
     row = await agent_repo.create_session(
@@ -147,7 +147,7 @@ async def list_sessions(
     project_id: UUID,
     limit: int = Query(50, ge=1, le=100),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[AgentSessionOut]:
     await _require_member(session, project_id, user.id)
     rows = await agent_repo.list_sessions(session, project_id=project_id, user_id=user.id)
@@ -159,7 +159,7 @@ async def get_session_detail(
     project_id: UUID,
     session_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> SessionDetailOut:
     await _require_member(session, project_id, user.id)
     row = await _owned_session(session, project_id, session_id, user.id)
@@ -192,7 +192,7 @@ async def post_message(
     body: PostMessageIn,
     request: Request,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     enqueuer: AgentEnqueuer = Depends(get_agent_enqueuer),
 ) -> PostMessageOut:
     await _require_member(session, project_id, user.id)
@@ -224,7 +224,7 @@ async def cancel_run(
     session_id: UUID,
     run_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> dict[str, str]:
@@ -249,7 +249,7 @@ async def run_events(
     session_id: UUID,
     run_id: UUID,
     user: User = Depends(sse_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
     await _require_member(session, project_id, user.id)
@@ -272,7 +272,7 @@ async def list_diffs(
     | None = Query(None, alias="status"),
     include: str | None = Query(None),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[ProposedDiffSummary]:
     await _require_member(session, project_id, user.id)
     await _owned_session(session, project_id, session_id, user.id)

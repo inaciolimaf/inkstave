@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import Settings
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ErrorEnvelope, RateLimitError
 from inkstave.infra.deps import get_email_enqueuer
@@ -90,7 +90,7 @@ async def read_me(user: User = Depends(get_current_user)) -> UserMe:
 async def update_me(
     data: UpdateProfileRequest,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UserMe:
     updated = await account.update_profile(
         session,
@@ -111,7 +111,7 @@ async def update_me(
 async def put_editor_preferences(
     prefs: EditorPreferences,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> EditorPreferences:
     return await account.set_editor_preferences(session, user, prefs)
 
@@ -126,7 +126,7 @@ async def put_editor_preferences(
 async def change_password(
     data: ChangePasswordRequest,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> MessageResponse:
@@ -151,7 +151,7 @@ async def change_password(
 async def change_email(
     data: ChangeEmailRequest,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
@@ -180,7 +180,7 @@ async def change_email(
 )
 async def confirm_email_change(
     data: ConfirmEmailChangeRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UserMe:
     user = await account.confirm_email_change(session, token=data.token)
     return UserMe.model_validate(user)
@@ -195,7 +195,7 @@ async def confirm_email_change(
 async def delete_me(
     data: DeleteAccountRequest,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> Response:

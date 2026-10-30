@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ConflictError
 from inkstave.core.schemas import StrictModel
 from inkstave.modules.admin.provisioning.admin import admin_exists, ensure_initial_admin
@@ -21,7 +21,7 @@ class SetupStatus(StrictModel):
 
 
 @router.get("/status", response_model=SetupStatus, summary="Whether a first admin is still needed")
-async def setup_status(session: AsyncSession = Depends(get_db_session)) -> SetupStatus:
+async def setup_status(session: AsyncSession = UNIT_OF_WORK) -> SetupStatus:
     return SetupStatus(needs_setup=not await admin_exists(session))
 
 
@@ -33,7 +33,7 @@ async def setup_status(session: AsyncSession = Depends(get_db_session)) -> Setup
 )
 async def create_first_admin(
     data: RegisterRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
 ) -> UserPublic:
     admin = await ensure_initial_admin(

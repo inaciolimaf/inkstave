@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.deps import get_object_store
 from inkstave.modules.auth import rate_limit_named
@@ -72,7 +72,7 @@ async def upload_file(
     parent_id: Annotated[UUID | None, Form()] = None,
     name: Annotated[str | None, Form()] = None,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
 ) -> FileRead:
     # Per spec 52 §5.2.5, traversal/path components (e.g. ``../evil``) are *stripped*
@@ -99,7 +99,7 @@ async def upload_file(
 async def get_file(
     entity_id: UUID,
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> FileRead:
     file_row = await file_service.get_file(session, project.id, entity_id)
     return await _read(session, file_row)
@@ -113,7 +113,7 @@ async def get_file(
 async def download_file(
     entity_id: UUID,
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
 ) -> StreamingResponse:
     file_row, stream = await file_service.open_file_content(session, store, project.id, entity_id)
@@ -134,7 +134,7 @@ async def download_file(
 async def delete_file(
     entity_id: UUID,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
 ) -> None:
     await file_service.delete_file(session, store, project.id, entity_id)

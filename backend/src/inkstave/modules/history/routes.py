@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import BadRequestError, ErrorEnvelope
 from inkstave.infra.storage.factory import get_object_store
@@ -76,7 +76,7 @@ async def get_versions(
     before: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1),
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
 ) -> VersionsResponse:
     await _verify_doc(session, project.id, doc_id)
@@ -90,7 +90,7 @@ async def get_updates(
     from_: int | None = Query(None, alias="from", ge=1),
     to: int | None = Query(None, ge=1),
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UpdatesResponse:
     await _verify_doc(session, project.id, doc_id)
     if from_ is not None and to is not None and from_ > to:
@@ -104,7 +104,7 @@ async def get_history_diff(
     from_: int = Query(..., alias="from", ge=1),
     to: str = Query(...),
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     store: ObjectStore = Depends(_store),
 ) -> JSONResponse:
@@ -131,7 +131,7 @@ async def restore_doc(
     body: RestoreRequest,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(_store),
 ) -> RestoreResponse:
     await _verify_doc(session, project.id, doc_id)
@@ -151,7 +151,7 @@ async def restore_whole_project(
     body: ProjectRestoreRequest,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(_store),
 ) -> ProjectRestoreResponse:
     label = await labels_service.get_project_label(session, project_id=project.id, label_id=body.label_id)
@@ -179,7 +179,7 @@ async def create_label(
     body: LabelCreate,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> LabelRead:
     await _verify_doc(session, project.id, doc_id)
     row = await labels_service.create_doc_label(
@@ -197,7 +197,7 @@ async def create_label(
 async def get_labels(
     doc_id: UUID,
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[LabelRead]:
     await _verify_doc(session, project.id, doc_id)
     return [
@@ -214,7 +214,7 @@ async def delete_label(
     doc_id: UUID,
     label_id: UUID,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await _verify_doc(session, project.id, doc_id)
     await labels_service.delete_doc_label(session, project_id=project.id, doc_id=doc_id, label_id=label_id)
@@ -230,7 +230,7 @@ async def create_project_label(
     body: ProjectLabelCreate,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> LabelRead:
     row = await labels_service.create_project_label(
         session, project_id=project.id, name=body.name, created_by=user.id
@@ -241,7 +241,7 @@ async def create_project_label(
 @router.get("/history/labels", response_model=list[LabelRead], responses=_ERRORS)
 async def get_project_labels(
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[LabelRead]:
     rows = await labels_service.list_project_labels(session, project.id)
     return [LabelRead.model_validate(label) for label in rows]
@@ -255,6 +255,6 @@ async def get_project_labels(
 async def delete_project_label(
     label_id: UUID,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await labels_service.delete_project_label(session, project_id=project.id, label_id=label_id)

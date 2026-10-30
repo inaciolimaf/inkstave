@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope, NotFoundError
 from inkstave.infra.deps import get_object_store
@@ -44,7 +44,7 @@ owned_project = require_capability(Capability.PROJECT_READ)
 
 
 def get_log_problems_service(
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
     settings: Settings = Depends(get_settings_dep),
 ) -> LogProblemsService:

@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK, get_session_factory
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ErrorEnvelope, NotFoundError
 from inkstave.infra.deps import get_object_store
@@ -34,7 +34,7 @@ from inkstave.modules.projects.transfer.stream import sse_stream
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
@@ -147,7 +147,7 @@ async def import_project(
     file: UploadFile,
     name: Annotated[str | None, Form()] = None,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     store: ObjectStore = Depends(get_object_store),
     enqueuer: ImportEnqueuer = Depends(get_import_enqueuer),
@@ -177,7 +177,7 @@ async def import_project(
 )
 async def get_latest_import(
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> ProjectImportRead:
     row = await ProjectImportRepository(session).get_latest(project.id)
     if row is None:
@@ -194,7 +194,7 @@ async def get_latest_import(
 async def get_import(
     import_id: UUID,
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> ProjectImportRead:
     row = await ProjectImportRepository(session).get(project.id, import_id)
     if row is None:
@@ -211,19 +211,23 @@ async def import_events(
     import_id: UUID,
     project_id: UUID,
     user: User = Depends(sse_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
+    sessions: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
     # SSE uses a query-param token (EventSource can't set headers); authorize inline.
     if await role_for(session, user.id, project_id) is None:
         raise ProjectNotFoundError()  # 404 — non-member / missing project
-    repo = ProjectImportRepository(session)
-    if await repo.get(project_id, import_id) is None:
+    if await ProjectImportRepository(session).get(project_id, import_id) is None:
         raise ImportNotFoundError()
 
     async def snapshot() -> dict[str, Any] | None:
-        row: ProjectImport | None = await repo.get(project_id, import_id)
+        # Runs inside the stream, after the request's unit of work has closed.
+        async with sessions() as stream_session:
+            row: ProjectImport | None = await ProjectImportRepository(stream_session).get(
+                project_id, import_id
+            )
         return ProjectImportRead.model_validate(row).model_dump(mode="json") if row else None
 
     return StreamingResponse(

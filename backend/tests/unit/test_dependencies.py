@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import get_session_factory
 from inkstave.core.deps import ServiceUnavailableError, get_redis
 
 
@@ -24,7 +24,6 @@ def test_get_redis_missing_raises() -> None:
         get_redis(_fake_request(redis=None))  # type: ignore[arg-type]
 
 
-async def test_get_db_session_unavailable_raises() -> None:
-    gen = get_db_session(_fake_request(db_sessionmaker=None))  # type: ignore[arg-type]
+def test_get_session_factory_unavailable_raises() -> None:
     with pytest.raises(ServiceUnavailableError):
-        await anext(gen)
+        get_session_factory(_fake_request(db_sessionmaker=None))  # type: ignore[arg-type]

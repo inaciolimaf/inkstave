@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.app import create_app
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import get_db_session, get_session_factory
 from inkstave.core.deps import get_redis
 from inkstave.infra.deps import get_email_enqueuer
 
@@ -63,7 +63,17 @@ async def app(db_engine: Any, db_session: AsyncSession, redis: Any) -> Any:
             await db_session.rollback()
             raise
 
+    class _SharedSession:
+        """What a stream's short-lived session is here: the test's own transaction."""
+
+        async def __aenter__(self) -> AsyncSession:
+            return db_session
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
     application.dependency_overrides[get_db_session] = _override_get_db
+    application.dependency_overrides[get_session_factory] = lambda: _SharedSession
     application.dependency_overrides[get_redis] = lambda: redis
 
     # Default no-op email enqueuer so fire-and-forget sends (e.g. registration's

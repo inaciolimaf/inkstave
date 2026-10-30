@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 import tomllib
@@ -21,6 +22,27 @@ MAX_IMPORT_EXCEPTIONS = 3
 
 def _source_files() -> list[Path]:
     return [p for p in PACKAGE.rglob("*.py") if "__pycache__" not in p.parts]
+
+
+def _call_name(node: ast.Call) -> str:
+    return node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", "")
+
+
+def _calls(path: Path) -> list[ast.Call]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
+
+
+def test_session_dependency_is_only_reached_through_the_unit_of_work() -> None:
+    # A bare Depends(get_db_session) commits after the response and opens a second session.
+    offenders = [
+        f"{path.relative_to(PACKAGE)}:{call.lineno}"
+        for path in _source_files()
+        if path.relative_to(PACKAGE).as_posix() != "core/db/session.py"
+        for call in _calls(path)
+        if _call_name(call) == "Depends" and "get_db_session" in ast.unparse(call)
+    ]
+    assert offenders == []
 
 
 def test_no_folder_holds_more_than_eight_files() -> None:

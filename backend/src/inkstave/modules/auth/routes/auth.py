@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.core.invariants import require
@@ -65,7 +65,7 @@ _RESET_ON_ITS_WAY = "If that email is registered, a reset link is on its way."
 )
 async def register(
     data: RegisterRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
@@ -94,7 +94,7 @@ async def register(
 )
 async def forgot_password(
     data: ForgotPasswordRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> MessageResponse:
@@ -128,7 +128,7 @@ async def forgot_password(
 )
 async def resend_verification(
     data: EmailOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> MessageResponse:
@@ -159,7 +159,7 @@ async def resend_verification(
 )
 async def confirm_verification(
     data: TokenOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UserPublic:
     """Consume the verification token and set ``email_confirmed`` (idempotent)."""
     user = await email_auth.confirm_email_verification(session, raw_token=data.token)
@@ -175,7 +175,7 @@ async def confirm_verification(
 )
 async def magic_link(
     data: EmailOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> MessageResponse:
@@ -204,7 +204,7 @@ async def magic_link(
 )
 async def magic_link_callback(
     data: TokenOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> TokenPair:
@@ -221,7 +221,7 @@ async def magic_link_callback(
 )
 async def reset_password(
     data: ResetPasswordRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> MessageResponse:
@@ -244,7 +244,7 @@ async def reset_password(
 )
 async def login(
     data: LoginRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
@@ -276,7 +276,7 @@ async def login(
 )
 async def refresh(
     data: RefreshRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> TokenPair:
@@ -291,7 +291,7 @@ async def refresh(
 )
 async def logout(
     data: LogoutRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> MessageResponse:
