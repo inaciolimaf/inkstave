@@ -29,9 +29,7 @@ def upgrade() -> None:
     op.create_table(
         "agent_audit_log",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=True),
         sa.Column("session_id", sa.UUID(), nullable=True),
@@ -45,19 +43,21 @@ def upgrade() -> None:
         sa.Column("detail", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.CheckConstraint(f"action IN ({_ACTIONS})", name="agent_audit_action_valid"),
         sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], name=op.f("fk_agent_audit_log_user_id_users"),
+            ["user_id"],
+            ["users.id"],
+            name=op.f("fk_agent_audit_log_user_id_users"),
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["project_id"], ["projects.id"], name=op.f("fk_agent_audit_log_project_id_projects"),
+            ["project_id"],
+            ["projects.id"],
+            name=op.f("fk_agent_audit_log_project_id_projects"),
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_agent_audit_log")),
     )
     op.create_index("ix_agent_audit_user_created", "agent_audit_log", ["user_id", "created_at"])
-    op.create_index(
-        "ix_agent_audit_project_created", "agent_audit_log", ["project_id", "created_at"]
-    )
+    op.create_index("ix_agent_audit_project_created", "agent_audit_log", ["project_id", "created_at"])
     op.create_index("ix_agent_audit_run", "agent_audit_log", ["run_id"])
 
 

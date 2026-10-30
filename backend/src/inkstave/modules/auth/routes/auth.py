@@ -285,13 +285,14 @@ async def refresh(
 @router.post(
     "/logout",
     response_model=MessageResponse,
-    summary="Revoke a refresh token (and its family)",
+    summary="End the session of a refresh token (its family and its access tokens)",
 )
 async def logout(
     data: LogoutRequest,
+    session: AsyncSession = Depends(get_db_session),
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> MessageResponse:
-    """Idempotently revoke the token's family; unknown tokens still return 200."""
-    await auth_service.logout(token_service, refresh_store, data.refresh_token)
+    """Idempotently end the token's session; unknown tokens still return 200."""
+    await auth_service.logout(session, token_service, refresh_store, data.refresh_token)
     return MessageResponse(detail="Logged out.")

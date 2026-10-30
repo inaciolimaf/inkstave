@@ -56,6 +56,9 @@ class FakeAuthSession:
     async def get(self, _model: Any, _pk: Any) -> Any:
         return self._user
 
+    async def scalar(self, _statement: Any) -> Any:
+        return None  # no revoked session
+
 
 class FakeHasher:
     def __init__(self, *, ok: bool = True) -> None:
@@ -69,7 +72,9 @@ class FakeHasher:
 
 
 class FakeTokenService:
-    def create_access_token(self, _user: Any) -> tuple[str, int]:
+    refresh_ttl_seconds = 1209600
+
+    def create_access_token(self, _user: Any, *, session_id: Any = None) -> tuple[str, int]:
         return ACCESS_RAW, 900
 
     def create_refresh_token(self, _user_id: Any, _family_id: Any) -> tuple[str, str]:
@@ -110,7 +115,9 @@ class FakeRefreshStore:
 
 
 def _user() -> Any:
-    return SimpleNamespace(id=_SUB, hashed_password="$argon2id$dummy", email="u@example.com")
+    return SimpleNamespace(
+        id=_SUB, hashed_password="$argon2id$dummy", email="u@example.com", is_active=True, session_version=0
+    )
 
 
 def _login_data() -> Any:
@@ -175,7 +182,7 @@ async def test_successful_refresh_logs_info(caplog: pytest.LogCaptureFixture) ->
 async def test_logout_logs_info(caplog: pytest.LogCaptureFixture) -> None:
     store = FakeRefreshStore()
     with caplog.at_level(logging.INFO):
-        await logout(FakeTokenService(), store, REFRESH_RAW)
+        await logout(FakeAuthSession(), FakeTokenService(), store, REFRESH_RAW)
     assert store.revoked_family == str(_FAMILY)
     infos = [r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.INFO]
     assert any("logout" in r.getMessage() for r in infos)

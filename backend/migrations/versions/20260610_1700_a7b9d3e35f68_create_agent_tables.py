@@ -29,12 +29,8 @@ def upgrade() -> None:
         sa.Column("title", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=16), server_default="active", nullable=False),
         sa.Column("model", sa.Text(), nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("status IN ('active','archived')", name="agent_session_status_valid"),
         sa.ForeignKeyConstraint(
             ["project_id"],
@@ -68,12 +64,8 @@ def upgrade() -> None:
         sa.Column("tool_calls", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("tool_call_id", sa.Text(), nullable=True),
         sa.Column("token_usage", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
-        sa.CheckConstraint(
-            "role IN ('system','user','assistant','tool')", name="agent_message_role_valid"
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.CheckConstraint("role IN ('system','user','assistant','tool')", name="agent_message_role_valid"),
         sa.ForeignKeyConstraint(
             ["session_id"],
             ["agent_sessions.id"],

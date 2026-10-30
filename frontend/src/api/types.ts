@@ -112,8 +112,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Revoke a refresh token (and its family)
-         * @description Idempotently revoke the token's family; unknown tokens still return 200.
+         * End the session of a refresh token (its family and its access tokens)
+         * @description Idempotently end the token's session; unknown tokens still return 200.
          */
         post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;

@@ -25,6 +25,7 @@ from inkstave.core.errors import ForbiddenError, UnauthorizedError
 from inkstave.core.observability.context import bind_context
 from inkstave.modules.auth.credentials.password import PasswordHasher, build_password_hasher
 from inkstave.modules.auth.credentials.refresh_store import RefreshStore, build_refresh_store
+from inkstave.modules.auth.credentials.sessions import is_alive
 from inkstave.modules.auth.credentials.tokens import TokenError, TokenService, build_token_service
 from inkstave.modules.auth.models.user import User
 
@@ -80,7 +81,7 @@ async def _resolve_user(token: str, token_service: TokenService, session: AsyncS
     except TokenError as exc:
         raise NotAuthenticatedError() from exc
     user = await session.get(User, UUID(claims["sub"]))
-    if user is None:
+    if user is None or not await is_alive(session, user, claims):
         raise NotAuthenticatedError()
     # Bind the resolved user to the request context so all later logs carry user_id
     # without the call site threading it (spec 51 §5.2.2).

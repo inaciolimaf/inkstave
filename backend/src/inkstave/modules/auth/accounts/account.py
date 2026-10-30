@@ -19,6 +19,7 @@ from inkstave.modules.auth.accounts.users import email_exists, normalise_email
 from inkstave.modules.auth.credentials.opaque_tokens import generate_token, hash_token
 from inkstave.modules.auth.credentials.password import PasswordHasher
 from inkstave.modules.auth.credentials.refresh_store import RefreshStore
+from inkstave.modules.auth.credentials.sessions import end_every_session
 from inkstave.modules.auth.models.user import User
 from inkstave.modules.auth.schemas.user import EditorPreferences
 
@@ -64,14 +65,22 @@ async def change_password(
     current_password: str,
     new_password: str,
 ) -> None:
-    """Re-hash after verifying the current password, then revoke every existing
-    refresh token (policy: all sessions sign out — the actor re-authenticates)."""
+    """Re-hash after verifying the current password, then end every session, access
+    tokens included (policy: all sessions sign out — the actor re-authenticates)."""
     await _require_password(hasher, user, current_password)
     if user.email.split("@", 1)[0].lower() in new_password.lower():
         raise BadRequestError("Password must not contain your email address.")
     user.hashed_password = await asyncio.to_thread(hasher.hash, new_password)
+    end_every_session(user)
     await session.flush()
     await refresh_store.revoke_user(user.id)
+
+
+async def deactivate_account(session: AsyncSession, user: User) -> None:
+    """Lock the account out: no new login, and every token already issued stops working."""
+    user.is_active = False
+    end_every_session(user)
+    await session.flush()
 
 
 async def start_email_change(

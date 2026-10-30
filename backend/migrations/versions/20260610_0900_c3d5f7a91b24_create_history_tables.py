@@ -40,12 +40,8 @@ def upgrade() -> None:
         sa.Column("base_snapshot_blob_key", sa.Text(), nullable=True),
         sa.Column("base_snapshot_size", sa.Integer(), nullable=False),
         sa.Column("sealed", sa.Boolean(), server_default=sa.text("false"), nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.ForeignKeyConstraint(
             ["project_id"],
             ["projects.id"],
@@ -63,9 +59,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_history_chunks_doc_version", "history_chunks", ["doc_id", "start_version"], unique=False
     )
-    op.create_index(
-        "ix_history_chunks_project", "history_chunks", ["project_id", "created_at"], unique=False
-    )
+    op.create_index("ix_history_chunks_project", "history_chunks", ["project_id", "created_at"], unique=False)
     op.create_index(
         "uq_history_chunks_open",
         "history_chunks",
@@ -113,12 +107,8 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_history_updates")),
     )
-    op.create_index(
-        "uq_history_updates_doc_version", "history_updates", ["doc_id", "version"], unique=True
-    )
-    op.create_index(
-        "ix_history_updates_chunk", "history_updates", ["chunk_id", "version"], unique=False
-    )
+    op.create_index("uq_history_updates_doc_version", "history_updates", ["doc_id", "version"], unique=True)
+    op.create_index("ix_history_updates_chunk", "history_updates", ["chunk_id", "version"], unique=False)
     op.create_index(
         "ix_history_updates_project_ts", "history_updates", ["project_id", "timestamp"], unique=False
     )

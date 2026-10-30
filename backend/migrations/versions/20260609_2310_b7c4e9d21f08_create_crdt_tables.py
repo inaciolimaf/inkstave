@@ -62,9 +62,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_crdt_update")),
     )
-    op.create_index(
-        "ix_crdt_update_document_id_id", "crdt_update", ["document_id", "id"], unique=False
-    )
+    op.create_index("ix_crdt_update_document_id_id", "crdt_update", ["document_id", "id"], unique=False)
 
 
 def downgrade() -> None:

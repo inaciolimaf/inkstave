@@ -2902,7 +2902,7 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "Idempotently revoke the token's family; unknown tokens still return 200.",
+        "description": "Idempotently end the token's session; unknown tokens still return 200.",
         "operationId": "logout_api_v1_auth_logout_post",
         "requestBody": {
           "content": {
@@ -2936,7 +2936,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Revoke a refresh token (and its family)",
+        "summary": "End the session of a refresh token (its family and its access tokens)",
         "tags": [
           "auth"
         ]

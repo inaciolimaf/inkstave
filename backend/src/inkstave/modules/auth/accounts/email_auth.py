@@ -18,6 +18,7 @@ from inkstave.core.time import SYSTEM_CLOCK, Clock
 from inkstave.modules.auth.accounts.login import issue_token_pair
 from inkstave.modules.auth.accounts.users import get_user_by_email
 from inkstave.modules.auth.credentials.auth_tokens import consume_token, issue_token
+from inkstave.modules.auth.credentials.sessions import end_every_session
 from inkstave.modules.auth.schemas.auth import TokenPair
 from inkstave.modules.auth.schemas.user import (
     PASSWORD_MAX_LENGTH,
@@ -133,7 +134,7 @@ async def complete_magic_login(
     """
     token = await consume_token(session, raw_token=raw_token, purpose="magic_login", clock=clock)
     user = await _load_user(session, token.user_id)
-    if user.email.lower() != token.email.lower():
+    if user.email.lower() != token.email.lower() or not user.is_active:
         raise BadRequestError("Invalid or already-used link.")
     if not user.email_confirmed:
         user.email_confirmed = True
@@ -188,6 +189,7 @@ async def complete_password_reset(
     user.hashed_password = await asyncio.to_thread(hasher.hash, new_password)
     if not user.email_confirmed:
         user.email_confirmed = True
+    end_every_session(user)
     await session.flush()
     await refresh_store.revoke_user(user.id)
     logger.info("password_reset_completed", extra={"user_id": user.id})

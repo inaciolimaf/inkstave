@@ -58,6 +58,7 @@ def _user(**over: Any) -> SimpleNamespace:
         "id": "user-1",
         "email": "ada@example.com",
         "hashed_password": "old-hash",
+        "session_version": 0,
         "pending_email": None,
         "email_change_token_hash": None,
         "email_change_expires_at": None,

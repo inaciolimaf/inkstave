@@ -54,7 +54,7 @@ def _unverified_claims(token: str) -> dict[str, Any]:
 def test_access_token_exp_derives_from_injected_clock() -> None:
     settings = get_settings()
     svc = build_token_service(settings)
-    user = SimpleNamespace(id=uuid4(), is_admin=False)
+    user = SimpleNamespace(id=uuid4(), is_admin=False, session_version=0)
     clock = FrozenClock(BASE)
 
     token, expires_in = svc.create_access_token(user, clock=clock)
@@ -77,13 +77,13 @@ def test_access_token_exp_derives_from_injected_clock() -> None:
 def test_token_default_clock_lifetime_unchanged() -> None:
     settings = get_settings()
     svc = build_token_service(settings)
-    user = SimpleNamespace(id=uuid4(), is_admin=False)
+    user = SimpleNamespace(id=uuid4(), is_admin=False, session_version=0)
 
     access, _ = svc.create_access_token(user)  # no clock -> system clock
     a = _unverified_claims(access)
     assert a["exp"] - a["iat"] == settings.access_token_ttl_seconds
 
-    refresh, _ = svc.create_refresh_token(uuid4(), uuid4())
+    refresh, _ = svc.create_refresh_token(user, uuid4())
     r = _unverified_claims(refresh)
     assert r["exp"] - r["iat"] == settings.refresh_token_ttl_seconds
 

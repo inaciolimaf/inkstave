@@ -61,7 +61,7 @@ async def test_login_verify_runs_via_to_thread(monkeypatch: pytest.MonkeyPatch) 
 
     calls = _record_to_thread(monkeypatch)
     hasher = FakeHasher(ok=True)
-    user = SimpleNamespace(id=uuid4(), hashed_password="$argon2id$dummy")
+    user = SimpleNamespace(id=uuid4(), hashed_password="$argon2id$dummy", is_active=True)
     result = await authenticate_user(FakeSession(user), hasher, "u@example.com", "pw")
     assert result is user
     assert hasher.verify in calls  # the Argon2 verify was offloaded

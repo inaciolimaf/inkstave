@@ -23,9 +23,7 @@ def upgrade() -> None:
     op.add_column("agent_sessions", sa.Column("active_run_id", sa.UUID(), nullable=True))
     op.add_column(
         "agent_sessions",
-        sa.Column(
-            "run_state", sa.String(length=16), server_default="idle", nullable=False
-        ),
+        sa.Column("run_state", sa.String(length=16), server_default="idle", nullable=False),
     )
     op.create_check_constraint(
         "agent_session_run_state_valid",

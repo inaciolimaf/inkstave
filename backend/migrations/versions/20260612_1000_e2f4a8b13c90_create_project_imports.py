@@ -70,9 +70,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project_imports")),
     )
-    op.create_index(
-        "ix_project_imports_project_id", "project_imports", ["project_id"], unique=False
-    )
+    op.create_index("ix_project_imports_project_id", "project_imports", ["project_id"], unique=False)
     op.create_index(
         "ix_project_imports_requester",
         "project_imports",

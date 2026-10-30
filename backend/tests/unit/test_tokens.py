@@ -20,6 +20,7 @@ def _user(*, is_admin: bool = False) -> User:
         hashed_password="x",
         display_name="User",
         is_admin=is_admin,
+        session_version=0,
     )
 
 
@@ -37,10 +38,10 @@ def test_access_token_roundtrip_and_claims() -> None:
 
 def test_refresh_token_roundtrip_and_claims() -> None:
     svc = build_token_service(get_settings())
-    user_id, family_id = uuid4(), uuid4()
-    token, jti = svc.create_refresh_token(user_id, family_id)
+    user, family_id = _user(), uuid4()
+    token, jti = svc.create_refresh_token(user, family_id)
     claims = svc.decode_token(token, "refresh")
-    assert claims["sub"] == str(user_id)
+    assert claims["sub"] == str(user.id)
     assert claims["type"] == "refresh"
     assert claims["family_id"] == str(family_id)
     assert claims["jti"] == jti

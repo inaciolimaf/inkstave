@@ -6,6 +6,7 @@
     python -m inkstave.cli check-config      # validate env/secrets; exit non-zero on error
     python -m inkstave.cli doctor            # config + Postgres/Redis reachability (spec 62)
     python -m inkstave.cli send-test-email --to you@example.com  # verify email wiring (spec 103)
+    python -m inkstave.cli deactivate-user --email user@example.com  # lock an account out
 
 Stdlib argparse only — no extra dependency. Each command returns a process exit
 code so it doubles as a deploy/CI gate.
@@ -27,6 +28,8 @@ from inkstave.modules.admin.provisioning.admin import ensure_initial_admin
 from inkstave.modules.admin.provisioning.config_check import format_config_problems, validate_config
 from inkstave.modules.admin.provisioning.migrate import run_upgrade
 from inkstave.modules.admin.provisioning.seed import seed_demo
+from inkstave.modules.auth.accounts.account import deactivate_account
+from inkstave.modules.auth.accounts.users import get_user_by_email
 from inkstave.modules.auth.credentials.password import build_password_hasher
 
 if TYPE_CHECKING:
@@ -236,6 +239,22 @@ async def _cmd_seed(*, demo: bool, force: bool) -> int:
         await engine.dispose()
 
 
+async def _cmd_deactivate_user(email: str) -> int:
+    engine, sessionmaker = create_engine_and_sessionmaker(get_settings())
+    try:
+        async with sessionmaker() as session:
+            user = await get_user_by_email(session, email)
+            if user is None:
+                print(f"no user with email {email}", file=sys.stderr)
+                return 1
+            await deactivate_account(session, user)
+            await session.commit()
+        print(f"deactivated: {email}")
+        return 0
+    finally:
+        await engine.dispose()
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """The `inkstave` CLI's subcommands and their options."""
     parser = argparse.ArgumentParser(prog="inkstave", description="Inkstave operations CLI")
@@ -254,6 +273,8 @@ def _build_parser() -> argparse.ArgumentParser:
         default="email_verification",
         help="template name (default: email_verification)",
     )
+    deactivate_parser = sub.add_parser("deactivate-user", help="lock an account out and end its sessions")
+    deactivate_parser.add_argument("--email", required=True, help="the account's address")
     return parser
 
 
@@ -274,6 +295,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "bootstrap-admin": lambda _a: _run_bootstrap_admin(),
         "seed": lambda a: asyncio.run(_cmd_seed(demo=a.demo, force=a.force)),
         "send-test-email": lambda a: asyncio.run(_cmd_send_test_email(to=a.to, template=a.template)),
+        "deactivate-user": lambda a: asyncio.run(_cmd_deactivate_user(a.email)),
     }
     handler = commands.get(args.command)
     if handler is None:  # pragma: no cover - argparse requires a known subcommand
