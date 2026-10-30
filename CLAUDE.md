@@ -127,10 +127,10 @@ frontend/
   src/routes/       screens, assembled from the modules
   src/api/          generated OpenAPI types
   src/components/ src/lib/ src/i18n/
-  tests/            cross-cutting Vitest suites (router, boundaries, e2e route list)
+  tests/            cross-cutting Vitest suites (router, boundaries, e2e route list, contrast, CSS rules)
   e2e/              Playwright: routes.spec.ts, mobile.spec.ts, flows/
 infra/              nginx config, Tectonic package set and sandbox image
-scripts/            function-size lint, timing, dependency audit
+scripts/            function-size lint, timing, dependency audit, bundle budget
 tools/              docs_coverage.py (`make docs`)
 docs/               system/ (the system as it is), glossary, known gaps, guides, adr/, api/
 specs/              NN-slug/README.md (prompt) and spec.md (requirements)
@@ -160,6 +160,7 @@ targets, so what passes here passes there.
 | `make web-test` | eslint, prettier check, `tsc -b`, Vitest |
 | `make web-coverage` | Vitest with the coverage floor |
 | `make web-build` | production bundle |
+| `make web-budget` | gate the initial JS of `frontend/dist` at 250 KB gzip; needs a build |
 | `make e2e-infra` | throwaway Postgres + Redis for Playwright |
 | `make e2e-smoke` | the in-budget Playwright tier (what CI runs) |
 | `make e2e` / `make mobile` / `make e2e-flows` / `make e2e-all` | routes / 390x844 / journeys / smoke plus `@full` |
