@@ -1,48 +1,47 @@
 # Inkstave command runner. Run `just --list` to see available recipes.
+# The Makefile is the source of truth (`make` lists it); recipes with an equivalent delegate.
+# `just up/down/logs` are the infra-only `make docker-up/down/logs`, NOT `make up/down/logs`.
 # See docs/adr/0001-tooling-choices.md for why `just` was chosen.
 
 # Start the infrastructure services (postgres + redis) in the background.
 up:
-    docker compose up -d
+    make docker-up
 
 # Stop and remove the infrastructure services.
 down:
-    docker compose down
+    make docker-down
 
 # Follow logs from the running services.
 logs:
-    docker compose logs -f
+    make docker-logs
 
-# Format code. (Frontend prettier is added in spec 09.)
+# Format the backend. (`make web-format` formats the frontend.)
 fmt:
-    uv run --project backend ruff format backend
-    # frontend: pnpm prettier — added in spec 09
+    make format
 
 # Lint + type-check the backend. `ruff check` enforces the complexity budget
 # (C901 / PLR09xx) and the bandit security rules; the function-length ceiling
 # has no ruff equivalent, so it ships as its own dependency-free checker.
 lint:
-    uv run --project backend ruff check backend
-    uv run --project backend python scripts/lint_function_length.py
-    uv run --project backend mypy backend/src
+    make lint types
 
 # Run the backend fast test tier (unit + integration; excludes slow/e2e).
 # Parallelised with pytest-xdist (`-n auto`, inherited from pyproject addopts) so
 # the day-to-day run matches the < 2-minute budget measured by `just test-timed`.
 test:
-    uv run --project backend pytest backend/tests
+    make test
 
 # Run the backend tests with a coverage report.
 cov:
-    uv run --project backend pytest backend/tests --cov=inkstave --cov-config=backend/pyproject.toml --cov-report=term-missing
+    make coverage
 
 # Run the frontend Vitest unit tests.
 test-fe:
-    pnpm -C frontend test
+    make web-unit
 
-# Run the Playwright e2e smoke test (stub target).
+# Run the Playwright e2e suite (smoke + @full).
 test-e2e:
-    pnpm -C frontend exec playwright test
+    make e2e-all
 
 # Run every test tier (backend + frontend + e2e).
 test-all: test test-fe test-e2e
@@ -62,7 +61,7 @@ run:
 
 # Apply all pending database migrations.
 migrate:
-    uv run --project backend alembic -c backend/alembic.ini upgrade head
+    make migrate
 
 # Autogenerate a new migration from model changes: just makemigration name="..."
 makemigration name:
