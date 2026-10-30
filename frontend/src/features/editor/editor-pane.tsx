@@ -153,6 +153,7 @@ export function EditorPane({
   // Notify when the open document's content is ready (deferred SyncTeX reveal).
   useEffect(() => {
     if (loaded && openEntity?.type === "doc") onDocumentLoaded?.(openEntity);
+    // Fires once per loaded document: a refetch or a new callback identity is not a new load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded?.id]);
 

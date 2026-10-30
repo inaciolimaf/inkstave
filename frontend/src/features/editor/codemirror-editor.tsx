@@ -121,6 +121,8 @@ export function CodeMirrorEditor({
       view.destroy();
       viewRef.current = null;
     };
+    // Every prop here is an initial value: later changes go through the compartments below, and
+    // recreating the view would drop the undo history and the selection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -133,6 +135,7 @@ export function CodeMirrorEditor({
     if (view.state.doc.toString() !== doc) {
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: doc } });
     }
+    // `collabExtension` is fixed for the life of the view, so only `doc` can trigger a swap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc]);
 

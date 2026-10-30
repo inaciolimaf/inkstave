@@ -171,6 +171,7 @@ export function useDocumentAutosave(
       if (debounceRef.current !== null) clearTimeout(debounceRef.current);
       if (retryRef.current !== null) clearTimeout(retryRef.current);
     };
+    // Runs once per document: a refetch of the same id must not reset unsaved local text.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded?.id]);
 

@@ -69,19 +69,21 @@ export function usePresence(
   // which `setLocalStateField` is a no-op (it bails when the local state is null).
   // The awareness object is stable for the life of the session.
   const awareness = session?.awareness ?? null;
+  const userId = currentUser?.id;
+  const userName = currentUser?.name;
 
   // Publish the local user's identity once per session. Merge via `setLocalState`
   // (not `setLocalStateField`, which no-ops when the local state is null) so the
   // identity is set regardless of whether the CodeMirror binding has populated a
   // cursor field yet, while preserving any field it did add.
   useEffect(() => {
-    if (!awareness || !currentUser) return;
-    const color = colorForUser(currentUser.id);
+    if (!awareness || userId === undefined || userName === undefined) return;
+    const color = colorForUser(userId);
     awareness.setLocalState({
       ...(awareness.getLocalState() ?? {}),
       user: {
-        id: currentUser.id,
-        name: currentUser.name,
+        id: userId,
+        name: userName,
         color,
         colorLight: colorLight(color),
       },
@@ -94,8 +96,7 @@ export function usePresence(
       }
     };
     // Re-publish only when the identity changes, not on every parent re-render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [awareness, currentUser?.id, currentUser?.name]);
+  }, [awareness, userId, userName]);
 
   // Publish the idle flag once a local state exists (the identity effect above
   // creates it); merge to avoid spawning a user-less state.

@@ -34,7 +34,8 @@ export function ReadonlyCodePreview({ value }: { value: string }) {
       view.destroy();
       viewRef.current = null;
     };
-    // Mount once; document updates are handled by the dispatch effect below.
+    // `value` only seeds the view: later updates go through the dispatch effect below, and
+    // recreating the view on each one would lose the scroll position.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
