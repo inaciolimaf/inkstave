@@ -49,6 +49,8 @@ jobs:
         run: make docs
       - name: Frontend lint
         run: make web-lint
+      - name: Initial JS stays within the budget
+        run: make web-build web-budget
 
   # --- Stage 2: type-check --------------------------------------------------- #
   typecheck:

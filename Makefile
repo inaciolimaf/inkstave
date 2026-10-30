@@ -43,7 +43,7 @@ PLAYWRIGHT := pnpm -C frontend exec playwright test
         test test-unit test-integration coverage coverage-combine budget \
         lint boundaries format types docs \
         web-types web-types-check web-dev web-lint web-typecheck web-unit web-test \
-        web-format web-coverage web-build e2e mobile e2e-flows e2e-smoke e2e-all
+        web-format web-coverage web-build web-budget e2e mobile e2e-flows e2e-smoke e2e-all
 
 help: ## List the available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -210,6 +210,9 @@ web-coverage: ## Vitest with coverage; fails below the floor in vitest.config.ts
 
 web-build: ## Build the production bundle
 	pnpm -C frontend build
+
+web-budget: ## Fail if the initial JS of frontend/dist passes 250 KB gzip; needs a build
+	node scripts/check-bundle.mjs
 
 # The Playwright targets do not depend on web-build: the config's webServer builds the bundle
 # itself, with the API URL of the e2e backend. They need `make e2e-infra` first.
