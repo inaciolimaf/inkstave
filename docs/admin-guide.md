@@ -22,13 +22,27 @@ cp .env.example .env          # then edit (see Configuration below)
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Services: `postgres`, `redis`, `backend`, `worker`, `frontend`. Only the
-**frontend** publishes a host port (`PUBLIC_HTTP_PORT`, default `80`); the backend
-and worker are reachable only on the internal network. nginx routes `/` → SPA,
-`/api` → backend, `/ws` → backend (WebSocket upgrade), and blocks `/metrics`.
+Services: `postgres`, `redis`, `backend`, `worker`, `frontend`. **No service
+publishes a host port.** The frontend container only `expose`s port 80 so that a
+managed proxy (Coolify, Traefik) can route a domain to it without colliding on the
+host's :80. `PUBLIC_HTTP_PORT` stays in `.env.example`, but no compose file reads it.
+
+To reach a standalone stack from the host, add a mapping in a file of your own, for
+example `docker-compose.local.yml`:
+
+```yaml
+services:
+  frontend:
+    ports:
+      - "80:80"
+```
+
+Then start it with `docker compose -f docker-compose.prod.yml -f docker-compose.local.yml up -d --build`
+and open `http://localhost`. nginx routes `/` → SPA, `/api` → backend, `/ws` → backend
+(WebSocket upgrade), and blocks `/metrics`.
 
 **TLS** is the operator's responsibility: terminate it in a proxy/load balancer in
-front of the published port. The compose listens on plain HTTP internally.
+front of the frontend container. The compose listens on plain HTTP internally.
 
 ## Configuration (environment variables)
 
@@ -37,13 +51,37 @@ into images. The prod compose derives `DATABASE_URL`/`REDIS_URL` from the
 `POSTGRES_*` values and the internal service hostnames, and sets the storage and
 cache paths itself.
 
-**Required in production** (`ENVIRONMENT=prod`, enforced at boot — the process
-refuses to start otherwise): a strong `JWT_SECRET` (≥ 32 bytes), a non-empty
-`CORS_ORIGINS` (your public origin), `DATABASE_URL`, and — unless the agent is
-stubbed — `OPENROUTER_API_KEY`. Run `python -m inkstave.cli check-config` to
-validate before deploying.
+**Boot refusals.** With `ENVIRONMENT=prod` the process refuses to start without:
 
-The table below documents **every** variable in `.env.example`. Variables prefixed
+- a strong `JWT_SECRET`: at least 32 bytes, not a common word and not the
+  `.env.example` value;
+- `JWT_SECRET_PREVIOUS` entries that pass the same check;
+- a non-empty `CORS_ORIGINS` (your public origin);
+- `DATABASE_URL`, and a `REDIS_URL` other than the localhost default;
+- `RESEND_API_KEY` when `EMAIL_BACKEND=resend`.
+
+In every environment it also refuses `CORS_ORIGINS` containing `*`,
+`FILE_STORAGE_BACKEND=s3` without `S3_BUCKET`, and a `COMPILE_JOB_TIMEOUT_S` that is
+not strictly greater than `TECTONIC_COMPILE_TIMEOUT_S`. With `MIGRATE_ON_START=false`
+it refuses a database that is not at the latest migration.
+
+`OPENROUTER_API_KEY` is **not** a boot refusal, because nothing says a deployment
+uses the agent. `python -m inkstave.cli check-config` reports it, along with the
+always-required `JWT_SECRET`, `DATABASE_URL` and `REDIS_URL`, and the e-mail settings.
+Run it before deploying.
+
+**Deadlines.** Every Postgres connection runs with `DB_LOCK_TIMEOUT_S`,
+`DB_STATEMENT_TIMEOUT_S` and `DB_IDLE_IN_TRANSACTION_TIMEOUT_S` (migrations are
+exempt). External clients have `REDIS_CONNECT_TIMEOUT_S`, `REDIS_SOCKET_TIMEOUT_S`,
+`S3_CONNECT_TIMEOUT_S`, `S3_READ_TIMEOUT_S` and `SMTP_TIMEOUT_S`. Keep the idle-in-transaction
+timeout above the S3 and SMTP timeouts.
+
+**Login limits.** `RATE_LIMIT_AUTH_LOGIN` counts wrong passwords per e-mail and
+`RATE_LIMIT_LOGIN_IP` per client IP. Behind a proxy, set `TRUST_PROXY_HEADERS=true`:
+without it every request appears to come from the proxy, so the per-IP limit stands
+down and only the per-e-mail limit applies.
+
+The table below documents **every** variable in `.env.example`, including the commented ones. Variables prefixed
 `POSTGRES_`/`REDIS_`/`DATABASE_`/`REDIS_URL` configure data stores; `JWT_`/`ARGON2_`/
 `RATE_LIMIT_`/`CORS_`/`HSTS_`/`TRUST_PROXY_`/`MAX_*` are auth/security; `COMPILE_`/
 `TECTONIC_`/`SYNCTEX_`/`LOGPARSE_` are compilation; `COLLAB_`/`HISTORY_` are
@@ -51,7 +89,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 `METRICS_`/`SERVICE_`/`READINESS_` are observability; `E2E_`/`SUITE_`/`SLOW_TEST_`/
 `TEST_` are CI/test-only; `VITE_` are baked into the frontend build.
 
-<!-- 185 variables, generated from .env.example -->
+<!-- 229 variables, from .env.example -->
 | Variable | Required? | Default | Description | Used by (services) |
 | --- | --- | --- | --- | --- |
 | `POSTGRES_USER` | No | `inkstave` | Postgres role | postgres, backend, worker |
@@ -61,13 +99,13 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `REDIS_PORT` | No | `6379` | host port mapped to the Redis container | redis |
 | `DATABASE_URL` | Yes | `postgresql+asyncpg://inkstave:inkstave@localhost:5432/inkstave` | primary async PostgreSQL DSN used by the backend and Alembic | backend, worker |
 | `REDIS_URL` | Yes | `redis://localhost:6379/0` | Redis connection used for refresh tokens, presence, and ARQ jobs | backend, worker, collab/websocket |
-| `TEST_DATABASE_URL` | No | `postgresql+asyncpg://inkstave:inkstave@localhost:5432/inkstave_test` | PostgreSQL DSN used only by the integration test suite | tests |
+| `TEST_DATABASE_URL` | No | `postgresql+asyncpg://inkstave:inkstave@localhost:5432/inkstave_test` | PostgreSQL DSN of the test suite. The harness drops and recreates this database (suffixed per xdist worker) and migrates it; tests that need it skip when Postgres is unreachable | tests |
+| `APP_NAME` | No | `Inkstave` | application name, shown in the OpenAPI title | backend |
 | `ENVIRONMENT` | No | `dev` | dev \| test \| prod | backend, worker, collab/websocket |
 | `DEBUG` | No | `false` | verbose errors + SQLAlchemy SQL echo (spec 03) | backend |
 | `LOG_LEVEL` | No | `INFO` | DEBUG \| INFO \| WARNING \| ERROR | backend, worker, collab/websocket |
 | `LOG_JSON` | No | `true` | JSON logs (true) vs. console (false) | backend, worker, collab/websocket |
 | `DOCS_ENABLED` | No | `true` | expose /docs and /redoc | backend |
-| `CORS_ORIGINS` | Yes | `http://localhost:5173` | comma-separated or JSON list of origins | backend |
 | `REQUEST_ID_HEADER` | No | `X-Request-ID` | request correlation header name | backend |
 | `LOG_FORMAT` | No | `json` | json \| console (pretty, dev only) | backend, worker, collab/websocket |
 | `LOG_STACKS` | No | `true` | include tracebacks in error logs (false in prod) | backend, worker, collab/websocket |
@@ -96,7 +134,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `SUITE_WARN_SECONDS` | No | `90` | early-warning threshold | tests |
 | `SLOW_TEST_WARN_S` | No | `3` | per-test warn threshold | tests |
 | `SLOW_TEST_FAIL_S` | No | `10` | per-test fail threshold (non-@slow) | tests |
-| `TEST_DB_TEMPLATE` | No | `inkstave_test_tmpl` | template DB name (xdist clone source) | tests |
+| `TEST_DB_TEMPLATE` | No | `inkstave_test_tmpl` | not read by any code: each xdist worker migrates its own database (ADR 0053) | tests |
 | `CORS_ORIGINS` | Yes | `http://localhost:5173` | CORS allow-list (CORS_ALLOWED_ORIGINS); never '*' with creds | backend |
 | `HSTS_ENABLED` | No | `false` | emit Strict-Transport-Security (true in prod) | backend |
 | `TRUST_PROXY_HEADERS` | No | `false` | trust X-Forwarded-For for client IP (only behind a proxy) | backend, collab/websocket |
@@ -191,10 +229,11 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `OPENROUTER_BASE_URL` | No | `https://openrouter.ai/api/v1` | OpenAI-SDK base URL (swap provider here) | backend, worker |
 | `AGENT_MODEL` | No | `openai/gpt-4o-mini` | model id passed to the SDK | backend, worker |
 | `AGENT_TEMPERATURE` | No | `0.2` | default sampling temperature | backend, worker |
-| `AGENT_MAX_ITERATIONS` | No | `8` | hard cap on plan loops per turn | backend, worker |
+| `AGENT_MAX_ITERATIONS` | No | `15` | hard cap on plan loops per turn | backend, worker |
 | `AGENT_MAX_TOTAL_TOKENS` | No | `60000` | hard cap on accumulated tokens per turn | backend, worker |
 | `AGENT_MAX_TOKENS_PER_CALL` | No | `1024` | max_tokens per LLM call | backend, worker |
 | `AGENT_REQUEST_TIMEOUT_S` | No | `60` | per-call timeout for the real client | backend, worker |
+| `AGENT_JOB_TIMEOUT_S` | No | `600` | ARQ timeout for one whole agent run; keep above the per-call timeout | backend, worker |
 | `AGENT_HTTP_REFERER` | No | `https://inkstave.local` | OpenRouter HTTP-Referer header | backend, worker |
 | `AGENT_APP_TITLE` | No | `Inkstave` | OpenRouter X-Title header | backend, worker |
 | `AGENT_TOOL_READ_MAX_CHARS` | No | `40000` | char cap for read_file output (spec 42) | backend, worker |
@@ -215,9 +254,9 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `AGENT_MAX_CONCURRENT_RUNS_PER_USER` | No | `2` | max simultaneous agent runs per user | backend, worker |
 | `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` | No | `20` | per-project agent run-rate cap (runs per minute) | backend, worker |
 | `AGENT_MAX_TOKENS_PER_RUN` | No | `120000` | hard token cap for a single agent run | backend, worker |
-| `AGENT_MAX_COST_PER_RUN_USD` | No | `0.50` | hard USD cost cap for a single agent run | backend, worker |
+| `AGENT_MAX_COST_PER_RUN_USD` | No | `0.30` | hard USD cost cap for a single agent run | backend, worker |
 | `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` | No | `2000000` | daily token budget per project | backend, worker |
-| `AGENT_MAX_COST_PER_DAY_PER_USER_USD` | No | `10.00` | daily USD cost budget per user | backend, worker |
+| `AGENT_MAX_COST_PER_DAY_PER_USER_USD` | No | `0.30` | daily USD cost budget per user | backend, worker |
 | `AGENT_MODEL_COST_TABLE` | No | `{"openai/gpt-4o-mini":{"input":0.00015,"output":0.0006}}` | per-model input/output token prices (USD per 1K tokens) for cost accounting | backend, worker |
 | `AGENT_AUDIT_RETENTION_DAYS` | No | `90` | 0 = keep forever | worker |
 | `AGENT_INJECTION_GUARD` | No | `on` | on \| off | backend, worker |
@@ -241,7 +280,6 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `VITE_AGENT_ENABLED` | No | `true` | show the AI agent chat panel (spec 46; "false" hides it) | frontend build |
 | `FILE_STORAGE_BACKEND` | No | `local` | local \| s3 | backend, worker |
 | `FILE_STORAGE_LOCAL_PATH` | No | `./data/files` | base dir for the local backend | backend, worker |
-| `MAX_UPLOAD_BYTES` | No | `52428800` | per-file upload limit (50 MB) | backend |
 | `ALLOWED_UPLOAD_MIME` | No | `image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,text/plain,application/x-bibtex,text/x-bibtex` | comma-separated MIME allow-list for uploads | backend |
 | `STORAGE_STREAM_CHUNK_BYTES` | No | `65536` | streaming chunk size | backend, worker |
 | `IMPORT_MAX_ZIP_BYTES` | No | `52428800` | max compressed `.zip` upload size for project import (50 MiB) | backend, worker |
@@ -273,7 +311,15 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `E2E_REDIS_URL` | No | `redis://localhost:6380/0` | docker-compose.test.yml Redis | tests |
 | `E2E_PLAYWRIGHT_WORKERS` | No | `—` | parallel workers (blank = from cores) | tests |
 | `E2E_RETRIES` | No | `—` | flake retries (blank = 1 in CI, 0 local) | tests |
-| `PUBLIC_HTTP_PORT` | No | `80` | host port published by the nginx frontend container | frontend, nginx |
+| `E2E_BACKEND_PORT` | No | `8099` | port of the e2e backend | tests |
+| `E2E_FRONTEND_PORT` | No | `4173` | port of the e2e Vite preview | tests |
+| `E2E_POSTGRES_PORT` | No | `5433` | host port of the docker-compose.test.yml Postgres | tests |
+| `E2E_REDIS_PORT` | No | `6380` | host port of the docker-compose.test.yml Redis | tests |
+| `E2E_JWT_SECRET` | No | `—` | test-only signing secret (blank = a fixed test value) | tests |
+| `E2E_COMPILE_WORKDIR` | No | `/tmp/inkstave-e2e-compiles` | compile workdir root of the e2e backend | tests |
+| `E2E_EMAIL_DIR` | No | `/tmp/inkstave-e2e-emails` | where the e2e backend's file sender writes e-mails | tests |
+| `E2E_HISTORY_DEBOUNCE_MS` | No | `200` | history debounce of the e2e backend | tests |
+| `PUBLIC_HTTP_PORT` | No | `80` | not read by any compose file; see Deployment | none |
 | `MIGRATE_ON_START` | No | `false` | strict: refuse to start unless the DB is at head. | backend |
 
 ## First run
@@ -302,8 +348,9 @@ Each container is one process, supervised by Docker `restart` + healthchecks.
 App services are stateless (all state is in Postgres/Redis/volumes), so you can
 scale horizontally: `docker compose -f docker-compose.prod.yml up -d --scale
 worker=3`. Redis is the ARQ broker + pub/sub, so multiple workers share the
-compile/agent queues and multiple backend replicas relay collab updates across
-instances via Redis. The compile concurrency caps
+compile/agent queues. **Run one `backend` replica:** updates relayed through Redis are
+not applied to the receiving instance's document, so several replicas are unsafe for
+collaboration (see [known gaps](known-gaps.md#data-correctness)). The compile concurrency caps
 (`COMPILE_MAX_CONCURRENT_PER_*`) and agent limits are per-user/project, not
 per-replica.
 
@@ -332,19 +379,25 @@ section and [docs/e2e-strategy.md](e2e-strategy.md) for the mock path used in te
 
 ## Observability
 
-- **Logs** — structured JSON (`LOG_JSON=true`) to stdout, with request/trace ids
+- **Logs** — structured JSON (`LOG_FORMAT=json`) to stdout, with request/trace ids
   correlated end-to-end (HTTP → jobs → WS). Ship them with your platform's log
   driver. Secrets are redacted.
 - **Metrics** — Prometheus metrics at `/metrics`. **This is blocked at the public
   nginx proxy** (returns 404) and should be scraped only on the internal network.
 - **Health** — `/health` (liveness, no dependencies) and `/readyz` (readiness;
-  503 when Postgres/Redis are down, with per-check timeouts). The containers'
-  healthchecks use these.
+  503 when Postgres/Redis are down, with per-check timeouts) are on the backend's
+  port 8000. nginx does not proxy them: through the frontend container they fall
+  to the SPA and answer 200. nginx answers `/healthz` itself. Probe the backend
+  directly.
 - **Tracing** — optional OpenTelemetry (`OTEL_ENABLED=true`,
-  `OTEL_EXPORTER_OTLP_ENDPOINT`); a true no-op when disabled.
+  `OTEL_EXPORTER_OTLP_ENDPOINT`). No `opentelemetry` package ships in the image, so
+  enabling it only logs the import failure until one is installed.
 
+## Account administration
 
-**Locking an account out.** `python -m inkstave.cli deactivate-user --email user@example.com` blocks login and ends every session. Undo it with `UPDATE users SET is_active = true`.
+**Locking an account out.** `python -m inkstave.cli deactivate-user --email user@example.com`
+blocks login and ends every session. There is no reactivate command: undo it with
+`UPDATE users SET is_active = true WHERE email = 'user@example.com';`.
 
 ## Upgrades
 
@@ -400,8 +453,7 @@ logs the failure (template + recipient + HTTP status for Resend — never the ke
 
 - **App refuses to start: "Database is not at the latest migration"** — run
   `inkstave migrate`, or set `MIGRATE_ON_START=true` for single-node convenience.
-- **Process exits immediately at boot** — a required production secret is missing
-  or weak (`JWT_SECRET`, `CORS_ORIGINS`, `DATABASE_URL`). Run
+- **Process exits immediately at boot** — see "Boot refusals" above. Run
   `inkstave check-config` for the exact list.
 - **Compiles time out / fail** — raise `TECTONIC_COMPILE_TIMEOUT_S` (and keep
   `COMPILE_JOB_TIMEOUT_S` strictly larger); check the `tectonic-cache` volume and
