@@ -8,15 +8,15 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.compile.errors import InputLimitError, UnsafePathError
-from inkstave.compile.limits import ResourceLimits
-from inkstave.compile.workdir import (
+from inkstave.modules.compile.assembly.workdir import (
     assemble_inputs,
     cleanup_workdir,
     collect_outputs,
     create_workdir,
     safe_join,
 )
+from inkstave.modules.compile.running.errors import InputLimitError, UnsafePathError
+from inkstave.modules.compile.running.limits import ResourceLimits
 
 
 def _limits(**over: int | None) -> ResourceLimits:
@@ -46,9 +46,7 @@ class FakeFiles:
     def __init__(self, files: list[tuple[str, bytes]]) -> None:
         self._files = files
 
-    async def iter_files(
-        self, project_id: object
-    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+    async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         for path, data in self._files:
 
             async def stream(payload: bytes = data) -> AsyncIterator[bytes]:
@@ -80,9 +78,7 @@ class _RecordingFiles:
     def __init__(self, streams: list[tuple[str, _RecordingStream]]) -> None:
         self._streams = streams
 
-    async def iter_files(
-        self, project_id: object
-    ) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
+    async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         for path, stream in self._streams:
             yield path, stream  # type: ignore[misc]
 

@@ -11,8 +11,8 @@ import pytest
 from annotated_types import MaxLen, MinLen
 from pydantic import ValidationError
 
-from inkstave.schemas.tree import CreateEntityIn, RenameEntityIn
-from inkstave.services.safe_path import MAX_TREE_ENTITY_NAME_LENGTH
+from inkstave.modules.projects.schemas.tree import CreateEntityIn, RenameEntityIn
+from inkstave.modules.projects.tree.safe_path import MAX_TREE_ENTITY_NAME_LENGTH
 
 
 @pytest.mark.parametrize("bad", ["", "x" * (MAX_TREE_ENTITY_NAME_LENGTH + 1)])

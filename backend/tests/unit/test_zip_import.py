@@ -11,7 +11,7 @@ import zipfile
 
 import pytest
 
-from inkstave.services.zip_import import (
+from inkstave.modules.projects.transfer.zip_import import (
     EmptyArchiveError,
     ImportLimits,
     PlannedEntry,

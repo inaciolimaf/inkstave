@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from inkstave.agent.llm.base import LLMMessage
-from inkstave.compile.limits import CancelToken, ResourceLimits
-from inkstave.testkit.compile_stub import CANNED_PDF, MockTectonicRunner, build_minimal_pdf
-from inkstave.testkit.llm_stub import FINAL_REPLY, PROPOSED_TEXT, SEARCH_QUERY, StubAgentLLM
+from inkstave.modules.agent.llm.base import LLMMessage
+from inkstave.modules.agent.llm.stub import FINAL_REPLY, PROPOSED_TEXT, SEARCH_QUERY, StubAgentLLM
+from inkstave.modules.compile.running.limits import CancelToken, ResourceLimits
+from inkstave.modules.compile.running.stub import CANNED_PDF, MockTectonicRunner, build_minimal_pdf
 
 _DOC_ID = "11111111-1111-1111-1111-111111111111"
 

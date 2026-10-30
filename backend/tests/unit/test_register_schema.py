@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from inkstave.schemas.user import RegisterRequest
-from inkstave.services.user import normalise_email
+from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.schemas.user import RegisterRequest
 
 
 def _valid(**overrides: object) -> dict[str, object]:

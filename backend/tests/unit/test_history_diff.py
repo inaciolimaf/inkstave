@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.collab.ydocument import YDocument
-from inkstave.history.diff import apply_hunks, diff_text
-from inkstave.history.reconstruct import is_binary, text_from_state
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.history.versions.diff import apply_hunks, diff_text
+from inkstave.modules.history.versions.reconstruct import is_binary, text_from_state
 
 _CASES = [
     ("", "hello\nworld\n"),  # pure insert

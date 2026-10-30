@@ -12,12 +12,12 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.bootstrap.admin import admin_exists, ensure_initial_admin
-from inkstave.bootstrap.migrate import is_database_at_head, run_upgrade
-from inkstave.bootstrap.seed import DEMO_EMAIL, seed_demo
-from inkstave.config import Settings, get_settings
-from inkstave.db.models.user import User
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.modules.admin.provisioning.admin import admin_exists, ensure_initial_admin
+from inkstave.modules.admin.provisioning.migrate import is_database_at_head, run_upgrade
+from inkstave.modules.admin.provisioning.seed import DEMO_EMAIL, seed_demo
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.models.user import User
 
 pytestmark = pytest.mark.integration
 
@@ -28,8 +28,7 @@ def _hasher() -> Any:
 
 async def _admin_count(session: AsyncSession) -> int:
     return int(
-        await session.scalar(select(func.count()).select_from(User).where(User.is_admin.is_(True)))
-        or 0
+        await session.scalar(select(func.count()).select_from(User).where(User.is_admin.is_(True))) or 0
     )
 
 
@@ -93,9 +92,7 @@ async def test_setup_admin_second_attempt_creates_nothing(
 # --- migration runner -------------------------------------------------------- #
 
 
-async def test_run_upgrade_is_idempotent_against_test_db(
-    db_engine: Any, settings_override: Settings
-) -> None:
+async def test_run_upgrade_is_idempotent_against_test_db(db_engine: Any, settings_override: Settings) -> None:
     # The test DB is already at head (conftest migrates the template). The
     # advisory-locked upgrade is a clean no-op, and re-running it is also a no-op.
     await asyncio.to_thread(run_upgrade, settings_override)
@@ -112,7 +109,5 @@ async def test_seed_demo_is_idempotent_in_dev(db_session: AsyncSession) -> None:
     assert await seed_demo(db_session, hasher, settings=settings) is True
     # Re-running does not duplicate the demo user/project.
     assert await seed_demo(db_session, hasher, settings=settings) is False
-    count = await db_session.scalar(
-        select(func.count()).select_from(User).where(User.email == DEMO_EMAIL)
-    )
+    count = await db_session.scalar(select(func.count()).select_from(User).where(User.email == DEMO_EMAIL))
     assert count == 1

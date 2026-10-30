@@ -5,12 +5,8 @@ from __future__ import annotations
 import asyncio
 from uuid import UUID, uuid4
 
-from inkstave.collab.ws.rooms import (
-    CLOSE_SLOW_CONSUMER,
-    Connection,
-    RoomManager,
-)
-from inkstave.collab.ws.router import _force_close, _make_forwarder
+from inkstave.modules.collab.ws.rooms import CLOSE_SLOW_CONSUMER, Connection, RoomManager
+from inkstave.modules.collab.ws.router import _force_close, _make_forwarder
 
 
 class _FakeWS:
@@ -97,9 +93,9 @@ async def test_enqueue_timed_succeeds_within_grace_window() -> None:
         await asyncio.sleep(0)
         conn.send_queue.get_nowait()  # make room so the timed put can complete
 
-    # Fire-and-forget: the task finishes within the awaited enqueue below.
-    asyncio.create_task(drain())
+    drainer = asyncio.create_task(drain())
     assert await conn.enqueue_timed(b"payload", timeout_ms=200) is True
+    await drainer
 
 
 async def test_enqueue_timed_times_out_on_full_queue() -> None:

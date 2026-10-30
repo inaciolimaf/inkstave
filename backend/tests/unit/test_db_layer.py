@@ -8,9 +8,9 @@ from sqlalchemy import Column, Integer, Table, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
-from inkstave.db.base import NAMING_CONVENTION, Base
-from inkstave.db.engine import check_db, normalize_async_dsn
-from inkstave.db.models.ping import Ping
+from inkstave.core.db.base import NAMING_CONVENTION, Base
+from inkstave.core.db.engine import check_db, normalize_async_dsn
+from inkstave.modules.admin.models import Ping
 from tests.conftest import FakeEngineBroken, FakeEngineOk
 
 

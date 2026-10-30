@@ -8,15 +8,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.protocol import (
-    SyncUpdate,
-    encode_awareness,
-    encode_update,
-    read_message,
-)
-from inkstave.collab.ws.components import build_collab_components
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.collab.crdt.protocol import SyncUpdate, encode_awareness, encode_update, read_message
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.ws.components import build_collab_components
 
 
 class SessionCtx:

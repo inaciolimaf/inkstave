@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from inkstave.config import Settings
-from inkstave.security.rate_limit import RateLimitPolicy, check_rate_limit
-from inkstave.security.uploads import (
+from inkstave.core.config.settings import Settings
+from inkstave.modules.auth.throttling.policies import RateLimitPolicy, check_rate_limit
+from inkstave.modules.projects.content.uploads import (
     content_matches_extension,
     extension_allowed,
     sanitize_filename,

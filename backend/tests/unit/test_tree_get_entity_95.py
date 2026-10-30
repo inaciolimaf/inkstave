@@ -14,10 +14,10 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import NotADocumentError
-from inkstave.services.file_service import NotAFileError
-from inkstave.services.tree_service import EntityNotFoundError, get_entity
+from inkstave.modules.projects.content.documents import NotADocumentError
+from inkstave.modules.projects.content.files import NotAFileError
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import EntityNotFoundError, get_entity
 
 
 class _Result:

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.logparse.latex_log_parser import parse_latex_log
-from inkstave.logparse.models import ProblemSeverity
-from tests.logparse_fixtures import SAMPLE_LOG, wrap79
+from inkstave.modules.compile.logparse.latex_log_parser import parse_latex_log
+from inkstave.modules.compile.logparse.models import ProblemSeverity
+from tests.golden.logparse_fixtures import wrap79
 
 
 def test_error_with_line_marker_and_file_stack() -> None:
@@ -104,12 +104,7 @@ def test_underfull_vbox_single_line() -> None:
 
 
 def test_file_attribution_across_includes() -> None:
-    log = (
-        "(./main.tex\n"
-        "(sections/intro.tex\n"
-        "Overfull \\hbox (3.0pt too wide) in paragraph at lines 5--6\n"
-        ")\n"
-    )
+    log = "(./main.tex\n(sections/intro.tex\nOverfull \\hbox (3.0pt too wide) in paragraph at lines 5--6\n)\n"
     p = parse_latex_log(log)[0]
     assert p.file == "sections/intro.tex"
 
@@ -135,19 +130,3 @@ def test_resilient_to_garbage() -> None:
 def test_rejects_non_string() -> None:
     with pytest.raises(ValueError):
         parse_latex_log(None)  # type: ignore[arg-type]
-
-
-def test_sample_log_counts_and_order() -> None:
-    problems = parse_latex_log(SAMPLE_LOG)
-    rules = [p.rule for p in problems]
-    assert rules == ["overfull-hbox", "tex-error", "undefined-ref", "latex-warning"]
-    assert [p.file for p in problems] == [
-        "sections/intro.tex",
-        "main.tex",
-        "main.tex",
-        "main.tex",
-    ]
-    sev = [p.severity for p in problems]
-    assert sev.count(ProblemSeverity.error) == 1
-    assert sev.count(ProblemSeverity.warning) == 2
-    assert sev.count(ProblemSeverity.info) == 1

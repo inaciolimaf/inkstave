@@ -14,11 +14,11 @@ from uuid import UUID
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.jobs import run_compile
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileResult
-from inkstave.compile.stream import request_cancel
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.queue.jobs import run_compile
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.queue.stream import request_cancel
+from inkstave.modules.compile.running.result import CompileResult
 from tests.integration._compile_job_support import (
     CancelAwareWorkdirService,
     StubService,
@@ -44,9 +44,7 @@ async def test_precancelled_exits_without_compiling(db_session: AsyncSession, re
     assert row.status == "cancelled"
 
 
-async def test_cancel_during_run_trips_token(
-    db_session: AsyncSession, redis: Any, tmp_path: Path
-) -> None:
+async def test_cancel_during_run_trips_token(db_session: AsyncSession, redis: Any, tmp_path: Path) -> None:
     # spec 68 #93/#94: real workdir + deterministic (event-driven) cancel, no sleeps.
     cid = await _new_compile(db_session)
     settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))  # type: ignore[call-arg]
@@ -54,9 +52,7 @@ async def test_cancel_during_run_trips_token(
 
     async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None: ...
 
-    task = asyncio.create_task(
-        run_compile(_ctx(db_session, redis, service, persist, settings), str(cid))
-    )
+    task = asyncio.create_task(run_compile(_ctx(db_session, redis, service, persist, settings), str(cid)))
     await service.running.wait()  # run() is in-flight at a known point
     await request_cancel(redis, cid, 300)  # the job's watcher will trip the token
     await task

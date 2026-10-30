@@ -12,13 +12,13 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.tools.list_tree import ListTreeArgs, ListTreeTool
-from inkstave.agent.tools.locate_section import LocateSectionArgs, LocateSectionTool
-from inkstave.agent.tools.read_file import ReadFileArgs, ReadFileTool
-from inkstave.agent.tools.search_project import SearchProjectArgs, SearchProjectTool
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.agent.tools.list_tree import ListTreeArgs, ListTreeTool
+from inkstave.modules.agent.tools.locate_section import LocateSectionArgs, LocateSectionTool
+from inkstave.modules.agent.tools.read_file import ReadFileArgs, ReadFileTool
+from inkstave.modules.agent.tools.search_project import SearchProjectArgs, SearchProjectTool
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 
 from ._agent_tools_support import _ctx, seed
 
@@ -51,9 +51,7 @@ async def test_search_project(seed: SimpleNamespace, db_session: AsyncSession) -
     assert result.data["matches"][0]["kind"] == "section"
 
 
-async def test_read_file_truncation_and_window(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_read_file_truncation_and_window(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     big = await create_entity(db_session, seed.project_id, TreeEntityType.doc, "big.tex", None)
     await set_content_from_collab(db_session, big.id, "\n".join(f"line {i}" for i in range(1000)))
     await db_session.commit()
@@ -66,9 +64,7 @@ async def test_read_file_truncation_and_window(
 
     # A window that fits the cap returns exactly that slice, untruncated.
     roomy = _ctx(db_session, seed.project_id, seed.owner.id, agent_tool_read_max_chars=40000)
-    window = await ReadFileTool().run(
-        ReadFileArgs(doc_id=str(big.id), start_line=10, end_line=20), roomy
-    )
+    window = await ReadFileTool().run(ReadFileArgs(doc_id=str(big.id), start_line=10, end_line=20), roomy)
     assert window.ok and window.data is not None
     assert window.data["truncated"] is False
     assert window.data["content"].splitlines() == [f"line {i}" for i in range(10, 20)]

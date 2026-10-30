@@ -13,12 +13,12 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.errors import RateLimitError
-from inkstave.security.body_limit import BodySizeLimitMiddleware
-from inkstave.security.rate_limit import RateLimitPolicy, rate_limit
-from inkstave.services.project import create_project
+from inkstave.core.config.settings import get_settings
+from inkstave.core.errors import RateLimitError
+from inkstave.core.http.body_limit import BodySizeLimitMiddleware
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.throttling.policies import RateLimitPolicy, rate_limit
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -78,9 +78,7 @@ async def test_body_size_limit_returns_413() -> None:
 # --- strict validation (AC4: 422 extra) ------------------------------------- #
 
 
-async def test_extra_field_is_rejected_422(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_extra_field_is_rejected_422(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers, user = await _auth(db_session)
     project = await create_project(db_session, user.id, "P")
     await db_session.commit()

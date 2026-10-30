@@ -9,10 +9,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -60,9 +60,7 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str]) -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"])
 
 
 async def _create_entity(
@@ -130,9 +128,7 @@ async def test_file_get_is_few_queries(
         headers = await _auth(db_session)
         pid = await _project(async_client, headers)
         files = {"file": ("logo.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 16, "image/png")}
-        upload = await async_client.post(
-            f"/api/v1/projects/{pid}/files", files=files, headers=headers
-        )
+        upload = await async_client.post(f"/api/v1/projects/{pid}/files", files=files, headers=headers)
         assert upload.status_code == 201
         eid = upload.json()["entity_id"]
 
@@ -156,7 +152,7 @@ async def test_create_name_race_maps_to_409(
     await _create_entity(async_client, pid, headers, "doc", "race.tex")
 
     # Force the pre-check to miss so the INSERT races into the unique index.
-    import inkstave.services.tree_service as tree_service
+    import inkstave.modules.projects.tree.service as tree_service
 
     async def _never(*_a: Any, **_k: Any) -> bool:
         return False
@@ -179,7 +175,7 @@ async def test_rename_name_race_maps_to_409(
     await _create_entity(async_client, pid, headers, "doc", "taken.tex")
     other = await _create_entity(async_client, pid, headers, "doc", "other.tex")
 
-    import inkstave.services.tree_service as tree_service
+    import inkstave.modules.projects.tree.service as tree_service
 
     async def _never(*_a: Any, **_k: Any) -> bool:
         return False
@@ -208,7 +204,7 @@ async def test_move_name_race_maps_to_409(
         headers=headers,
     )
 
-    import inkstave.services.tree_service as tree_service
+    import inkstave.modules.projects.tree.service as tree_service
 
     async def _never(*_a: Any, **_k: Any) -> bool:
         return False
@@ -226,9 +222,7 @@ async def test_move_name_race_maps_to_409(
 # --- Ownership = existence (404, never 403) across resource types (AC2) ----- #
 
 
-async def test_ownership_is_404_across_resources(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_ownership_is_404_across_resources(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers_a = await _auth(db_session)
     headers_b = await _auth(db_session)
     pid = await _project(async_client, headers_a)
@@ -250,10 +244,10 @@ async def test_ownership_is_404_across_resources(
 
 async def test_get_file_without_content_row_is_404(db_session: AsyncSession) -> None:
     # A `file` entity created without an upload (no `files` row) reports 404.
-    from inkstave.db.models.tree_entity import TreeEntityType
-    from inkstave.services.file_service import get_file
-    from inkstave.services.project import create_project
-    from inkstave.services.tree_service import EntityNotFoundError, create_entity, ensure_root
+    from inkstave.modules.projects.catalog.service import create_project
+    from inkstave.modules.projects.content.files import get_file
+    from inkstave.modules.projects.models.tree_entity import TreeEntityType
+    from inkstave.modules.projects.tree.service import EntityNotFoundError, create_entity, ensure_root
 
     user = await UserFactory.create(db_session)
     await db_session.flush()

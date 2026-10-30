@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import (
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import (
     ContentTooLargeError,
     NotADocumentError,
     VersionConflictError,
@@ -14,8 +14,8 @@ from inkstave.services.document_service import (
     get_document,
     replace_content,
 )
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity, ensure_root
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity, ensure_root
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -39,7 +39,7 @@ async def test_doc_creation_yields_empty_document(db_session: AsyncSession) -> N
 
 
 async def test_ensure_document_is_idempotent(db_session: AsyncSession) -> None:
-    project, entity = await _doc_entity(db_session)
+    _project, entity = await _doc_entity(db_session)
     first = await ensure_document(db_session, entity)
     second = await ensure_document(db_session, entity)
     assert first.entity_id == second.entity_id
@@ -75,7 +75,7 @@ async def test_replace_with_stale_version_conflicts(db_session: AsyncSession) ->
 
 
 async def test_content_too_large(db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
-    from inkstave.config import get_settings
+    from inkstave.core.config.settings import get_settings
 
     monkeypatch.setenv("MAX_DOCUMENT_BYTES", "10")
     get_settings.cache_clear()
@@ -107,9 +107,7 @@ async def test_not_a_document_for_file_entity(db_session: AsyncSession) -> None:
     await db_session.flush()
     project = await create_project(db_session, user.id, "P")
     root = await ensure_root(db_session, project.id)
-    file_entity = await create_entity(
-        db_session, project.id, TreeEntityType.file, "logo.png", root.id
-    )
+    file_entity = await create_entity(db_session, project.id, TreeEntityType.file, "logo.png", root.id)
     with pytest.raises(NotADocumentError):
         await get_document(db_session, project.id, file_entity.id)
     with pytest.raises(NotADocumentError):

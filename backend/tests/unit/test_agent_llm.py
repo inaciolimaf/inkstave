@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.agent.llm.base import LLMError, LLMMessage, LLMResponse, LLMUsage
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.llm.openrouter import OpenRouterLLMClient
-from inkstave.agent.settings import AgentSettings
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.llm.base import LLMError, LLMMessage, LLMResponse, LLMUsage
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
 
 
 async def test_fake_complete_is_scripted_and_records_calls() -> None:

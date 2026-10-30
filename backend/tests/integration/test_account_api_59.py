@@ -13,12 +13,12 @@ from httpx import AsyncClient
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.user import User
-from inkstave.dependencies import get_email_enqueuer
-from inkstave.services.user import normalise_email
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.models.user import User
 
 pytestmark = pytest.mark.integration
 
@@ -42,13 +42,9 @@ def enqueuer(app: Any) -> FakeEmailEnqueuer:
     return fake
 
 
-async def _user(
-    db: AsyncSession, *, email: str = "owner@example.com", password: str = PASSWORD
-) -> User:
+async def _user(db: AsyncSession, *, email: str = "owner@example.com", password: str = PASSWORD) -> User:
     hasher = build_password_hasher(get_settings())
-    user = User(
-        email=normalise_email(email), hashed_password=hasher.hash(password), display_name="Owner"
-    )
+    user = User(email=normalise_email(email), hashed_password=hasher.hash(password), display_name="Owner")
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -73,9 +69,7 @@ async def test_get_and_patch_profile(async_client: AsyncClient, db_session: Asyn
     assert body["email"] == "owner@example.com" and body["avatar_url"] is None
     assert body["editor_preferences"] == {"theme": "system", "font_size": 14, "keymap": "default"}
 
-    patched = await async_client.patch(
-        f"{USERS}/me", json={"display_name": "  New Name  "}, headers=h
-    )
+    patched = await async_client.patch(f"{USERS}/me", json={"display_name": "  New Name  "}, headers=h)
     assert patched.status_code == 200 and patched.json()["display_name"] == "New Name"
     assert (await async_client.get(f"{USERS}/me", headers=h)).json()["display_name"] == "New Name"
 
@@ -92,13 +86,9 @@ async def test_editor_preferences_round_trip_and_clamp(
     assert r.status_code == 200
     assert r.json() == {"theme": "dark", "font_size": 28, "keymap": "vim"}  # font clamped to 28
     # Persisted + returned on the next read.
-    assert (await async_client.get(f"{USERS}/me", headers=h)).json()["editor_preferences"][
-        "theme"
-    ] == "dark"
+    assert (await async_client.get(f"{USERS}/me", headers=h)).json()["editor_preferences"]["theme"] == "dark"
     # Bad enum → 422.
-    bad = await async_client.put(
-        f"{USERS}/me/editor-preferences", json={"keymap": "nano"}, headers=h
-    )
+    bad = await async_client.put(f"{USERS}/me/editor-preferences", json={"keymap": "nano"}, headers=h)
     assert bad.status_code == 422
 
 
@@ -130,9 +120,7 @@ async def test_change_password_success_and_revokes_sessions(
         )
     ).status_code == 200
     assert (
-        await async_client.post(
-            "/api/v1/auth/login", json={"email": "pw@example.com", "password": PASSWORD}
-        )
+        await async_client.post("/api/v1/auth/login", json={"email": "pw@example.com", "password": PASSWORD})
     ).status_code == 401
     # The pre-existing refresh token is now revoked.
     assert (
@@ -241,10 +229,7 @@ async def test_delete_account_cascades_and_revokes(
     assert deleted.status_code == 204
 
     # The row (and its project) are gone; further authed requests 401 (user lookup fails).
-    assert (
-        await db_session.scalar(select(func.count()).select_from(User).where(User.id == user.id))
-        == 0
-    )
+    assert await db_session.scalar(select(func.count()).select_from(User).where(User.id == user.id)) == 0
     assert (await async_client.get(f"{USERS}/me", headers=h)).status_code == 401
 
 

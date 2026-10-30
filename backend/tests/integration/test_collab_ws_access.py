@@ -9,15 +9,15 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import get_settings
-from inkstave.db.models.crdt import CrdtUpdate
-from inkstave.db.models.document import Document
-from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtUpdate
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import (
     ASGIWebSocketClient,
     apply_update_message,
@@ -68,9 +68,7 @@ def _path(project_id: Any, document_id: Any) -> str:
     return f"/ws/collab/projects/{project_id}/documents/{document_id}"
 
 
-async def test_non_member_join_rejected_4403(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_non_member_join_rejected_4403(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     async with ASGIWebSocketClient(
@@ -107,9 +105,7 @@ async def test_viewer_update_is_dropped(app: Any, db_session: AsyncSession, redi
     assert count == 0
 
 
-async def test_viewer_receives_editor_updates(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_viewer_receives_editor_updates(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
     path = _path(project.id, entity.id)
@@ -129,14 +125,10 @@ async def test_viewer_receives_editor_updates(
         assert local.text == "editor edit"
 
 
-async def test_editor_update_applies_and_persists(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_editor_update_applies_and_persists(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     project, entity, tokens = await _setup(db_session)
-    async with ASGIWebSocketClient(
-        app, _path(project.id, entity.id), query=f"token={tokens['editor']}"
-    ) as e:
+    async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={tokens['editor']}") as e:
         await e.expect_accept()
         await e.receive_bytes()
         await e.send_bytes(make_update("editor wrote this"))
@@ -148,7 +140,5 @@ async def test_editor_update_applies_and_persists(
         assert count >= 1  # AC8 applied + persisted
 
         await components.manager.flush(entity.id)
-        content = await db_session.scalar(
-            select(Document.content).where(Document.entity_id == entity.id)
-        )
+        content = await db_session.scalar(select(Document.content).where(Document.entity_id == entity.id))
         assert content == "editor wrote this"

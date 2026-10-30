@@ -8,15 +8,15 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.bootstrap.seed import DEMO_EMAIL, seed_demo
-from inkstave.config import get_settings
-from inkstave.db.models.document import Document
-from inkstave.db.models.project import Project
-from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
-from inkstave.db.models.user import User
-from inkstave.services.document_service import read_content_for_collab
-from inkstave.services.user import normalise_email
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.admin.provisioning.seed import DEMO_EMAIL, seed_demo
+from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.models.user import User
+from inkstave.modules.projects.content.documents import read_content_for_collab
+from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 
 pytestmark = pytest.mark.integration
 

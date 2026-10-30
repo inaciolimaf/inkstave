@@ -11,16 +11,16 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.collab.protocol import SyncStep2, encode_sync_step1, read_message
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import get_settings
-from inkstave.db.models.crdt import CrdtUpdate
-from inkstave.db.models.project import Project
-from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
-from inkstave.db.models.user import User
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.models.user import User
+from inkstave.modules.collab.crdt.protocol import SyncStep2, encode_sync_step1, read_message
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtUpdate
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import ASGIWebSocketClient, install_collab, make_update
 from tests.factories import UserFactory
 
@@ -64,9 +64,7 @@ async def _setup(db_session: AsyncSession) -> tuple[User, Project, TreeEntity, s
 async def _update_count(db_session: AsyncSession, document_id: UUID) -> int:
     return int(
         await db_session.scalar(
-            select(func.count())
-            .select_from(CrdtUpdate)
-            .where(CrdtUpdate.document_id == document_id)
+            select(func.count()).select_from(CrdtUpdate).where(CrdtUpdate.document_id == document_id)
         )
         or 0
     )
@@ -76,9 +74,7 @@ def _path(project_id: Any, document_id: Any) -> str:
     return f"/ws/collab/projects/{project_id}/documents/{document_id}"
 
 
-async def test_reconnect_resyncs_and_converges(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_reconnect_resyncs_and_converges(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
     path = _path(project.id, entity.id)

@@ -11,13 +11,13 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.deps import AgentDeps
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.runner import run_turn
-from inkstave.agent.settings import AgentSettings
-from inkstave.agent.tools import default_registry
-from inkstave.services.document_service import get_document
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.graph.agent_deps import AgentDeps
+from inkstave.modules.agent.graph.runner import run_turn
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.tools import default_registry
+from inkstave.modules.projects.content.documents import get_document
 
 from ._agent_tools_support import _session, _tool_call, seed
 
@@ -26,9 +26,7 @@ pytestmark = pytest.mark.integration
 __all__ = ["seed"]
 
 
-async def test_act_runs_real_tool_via_graph(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_act_runs_real_tool_via_graph(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     session = await _session(db_session, seed)
     deps = AgentDeps(
         llm=FakeLLM(script=[_tool_call("search_project", {"query": "introduction"})]),
@@ -63,9 +61,7 @@ async def test_locate_section_via_graph_is_structure_aware(
     assert match["title"] == "Introduction" and match["heading_line"] == 3
 
 
-async def test_act_unknown_tool_is_unsupported(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_act_unknown_tool_is_unsupported(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     session = await _session(db_session, seed)
     deps = AgentDeps(
         llm=FakeLLM(script=[_tool_call("ghost", {})]),
@@ -78,9 +74,7 @@ async def test_act_unknown_tool_is_unsupported(
     assert payload["ok"] is False and payload["error"]["code"] == "unsupported"  # AC8
 
 
-async def test_act_invalid_args_is_invalid_args(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_act_invalid_args_is_invalid_args(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     session = await _session(db_session, seed)
     deps = AgentDeps(
         llm=FakeLLM(script=[_tool_call("read_file", {})]),  # neither selector → invalid

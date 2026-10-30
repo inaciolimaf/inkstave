@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import OutputStore
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileResult
-from inkstave.config import Settings
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.result import CompileResult
 from tests.integration._compile_outputs_support import (
     _result,
     _seed,
@@ -30,18 +30,18 @@ pytestmark = pytest.mark.integration
 async def test_job_persists_outputs_and_cleans_workdir(
     db_session: AsyncSession, redis, tmp_path: Path
 ) -> None:
-    from inkstave.compile.jobs import run_compile
+    from inkstave.modules.compile.queue.jobs import run_compile
 
-    _, project, compile_row = await _seed(db_session)
+    _, _project, compile_row = await _seed(db_session)
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"  # the job cleans this up after persisting
     backend = LocalObjectStore(tmp_path / "blobs", 65536)
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
 
     async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
-        await OutputStore(
-            storage=backend, repo=OutputRepository(session), settings=settings
-        ).persist(cid, pid, res)
+        await OutputStore(storage=backend, repo=OutputRepository(session), settings=settings).persist(
+            cid, pid, res
+        )
 
     ctx = {
         "settings": settings,
@@ -65,9 +65,9 @@ def _ordered_persist_hook(backend: LocalObjectStore, settings: Settings, order: 
     """A persist hook that records when it ran, relative to the publish spy."""
 
     async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
-        await OutputStore(
-            storage=backend, repo=OutputRepository(session), settings=settings
-        ).persist(cid, pid, res)
+        await OutputStore(storage=backend, repo=OutputRepository(session), settings=settings).persist(
+            cid, pid, res
+        )
         order.append("persist")
 
     return persist
@@ -79,10 +79,10 @@ async def test_job_persists_before_terminal_status_event(
     """AC2: outputs are persisted BEFORE the terminal status event is published.
     Spy on the persist hook and ``publish_status`` (instrumented on the job's
     collaborators, never editing jobs.py) and assert the recorded order."""
-    import inkstave.compile.jobs as jobs_module
-    from inkstave.compile.jobs import run_compile
+    import inkstave.modules.compile.queue.jobs as jobs_module
+    from inkstave.modules.compile.queue.jobs import run_compile
 
-    _, project, compile_row = await _seed(db_session)
+    _, _project, compile_row = await _seed(db_session)
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"
     settings = Settings(_env_file=None)  # type: ignore[call-arg]
@@ -99,9 +99,7 @@ async def test_job_persists_before_terminal_status_event(
         "redis": redis,
         "session_factory": lambda: _SessionCtx(db_session),
         "make_compile_service": lambda _s: _StubService(result),
-        "persist_hook": _ordered_persist_hook(
-            LocalObjectStore(tmp_path / "blobs", 65536), settings, order
-        ),
+        "persist_hook": _ordered_persist_hook(LocalObjectStore(tmp_path / "blobs", 65536), settings, order),
     }
     monkey = pytest.MonkeyPatch()
     monkey.setattr(jobs_module, "publish_status", spy_publish)

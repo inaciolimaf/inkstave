@@ -15,10 +15,10 @@ from fastapi.routing import APIRoute
 from httpx import AsyncClient
 
 from inkstave.app import create_app
-from inkstave.auth.rate_limit import rate_limit
-from inkstave.config import Settings
-from inkstave.observability.context import request_id_var
-from inkstave.observability.log import redact
+from inkstave.core.config.settings import Settings
+from inkstave.core.observability.context import request_id_var
+from inkstave.core.observability.log import redact
+from inkstave.modules.auth.throttling.limiter import rate_limit
 
 pytestmark = pytest.mark.integration
 
@@ -38,7 +38,7 @@ def test_secret_access_key_is_redacted() -> None:
 
 
 async def test_agent_job_binds_and_clears_context(monkeypatch: pytest.MonkeyPatch) -> None:
-    from inkstave.agent.api import jobs
+    from inkstave.modules.agent.runs import jobs
 
     seen: dict[str, Any] = {}
 
@@ -49,9 +49,7 @@ async def test_agent_job_binds_and_clears_context(monkeypatch: pytest.MonkeyPatc
 
     token = request_id_var.set("outer")
     try:
-        await jobs.run_agent_turn(
-            {}, session_id="s", run_id="r", user_message="m", request_id="req-123"
-        )
+        await jobs.run_agent_turn({}, session_id="s", run_id="r", user_message="m", request_id="req-123")
         assert seen["request_id"] == "req-123"  # request id chained into the job
         assert request_id_var.get() == "outer"  # restored after — no leak to next job
     finally:
@@ -100,10 +98,7 @@ def _has_rate_limit(route: APIRoute) -> bool:
 def test_every_sensitive_route_is_rate_limited() -> None:
     app = create_app()
     by_key = {
-        (method, r.path): r
-        for r in app.routes
-        if isinstance(r, APIRoute)
-        for method in (r.methods or set())
+        (method, r.path): r for r in app.routes if isinstance(r, APIRoute) for method in (r.methods or set())
     }
     missing: list[tuple[str, str]] = []
     for key in _SENSITIVE:
@@ -141,11 +136,11 @@ async def test_unknown_request_field_is_rejected(async_client: AsyncClient) -> N
 
 def _core_request_models() -> list[type]:
     """Auth, user, project and tree request bodies."""
-    from inkstave.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest
-    from inkstave.schemas.document import DocumentContentReplace
-    from inkstave.schemas.project import ProjectCreate, ProjectRename
-    from inkstave.schemas.tree import CreateEntityIn, MoveEntityIn, RenameEntityIn
-    from inkstave.schemas.user import RegisterRequest
+    from inkstave.modules.auth.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest
+    from inkstave.modules.auth.schemas.user import RegisterRequest
+    from inkstave.modules.projects.schemas.document import DocumentContentReplace
+    from inkstave.modules.projects.schemas.project import ProjectCreate, ProjectRename
+    from inkstave.modules.projects.schemas.tree import CreateEntityIn, MoveEntityIn, RenameEntityIn
 
     return [
         LoginRequest,
@@ -163,15 +158,15 @@ def _core_request_models() -> list[type]:
 
 def _feature_request_models() -> list[type]:
     """Sharing, compile, history and agent request bodies."""
-    from inkstave.agent.api.schemas import CreateSessionIn, PostMessageIn
-    from inkstave.schemas.compile import CompileRequest
-    from inkstave.schemas.history import (
+    from inkstave.modules.agent.schemas import CreateSessionIn, PostMessageIn
+    from inkstave.modules.compile.schemas import CompileRequest
+    from inkstave.modules.history.schemas import (
         LabelCreate,
         ProjectLabelCreate,
         ProjectRestoreRequest,
         RestoreRequest,
     )
-    from inkstave.schemas.sharing import InviteCreate, MemberRoleUpdate, TransferRequest
+    from inkstave.modules.projects.schemas.sharing import InviteCreate, MemberRoleUpdate, TransferRequest
 
     return [
         MemberRoleUpdate,

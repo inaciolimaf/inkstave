@@ -12,9 +12,9 @@ from typing import Any
 
 import pytest
 
-from inkstave.compile.errors import CompileError
-from inkstave.compile.limits import CancelToken, ResourceLimits
-from inkstave.compile.runner import SandboxedTectonicRunner, validate_main_file
+from inkstave.modules.compile.running.errors import CompileError
+from inkstave.modules.compile.running.limits import CancelToken, ResourceLimits
+from inkstave.modules.compile.running.sandbox import SandboxCaps, SandboxedTectonicRunner, validate_main_file
 
 
 def _limits(*, address_space_bytes: int | None = 2_147_483_648) -> ResourceLimits:
@@ -29,8 +29,8 @@ def _limits(*, address_space_bytes: int | None = 2_147_483_648) -> ResourceLimit
     )
 
 
-def _runner(**kwargs: Any) -> SandboxedTectonicRunner:
-    return SandboxedTectonicRunner(image="inkstave-tectonic", **kwargs)
+def _runner(**caps: Any) -> SandboxedTectonicRunner:
+    return SandboxedTectonicRunner(image="inkstave-tectonic", caps=SandboxCaps(**caps))
 
 
 def _cmd(main_file: str = "main.tex", **kwargs: Any) -> Any:

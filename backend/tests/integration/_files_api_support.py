@@ -19,11 +19,11 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.factories import UserFactory
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 40
@@ -89,14 +89,10 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def _project(client: AsyncClient, headers: dict[str, str]) -> str:
-    return str(
-        (await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"]
-    )
+    return str((await client.post("/api/v1/projects", json={"name": "P"}, headers=headers)).json()["id"])
 
 
-async def _entity(
-    client: AsyncClient, pid: str, headers: dict[str, str], type_: str, name: str
-) -> str:
+async def _entity(client: AsyncClient, pid: str, headers: dict[str, str], type_: str, name: str) -> str:
     resp = await client.post(
         f"/api/v1/projects/{pid}/tree/entities",
         json={"type": type_, "name": name},
@@ -122,9 +118,7 @@ async def _upload(
         data["name"] = name
     if parent_id is not None:
         data["parent_id"] = parent_id
-    return await client.post(
-        f"/api/v1/projects/{pid}/files", files=files, data=data, headers=headers
-    )
+    return await client.post(f"/api/v1/projects/{pid}/files", files=files, data=data, headers=headers)
 
 
 def _files(pid: str) -> str:

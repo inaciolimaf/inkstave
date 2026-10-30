@@ -11,8 +11,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.config import get_settings
-from inkstave.storage.base import ObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.storage.base import ObjectStore
 
 from ._files_api_support import (
     _auth,
@@ -63,9 +63,7 @@ async def test_disallowed_mime(
     assert resp.json()["error"]["type"] == "unsupported_media_type"
 
 
-async def test_invalid_name(
-    client_store: tuple[AsyncClient, ObjectStore], db_session: AsyncSession
-) -> None:
+async def test_invalid_name(client_store: tuple[AsyncClient, ObjectStore], db_session: AsyncSession) -> None:
     client, store = client_store
     headers = await _auth(db_session)
     pid = await _project(client, headers)

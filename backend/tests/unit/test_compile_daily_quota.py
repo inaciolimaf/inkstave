@@ -8,12 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from inkstave.config import Settings
-from inkstave.security.rate_limit import (
-    _NAMED_POLICIES,
-    check_rate_limit,
-    policy_from_setting,
-)
+from inkstave.core.config.settings import Settings
+from inkstave.modules.auth.throttling.policies import _NAMED_POLICIES, check_rate_limit, policy_from_setting
 
 
 def _settings(**overrides: Any) -> Settings:
@@ -60,7 +56,7 @@ async def test_quota_is_scoped_per_user(redis: Any) -> None:
 
 def test_compile_route_attaches_the_daily_quota_dependency() -> None:
     # The POST .../compile route must carry both the per-minute and the daily caps.
-    from inkstave.api.routes import compile as compile_routes
+    from inkstave.modules.compile.routes import compile as compile_routes
 
     policies = {
         getattr(dep.dependency, "__rate_limit__", None)

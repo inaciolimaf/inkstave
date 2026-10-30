@@ -9,9 +9,9 @@ from typing import Any
 import httpx
 import pytest
 
-from inkstave.config import get_settings
-from inkstave.mailer.sender import OutgoingEmail, ResendEmailSender, get_email_sender
-from inkstave.mailer.templates import render_email
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.mailer.sender import OutgoingEmail, ResendEmailSender, get_email_sender
+from inkstave.infra.mailer.templates import render_email
 
 
 def _sender(handler: Any, key: str = "re_secret_key") -> ResendEmailSender:
@@ -66,11 +66,10 @@ async def test_resend_raises_on_non_2xx_and_hides_key(caplog: pytest.LogCaptureF
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(422, json={"message": "invalid recipient"})
 
-    with caplog.at_level(logging.WARNING):
-        with pytest.raises(httpx.HTTPStatusError):
-            await _sender(handler, key="re_TOPSECRET").send(
-                OutgoingEmail(to="b@x.com", subject="s", text_body="t")
-            )
+    with caplog.at_level(logging.WARNING), pytest.raises(httpx.HTTPStatusError):
+        await _sender(handler, key="re_TOPSECRET").send(
+            OutgoingEmail(to="b@x.com", subject="s", text_body="t")
+        )
     assert "re_TOPSECRET" not in caplog.text
     assert "422" in caplog.text  # status logged for the bounce
 
@@ -87,7 +86,7 @@ def test_factory_selects_resend_and_keeps_others() -> None:
     resend = get_settings().model_copy(update={"email_backend": "resend", "resend_api_key": "re_x"})
     assert isinstance(get_email_sender(resend), ResendEmailSender)
     # The existing backends are unchanged.
-    from inkstave.mailer.sender import ConsoleEmailSender
+    from inkstave.infra.mailer.sender import ConsoleEmailSender
 
     console = get_settings().model_copy(update={"email_backend": "console"})
     assert isinstance(get_email_sender(console), ConsoleEmailSender)
@@ -141,9 +140,7 @@ async def test_cli_send_test_email_pass(capsys: pytest.CaptureFixture[str]) -> N
 async def test_cli_send_test_email_fail_nonzero(capsys: pytest.CaptureFixture[str]) -> None:
     from inkstave.cli import _cmd_send_test_email
 
-    rc = await _cmd_send_test_email(
-        to="a@b.com", template="email_verification", sender=_RaisingSender()
-    )
+    rc = await _cmd_send_test_email(to="a@b.com", template="email_verification", sender=_RaisingSender())
     assert rc == 1
     err = capsys.readouterr().err
     assert "FAIL" in err and "Traceback" not in err
@@ -155,7 +152,7 @@ async def test_cli_send_test_email_fail_nonzero(capsys: pytest.CaptureFixture[st
 
 
 def test_validator_flags_missing_resend_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    from inkstave.bootstrap.config_check import validate_config
+    from inkstave.modules.admin.provisioning.config_check import validate_config
 
     monkeypatch.setenv("EMAIL_BACKEND", "resend")
     monkeypatch.setenv("RESEND_API_KEY", "")

@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.ping import Ping
+from inkstave.modules.admin.models import Ping
 
 
 class PingFactory:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.config import Settings, get_settings
+from inkstave.core.config.settings import Settings, get_settings
 
 
 def test_defaults_apply(monkeypatch: pytest.MonkeyPatch) -> None:

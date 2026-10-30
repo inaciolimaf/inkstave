@@ -5,10 +5,7 @@ Pure string-in → list-out checks; no real DB/Redis, no server boot.
 
 from __future__ import annotations
 
-from inkstave.bootstrap.config_check import (
-    format_config_problems,
-    validate_required_runtime,
-)
+from inkstave.modules.admin.provisioning.config_check import format_config_problems, validate_required_runtime
 
 _VALID = {
     "JWT_SECRET": "a-strong-secret-value-of-sufficient-length-0123456789",

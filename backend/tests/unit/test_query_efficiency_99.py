@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.services.tree_service import TreeTooLargeError, get_tree
+from inkstave.modules.projects.tree.service import TreeTooLargeError, get_tree
 
 
 class _ScalarsResult:
@@ -61,7 +61,7 @@ def test_tree_too_large_error_shape_and_export() -> None:
     err = TreeTooLargeError()
     assert err.status_code == 422
     assert err.error_type == "tree_too_large"
-    from inkstave.services import tree_service
+    from inkstave.modules.projects.tree import service as tree_service
 
     assert "TreeTooLargeError" in tree_service.__all__
 
@@ -70,7 +70,7 @@ def test_tree_too_large_error_shape_and_export() -> None:
 
 
 def test_files_route_has_no_standalone_entity_name_lookup() -> None:
-    from inkstave.api.routes import files as files_mod
+    from inkstave.modules.projects.routes import files as files_mod
 
     # The per-file TreeEntity SELECT helper is gone; _read uses file_row.entity.name.
     assert not hasattr(files_mod, "_entity_name")
@@ -80,7 +80,7 @@ def test_files_route_has_no_standalone_entity_name_lookup() -> None:
 
 
 async def test_compile_entities_by_id_uses_get_tree(monkeypatch: pytest.MonkeyPatch) -> None:
-    from inkstave.compile import sources
+    from inkstave.modules.compile.assembly import sources
 
     ents = _entities(3)
 
@@ -95,7 +95,7 @@ async def test_compile_entities_by_id_uses_get_tree(monkeypatch: pytest.MonkeyPa
 async def test_compile_entities_by_id_propagates_tree_too_large(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from inkstave.compile import sources
+    from inkstave.modules.compile.assembly import sources
 
     async def fake_get_tree(_session: Any, _project_id: Any, **_kw: Any) -> list[Any]:
         raise TreeTooLargeError()

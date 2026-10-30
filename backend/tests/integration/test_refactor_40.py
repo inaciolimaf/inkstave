@@ -13,18 +13,18 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import get_settings
-from inkstave.db.models.history import HistoryChunk, HistoryUpdate
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.history.capture import HistoryCaptureService
-from inkstave.history.jobs import compact_history
-from inkstave.history.reconstruct import reconstruct_state
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
+from inkstave.modules.history.versions.capture import HistoryCaptureService
+from inkstave.modules.history.versions.jobs import compact_history
+from inkstave.modules.history.versions.reconstruct import reconstruct_state
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import install_collab
 from tests.factories import UserFactory
 
@@ -107,9 +107,7 @@ async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_p
         lambda: _SessionCtx(db_session), LocalObjectStore(tmp_path, 65536), _settings(tmp_path)
     )
     ed = _Editor()
-    await svc.capture_update(
-        project_id=pid, doc_id=doc_id, update=ed.update("x\n"), author_id=None, at=_NOW
-    )
+    await svc.capture_update(project_id=pid, doc_id=doc_id, update=ed.update("x\n"), author_id=None, at=_NOW)
     await svc.flush_doc(doc_id=doc_id, reason="manual")
     chunk_id = await db_session.scalar(select(HistoryChunk.id).where(HistoryChunk.doc_id == doc_id))
 
@@ -135,14 +133,10 @@ async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_p
 # --- compaction preserves reconstructed state (AC4) ------------------------ #
 
 
-async def test_compact_preserves_reconstructed_state(
-    db_session: AsyncSession, tmp_path: Any
-) -> None:
+async def test_compact_preserves_reconstructed_state(db_session: AsyncSession, tmp_path: Any) -> None:
     pid, doc_id = await _doc(db_session)
     # Small chunk size forces a seal; high merge bytes makes compaction merge.
-    settings = _settings(
-        tmp_path, history_chunk_max_updates=3, history_compact_merge_bytes=1_000_000
-    )
+    settings = _settings(tmp_path, history_chunk_max_updates=3, history_compact_merge_bytes=1_000_000)
     store = LocalObjectStore(tmp_path, 65536)
     svc = HistoryCaptureService(lambda: _SessionCtx(db_session), store, settings)
 

@@ -13,10 +13,10 @@ from uuid import UUID
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.jobs import run_compile
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileResult
-from inkstave.config import Settings
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.queue.jobs import run_compile
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.result import CompileResult
 from tests.integration._compile_job_support import (
     WorkdirCreatingService,
     _ctx,

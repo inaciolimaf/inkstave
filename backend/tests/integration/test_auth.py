@@ -11,7 +11,7 @@ from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.config import get_settings
+from inkstave.core.config.settings import get_settings
 
 pytestmark = pytest.mark.integration
 
@@ -26,9 +26,7 @@ async def _register(
     email: str = "user@example.com",
     password: str = "secret123",
 ) -> tuple[str, str]:
-    resp = await client.post(
-        REGISTER, json={"email": email, "password": password, "display_name": "User"}
-    )
+    resp = await client.post(REGISTER, json={"email": email, "password": password, "display_name": "User"})
     assert resp.status_code == 201
     return email, password
 
@@ -67,9 +65,7 @@ async def test_access_token_claims(async_client: AsyncClient) -> None:
 async def test_login_failures_are_uniform(async_client: AsyncClient) -> None:
     email, _ = await _register(async_client)
     wrong_pw = await async_client.post(LOGIN, json={"email": email, "password": "wrongpass1"})
-    unknown = await async_client.post(
-        LOGIN, json={"email": "nobody@example.com", "password": "whatever1"}
-    )
+    unknown = await async_client.post(LOGIN, json={"email": "nobody@example.com", "password": "whatever1"})
     assert wrong_pw.status_code == 401
     assert unknown.status_code == 401
     assert (
@@ -102,9 +98,7 @@ async def test_refresh_reuse_revokes_family(async_client: AsyncClient) -> None:
     email, password = await _register(async_client)
     pair1 = await _login(async_client, email, password)
 
-    pair2 = (
-        await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
-    ).json()
+    pair2 = (await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})).json()
 
     # Replay the already-rotated token -> reuse detected.
     replay = await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
@@ -144,9 +138,7 @@ async def test_refresh_with_tampered_token(async_client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
-async def test_refresh_with_deleted_user_is_401(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_refresh_with_deleted_user_is_401(async_client: AsyncClient, db_session: AsyncSession) -> None:
     email, password = await _register(async_client)
     pair = await _login(async_client, email, password)
 
@@ -188,9 +180,7 @@ async def test_logout_revokes_whole_token_family(async_client: AsyncClient) -> N
     email, password = await _register(async_client)
     pair1 = await _login(async_client, email, password)
 
-    rotated = (
-        await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
-    ).json()
+    rotated = (await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})).json()
     assert rotated["refresh_token"] != pair1["refresh_token"]  # same family, new member
 
     out = await async_client.post(LOGOUT, json={"refresh_token": rotated["refresh_token"]})

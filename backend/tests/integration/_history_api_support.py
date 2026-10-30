@@ -20,13 +20,13 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import install_collab
 from tests.factories import UserFactory
 
@@ -43,9 +43,7 @@ async def _user(db_session: AsyncSession) -> tuple[Any, dict[str, str]]:
 
 async def _member(db_session: AsyncSession, pid: UUID, user_id: UUID, role: str) -> None:
     db_session.add(
-        ProjectMembership(
-            project_id=pid, user_id=user_id, role=role, status=MembershipStatus.active
-        )
+        ProjectMembership(project_id=pid, user_id=user_id, role=role, status=MembershipStatus.active)
     )
     await db_session.commit()
 

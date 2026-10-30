@@ -10,7 +10,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.settings import AgentSettings
+from inkstave.core.config.agent import AgentSettings
 
 from ._agent_api_support import API, _auth, _FakeEnqueuer, enqueuer, seed
 
@@ -35,9 +35,7 @@ async def test_session_create_authz(
         f"{API}/{seed.project.id}/agent/sessions", json={}, headers=outsider_h
     )
     assert forbidden.status_code == 403  # non-member
-    missing = await async_client.post(
-        f"{API}/{uuid4()}/agent/sessions", json={}, headers=seed.headers
-    )
+    missing = await async_client.post(f"{API}/{uuid4()}/agent/sessions", json={}, headers=seed.headers)
     assert missing.status_code == 404  # unknown project
 
 
@@ -75,7 +73,7 @@ async def test_post_message_after_terminal_state_starts_new_run(
     the next message must start a fresh run rather than 409 (multi-turn chat)."""
     from uuid import UUID
 
-    from inkstave.agent.models import AgentRunState, AgentSession
+    from inkstave.modules.agent.models import AgentRunState, AgentSession
 
     base = f"{API}/{seed.project.id}/agent"
     sid = (await async_client.post(f"{base}/sessions", json={}, headers=seed.headers)).json()["id"]

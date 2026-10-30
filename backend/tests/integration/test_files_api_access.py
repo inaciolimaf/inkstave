@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.storage.base import ObjectStore
+from inkstave.infra.storage.base import ObjectStore
 
 from ._files_api_support import (
     _auth,
@@ -82,9 +82,7 @@ async def test_ownership_isolation(
         assert resp.json()["error"]["type"] == "project_not_found"
 
 
-async def test_requires_auth(
-    client_store: tuple[AsyncClient, ObjectStore], db_session: AsyncSession
-) -> None:
+async def test_requires_auth(client_store: tuple[AsyncClient, ObjectStore], db_session: AsyncSession) -> None:
     client, _ = client_store
     headers = await _auth(db_session)
     pid = await _project(client, headers)

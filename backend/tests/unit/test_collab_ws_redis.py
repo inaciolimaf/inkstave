@@ -8,9 +8,9 @@ from uuid import UUID, uuid4
 
 import fakeredis.aioredis as fakeredis
 
-from inkstave.collab.ws.redis_bridge import RedisBridge, decode_envelope, encode_envelope
-from inkstave.collab.ws.rooms import Connection, RoomManager
-from inkstave.collab.ydocument import YDocument
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.ws.redis_bridge import RedisBridge, decode_envelope, encode_envelope
+from inkstave.modules.collab.ws.rooms import Connection, RoomManager
 
 
 def test_envelope_round_trip() -> None:

@@ -8,8 +8,8 @@ pass unchanged.
 
 from __future__ import annotations
 
-from inkstave.agent.context import locate
-from inkstave.agent.safety.budget import _BUDGET_KEY_TTL_SECONDS, _SECONDS_PER_DAY
+from inkstave.modules.agent.context import locate
+from inkstave.modules.agent.safety.budget import _BUDGET_KEY_TTL_SECONDS, _SECONDS_PER_DAY
 
 
 def test_budget_constants_match_original_literals() -> None:

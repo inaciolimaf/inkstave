@@ -15,7 +15,7 @@ import pytest
 import inkstave.app as appmod
 from inkstave.app import create_app
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("test_database_env")]
 
 
 class RecordingRedis:
@@ -31,9 +31,7 @@ class RecordingRedis:
         self.closed = True
 
 
-async def test_lifespan_opens_and_disposes(
-    _template_db: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_lifespan_opens_and_disposes(_template_db: str, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = RecordingRedis()
 
     async def _fake_pool(_url: str) -> RecordingRedis:

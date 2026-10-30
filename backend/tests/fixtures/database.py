@@ -6,7 +6,6 @@ Registered as a pytest plugin from the root ``tests/conftest.py``.
 from __future__ import annotations
 
 import asyncio
-import os
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
@@ -17,6 +16,7 @@ from alembic.config import Config
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+from tests.fixtures.env import test_database_url
 from tests.fixtures.paths import ALEMBIC_INI
 
 # --------------------------------------------------------------------------- #
@@ -54,7 +54,7 @@ def _template_db() -> Iterator[str]:
     block on) for marginal wall-clock gain on a fast migration set; per-worker
     migration is simpler, fully isolated, and keeps the suite well under budget.
     """
-    url = make_url(os.environ["DATABASE_URL"])
+    url = make_url(test_database_url())
     db_name = url.database or "inkstave_test"
     admin_url = url.set(drivername="postgresql", database="postgres")
     test_url = url.render_as_string(hide_password=False)
@@ -73,7 +73,9 @@ def _template_db() -> Iterator[str]:
         pytest.skip(f"PostgreSQL not available for the test database: {exc}")
 
     # Build the schema template ONCE for the whole session.
-    command.upgrade(Config(str(ALEMBIC_INI)), "head")
+    alembic_config = Config(str(ALEMBIC_INI))
+    alembic_config.set_main_option("sqlalchemy.url", test_url.replace("%", "%%"))
+    command.upgrade(alembic_config, "head")
 
     yield test_url
 
@@ -81,7 +83,7 @@ def _template_db() -> Iterator[str]:
 
 
 @pytest_asyncio.fixture
-async def db_engine(_template_db: str) -> AsyncIterator[Any]:
+async def db_engine(_template_db: str, test_database_env: str) -> AsyncIterator[Any]:
     """A function-scoped engine bound to the current test's event loop."""
     engine = create_async_engine(_template_db)
     try:

@@ -16,12 +16,12 @@ from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.password import build_password_hasher
-from inkstave.config import get_settings
-from inkstave.db.models.auth_token import AuthToken
-from inkstave.db.models.user import User
-from inkstave.dependencies import get_email_enqueuer
-from inkstave.services.user import normalise_email
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.credentials.password import build_password_hasher
+from inkstave.modules.auth.models.auth_token import AuthToken
+from inkstave.modules.auth.models.user import User
 
 pytestmark = pytest.mark.integration
 
@@ -45,9 +45,7 @@ def emails(app: Any) -> FakeEmailEnqueuer:
     return fake
 
 
-async def _user(
-    db: AsyncSession, *, email: str = "owner@example.com", confirmed: bool = False
-) -> User:
+async def _user(db: AsyncSession, *, email: str = "owner@example.com", confirmed: bool = False) -> User:
     hasher = build_password_hasher(get_settings())
     user = User(
         email=normalise_email(email),
@@ -132,9 +130,7 @@ async def test_resend_confirmed_user_enqueues_zero(
     async_client: AsyncClient, db_session: AsyncSession, emails: FakeEmailEnqueuer
 ) -> None:
     await _user(db_session, email="conf@example.com", confirmed=True)
-    resp = await async_client.post(
-        f"{AUTH}/verify-email/resend", json={"email": "conf@example.com"}
-    )
+    resp = await async_client.post(f"{AUTH}/verify-email/resend", json={"email": "conf@example.com"})
     assert resp.status_code == 202
     assert emails.calls == []  # already confirmed → silent, no spam
 
@@ -151,9 +147,7 @@ async def test_resend_unconfirmed_enqueues_one(
     async_client: AsyncClient, db_session: AsyncSession, emails: FakeEmailEnqueuer
 ) -> None:
     await _user(db_session, email="unconf@example.com", confirmed=False)
-    resp = await async_client.post(
-        f"{AUTH}/verify-email/resend", json={"email": "unconf@example.com"}
-    )
+    resp = await async_client.post(f"{AUTH}/verify-email/resend", json={"email": "unconf@example.com"})
     assert resp.status_code == 202
     assert len(emails.calls) == 1
     assert emails.calls[0]["template"] == "email_verification"
@@ -285,7 +279,7 @@ async def test_reset_password_weak_is_400(
 async def test_magic_link_request_rate_limited(
     async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from inkstave.config import get_settings as _gs
+    from inkstave.core.config.settings import get_settings as _gs
 
     _gs.cache_clear()
     monkeypatch.setenv("RATE_LIMIT_MAGIC_LINK", "2/3600")
@@ -312,9 +306,7 @@ async def test_login_verified_email_flag(
     monkeypatch.setenv("REQUIRE_VERIFIED_EMAIL_TO_LOGIN", "true" if require_verified else "false")
     get_settings.cache_clear()
     await _user(db_session, email="flag@example.com", confirmed=False)
-    resp = await async_client.post(
-        f"{AUTH}/login", json={"email": "flag@example.com", "password": PASSWORD}
-    )
+    resp = await async_client.post(f"{AUTH}/login", json={"email": "flag@example.com", "password": PASSWORD})
     if require_verified:
         assert resp.status_code == 401
     else:

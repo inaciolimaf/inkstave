@@ -9,7 +9,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.dependencies import get_object_store
+from inkstave.infra.deps import get_object_store
 from tests.integration._tree_api_support import (
     InMemoryObjectStore,
     _auth,
@@ -102,12 +102,8 @@ async def test_ownership_isolation(async_client: AsyncClient, db_session: AsyncS
 
     calls = [
         async_client.get(_tree(pid), headers=headers_b),
-        async_client.post(
-            f"{_tree(pid)}/entities", json={"type": "doc", "name": "x"}, headers=headers_b
-        ),
-        async_client.patch(
-            f"{_tree(pid)}/entities/{eid}/rename", json={"name": "y"}, headers=headers_b
-        ),
+        async_client.post(f"{_tree(pid)}/entities", json={"type": "doc", "name": "x"}, headers=headers_b),
+        async_client.patch(f"{_tree(pid)}/entities/{eid}/rename", json={"name": "y"}, headers=headers_b),
         async_client.patch(
             f"{_tree(pid)}/entities/{eid}/move",
             json={"new_parent_id": str(uuid4())},

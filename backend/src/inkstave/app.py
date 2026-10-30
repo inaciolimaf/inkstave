@@ -19,21 +19,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from inkstave import __version__
-from inkstave.api.router import api_v1
-from inkstave.api.routes import health, setup
-from inkstave.collab.ws import router as collab_ws
-from inkstave.collab.ws.components import build_collab_components
-from inkstave.config import Settings, get_settings
-from inkstave.db.engine import check_db, create_engine_and_sessionmaker
-from inkstave.errors import ErrorEnvelope
-from inkstave.exception_handlers import register_exception_handlers
-from inkstave.observability.log import configure_logging
-from inkstave.observability.metrics import set_build_info
-from inkstave.observability.middleware import RequestContextMiddleware
-from inkstave.observability.tracing import setup_tracing
-from inkstave.redis_client import create_redis_pool, ping_redis
-from inkstave.security.body_limit import BodySizeLimitMiddleware
-from inkstave.security.headers import SecurityHeadersMiddleware
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.core.db.engine import check_db, create_engine_and_sessionmaker
+from inkstave.core.errors import ErrorEnvelope
+from inkstave.core.exception_handlers import register_exception_handlers
+from inkstave.core.http.body_limit import BodySizeLimitMiddleware
+from inkstave.core.http.headers import SecurityHeadersMiddleware
+from inkstave.core.observability.log import configure_logging
+from inkstave.core.observability.metrics import set_build_info
+from inkstave.core.observability.middleware import RequestContextMiddleware
+from inkstave.core.observability.tracing import setup_tracing
+from inkstave.infra.redis import create_redis_pool, ping_redis
+from inkstave.modules.admin.routes import health, setup
+from inkstave.modules.collab.ws import router as collab_ws
+from inkstave.modules.collab.ws.components import build_collab_components
+from inkstave.router import api_v1
 
 logger = logging.getLogger("inkstave.app")
 
@@ -49,7 +49,7 @@ async def _ensure_migrations(engine: Any, settings: Settings) -> None:
     upgrade now. Strict mode (the production default) refuses to start unless the
     DB is already at head — migrations belong to the one-shot ``migrate`` step.
     """
-    from inkstave.bootstrap.migrate import is_database_at_head, run_upgrade
+    from inkstave.modules.admin.provisioning.migrate import is_database_at_head, run_upgrade
 
     if settings.migrate_on_start:
         await asyncio.to_thread(run_upgrade, settings)

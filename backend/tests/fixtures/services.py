@@ -13,8 +13,9 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.app import create_app
-from inkstave.db.session import get_db_session
-from inkstave.dependencies import get_email_enqueuer, get_redis
+from inkstave.core.db.session import get_db_session
+from inkstave.core.deps import get_redis
+from inkstave.infra.deps import get_email_enqueuer
 
 # --------------------------------------------------------------------------- #
 # Redis fake

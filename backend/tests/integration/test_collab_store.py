@@ -9,12 +9,12 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.store import CrdtStore
-from inkstave.collab.ydocument import YDocument
-from inkstave.db.models.crdt import CrdtUpdate
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtUpdate
+from inkstave.modules.collab.rooms.store import CrdtStore
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -117,9 +117,7 @@ async def test_compaction_truncates_log_and_preserves_text(db_session: AsyncSess
     assert seq == new_seq
 
 
-async def test_append_is_constant_cost(
-    db_session: AsyncSession, query_counter: dict[str, int]
-) -> None:
+async def test_append_is_constant_cost(db_session: AsyncSession, query_counter: dict[str, int]) -> None:
     doc_id = await _make_doc(db_session)
     store = CrdtStore(_factory(db_session))
     update = _updates(YDocument().get_state(), ["x"])[0]

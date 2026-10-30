@@ -1,0 +1,215 @@
+"""The synchronous compile service — assemble, run Tectonic, map the result (spec 21)."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+from inkstave.modules.compile.assembly.workdir import (
+    assemble_inputs,
+    cleanup_workdir,
+    collect_outputs,
+    create_workdir,
+)
+from inkstave.modules.compile.running.errors import CompileError
+from inkstave.modules.compile.running.limits import CancelToken, ResourceLimits
+from inkstave.modules.compile.running.result import CompileResult, CompileStatus, RunOutcome
+
+if TYPE_CHECKING:
+    from inkstave.core.config.settings import Settings
+    from inkstave.modules.compile.assembly.workdir import DocumentSource, FileSource
+    from inkstave.modules.compile.running.packages import PackageConfig
+    from inkstave.modules.compile.running.runner import TectonicRunner
+
+_FAILED = {CompileStatus.FAILURE, CompileStatus.TIMEOUT, CompileStatus.SYSTEM_ERROR}
+
+
+@dataclass(slots=True)
+class CompileOptions:
+    project_id: UUID
+    main_file: str = "main.tex"
+    timeout_s: int | None = None
+    keep_workdir: bool = False
+    compile_id: UUID | None = None
+
+
+def _declares_documentclass(path: Path) -> bool:
+    try:
+        return "\\documentclass" in path.read_text("utf-8", errors="ignore")
+    except OSError:
+        return False
+
+
+def _resolve_root(input_dir: Path, main_file: str) -> str | None:
+    """The .tex file to compile, or ``None`` when the project has none.
+
+    If the requested root (default "main.tex") is missing, fall back to a .tex file
+    in the project so it still compiles. Prefer the shallowest file that actually
+    declares ``\\documentclass`` (a real root), otherwise the first .tex by path.
+    """
+    if (input_dir / main_file).is_file():
+        return main_file
+    candidates = sorted(
+        (p.relative_to(input_dir).as_posix() for p in input_dir.rglob("*.tex") if p.is_file()),
+        key=lambda rel: (rel.count("/"), rel),
+    )
+    if not candidates:
+        return None
+    return next((rel for rel in candidates if _declares_documentclass(input_dir / rel)), candidates[0])
+
+
+class CompileService:
+    def __init__(
+        self,
+        *,
+        settings: Settings,
+        runner: TectonicRunner,
+        docs: DocumentSource,
+        files: FileSource,
+        packages: PackageConfig,
+    ) -> None:
+        self._settings = settings
+        self._runner = runner
+        self._docs = docs
+        self._files = files
+        self._packages = packages
+
+    def _limits(self) -> ResourceLimits:
+        s = self._settings
+        return ResourceLimits(
+            max_input_files=s.compile_max_input_files,
+            max_input_bytes=s.compile_max_input_bytes,
+            max_output_bytes=s.compile_max_output_bytes,
+            max_log_bytes=s.compile_max_log_bytes,
+            max_stdout_bytes=s.compile_max_stdout_bytes,
+            cpu_seconds=s.compile_cpu_seconds,
+            address_space_bytes=s.compile_address_space_bytes,
+        )
+
+    async def compile(self, opts: CompileOptions, cancel: CancelToken | None = None) -> CompileResult:
+        cancel = cancel or CancelToken()
+        compile_id = opts.compile_id or uuid4()
+        workdir: Path | None = None
+        result: CompileResult | None = None
+        try:
+            workdir = await create_workdir(Path(self._settings.compile_workdir_root), compile_id)
+            result = await self._run(workdir, opts, cancel)
+            return result
+        except Exception as exc:  # pragma: no cover - defensive catch-all
+            result = _empty(CompileStatus.SYSTEM_ERROR, log_text=f"compile failed: {exc}")
+            return result
+        finally:
+            if workdir is not None:
+                await self._release_workdir(workdir, opts, result)
+
+    async def _run(self, workdir: Path, opts: CompileOptions, cancel: CancelToken) -> CompileResult:
+        """Assemble, resolve the root document, and run Tectonic once."""
+        limits = self._limits()
+        if cancel.is_cancelled():
+            return _empty(CompileStatus.CANCELLED)
+
+        assembly_error = await self._assemble(workdir, opts, limits)
+        if assembly_error is not None:
+            return assembly_error
+
+        root = _resolve_root(workdir / "input", opts.main_file)
+        if root is None:
+            return _empty(
+                CompileStatus.FAILURE,
+                log_text=(
+                    f"No LaTeX root document found: '{opts.main_file}' is missing and the "
+                    "project has no .tex file to compile."
+                ),
+            )
+        if cancel.is_cancelled():
+            return _empty(CompileStatus.CANCELLED)
+
+        outcome = await self._runner.run(
+            workdir=workdir,
+            main_file=root,
+            output_dir=workdir / "output",
+            timeout_s=opts.timeout_s or self._settings.tectonic_compile_timeout_s,
+            limits=limits,
+            cancel=cancel,
+        )
+        return self._build_result(workdir, root, outcome, limits)
+
+    async def _assemble(
+        self, workdir: Path, opts: CompileOptions, limits: ResourceLimits
+    ) -> CompileResult | None:
+        """Materialise the project's inputs; a failure becomes a terminal result."""
+        try:
+            await assemble_inputs(
+                workdir=workdir,
+                project_id=opts.project_id,
+                docs=self._docs,
+                files=self._files,
+                limits=limits,
+            )
+        except CompileError as exc:
+            return _empty(CompileStatus.SYSTEM_ERROR, log_text=str(exc))
+        return None
+
+    async def _release_workdir(
+        self, workdir: Path, opts: CompileOptions, result: CompileResult | None
+    ) -> None:
+        """Hand the workdir to the caller, or delete it."""
+        keep = opts.keep_workdir or (
+            result is not None and result.status in _FAILED and self._settings.compile_keep_workdir_on_failure
+        )
+        if not keep:
+            await cleanup_workdir(workdir)
+        elif result is not None:
+            result.workdir = workdir
+
+    def _build_result(
+        self, workdir: Path, main_file: str, outcome: RunOutcome, limits: ResourceLimits
+    ) -> CompileResult:
+        output_dir = workdir / "output"
+        artifacts = collect_outputs(output_dir)
+        pdf = next((a for a in artifacts if a.content_type == "application/pdf"), None)
+        log_text, truncated = self._read_log(output_dir, main_file, outcome, limits)
+
+        if outcome.cancelled:
+            status = CompileStatus.CANCELLED
+        elif outcome.timed_out:
+            status = CompileStatus.TIMEOUT
+        elif outcome.exit_code == 0 and pdf is not None:
+            status = CompileStatus.SUCCESS
+        else:
+            status = CompileStatus.FAILURE
+
+        return CompileResult(
+            status=status,
+            pdf=pdf if status == CompileStatus.SUCCESS else None,
+            log_text=log_text,
+            stdout=outcome.stdout,
+            stderr=outcome.stderr,
+            exit_code=outcome.exit_code,
+            duration_ms=outcome.duration_ms,
+            artifacts=artifacts,
+            truncated=truncated,
+        )
+
+    @staticmethod
+    def _read_log(
+        output_dir: Path, main_file: str, outcome: RunOutcome, limits: ResourceLimits
+    ) -> tuple[str, bool]:
+        log_path = output_dir / f"{Path(main_file).stem}.log"
+        raw = log_path.read_bytes() if log_path.is_file() else outcome.stdout.encode("utf-8")
+        truncated = len(raw) > limits.max_log_bytes
+        return raw[: limits.max_log_bytes].decode("utf-8", "replace"), truncated
+
+
+def _empty(status: CompileStatus, *, log_text: str = "") -> CompileResult:
+    return CompileResult(
+        status=status,
+        pdf=None,
+        log_text=log_text,
+        stdout="",
+        stderr="",
+        exit_code=None,
+        duration_ms=0,
+    )

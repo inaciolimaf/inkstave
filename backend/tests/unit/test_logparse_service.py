@@ -7,10 +7,10 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.config import Settings
-from inkstave.logparse.models import ProblemSeverity
-from inkstave.logparse.service import LogNotAvailable, LogProblemsService
-from tests.logparse_fixtures import SAMPLE_LOG
+from inkstave.core.config.settings import Settings
+from inkstave.modules.compile.logparse.models import ProblemSeverity
+from inkstave.modules.compile.logparse.service import LogNotAvailableError, LogProblemsService
+from tests.golden.logparse_fixtures import SAMPLE_LOG
 
 
 class _Row:
@@ -70,7 +70,7 @@ async def test_counts_match_severities() -> None:
 
 
 async def test_no_log_raises() -> None:
-    with pytest.raises(LogNotAvailable):
+    with pytest.raises(LogNotAvailableError):
         await _service(None).problems_for(uuid4(), None)
 
 
@@ -82,8 +82,6 @@ async def test_truncation_emits_synthetic_info() -> None:
 
 
 async def test_max_problems_cap_appends_omitted_info() -> None:
-    result = await _service(SAMPLE_LOG.encode(), logparse_max_problems=1).problems_for(
-        uuid4(), None
-    )
+    result = await _service(SAMPLE_LOG.encode(), logparse_max_problems=1).problems_for(uuid4(), None)
     assert len(result.problems) == 2  # 1 kept + the synthetic notice
     assert result.problems[-1].rule == "too-many-problems"

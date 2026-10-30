@@ -14,19 +14,19 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.context import build_project_map, locate_section
-from inkstave.agent.deps import AgentDeps
-from inkstave.agent.llm.base import LLMResponse, LLMUsage, ToolCall
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.runner import run_turn
-from inkstave.agent.safety import avg_rate_per_1k
-from inkstave.agent.settings import AgentSettings
-from inkstave.agent.tools import default_registry
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import get_document, set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.context import build_project_map, locate_section
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.graph.agent_deps import AgentDeps
+from inkstave.modules.agent.graph.runner import run_turn
+from inkstave.modules.agent.llm.base import LLMResponse, LLMUsage, ToolCall
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.safety import avg_rate_per_1k
+from inkstave.modules.agent.tools import default_registry
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -106,18 +106,14 @@ async def test_eval_propose_edit_yields_valid_diff(
             )
         ]
     )
-    result = await run_turn(
-        session=project.session, user_message="tweak intro", deps=deps, db=db_session
-    )
+    result = await run_turn(session=project.session, user_message="tweak intro", deps=deps, db=db_session)
     assert len(result.proposed_diffs) == 1
     diff = result.proposed_diffs[0].diff_text
     assert diff.startswith("--- a/main.tex\n+++ b/main.tex\n@@ ")
     assert "+The introduction MOTIVATES the work." in diff
 
 
-async def test_eval_budget_blocks_over_cap(
-    project: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_eval_budget_blocks_over_cap(project: SimpleNamespace, db_session: AsyncSession) -> None:
     """AC7c — a per-run budget stops the turn gracefully."""
     deps = _deps(
         [_tool_call("read_file", {"doc_id": str(project.main_id)}, usage=100)] * 5,
@@ -143,9 +139,7 @@ async def test_eval_injection_does_not_change_behaviour(
     assert "IGNORE ALL PREVIOUS" in after.content  # untouched
 
 
-async def test_eval_disallowed_tool_is_flagged(
-    project: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_eval_disallowed_tool_is_flagged(project: SimpleNamespace, db_session: AsyncSession) -> None:
     """AC5/AC7 — a tool call outside the allow-list is rejected and flagged."""
     deps = _deps(
         [
@@ -157,8 +151,7 @@ async def test_eval_disallowed_tool_is_flagged(
     flagged = [
         e
         for e in result.audit_events
-        if e["action"] == "injection_flagged"
-        and (e.get("detail") or {}).get("reason") == "disallowed_tool"
+        if e["action"] == "injection_flagged" and (e.get("detail") or {}).get("reason") == "disallowed_tool"
     ]
     assert flagged  # the disallowed tool produced an injection_flagged audit event
     assert result.error is None  # the run continued/finished gracefully
@@ -179,9 +172,7 @@ async def test_eval_never_auto_applies(project: SimpleNamespace, db_session: Asy
             )
         ]
     )
-    result = await run_turn(
-        session=project.session, user_message="rewrite", deps=deps, db=db_session
-    )
+    result = await run_turn(session=project.session, user_message="rewrite", deps=deps, db=db_session)
     assert len(result.proposed_diffs) == 1  # a proposal was created
     after = (await get_document(db_session, project.proj.id, project.main_id)).content
     assert after == before  # but the document was NOT changed

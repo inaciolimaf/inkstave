@@ -12,17 +12,17 @@ import pytest_asyncio
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.awareness import AwarenessRegistry
-from inkstave.collab.content_bridge import ContentBridge
-from inkstave.collab.manager import CollabSettings, DocumentManager, UpdateTooLarge
-from inkstave.collab.store import CrdtStore
-from inkstave.collab.ydocument import YDocument
-from inkstave.db.models.crdt import CrdtDocumentState, CrdtUpdate
-from inkstave.db.models.document import Document
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.collab.crdt.awareness import AwarenessRegistry
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtDocumentState, CrdtUpdate
+from inkstave.modules.collab.rooms.content_bridge import ContentBridge
+from inkstave.modules.collab.rooms.manager import CollabSettings, DocumentManager, UpdateTooLargeError
+from inkstave.modules.collab.rooms.store import CrdtStore
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -101,9 +101,7 @@ def _edit_update(open_state: bytes, new_text: str) -> bytes:
 
 
 async def _content(db_session: AsyncSession, doc_id: UUID) -> str:
-    return (
-        await db_session.scalar(select(Document.content).where(Document.entity_id == doc_id))
-    ) or ""
+    return (await db_session.scalar(select(Document.content).where(Document.entity_id == doc_id))) or ""
 
 
 async def test_seeds_crdt_from_spec13_content(db_session: AsyncSession) -> None:
@@ -208,12 +206,12 @@ async def test_update_size_guard(db_session: AsyncSession) -> None:
     doc_id = await _make_doc(db_session, content="x")
     manager = _manager(db_session, max_update_bytes=10)
     await manager.acquire(doc_id)
-    with pytest.raises(UpdateTooLarge):
+    with pytest.raises(UpdateTooLargeError):
         await manager.handle_update(doc_id, b"x" * 50, origin=None)
 
 
 async def test_sync_step1_returns_two_messages(db_session: AsyncSession) -> None:
-    from inkstave.collab.protocol import SyncStep1, SyncStep2, read_message
+    from inkstave.modules.collab.crdt.protocol import SyncStep1, SyncStep2, read_message
 
     doc_id = await _make_doc(db_session, content="Hello")
     manager = _manager(db_session)

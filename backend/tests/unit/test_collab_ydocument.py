@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pycrdt import Decoder
 
-from inkstave.collab.ydocument import YDocument
+from inkstave.modules.collab.crdt.ydocument import YDocument
 
 
 def _state_vector(sv: bytes) -> dict[int, int]:

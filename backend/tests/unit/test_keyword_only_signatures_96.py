@@ -12,10 +12,10 @@ import inspect
 from collections.abc import Callable
 from typing import Any
 
-from inkstave.auth.refresh_store import RefreshStore
 from inkstave.cli import _cmd_seed
-from inkstave.collab.manager import DocumentManager
-from inkstave.collab.store import CrdtStore
+from inkstave.modules.auth.credentials.refresh_store import RefreshStore
+from inkstave.modules.collab.rooms.manager import DocumentManager
+from inkstave.modules.collab.rooms.store import CrdtStore
 
 
 def _all_keyword_only(func: Callable[..., Any], names: list[str]) -> bool:
@@ -32,9 +32,7 @@ def test_store_refresh_ids_are_keyword_only() -> None:
 
 
 def test_snapshot_params_are_keyword_only() -> None:
-    assert _all_keyword_only(
-        CrdtStore.snapshot, ["document_id", "state", "state_vector", "upto_update_id"]
-    )
+    assert _all_keyword_only(CrdtStore.snapshot, ["document_id", "state", "state_vector", "upto_update_id"])
 
 
 def test_manager_exposes_intention_revealing_flush_methods() -> None:

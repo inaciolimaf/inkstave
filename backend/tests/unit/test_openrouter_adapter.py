@@ -14,10 +14,10 @@ from typing import Any
 import httpx
 import pytest
 
-from inkstave.agent.llm.base import LLMClient, LLMError, LLMMessage, ToolSpec
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.llm.openrouter import OpenRouterLLMClient
-from inkstave.agent.settings import AgentSettings
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.llm.base import LLMClient, LLMError, LLMMessage, ToolSpec
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
 
 DUMMY_KEY = "dummy-key-not-real"
 
@@ -70,9 +70,7 @@ def _usage_event() -> dict[str, Any]:
     }
 
 
-def _client_with_transport(
-    handler: Any, **settings_over: Any
-) -> tuple[OpenRouterLLMClient, dict[str, Any]]:
+def _client_with_transport(handler: Any, **settings_over: Any) -> tuple[OpenRouterLLMClient, dict[str, Any]]:
     """Build the real client, then swap its OpenAI SDK for one over a mock socket."""
     from openai import AsyncOpenAI
 
@@ -146,9 +144,7 @@ async def test_complete_malformed_tool_args_do_not_raise() -> None:  # AC4
     }
 
     def handler(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200, json=_completion_json(tool_calls=[bad_tool], finish_reason="tool_calls")
-        )
+        return httpx.Response(200, json=_completion_json(tool_calls=[bad_tool], finish_reason="tool_calls"))
 
     client, _ = _client_with_transport(handler)
     resp = await client.complete(
@@ -196,9 +192,7 @@ async def test_stream_chunks_become_agent_tokens() -> None:  # AC6
 
     client, _ = _client_with_transport(handler)
     # The stream-chunk → token wiring: each non-empty delta is an ordered token.
-    tokens = [
-        c.delta async for c in client.stream([LLMMessage(role="user", content="hi")]) if c.delta
-    ]
+    tokens = [c.delta async for c in client.stream([LLMMessage(role="user", content="hi")]) if c.delta]
     assert tokens == ["The ", "quick ", "fox"]
 
 

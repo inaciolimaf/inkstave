@@ -10,16 +10,16 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.collab.protocol import AwarenessMessage, SyncStep1, read_message
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import get_settings
-from inkstave.db.models.crdt import CrdtUpdate
-from inkstave.db.models.document import Document
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.collab.crdt.protocol import AwarenessMessage, SyncStep1, read_message
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab.models import CrdtUpdate
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import (
     ASGIWebSocketClient,
     apply_update_message,
@@ -61,9 +61,7 @@ async def test_missing_token_closes_4401(app: Any, db_session: AsyncSession, red
 async def test_invalid_token_closes_4401(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     _user, project, entity, _token = await _setup(db_session)
-    async with ASGIWebSocketClient(
-        app, _path(project.id, entity.id), query="token=not-a-jwt"
-    ) as ws:
+    async with ASGIWebSocketClient(app, _path(project.id, entity.id), query="token=not-a-jwt") as ws:
         assert await ws.close_code() == 4401
 
 
@@ -73,9 +71,7 @@ async def test_non_member_closes_4403(app: Any, db_session: AsyncSession, redis:
     other = await UserFactory.create(db_session)
     await db_session.flush()
     other_token, _ = build_token_service(get_settings()).create_access_token(other)
-    async with ASGIWebSocketClient(
-        app, _path(project.id, entity.id), query=f"token={other_token}"
-    ) as ws:
+    async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={other_token}") as ws:
         assert await ws.close_code() == 4403
 
 
@@ -105,9 +101,7 @@ async def test_handshake_sends_server_step1(app: Any, db_session: AsyncSession, 
         assert isinstance(read_message(first), SyncStep1)
 
 
-async def test_handshake_sends_awareness_snapshot(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_handshake_sends_awareness_snapshot(app: Any, db_session: AsyncSession, redis: Any) -> None:
     """AC3: a joining client receives Sync Step 1 **and** the pre-existing awareness
     snapshot before sending anything (router's ``if snapshot is not None`` branch)."""
     from pycrdt import Awareness, Doc
@@ -182,9 +176,7 @@ async def test_awareness_relay_and_offline(app: Any, db_session: AsyncSession, r
 # --- persistence integration (criterion 7) --------------------------------- #
 
 
-async def test_update_persists_and_bridges_text(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_update_persists_and_bridges_text(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={token}") as ws:
@@ -199,27 +191,21 @@ async def test_update_persists_and_bridges_text(
         assert count >= 1
 
         await components.manager.flush(entity.id)
-        content = await db_session.scalar(
-            select(Document.content).where(Document.entity_id == entity.id)
-        )
+        content = await db_session.scalar(select(Document.content).where(Document.entity_id == entity.id))
         assert content == "Hello WS"
 
 
 # --- disconnect cleanup (criterion 8) -------------------------------------- #
 
 
-async def test_ws_connection_gauge_rises_and_returns(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_ws_connection_gauge_rises_and_returns(app: Any, db_session: AsyncSession, redis: Any) -> None:
     from prometheus_client import REGISTRY
 
     install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
 
     def gauge() -> float:
-        return (
-            REGISTRY.get_sample_value("inkstave_ws_connections_active", {"kind": "collab"}) or 0.0
-        )
+        return REGISTRY.get_sample_value("inkstave_ws_connections_active", {"kind": "collab"}) or 0.0
 
     before = gauge()
     ws = ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={token}")

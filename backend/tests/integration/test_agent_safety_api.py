@@ -11,19 +11,19 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent import repository as agent_repo
-from inkstave.agent.api.events import InMemoryEventSink
-from inkstave.agent.api.jobs import run_agent_turn
-from inkstave.agent.llm.base import LLMResponse, LLMUsage, ToolCall
-from inkstave.agent.llm.fake import FakeLLM
-from inkstave.agent.models import AgentRunState
-from inkstave.agent.safety import acquire_run, record_usage
-from inkstave.agent.safety.models import AgentAuditAction, AgentAuditLog
-from inkstave.agent.settings import AgentSettings
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import get_document, set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.graph import repository as agent_repo
+from inkstave.modules.agent.llm.base import LLMResponse, LLMUsage, ToolCall
+from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.models import AgentRunState
+from inkstave.modules.agent.runs.events import InMemoryEventSink
+from inkstave.modules.agent.runs.jobs import run_agent_turn
+from inkstave.modules.agent.safety import acquire_run, record_usage
+from inkstave.modules.agent.safety.models import AgentAuditAction, AgentAuditLog
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -63,9 +63,7 @@ async def seed(db_session: AsyncSession) -> SimpleNamespace:
     )
 
 
-def _ctx(
-    db: AsyncSession, redis: Any, llm: FakeLLM, sink: InMemoryEventSink, settings: AgentSettings
-):
+def _ctx(db: AsyncSession, redis: Any, llm: FakeLLM, sink: InMemoryEventSink, settings: AgentSettings):
     return {
         "settings": settings,
         "session_factory": lambda: _SessionCtx(db),
@@ -202,16 +200,12 @@ async def test_internal_error_message_is_not_leaked(
     assert "secret-internal-detail-xyz" not in str(sink.events)
 
 
-async def test_audit_rows_for_a_full_run(
-    seed: SimpleNamespace, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_audit_rows_for_a_full_run(seed: SimpleNamespace, db_session: AsyncSession, redis: Any) -> None:
     settings = AgentSettings()
     sink = InMemoryEventSink(str(seed.run_id))
     llm = FakeLLM(
         script=[
-            _tool_call(
-                "propose_edit", {"doc_id": str(seed.main_id), "mode": "full", "new_text": "new\n"}
-            )
+            _tool_call("propose_edit", {"doc_id": str(seed.main_id), "mode": "full", "new_text": "new\n"})
         ]
     )
 

@@ -12,14 +12,14 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.history import HistoryLabel, HistoryUpdate
-from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.history.models import HistoryLabel, HistoryUpdate
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import install_collab
 from tests.factories import UserFactory
 
@@ -113,9 +113,7 @@ async def test_restore_creates_new_version_non_destructive(
 
     # AC6b: the live text now equals version 1 — diff(v1, current) is empty.
     diff = (
-        await async_client.get(
-            _url(hist.pid, hist.doc_id, "diff?from=1&to=current"), headers=hist.editor_h
-        )
+        await async_client.get(_url(hist.pid, hist.doc_id, "diff?from=1&to=current"), headers=hist.editor_h)
     ).json()
     changed = [s for h in diff["hunks"] for s in h["segments"] if s["type"] != "context"]
     assert changed == []
@@ -150,9 +148,7 @@ async def test_restore_atomic_on_room_failure(
     )
     assert r.status_code == 409  # AC12
     assert await _max_version(db_session, hist.doc_uuid) == before  # no new version
-    label = await db_session.scalar(
-        select(HistoryLabel).where(HistoryLabel.name == "should-not-exist")
-    )
+    label = await db_session.scalar(select(HistoryLabel).where(HistoryLabel.name == "should-not-exist"))
     assert label is None  # no label created
 
 

@@ -14,7 +14,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.membership import ProjectMembership
+from inkstave.modules.projects.models.membership import ProjectMembership
 
 from ._sharing_api_support import (
     PROJECTS,

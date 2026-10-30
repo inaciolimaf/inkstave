@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from inkstave.db.session import get_db_session
-from inkstave.dependencies import ServiceUnavailableError, get_redis
+from inkstave.core.db.session import get_db_session
+from inkstave.core.deps import ServiceUnavailableError, get_redis
 
 
 def _fake_request(**state: object) -> SimpleNamespace:

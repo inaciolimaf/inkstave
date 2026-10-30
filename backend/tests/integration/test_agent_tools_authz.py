@@ -10,15 +10,15 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.agent.tools.list_tree import ListTreeArgs, ListTreeTool
-from inkstave.agent.tools.locate_section import LocateSectionArgs, LocateSectionTool
-from inkstave.agent.tools.propose_edit import ProposeEditArgs, ProposeEditTool
-from inkstave.agent.tools.read_file import ReadFileArgs, ReadFileTool
-from inkstave.agent.tools.search_project import SearchProjectArgs, SearchProjectTool
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import get_document, set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.agent.tools.list_tree import ListTreeArgs, ListTreeTool
+from inkstave.modules.agent.tools.locate_section import LocateSectionArgs, LocateSectionTool
+from inkstave.modules.agent.tools.propose_edit import ProposeEditArgs, ProposeEditTool
+from inkstave.modules.agent.tools.read_file import ReadFileArgs, ReadFileTool
+from inkstave.modules.agent.tools.search_project import SearchProjectArgs, SearchProjectTool
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 from ._agent_tools_support import _ctx, seed
@@ -49,9 +49,7 @@ async def test_propose_edit_stages_without_changing_doc(
     assert after == before
 
 
-async def test_viewer_cannot_propose_but_can_read(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_viewer_cannot_propose_but_can_read(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     ctx = _ctx(db_session, seed.project_id, seed.viewer.id)
     denied = await ProposeEditTool().run(
         ProposeEditArgs(doc_id=str(seed.main_id), mode="full", new_text="x"), ctx
@@ -68,9 +66,7 @@ async def test_viewer_cannot_propose_but_can_read(
     assert located.ok
 
 
-async def test_cross_project_doc_is_not_found(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_cross_project_doc_is_not_found(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     other_owner = await UserFactory.create(db_session)
     other = await create_project(db_session, other_owner.id, "Other")
     other_doc = await create_entity(db_session, other.id, TreeEntityType.doc, "secret.tex", None)
@@ -86,14 +82,10 @@ async def test_cross_project_doc_is_not_found(
     assert not edit.ok and edit.error is not None and edit.error.code == "not_found"
 
 
-async def test_propose_edit_range_out_of_bounds(
-    seed: SimpleNamespace, db_session: AsyncSession
-) -> None:
+async def test_propose_edit_range_out_of_bounds(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     ctx = _ctx(db_session, seed.project_id, seed.owner.id)
     result = await ProposeEditTool().run(
-        ProposeEditArgs(
-            doc_id=str(seed.main_id), mode="range", new_text="x", start_line=0, end_line=9999
-        ),
+        ProposeEditArgs(doc_id=str(seed.main_id), mode="range", new_text="x", start_line=0, end_line=9999),
         ctx,
     )
     assert not result.ok and result.error is not None

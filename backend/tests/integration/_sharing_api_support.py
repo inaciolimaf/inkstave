@@ -13,9 +13,9 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.dependencies import get_email_enqueuer
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.factories import UserFactory
 
 PROJECTS = "/api/v1/projects"
@@ -54,9 +54,7 @@ async def _project(client: AsyncClient, headers: dict[str, str], name: str = "Pa
 async def _invite(
     client: AsyncClient, headers: dict[str, str], pid: str, email: str, role: str = "editor"
 ) -> dict[str, Any]:
-    r = await client.post(
-        f"{PROJECTS}/{pid}/invites", json={"email": email, "role": role}, headers=headers
-    )
+    r = await client.post(f"{PROJECTS}/{pid}/invites", json={"email": email, "role": role}, headers=headers)
     assert r.status_code == 201, r.text
     return r.json()
 

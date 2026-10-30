@@ -14,9 +14,9 @@ from typing import Any
 
 import pytest
 
-from inkstave.errors import GoneError, UnauthorizedError
-from inkstave.services import account
-from inkstave.services.sharing import hash_token
+from inkstave.core.errors import GoneError, UnauthorizedError
+from inkstave.modules.auth.accounts import account
+from inkstave.modules.projects.sharing import hash_token
 
 
 class _FakeHasher:

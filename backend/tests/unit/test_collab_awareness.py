@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pycrdt import Awareness, Doc
 
-from inkstave.collab.awareness import AwarenessRegistry
+from inkstave.modules.collab.crdt.awareness import AwarenessRegistry
 
 
 def _client_update(state: dict[str, object]) -> tuple[int, bytes]:
@@ -18,7 +18,7 @@ def _client_update(state: dict[str, object]) -> tuple[int, bytes]:
 def test_apply_merges_and_returns_relayable_blob() -> None:
     reg = AwarenessRegistry()
     doc_id = uuid4()
-    client_id, blob = _client_update({"user": "alice"})
+    _client_id, blob = _client_update({"user": "alice"})
 
     relay = reg.apply(doc_id, blob)
     assert relay == blob

@@ -11,9 +11,7 @@ from tests.integration._tree_api_support import _auth, _create, _project, _tree
 pytestmark = pytest.mark.integration
 
 
-async def test_move_cycle_and_non_folder(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_move_cycle_and_non_folder(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers = await _auth(db_session)
     pid = await _project(async_client, headers)
     a = await _create(async_client, pid, headers, type_="folder", name="A")

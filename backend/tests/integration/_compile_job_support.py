@@ -13,12 +13,12 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.compile.limits import CancelToken
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileArtifact, CompileResult, CompileStatus
-from inkstave.config import Settings
-from inkstave.observability.context import current_context
-from inkstave.services.project import create_project
+from inkstave.core.config.settings import Settings
+from inkstave.core.observability.context import current_context
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.limits import CancelToken
+from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 
 
@@ -34,9 +34,7 @@ class _SessionCtx:
 
 
 class StubService:
-    def __init__(
-        self, result: CompileResult | None = None, *, raises: Exception | None = None
-    ) -> None:
+    def __init__(self, result: CompileResult | None = None, *, raises: Exception | None = None) -> None:
         self._result = result
         self._raises = raises
         self.cancel_seen = False
@@ -70,7 +68,7 @@ class CancelAwareWorkdirService:
         self.workdir = workdir
         self.running.set()  # signal the test that run() is in-flight
         await cancel.wait()  # block until the job's watcher trips the token
-        self.cancel_seen = cancel.is_cancelled
+        self.cancel_seen = cancel.is_cancelled()
         return CompileResult(
             status=CompileStatus.CANCELLED,
             pdf=None,

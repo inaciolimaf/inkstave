@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.protocol import SyncStep2, SyncUpdate, read_message
-from inkstave.collab.ydocument import YDocument
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.services.document_service import read_content_for_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.modules.collab.crdt.protocol import SyncStep2, SyncUpdate, read_message
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import read_content_for_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import (
     ASGIWebSocketClient,
     apply_update_message,
@@ -69,9 +69,9 @@ async def test_concurrent_edits_converge(app: Any, db_session: AsyncSession, red
         # (client, clock) map has no canonical encoding order, so two converged docs
         # can serialise their vectors differently. Assert instead that neither client
         # is missing anything from the other — both cross-diffs are the empty update.
-        _EMPTY_UPDATE = b"\x00\x00"
-        assert a.diff(b.get_state_vector()) == _EMPTY_UPDATE
-        assert b.diff(a.get_state_vector()) == _EMPTY_UPDATE
+        empty_update = b"\x00\x00"
+        assert a.diff(b.get_state_vector()) == empty_update
+        assert b.diff(a.get_state_vector()) == empty_update
         assert a.text.count("Hello ") == 1  # AC2 — no loss / no dup
         assert a.text.count("World") == 1
 
@@ -83,9 +83,7 @@ async def test_concurrent_edits_converge(app: Any, db_session: AsyncSession, red
         await mgr.release(doc_id)
 
 
-async def test_offline_client_merges_on_reconnect(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_offline_client_merges_on_reconnect(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     _owner, _project, entity = await _empty_doc(db_session)
     doc_id = entity.id
@@ -123,9 +121,7 @@ async def test_offline_client_merges_on_reconnect(
         await mgr.release(doc_id)
 
 
-async def test_converged_text_visible_to_bridge(
-    app: Any, db_session: AsyncSession, redis: Any
-) -> None:
+async def test_converged_text_visible_to_bridge(app: Any, db_session: AsyncSession, redis: Any) -> None:
     # Tiny debounce so the bridge flush resolves fast; we also force-flush below.
     components = install_collab(app, db_session, redis, collab_text_flush_debounce_ms=10)
     _owner, _project, entity = await _empty_doc(db_session)
@@ -154,8 +150,8 @@ async def test_converged_text_visible_to_bridge(
 async def test_relay_excludes_origin(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     owner, project, entity = await _empty_doc(db_session)
-    from inkstave.auth.tokens import build_token_service
-    from inkstave.config import get_settings
+    from inkstave.core.config.settings import get_settings
+    from inkstave.modules.auth.credentials.tokens import build_token_service
 
     token, _ = build_token_service(get_settings()).create_access_token(owner)
     path = f"/ws/collab/projects/{project.id}/documents/{entity.id}"

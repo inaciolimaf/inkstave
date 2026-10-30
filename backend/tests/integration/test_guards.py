@@ -12,14 +12,10 @@ from fastapi import Depends
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.dependencies import (
-    NotAuthenticatedError,
-    authenticate_ws_token,
-    get_optional_user,
-)
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.user import User
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.deps import NotAuthenticatedError, authenticate_ws_token, get_optional_user
+from inkstave.modules.auth.models.user import User
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -111,18 +107,14 @@ async def test_admin_ping_allows_admin(async_client: AsyncClient, db_session: As
     assert resp.json() == {"ok": True}
 
 
-async def test_admin_ping_rejects_non_admin(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_admin_ping_rejects_non_admin(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user = await _seed_user(db_session, is_admin=False)
     resp = await async_client.get(ADMIN_PING, headers=_auth(_access_token_for(user)))
     assert resp.status_code == 403
     assert resp.json()["error"]["message"] == "Admin privileges required."
 
 
-async def test_admin_check_is_db_authoritative(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_admin_check_is_db_authoritative(async_client: AsyncClient, db_session: AsyncSession) -> None:
     # DB says not admin, but the token claims is_admin=true -> still 403.
     user = await _seed_user(db_session, is_admin=False)
     token = _craft_access_token(sub=str(user.id), is_admin=True)
@@ -174,17 +166,13 @@ async def test_revoked_family_cannot_mint_access(
 ) -> None:
     reg = {"email": "chain@example.com", "password": "secret123", "display_name": "Chain"}
     assert (await async_client.post("/api/v1/auth/register", json=reg)).status_code == 201
-    pair1 = (
-        await async_client.post(LOGIN, json={"email": reg["email"], "password": reg["password"]})
-    ).json()
+    pair1 = (await async_client.post(LOGIN, json={"email": reg["email"], "password": reg["password"]})).json()
 
     # Access token works on a protected route.
     assert (await async_client.get(ME, headers=_auth(pair1["access_token"]))).status_code == 200
 
     # Rotate, then replay the old refresh -> reuse -> family revoked.
-    pair2 = (
-        await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
-    ).json()
+    pair2 = (await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})).json()
     replay = await async_client.post(REFRESH, json={"refresh_token": pair1["refresh_token"]})
     assert replay.status_code == 401
 
@@ -205,7 +193,7 @@ async def test_login_rate_limit_fails_open_when_redis_errors(
     fails open over HTTP, so login proceeds to normal auth handling (not 429)."""
     import logging
 
-    from inkstave.auth import rate_limit as auth_rate_limit
+    from inkstave.modules.auth.throttling import limiter as auth_rate_limit
 
     get_settings.cache_clear()
     # A limit so low that a *working* limiter would 429 on the second request.

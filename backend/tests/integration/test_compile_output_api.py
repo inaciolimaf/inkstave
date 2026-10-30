@@ -9,14 +9,14 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import OutputStore
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileArtifact, CompileResult, CompileStatus
-from inkstave.config import Settings, get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -39,14 +39,10 @@ def _result(tmp_path: Path, *, with_pdf: bool = True) -> CompileResult:
     if with_pdf:
         (outdir / "output.pdf").write_bytes(PDF)
         artifacts.append(
-            CompileArtifact(
-                "output.pdf", "output.pdf", outdir / "output.pdf", len(PDF), "application/pdf"
-            )
+            CompileArtifact("output.pdf", "output.pdf", outdir / "output.pdf", len(PDF), "application/pdf")
         )
     (outdir / "main.log").write_bytes(LOG)
-    artifacts.append(
-        CompileArtifact("main.log", "main.log", outdir / "main.log", len(LOG), "text/plain")
-    )
+    artifacts.append(CompileArtifact("main.log", "main.log", outdir / "main.log", len(LOG), "text/plain"))
     pdf = artifacts[0] if with_pdf else None
     return CompileResult(
         status=CompileStatus.SUCCESS if with_pdf else CompileStatus.FAILURE,
@@ -78,7 +74,7 @@ async def _seed_compile(
     from uuid import UUID
 
     project = await __import__(
-        "inkstave.services.project", fromlist=["create_project"]
+        "inkstave.modules.projects.catalog.service", fromlist=["create_project"]
     ).create_project(db_session, UUID(owner_id), "P")
     row = await CompileRepository(db_session).create(
         project_id=project.id, requested_by=UUID(owner_id), main_file="main.tex"
@@ -112,9 +108,7 @@ async def test_pdf_full_200(
 ) -> None:
     headers = await _auth(db_session)
     project, row = await _seed_compile(db_session, backend, tmp_path, headers["_uid"])
-    resp = await async_client.get(
-        _url(str(project.id), str(row.id)) + "/output.pdf", headers=headers
-    )
+    resp = await async_client.get(_url(str(project.id), str(row.id)) + "/output.pdf", headers=headers)
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/pdf"
     assert resp.headers["accept-ranges"] == "bytes"
@@ -168,9 +162,7 @@ async def test_log_200(
 ) -> None:
     headers = await _auth(db_session)
     project, row = await _seed_compile(db_session, backend, tmp_path, headers["_uid"])
-    resp = await async_client.get(
-        _url(str(project.id), str(row.id)) + "/output.log", headers=headers
-    )
+    resp = await async_client.get(_url(str(project.id), str(row.id)) + "/output.log", headers=headers)
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "text/plain; charset=utf-8"
     assert resp.content == LOG
@@ -180,12 +172,8 @@ async def test_pdf_404_for_failed_compile(
     async_client: AsyncClient, db_session: AsyncSession, backend: LocalObjectStore, tmp_path: Path
 ) -> None:
     headers = await _auth(db_session)
-    project, row = await _seed_compile(
-        db_session, backend, tmp_path, headers["_uid"], with_pdf=False
-    )
-    resp = await async_client.get(
-        _url(str(project.id), str(row.id)) + "/output.pdf", headers=headers
-    )
+    project, row = await _seed_compile(db_session, backend, tmp_path, headers["_uid"], with_pdf=False)
+    resp = await async_client.get(_url(str(project.id), str(row.id)) + "/output.pdf", headers=headers)
     assert resp.status_code == 404
 
 

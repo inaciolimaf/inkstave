@@ -11,15 +11,15 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.collab.ydocument import YDocument
-from inkstave.config import get_settings
-from inkstave.db.models.history import HistoryChunk, HistoryUpdate
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.history.capture import HistoryCaptureService
-from inkstave.services.document_service import set_content_from_collab
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
+from inkstave.modules.history.versions.capture import HistoryCaptureService
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.content.documents import set_content_from_collab
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -77,17 +77,13 @@ _NOW = datetime(2026, 6, 10, tzinfo=UTC)
 # --- capture --------------------------------------------------------------- #
 
 
-async def test_first_edit_creates_chunk_and_update(
-    db_session: AsyncSession, tmp_path: Path
-) -> None:
+async def test_first_edit_creates_chunk_and_update(db_session: AsyncSession, tmp_path: Path) -> None:
     _u, project_id, doc_id = await _make_doc(db_session)
     svc = _service(db_session, tmp_path)
     ed, updates = _editor()
     ed.replace_text("hello")
 
-    await svc.capture_update(
-        project_id=project_id, doc_id=doc_id, update=updates[-1], author_id=_u, at=_NOW
-    )
+    await svc.capture_update(project_id=project_id, doc_id=doc_id, update=updates[-1], author_id=_u, at=_NOW)
     await svc.flush_doc(doc_id=doc_id, reason="manual")
 
     assert await _count(db_session, HistoryChunk, doc_id) == 1  # AC1
@@ -135,9 +131,7 @@ async def test_replay_is_deduped(db_session: AsyncSession, tmp_path: Path) -> No
     ed, updates = _editor()
     ed.replace_text("hi")
     same = updates[-1]
-    await svc.capture_update(
-        project_id=project_id, doc_id=doc_id, update=same, author_id=None, at=_NOW
-    )
+    await svc.capture_update(project_id=project_id, doc_id=doc_id, update=same, author_id=None, at=_NOW)
     await svc.capture_update(  # identical replay
         project_id=project_id, doc_id=doc_id, update=same, author_id=None, at=_NOW
     )
@@ -162,9 +156,7 @@ async def test_chunk_seals_at_threshold(db_session: AsyncSession, tmp_path: Path
     chunks = list(
         (
             await db_session.execute(
-                select(HistoryChunk)
-                .where(HistoryChunk.doc_id == doc_id)
-                .order_by(HistoryChunk.base_version)
+                select(HistoryChunk).where(HistoryChunk.doc_id == doc_id).order_by(HistoryChunk.base_version)
             )
         ).scalars()
     )

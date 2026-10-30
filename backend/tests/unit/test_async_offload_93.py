@@ -57,7 +57,7 @@ def _record_to_thread(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
 
 
 async def test_login_verify_runs_via_to_thread(monkeypatch: pytest.MonkeyPatch) -> None:
-    from inkstave.services.auth import authenticate_user
+    from inkstave.modules.auth.accounts.login import authenticate_user
 
     calls = _record_to_thread(monkeypatch)
     hasher = FakeHasher(ok=True)
@@ -70,7 +70,7 @@ async def test_login_verify_runs_via_to_thread(monkeypatch: pytest.MonkeyPatch) 
 async def test_missing_user_dummy_verify_runs_via_to_thread(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from inkstave.services.auth import authenticate_user
+    from inkstave.modules.auth.accounts.login import authenticate_user
 
     calls = _record_to_thread(monkeypatch)
     hasher = FakeHasher(ok=False)
@@ -82,14 +82,12 @@ async def test_missing_user_dummy_verify_runs_via_to_thread(
 async def test_file_email_sender_offloads_io_and_writes_identically(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any
 ) -> None:
-    from inkstave.mailer.sender import FileEmailSender, OutgoingEmail
+    from inkstave.infra.mailer.sender import FileEmailSender, OutgoingEmail
 
     calls = _record_to_thread(monkeypatch)
     mail_dir = tmp_path / "mail"
     sender = FileEmailSender(str(mail_dir), "noreply@inkstave.local")
-    await sender.send(
-        OutgoingEmail(to="a@b.com", subject="Hi", text_body="Body", html_body="<p>Body</p>")
-    )
+    await sender.send(OutgoingEmail(to="a@b.com", subject="Hi", text_body="Body", html_body="<p>Body</p>"))
 
     files = list(mail_dir.glob("*.json"))
     assert len(files) == 1

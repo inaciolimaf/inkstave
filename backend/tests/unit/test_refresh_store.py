@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
-from inkstave.auth.refresh_store import build_refresh_store
-from inkstave.config import get_settings
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.refresh_store import build_refresh_store
 
 
 def _store(redis: Any) -> Any:

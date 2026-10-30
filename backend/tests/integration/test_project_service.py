@@ -7,8 +7,8 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.user import User
-from inkstave.services.project import (
+from inkstave.modules.auth.models.user import User
+from inkstave.modules.projects.catalog.service import (
     ProjectNotFoundError,
     create_project,
     get_owned_project,

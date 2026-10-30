@@ -16,8 +16,8 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.db.models.ping import Ping
-from inkstave.db.session import get_db_session
+from inkstave.core.db.session import get_db_session
+from inkstave.modules.admin.models import Ping
 from tests.factories import PingFactory
 
 pytestmark = pytest.mark.integration
@@ -43,9 +43,7 @@ async def test_endpoint_commit_is_visible(
 async def test_endpoint_error_rolls_back(
     app: Any, async_client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    async def insert_then_fail(
-        note: str, session: AsyncSession = Depends(get_db_session)
-    ) -> dict[str, bool]:
+    async def insert_then_fail(note: str, session: AsyncSession = Depends(get_db_session)) -> dict[str, bool]:
         session.add(Ping(note=note))
         raise RuntimeError("boom after add")
 

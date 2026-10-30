@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from inkstave.compile.outputs import ByteRange, RangeResult, classify, parse_range
-from inkstave.db.models.compile_output import OutputKind
+from inkstave.modules.compile.models.compile_output import OutputKind
+from inkstave.modules.compile.outputs.store import ByteRange, RangeResult, classify, parse_range
 
 
 @pytest.mark.parametrize(

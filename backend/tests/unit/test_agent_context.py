@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from inkstave.agent.context import (
+from inkstave.modules.agent.context import (
     build_project_map,
     estimate_tokens,
     locate_section,
     parse_latex_structure,
     select_context,
 )
-from inkstave.agent.context.models import StructureKind
+from inkstave.modules.agent.context.models import StructureKind
 
 _DOC = "\n".join(
     [
@@ -177,9 +177,7 @@ def test_select_respects_budget_and_truncates() -> None:  # AC5
     body = "\n".join(f"line {i}" for i in range(200))
     text = f"\\section{{Introduction}}\n{body}\n\\section{{Methods}}\nm\n"
     pm = build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
-    bundle = select_context(
-        pm, {"main.tex": text}.get, "introduction", budget_tokens=40, surrounding_lines=5
-    )
+    bundle = select_context(pm, {"main.tex": text}.get, "introduction", budget_tokens=40, surrounding_lines=5)
     assert bundle.estimated_tokens <= 40  # never exceeds the budget
     assert any(c.kind == "section" for c in bundle.chunks)
     assert any(c.truncated for c in bundle.chunks)  # deterministic truncation
@@ -200,12 +198,8 @@ def test_select_orders_sections_before_outline() -> None:  # issue 203
 def test_select_surrounding_lines_widens_window() -> None:  # issue 205
     text = "\n".join(["pre2", "pre1", "\\section{Mid}", "m1", "m2", "\\section{End}", "e"])
     pm = build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
-    narrow = select_context(
-        pm, {"main.tex": text}.get, "mid", budget_tokens=8000, surrounding_lines=0
-    )
-    wide = select_context(
-        pm, {"main.tex": text}.get, "mid", budget_tokens=8000, surrounding_lines=3
-    )
+    narrow = select_context(pm, {"main.tex": text}.get, "mid", budget_tokens=8000, surrounding_lines=0)
+    wide = select_context(pm, {"main.tex": text}.get, "mid", budget_tokens=8000, surrounding_lines=3)
     s0 = next(c for c in narrow.chunks if c.kind == "section").text
     s3 = next(c for c in wide.chunks if c.kind == "section").text
     assert len(s3) > len(s0)  # the larger config yields a strictly longer window

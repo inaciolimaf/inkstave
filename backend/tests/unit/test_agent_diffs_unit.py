@@ -6,14 +6,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from inkstave.agent.diffs import is_oversized, is_stale
-from inkstave.agent.diffs.compute import (
+from inkstave.modules.agent.diffs import is_oversized, is_stale
+from inkstave.modules.agent.diffs.compute import (
     DiffConflictError,
     apply_staged_edits,
     compute_diff,
     content_hash,
 )
-from inkstave.agent.edits import EditMode, StagedEdit
+from inkstave.modules.agent.graph.edits import EditMode, StagedEdit
 
 
 def _edit(mode: str, new_text: str, start: int | None = None, end: int | None = None) -> StagedEdit:

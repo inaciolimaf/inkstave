@@ -49,6 +49,8 @@ dev = [
     "fakeredis>=2.26",
     "pytest-xdist>=3.8.0",
     "pyyaml>=6.0.3",
+    "asyncpg-stubs>=0.31.3",
+    "import-linter>=2.15",
 ]
 
 [tool.uv]
@@ -56,35 +58,59 @@ dev = [
 # A uv.lock is committed alongside this file.
 
 [tool.ruff]
-line-length = 100
+line-length = 110
 target-version = "py312"
-# Forward-looking: Alembic migrations (added in spec 03) are not linted.
+# Alembic migrations are generated and never edited again, so they are not linted.
 # Deliberately `extend-exclude` (not a plain `exclude`): plain `exclude` would
 # *replace* ruff's built-in default excludes (.venv, .git, __pycache__, …),
 # whereas `extend-exclude` preserves them and merely adds `migrations/` on top.
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-# `C901` + the `PLR09xx` family cap structural complexity; `S` (bandit) covers the
-# security surface; `RUF100` keeps suppressions honest by failing on any `noqa`
-# that no longer silences anything. Thresholds and rationale:
-# docs/adr/0106-complexity-and-security-lint.md. The line ceiling per function
-# (30) has no ruff equivalent and is enforced by scripts/lint_function_length.py.
+# The project standard's ruleset, plus the project's stricter structural budget:
+# `C901` + the `PLR09xx` family cap complexity (the standard only has PLR0913).
+# Thresholds and rationale: docs/adr/0106-complexity-and-security-lint.md. The line
+# ceiling per function (30) has no ruff equivalent and is enforced by
+# scripts/lint_function_length.py.
 select = [
     "E",
     "F",
+    "W",
     "I",
+    "N",
     "UP",
     "B",
+    "A",
+    "C4",
+    "SIM",
+    "RUF",
+    "ANN",
+    "S",
     "ASYNC",
     "C901",
     "PLR0911",
     "PLR0912",
     "PLR0913",
     "PLR0915",
-    "RUF100",
-    "S",
 ]
+ignore = [
+    # `Any` is sometimes the honest annotation (structlog-style kwargs, raw JSON); strict mypy
+    # still enforces the rest.
+    "ANN401",
+    # Ambiguous characters: product text and docs legitimately use –, —, × and typographic quotes.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # Clashes with pydantic's `model_config` and SQLAlchemy's `__table_args__`.
+    "RUF012",
+    # `assert` is used for invariants and to narrow types.
+    "S101",
+    # Non-cryptographic `random` is fine for jitter/backoff; tokens and secrets use `secrets`.
+    "S311",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["inkstave", "tests"]
 
 [tool.ruff.lint.mccabe]
 # Deliberately stricter than ruff's default of 10: a function with more than six
@@ -92,10 +118,10 @@ select = [
 max-complexity = 6
 
 [tool.ruff.lint.pylint]
-# `max-args` is loosened from ruff's default of 5 — DI-heavy FastAPI/service
-# constructors legitimately take more — while the other three are ruff's
-# defaults, restated here so the whole complexity budget is readable in one place.
-max-args = 8
+# The standard's cap: DI-heavy FastAPI/service constructors may take up to 7 arguments,
+# more becomes a dataclass/DTO. The other three are ruff's defaults, restated here so the
+# whole complexity budget is readable in one place.
+max-args = 7
 max-branches = 12
 max-returns = 6
 max-statements = 50
@@ -104,15 +130,21 @@ max-statements = 50
 # The in-process ASGI WebSocket test client exposes idiomatic `timeout=` params
 # (mirroring Starlette's TestClient / the `websockets` API); ASYNC109 doesn't fit.
 "tests/collab_ws_harness.py" = ["ASYNC109"]
-# Tests are held to the same complexity budget as `src`, but bandit's credential
-# and sandbox heuristics do not apply to them: `assert` *is* the assertion
-# mechanism, fixture passwords/tokens are deliberately fake, `0.0.0.0` appears in
-# bind-address assertions, and `/tmp` paths are settings fixtures, not real I/O.
-"tests/**" = ["S101", "S104", "S105", "S106", "S107", "S108"]
+# A module's public interface imports models and schemas first and services after: while
+# cycles between modules remain, that order is what makes the import work.
+"src/inkstave/modules/*/__init__.py" = ["I001"]
+# The fake S3 client mirrors boto3's PascalCase keyword arguments (Bucket, Key, Body…).
+"tests/unit/test_storage.py" = ["N803"]
+# The standard's test exceptions: bandit's heuristics do not apply (fixture secrets are
+# fake, `0.0.0.0` appears in bind-address assertions, `/tmp` paths are settings fixtures),
+# fixtures and tests are not annotated, a test takes many fixtures, inline data is long.
+# Tests stay under the same complexity budget as `src`.
+"tests/**" = ["S", "ANN", "PLR0913", "E501"]
 
 [tool.ruff.lint.flake8-bugbear]
-# FastAPI's dependency-injection markers are designed to be call expressions in
-# parameter defaults; they are effectively immutable, so B008 does not apply.
+# B008 stays on. FastAPI's dependency-injection markers are designed to be call expressions in
+# parameter defaults and are effectively immutable; the project has ~276 `x = Depends(...)`
+# sites, kept in preference to churning every route to `Annotated` in this pass.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Header", "fastapi.Cookie", "fastapi.Body", "fastapi.Form", "fastapi.Security"]
 
 [tool.ruff.format]
@@ -121,16 +153,107 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 [tool.mypy]
 python_version = "3.12"
 strict = true
-warn_unused_ignores = true
+warn_unreachable = true
+# Paths are relative to where mypy runs, and it only finds this file from `backend/`:
+# run it as `cd backend && uv run mypy`. `mypy backend/src` from the repository root
+# reads no configuration at all, misses `strict` and reports a false pass.
+files = ["src", "scripts", "../scripts"]
 # The pydantic plugin teaches mypy that BaseSettings fields are populated from
 # the environment (so they are not required __init__ args).
 plugins = ["pydantic.mypy"]
-files = ["src"]
 
 [[tool.mypy.overrides]]
 # These ship no complete type stubs.
 module = ["pythonjsonlogger.*"]
 ignore_missing_imports = true
+
+[tool.importlinter]
+root_packages = ["inkstave"]
+# TYPE_CHECKING imports never run, so they create no cycle; runtime imports are what is enforced.
+exclude_type_checking_imports = true
+
+# The composition root (app, cli, main, router, worker, models) gathers everything and stays out
+# of the contracts. Each ignore_imports entry is an existing exception, with its way out as
+# "Target:"; the end state is every list empty, and tests/unit/test_architecture.py only lets
+# the count go down.
+
+[[tool.importlinter.contracts]]
+name = "layers: modules -> infra -> core"
+type = "layers"
+layers = ["inkstave.modules", "inkstave.infra", "inkstave.core"]
+
+[[tool.importlinter.contracts]]
+name = "module order, top to bottom"
+type = "layers"
+containers = ["inkstave.modules"]
+layers = ["admin | agent", "compile", "history", "collab", "projects", "notifications", "auth"]
+ignore_imports = [
+    # The room builds the history capture service and feeds it each CRDT update, while history
+    # reads CRDT state back. Target: collab emits an update event that history subscribes to.
+    "inkstave.modules.collab.ws.components -> inkstave.modules.history",
+    # The export flushes open rooms first so documents leave with their live content.
+    # Target: a domain event asked of collab, or the export moves up to a coordinating module.
+    "inkstave.modules.projects.routes.projects -> inkstave.modules.collab",
+    # Project deletion sweeps the compile outputs. Target: projects emits ProjectDeleted and
+    # compile subscribes.
+    "inkstave.modules.projects.routes.projects -> inkstave.modules.compile",
+]
+
+[[tool.importlinter.contracts]]
+name = "admin: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.admin.models", "inkstave.modules.admin.provisioning", "inkstave.modules.admin.routes"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "agent: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.agent.context", "inkstave.modules.agent.deps", "inkstave.modules.agent.diffs", "inkstave.modules.agent.graph", "inkstave.modules.agent.llm", "inkstave.modules.agent.models", "inkstave.modules.agent.routes", "inkstave.modules.agent.runs", "inkstave.modules.agent.safety", "inkstave.modules.agent.schemas", "inkstave.modules.agent.tools"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "auth: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.auth.accounts", "inkstave.modules.auth.credentials", "inkstave.modules.auth.deps", "inkstave.modules.auth.models", "inkstave.modules.auth.routes", "inkstave.modules.auth.schemas", "inkstave.modules.auth.throttling"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "collab: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.collab.crdt", "inkstave.modules.collab.models", "inkstave.modules.collab.rooms", "inkstave.modules.collab.ws"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "compile: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.compile.assembly", "inkstave.modules.compile.deps", "inkstave.modules.compile.logparse", "inkstave.modules.compile.models", "inkstave.modules.compile.outputs", "inkstave.modules.compile.queue", "inkstave.modules.compile.routes", "inkstave.modules.compile.running", "inkstave.modules.compile.schemas", "inkstave.modules.compile.synctex"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "history: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.history.models", "inkstave.modules.history.routes", "inkstave.modules.history.schemas", "inkstave.modules.history.versions"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "notifications: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.notifications.inbox", "inkstave.modules.notifications.models", "inkstave.modules.notifications.routes", "inkstave.modules.notifications.schemas"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "projects: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications"]
+forbidden_modules = ["inkstave.modules.projects.access", "inkstave.modules.projects.catalog", "inkstave.modules.projects.content", "inkstave.modules.projects.deps", "inkstave.modules.projects.models", "inkstave.modules.projects.routes", "inkstave.modules.projects.schemas", "inkstave.modules.projects.sharing", "inkstave.modules.projects.transfer", "inkstave.modules.projects.tree"]
+allow_indirect_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -142,6 +265,8 @@ testpaths = ["tests"]
 # under-2-minute wall-clock budget. conftest provisions per-worker databases via
 # PYTEST_XDIST_WORKER, so parallel execution is isolation-safe.
 addopts = "-q --strict-markers -n auto --durations=15 -m 'not slow and not e2e and not live'"
+# A deprecated API the project itself calls fails the suite instead of a future upgrade.
+filterwarnings = ["error::DeprecationWarning:inkstave.*"]
 markers = [
     "slow: heavier tests excluded from the default fast run",
     "integration: tests requiring the test database / wired app",
@@ -155,6 +280,7 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
+skip_covered = true
 # Non-aspirational gate satisfied by the current code; raised as coverage grows.
 fail_under = 80
 

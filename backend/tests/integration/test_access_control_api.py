@@ -10,10 +10,11 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.db.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.dependencies import get_compile_enqueuer, get_email_enqueuer
+from inkstave.core.config.settings import get_settings
+from inkstave.infra.deps import get_email_enqueuer
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.deps import get_compile_enqueuer
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -54,7 +55,7 @@ async def actors(app: Any, async_client: AsyncClient, db_session: AsyncSession) 
     app.dependency_overrides[get_compile_enqueuer] = lambda: _FakeEnqueuer()
     app.dependency_overrides[get_email_enqueuer] = lambda: _FakeEnqueuer()
 
-    owner, owner_h = await _user(db_session)
+    _owner, owner_h = await _user(db_session)
     pid = (await async_client.post(PROJECTS, json={"name": "P"}, headers=owner_h)).json()["id"]
     doc = await async_client.post(
         f"{PROJECTS}/{pid}/tree/entities",
@@ -100,19 +101,13 @@ async def test_doc_and_tree_read(actors: SimpleNamespace, async_client: AsyncCli
 # --- writes: viewer 403, non-member 404, editor/owner succeed -------------- #
 
 
-async def test_project_write_is_owner_only(
-    actors: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_project_write_is_owner_only(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}"
     assert (
         await async_client.patch(url, json={"name": "New"}, headers=actors.editor)
     ).status_code == 403  # AC4 editor denied
-    assert (
-        await async_client.patch(url, json={"name": "New"}, headers=actors.viewer)
-    ).status_code == 403
-    assert (
-        await async_client.patch(url, json={"name": "New"}, headers=actors.outsider)
-    ).status_code == 404
+    assert (await async_client.patch(url, json={"name": "New"}, headers=actors.viewer)).status_code == 403
+    assert (await async_client.patch(url, json={"name": "New"}, headers=actors.outsider)).status_code == 404
     assert (
         await async_client.patch(url, json={"name": "New"}, headers=actors.owner)
     ).status_code == 200  # AC5
@@ -125,9 +120,7 @@ async def test_doc_write(actors: SimpleNamespace, async_client: AsyncClient) -> 
         await async_client.put(url, json={"content": "x", "base_version": 0}, headers=actors.viewer)
     ).status_code == 403  # AC2 INSUFFICIENT_ROLE
     assert (
-        await async_client.put(
-            url, json={"content": "x", "base_version": 0}, headers=actors.outsider
-        )
+        await async_client.put(url, json={"content": "x", "base_version": 0}, headers=actors.outsider)
     ).status_code == 404
     # editor may write
     version = (await async_client.get(url, headers=actors.editor)).json()["version"]
@@ -137,9 +130,7 @@ async def test_doc_write(actors: SimpleNamespace, async_client: AsyncClient) -> 
     assert ok.status_code == 200  # AC4 editor writes
 
 
-async def test_tree_write_is_editor_plus(
-    actors: SimpleNamespace, async_client: AsyncClient
-) -> None:
+async def test_tree_write_is_editor_plus(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}/tree/entities"
     body = {"type": "doc", "name": "extra.tex", "parent_id": None}
     assert (await async_client.post(url, json=body, headers=actors.viewer)).status_code == 403

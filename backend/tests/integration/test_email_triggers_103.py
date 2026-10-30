@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from httpx import AsyncClient
 
-from inkstave.dependencies import get_email_enqueuer
+from inkstave.infra.deps import get_email_enqueuer
 
 pytestmark = pytest.mark.integration
 
@@ -36,9 +36,7 @@ def emails(app: Any) -> FakeEmailEnqueuer:
 
 
 async def _register(client: AsyncClient, email: str = "new@example.com") -> None:
-    resp = await client.post(
-        REGISTER, json={"email": email, "password": "secret123", "display_name": "New"}
-    )
+    resp = await client.post(REGISTER, json={"email": email, "password": "secret123", "display_name": "New"})
     assert resp.status_code == 201, resp.text
 
 

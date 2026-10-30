@@ -9,21 +9,18 @@ from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.cache import project_meta_key
-from inkstave.config import get_settings
-from inkstave.db.engine import create_engine_and_sessionmaker
-from inkstave.db.models.history import HistoryChunk, HistoryUpdate
-from inkstave.db.models.membership import (
-    MembershipRole,
-    MembershipStatus,
-    ProjectMembership,
-)
-from inkstave.db.models.tree_entity import TreeEntityType
-from inkstave.history.read import list_versions
-from inkstave.services import sharing, tree_service
-from inkstave.services.project import create_project
-from inkstave.services.tree_service import create_entity
+from inkstave.core.config.settings import get_settings
+from inkstave.core.db.engine import create_engine_and_sessionmaker
+from inkstave.infra.cache import project_meta_key
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
+from inkstave.modules.history.versions.read import list_versions
+from inkstave.modules.projects import sharing
+from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.tree import service as tree_service
+from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -62,7 +59,7 @@ async def test_project_metadata_cache_hit_and_invalidation(
 async def test_cache_helper_disabled_mode_bypasses(redis: Any) -> None:
     from types import SimpleNamespace
 
-    from inkstave.cache import RedisCache
+    from inkstave.infra.cache import RedisCache
 
     cache = RedisCache(redis, SimpleNamespace(cache_enabled=False, cache_ttl_seconds=30))
     await cache.set_json("k", {"a": 1})
@@ -200,6 +197,7 @@ async def test_collaborators_list_query_count_is_bounded(
 # --- DB connection pool: config + no leak (AC8) ----------------------------- #
 
 
+@pytest.mark.usefixtures("_template_db", "test_database_env")
 async def test_db_pool_uses_config_and_returns_to_baseline(settings_override: Any) -> None:
     settings = settings_override
     engine, sessionmaker = create_engine_and_sessionmaker(settings)

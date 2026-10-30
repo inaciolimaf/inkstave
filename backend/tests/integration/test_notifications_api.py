@@ -8,9 +8,9 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.config import get_settings
-from inkstave.notifications.service import NotificationService
+from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.notifications.inbox.service import NotificationService
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -27,7 +27,7 @@ async def _auth(db_session: AsyncSession) -> tuple[Any, dict[str, str]]:
 
 async def _notify(db_session: AsyncSession, user_id: Any, **payload: Any) -> Any:
     n = await NotificationService(db_session).create(
-        user_id=user_id, type="generic", payload=payload
+        user_id=user_id, notification_type="generic", payload=payload
     )
     await db_session.commit()
     return n
@@ -44,9 +44,7 @@ async def test_list_and_unread_count(async_client: AsyncClient, db_session: Asyn
     assert count == {"count": 2}
 
 
-async def test_mark_read_read_all_and_dismiss(
-    async_client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_mark_read_read_all_and_dismiss(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user, headers = await _auth(db_session)
     a = await _notify(db_session, user.id, msg="a")
     await _notify(db_session, user.id, msg="b")

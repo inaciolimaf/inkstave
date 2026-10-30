@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.agent.api.events import (
+from inkstave.modules.agent.runs.events import (
     InMemoryEventSink,
     RedisEventSink,
     is_cancel_requested,
@@ -16,7 +16,7 @@ from inkstave.agent.api.events import (
     request_cancel,
     run_channel,
 )
-from inkstave.agent.api.stream import sse_stream
+from inkstave.modules.agent.runs.stream import sse_stream
 
 pytestmark = pytest.mark.integration  # uses the fake redis fixture
 

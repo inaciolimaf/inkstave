@@ -8,7 +8,8 @@ from uuid import uuid4
 
 import pytest
 
-from inkstave.agent.safety import (
+from inkstave.core.config.agent import AgentSettings
+from inkstave.modules.agent.safety import (
     AgentAuditAction,
     AuditSubject,
     acquire_run,
@@ -22,7 +23,6 @@ from inkstave.agent.safety import (
     run_tokens_exceeded,
     wrap_untrusted,
 )
-from inkstave.agent.settings import AgentSettings
 
 pytestmark = pytest.mark.integration  # uses the fake redis fixture
 
@@ -39,9 +39,7 @@ async def test_rate_limit_allows_then_denies_with_retry_after(redis: Any) -> Non
     user, project = uuid4(), uuid4()
     now = 1000.0  # 1000 % 60 == 40 → retry_after 20
     for _ in range(2):
-        decision = await check_rate_limit(
-            redis, settings, user_id=user, project_id=project, now=now
-        )
+        decision = await check_rate_limit(redis, settings, user_id=user, project_id=project, now=now)
         assert decision.allowed
         await acquire_run(redis, user_id=user, project_id=project, now=now)
 
@@ -92,9 +90,7 @@ async def test_day_budget_precheck_blocks_when_exhausted(redis: Any) -> None:
     user, project = uuid4(), uuid4()
     first = await precheck_day(redis, settings, user_id=user, project_id=project, now=0.0)
     assert first.allowed
-    await record_usage(
-        redis, user_id=user, project_id=project, now=0.0, tokens=100, cost=Decimal("0")
-    )
+    await record_usage(redis, user_id=user, project_id=project, now=0.0, tokens=100, cost=Decimal("0"))
     blocked = await precheck_day(redis, settings, user_id=user, project_id=project, now=0.0)
     assert blocked.allowed is False and blocked.reason == "project_day_tokens"
 

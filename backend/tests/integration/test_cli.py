@@ -17,9 +17,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from inkstave import cli
-from inkstave.bootstrap.seed import DEMO_EMAIL
+from inkstave.modules.admin.provisioning.seed import DEMO_EMAIL
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("test_database_env")]
 
 
 class _FakeSender:
@@ -98,18 +98,14 @@ async def test_doctor_reports_each_failure() -> None:
 
 async def test_send_test_email_renders_and_sends_via_injected_sender() -> None:
     sender = _FakeSender()
-    rc = await cli._cmd_send_test_email(
-        to="dev@example.com", template="email_verification", sender=sender
-    )
+    rc = await cli._cmd_send_test_email(to="dev@example.com", template="email_verification", sender=sender)
     assert rc == 0
     assert len(sender.sent) == 1
 
 
 async def test_send_test_email_rejects_unknown_template() -> None:
     sender = _FakeSender()
-    rc = await cli._cmd_send_test_email(
-        to="dev@example.com", template="no-such-template", sender=sender
-    )
+    rc = await cli._cmd_send_test_email(to="dev@example.com", template="no-such-template", sender=sender)
     assert rc == 1
     assert sender.sent == []
 

@@ -10,17 +10,17 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.auth.tokens import build_token_service
-from inkstave.compile.output_repository import OutputRepository
-from inkstave.compile.outputs import OutputStore
-from inkstave.compile.repository import CompileRepository
-from inkstave.compile.result import CompileArtifact, CompileResult, CompileStatus
-from inkstave.config import Settings, get_settings
-from inkstave.dependencies import get_object_store
-from inkstave.services.project import create_project
-from inkstave.storage.local import LocalObjectStore
+from inkstave.core.config.settings import Settings, get_settings
+from inkstave.infra.deps import get_object_store
+from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.compile.queue.repository import CompileRepository
+from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
+from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
-from tests.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
+from tests.golden.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
 
 pytestmark = pytest.mark.integration
 
@@ -72,9 +72,7 @@ async def _seed(
 ):
     project = await create_project(db_session, UUID(owner_id), "P")
     repo = CompileRepository(db_session)
-    row = await repo.create(
-        project_id=project.id, requested_by=UUID(owner_id), main_file="main.tex"
-    )
+    row = await repo.create(project_id=project.id, requested_by=UUID(owner_id), main_file="main.tex")
     await repo.update(row, status="success", has_pdf=True)
 
     artifacts = _artifacts(tmp_path / "wd" / "output", synctex_text, with_synctex=with_synctex)
@@ -191,9 +189,7 @@ async def test_inverse_multi_file(
     async_client: AsyncClient, db_session: AsyncSession, backend: LocalObjectStore, tmp_path: Path
 ) -> None:
     headers = await _auth(db_session)
-    project, _ = await _seed(
-        db_session, backend, tmp_path, headers["_uid"], synctex_text=MULTI_FILE
-    )
+    project, _ = await _seed(db_session, backend, tmp_path, headers["_uid"], synctex_text=MULTI_FILE)
     resp = await async_client.get(
         _inv(str(project.id)), params={"page": 1, "h": 150.0, "v": 401.0}, headers=headers
     )

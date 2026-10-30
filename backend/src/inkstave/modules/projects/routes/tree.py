@@ -1,0 +1,136 @@
+"""File-tree routes (spec 12), scoped to an owned project.
+
+Every route resolves ``project_id`` through the spec-11 ownership rule first
+(``get_owned_project`` → 404 ``project_not_found`` when missing/not-owned).
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, status
+
+from inkstave.core.db.session import get_db_session
+from inkstave.core.errors import ErrorEnvelope
+from inkstave.infra.deps import get_object_store
+from inkstave.modules.projects.access.capabilities import Capability
+from inkstave.modules.projects.access.deps import require_capability
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.modules.projects.schemas.tree import (
+    CreateEntityIn,
+    MoveEntityIn,
+    RenameEntityIn,
+    TreeEntityRead,
+    TreeRead,
+)
+from inkstave.modules.projects.tree import service as tree_service
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from inkstave.infra.storage.base import ObjectStore
+    from inkstave.modules.projects.models.project import Project
+
+router = APIRouter(prefix="/projects/{project_id}/tree", tags=["tree"])
+
+_ERRORS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
+    status.HTTP_409_CONFLICT: {"model": ErrorEnvelope},
+    status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorEnvelope},
+}
+
+
+# Central authorization (spec 34): reads need DOC_READ, mutations DOC_WRITE.
+read_access = require_capability(Capability.DOC_READ)
+write_access = require_capability(Capability.DOC_WRITE)
+
+
+async def _read(session: AsyncSession, project_id: UUID, entity: TreeEntity) -> TreeEntityRead:
+    entities = await tree_service.get_tree(session, project_id)
+    by_id = {e.id: e for e in entities}
+    return TreeEntityRead(
+        id=entity.id,
+        project_id=entity.project_id,
+        parent_id=entity.parent_id,
+        type=entity.type.value,
+        name=entity.name,
+        is_root=entity.is_root,
+        created_at=entity.created_at,
+        updated_at=entity.updated_at,
+        path=tree_service.compute_path(entity, by_id),
+    )
+
+
+@router.get("", response_model=TreeRead, summary="List the project's file tree")
+async def get_tree(
+    project: Project = Depends(read_access),
+    session: AsyncSession = Depends(get_db_session),
+) -> TreeRead:
+    entities = await tree_service.get_tree(session, project.id)
+    return tree_service.build_tree(entities)
+
+
+@router.post(
+    "/entities",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TreeEntityRead,
+    summary="Create a folder or document entity",
+    responses=_ERRORS,
+)
+async def create_entity(
+    data: CreateEntityIn,
+    project: Project = Depends(write_access),
+    session: AsyncSession = Depends(get_db_session),
+) -> TreeEntityRead:
+    entity = await tree_service.create_entity(
+        session, project.id, TreeEntityType(data.type), data.name, data.parent_id
+    )
+    return await _read(session, project.id, entity)
+
+
+@router.patch(
+    "/entities/{entity_id}/rename",
+    response_model=TreeEntityRead,
+    summary="Rename a tree entity",
+    responses=_ERRORS,
+)
+async def rename_entity(
+    entity_id: UUID,
+    data: RenameEntityIn,
+    project: Project = Depends(write_access),
+    session: AsyncSession = Depends(get_db_session),
+) -> TreeEntityRead:
+    entity = await tree_service.rename_entity(session, project.id, entity_id, data.name)
+    return await _read(session, project.id, entity)
+
+
+@router.patch(
+    "/entities/{entity_id}/move",
+    response_model=TreeEntityRead,
+    summary="Move (reparent) a tree entity",
+    responses=_ERRORS,
+)
+async def move_entity(
+    entity_id: UUID,
+    data: MoveEntityIn,
+    project: Project = Depends(write_access),
+    session: AsyncSession = Depends(get_db_session),
+) -> TreeEntityRead:
+    entity = await tree_service.move_entity(session, project.id, entity_id, data.new_parent_id)
+    return await _read(session, project.id, entity)
+
+
+@router.delete(
+    "/entities/{entity_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a tree entity (recursive for folders)",
+    responses=_ERRORS,
+)
+async def delete_entity(
+    entity_id: UUID,
+    project: Project = Depends(write_access),
+    session: AsyncSession = Depends(get_db_session),
+    store: ObjectStore = Depends(get_object_store),
+) -> None:
+    await tree_service.delete_entity(session, project.id, entity_id, store=store)
