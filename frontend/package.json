@@ -26,6 +26,11 @@
     "@codemirror/state": "^6.5.0",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "@hookform/resolvers": "^3.10.0",
     "@lezer/highlight": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.4",
@@ -66,6 +71,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.17.0",
     "@playwright/test": "^1.49.1",
     "@testing-library/jest-dom": "^6.6.3",

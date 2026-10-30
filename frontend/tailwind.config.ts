@@ -45,6 +45,26 @@ export default {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          on: "hsl(var(--on-success))",
+          soft: "hsl(var(--success-soft))",
+          text: "hsl(var(--success-text))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          on: "hsl(var(--on-warning))",
+          soft: "hsl(var(--warning-soft))",
+          text: "hsl(var(--warning-text))",
+        },
+        error: {
+          soft: "hsl(var(--error-soft))",
+          text: "hsl(var(--error-text))",
+        },
+        focus: "hsl(var(--focus))",
+        "border-strong": "hsl(var(--border-strong))",
+        backdrop: "hsl(var(--backdrop))",
+        page: "hsl(var(--page))",
         // Landing-only "ink on paper" palette. The tokens are defined inside
         // `.landing-root` (see modules/landing/landing.css), so these utilities
         // resolve only on the marketing page and never touch the app shell.
@@ -67,6 +87,24 @@ export default {
         serif: ['"Newsreader"', "Georgia", "Cambria", "serif"],
         mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },
+      fontSize: {
+        small: "var(--text-small)",
+        body: "var(--text-body)",
+        heading: "var(--text-heading)",
+        title: "var(--text-title)",
+        figure: "var(--text-figure)",
+      },
+      transitionDuration: {
+        fast: "var(--motion-fast)",
+        base: "var(--motion-base)",
+        slow: "var(--motion-slow)",
+      },
+      transitionTimingFunction: {
+        out: "var(--ease-out)",
+        "in-out": "var(--ease-in-out)",
+      },
+      height: { dvh: "100dvh" },
+      minHeight: { dvh: "100dvh" },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
