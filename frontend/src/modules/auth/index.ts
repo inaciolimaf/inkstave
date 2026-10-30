@@ -9,3 +9,4 @@ export { LoginPage } from "./login";
 export { RegisterPage } from "./register";
 export { PublicOnly, RequireAuth } from "./require-auth";
 export { SetupPage } from "./setup/setup-page";
+export { useApplyTheme } from "./use-apply-theme";

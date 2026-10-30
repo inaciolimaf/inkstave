@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 
-import { useAuth } from "@/modules/auth";
+import { useAuth } from "./auth-context";
 import { DEFAULT_EDITOR_PREFERENCES } from "@/types";
 
-import { resolveDark } from "./resolve-theme";
-import { useIsDark } from "./use-is-dark";
+import { resolveDark } from "@/lib/resolve-theme";
+import { useIsDark } from "@/lib/use-is-dark";
 
 /**
  * Applies the user's theme preference to the document root (spec 59): toggles

@@ -4,10 +4,10 @@ import { useAuth } from "@/modules/auth";
 import { putEditorPreferences } from "@/modules/settings";
 import { DEFAULT_EDITOR_PREFERENCES, type EditorPreferences } from "@/types";
 
-import { resolveDark } from "./resolve-theme";
+import { resolveDark } from "@/lib/resolve-theme";
 import type { EditorSettings } from "./types";
 import { useEditorSettings } from "./use-editor-settings";
-import { useIsDark } from "./use-is-dark";
+import { useIsDark } from "@/lib/use-is-dark";
 
 /**
  * The editor's settings, sourced from the user's server-side preferences (spec

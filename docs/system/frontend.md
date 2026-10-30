@@ -22,7 +22,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | `frontend/src/components` | Shared UI: `states.tsx`, `route-error.tsx`, `error-boundary.tsx`, `inkstave-logo.tsx` |
 | `frontend/src/i18n/config.ts` | The global i18next instance and `NAMESPACES` |
 | `frontend/src/i18n/locales` | `en/`, `pt/` and `landing.ts` |
-| `frontend/src/routes` | 14 thin route components, one per screen |
+| `frontend/src/routes` | 14 thin route components, one per screen, each loaded on demand by `lazy` in `router.tsx` |
 | `frontend/src/modules` | 13 feature modules |
 | `frontend/eslint.config.js` | Lint rules, size caps, boundaries, exceptions |
 | `frontend/playwright.config.ts` | E2e projects and stack bring-up |
@@ -53,10 +53,10 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | Module | Holds | Public exports | Depends on |
 |---|---|---|---|
 | `frontend/src/modules/agent` | Chat panel, run reducer, SSE stream | `AgentPanel` | diff-review |
-| `frontend/src/modules/auth` | Session context, guards, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, the 8 page components | none |
+| `frontend/src/modules/auth` | Session context, guards, theme application, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, `useApplyTheme`, the 8 page components | none |
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
 | `frontend/src/modules/diff-review` | Hunk review dialog, rebase, CRDT apply | `DiffReviewDialog`, `createEditorBridge`, type `DocumentBridge` | collab |
-| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, theme | `EditorWorkspace`, `useApplyTheme` | every other module except landing |
+| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |
 | `frontend/src/modules/landing` | Public marketing page | `LandingPage` | auth |

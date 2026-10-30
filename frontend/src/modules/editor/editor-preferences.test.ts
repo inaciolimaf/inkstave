@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EditorPreferences, UserPublic } from "@/types";
 
 import { keymapExtension } from "./keymap-extension";
-import { resolveDark } from "./resolve-theme";
+import { resolveDark } from "@/lib/resolve-theme";
 import { useEditorPreferences } from "./use-editor-preferences";
 
 // Mock the hook's data sources so the mapping test is pure and fast.
@@ -13,7 +13,7 @@ let mockSystemDark = false;
 vi.mock("@/modules/auth/auth-context", () => ({
   useAuth: () => ({ user: mockUser, applyUser: vi.fn() }),
 }));
-vi.mock("./use-is-dark", () => ({ useIsDark: () => mockSystemDark }));
+vi.mock("@/lib/use-is-dark", () => ({ useIsDark: () => mockSystemDark }));
 vi.mock("@/modules/settings/api", () => ({ putEditorPreferences: vi.fn() }));
 
 describe("resolveDark", () => {

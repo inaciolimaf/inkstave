@@ -1,6 +1,6 @@
 import { RouterProvider } from "react-router-dom";
 
-import { useApplyTheme } from "@/modules/editor";
+import { useApplyTheme } from "@/modules/auth";
 import { createAppRouter } from "@/router";
 
 const router = createAppRouter();
