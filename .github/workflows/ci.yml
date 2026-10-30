@@ -1,14 +1,14 @@
 name: CI
 
-# Job graph: `lint` and `typecheck` run in parallel (no shared artifact). The
-# three test stages — `unit`, `integration`, `e2e` — each depend only on
-# `typecheck`, so they fan out and run concurrently; each provisions whatever it
-# needs (integration: a Postgres service; e2e: docker-compose.test.yml). The
-# `budget` gate depends on all three test stages and fails the build if their
-# combined wall-clock exceeds the 120 s budget (reusing scripts/check_test_budget.py).
-# The test stages upload JUnit XML, which the budget job parses into the `slowest`
-# array so the per-test slow-test detector runs on real durations, not a stub.
-# Pytest stages run under `-n auto` (pytest-xdist) to hold that budget.
+# Every step is a Makefile target, so a green `make` is a green CI.
+#
+# Job graph: `lint` and `typecheck` run in parallel (no shared artifact). The three
+# test stages — `unit`, `integration`, `e2e` — each depend only on `typecheck`, so they
+# fan out and run concurrently; each provisions whatever it needs (integration: a
+# Postgres service; e2e: docker-compose.test.yml). The `budget` job depends on all
+# three: it fails the build if their combined wall-clock exceeds the 120 s budget,
+# parsing the stages' JUnit XML so the slow-test detector runs on real durations, and
+# applies the backend coverage floor to unit + integration together.
 on:
   push:
     branches: [main]
@@ -17,6 +17,11 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    # Explicit, for `-o pipefail`: the default shell lets a pipe hide a failing gate.
+    shell: bash
 
 jobs:
   # --- Stage 1: lint --------------------------------------------------------- #
@@ -29,13 +34,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --project backend
-      - name: ruff check
-        run: uv run --project backend ruff check backend/src backend/tests
-      - name: ruff format --check
-        run: uv run --project backend ruff format --check backend/src backend/tests
-      - name: function-length ceiling
-        run: uv run --project backend python scripts/lint_function_length.py
+      - run: make install-backend
       - uses: pnpm/action-setup@v4
         with: { version: 9 }
       - uses: actions/setup-node@v4
@@ -43,11 +42,13 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm -C frontend install --frozen-lockfile
-      - name: eslint
-        run: pnpm -C frontend lint
-      - name: prettier --check
-        run: pnpm -C frontend format:check
+      - run: make install-web
+      - name: Backend lint
+        run: make lint
+      - name: Documentation matches the code
+        run: make docs
+      - name: Frontend lint
+        run: make web-lint
 
   # --- Stage 2: type-check --------------------------------------------------- #
   typecheck:
@@ -60,9 +61,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --project backend
-      - name: mypy
-        run: uv run --project backend mypy backend/src
+      - run: make install-backend
       - uses: pnpm/action-setup@v4
         with: { version: 9 }
       - uses: actions/setup-node@v4
@@ -70,9 +69,13 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm -C frontend install --frozen-lockfile
-      - name: tsc --noEmit
-        run: pnpm -C frontend typecheck
+      - run: make install-web
+      - name: mypy
+        run: make types
+      - name: tsc
+        run: make web-typecheck
+      - name: API contract is up to date
+        run: make web-types-check
 
   # --- Stage 3: unit (fakes only, no real services) -------------------------- #
   unit:
@@ -88,7 +91,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --project backend
+      - run: make install-backend
       - uses: pnpm/action-setup@v4
         with: { version: 9 }
       - uses: actions/setup-node@v4
@@ -96,20 +99,15 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm -C frontend install --frozen-lockfile
-      - name: Run unit tests (pytest unit subset + Vitest)
+      - run: make install-web
+      - name: Run unit tests (pytest unit subset + Vitest with coverage)
         id: measure
-        run: |
-          start=$(date +%s)
-          uv run --project backend pytest backend/tests -n auto -m "not integration and not slow and not e2e" \
-            --junitxml=unit-junit.xml -q
-          pnpm -C frontend test
-          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+        run: scripts/measure_stage.sh make test-unit web-coverage
       - uses: actions/upload-artifact@v4
         with:
-          name: unit-junit
-          path: unit-junit.xml
-          if-no-files-found: ignore
+          name: unit-results
+          path: test-results/
+          if-no-files-found: error
 
   # --- Stage 4: integration (ephemeral Postgres; Redis is faked) ------------- #
   integration:
@@ -138,25 +136,15 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --project backend
+      - run: make install-backend
       - name: Run integration tests
         id: measure
-        run: |
-          start=$(date +%s)
-          uv run --project backend pytest backend/tests -n auto -m "integration and not slow and not e2e" \
-            --cov=inkstave --cov-config=backend/pyproject.toml --cov-report=xml \
-            --junitxml=integration-junit.xml -q
-          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+        run: scripts/measure_stage.sh make test-integration
       - uses: actions/upload-artifact@v4
         with:
-          name: backend-coverage
-          path: coverage.xml
-          if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
-        with:
-          name: integration-junit
-          path: integration-junit.xml
-          if-no-files-found: ignore
+          name: integration-results
+          path: test-results/
+          if-no-files-found: error
 
   # --- Stage 5: e2e (Playwright smoke; LLM + compile stubbed per spec 54) ----- #
   e2e:
@@ -173,7 +161,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --project backend
+      - run: make install-backend
       - uses: pnpm/action-setup@v4
         with: { version: 9 }
       - uses: actions/setup-node@v4
@@ -181,89 +169,52 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm -C frontend install --frozen-lockfile
+      - run: make install-web
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}
       - name: Install Chromium
-        run: pnpm -C frontend exec playwright install --with-deps chromium
+        run: make e2e-install
       - name: Start e2e infra (Postgres + Redis)
-        run: docker compose -f docker-compose.test.yml up -d --wait
+        run: make e2e-infra
       - name: Run Playwright smoke
         id: measure
-        env:
-          CI: "true"
-        run: |
-          start=$(date +%s)
-          pnpm -C frontend exec playwright test --project=smoke
-          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+        run: scripts/measure_stage.sh make e2e-smoke
 
   # --- Budget gate: unit + integration + e2e must be < 120 s ----------------- #
   budget:
-    name: 2-minute budget gate
+    name: Budget and coverage gates
     runs-on: ubuntu-latest
     needs: [unit, integration, e2e]
     steps:
       - uses: actions/checkout@v4
-      - name: Download unit JUnit timings
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: make install-backend
+      - name: Download unit results
         uses: actions/download-artifact@v4
         with:
-          name: unit-junit
-          path: junit
-        continue-on-error: true
-      - name: Download integration JUnit timings
+          name: unit-results
+          path: test-results
+      - name: Download integration results
         uses: actions/download-artifact@v4
         with:
-          name: integration-junit
-          path: junit
-        continue-on-error: true
-      - name: Build test-timing.json from the measured stages
+          name: integration-results
+          path: test-results
+      - name: Enforce the 120 s budget
         env:
           UNIT_S: ${{ needs.unit.outputs.seconds }}
           INTEGRATION_S: ${{ needs.integration.outputs.seconds }}
           E2E_S: ${{ needs.e2e.outputs.seconds }}
-        run: |
-          python - <<'PY'
-          import glob, json, os
-          import xml.etree.ElementTree as ET
-
-          unit = float(os.environ.get("UNIT_S") or 0)
-          integ = float(os.environ.get("INTEGRATION_S") or 0)
-          e2e = float(os.environ.get("E2E_S") or 0)
-
-          def parse_slowest(paths, top=20):
-              # Parse the unit + integration JUnit XMLs into the slowest non-@slow
-              # testcases, emitting the {name, duration_s, slow_marked} shape that
-              # check_test_budget.py reads. @slow is excluded from these runs, so
-              # slow_marked stays False.
-              items = []
-              for path in paths:
-                  try:
-                      root = ET.parse(path).getroot()
-                  except (OSError, ET.ParseError):
-                      continue
-                  for case in root.iter("testcase"):
-                      try:
-                          dur = float(case.get("time", 0) or 0)
-                      except (TypeError, ValueError):
-                          continue
-                      cls = case.get("classname", "")
-                      name = case.get("name", "?")
-                      ident = f"{cls}::{name}" if cls else name
-                      items.append(
-                          {"name": ident, "duration_s": dur, "slow_marked": False}
-                      )
-              items.sort(key=lambda i: i["duration_s"], reverse=True)
-              return items[:top]
-
-          slowest = parse_slowest(sorted(glob.glob("junit/*.xml")))
-          json.dump(
-              {"total_s": unit + integ + e2e, "backend_s": integ,
-               "frontend_s": unit, "e2e_s": e2e, "slowest": slowest},
-              open("test-timing.json", "w"),
-          )
-          PY
-      - name: Enforce the 120 s budget
-        run: python backend/scripts/check_test_budget.py test-timing.json | tee -a "$GITHUB_STEP_SUMMARY"
+        run: make budget | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Backend coverage floor (unit + integration)
+        run: make coverage-combine
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: test-results/coverage.xml
+          if-no-files-found: ignore
