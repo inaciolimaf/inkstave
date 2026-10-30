@@ -71,7 +71,10 @@ function SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 
 function SheetTitle({ className, ...props }: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>) {
   return (
-    <SheetPrimitive.Title className={cn("text-lg font-semibold text-foreground", className)} {...props} />
+    <SheetPrimitive.Title
+      className={cn("text-heading font-semibold text-foreground", className)}
+      {...props}
+    />
   );
 }
 
@@ -79,7 +82,9 @@ function SheetDescription({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>) {
-  return <SheetPrimitive.Description className={cn("text-sm text-muted-foreground", className)} {...props} />;
+  return (
+    <SheetPrimitive.Description className={cn("text-body text-muted-foreground", className)} {...props} />
+  );
 }
 
 export { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger };

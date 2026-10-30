@@ -30,10 +30,8 @@ repeated after the fix. CI will be its first real run, and its cost against the 
 **The type scale tokens exist but screens do not use them yet, and field metrics are not collected.**
 *Why:* sizes move screen by screen under spec 106; `web-vitals` waits for real users.
 
-**The landing still loops and animates paint.** `float-soft`, `pulse-dot`, `cursor-bob` and the agent demo
-loop forever; `.ink-underline` transitions `background-size`; `transition-all` animates `box-shadow`.
-`drift` is unused. *Why:* the motion rule says only loading loops, but removing them is a design decision
-for the user.
+**The landing animates paint.** `.ink-underline` transitions `background-size` and `transition-all`
+animates `box-shadow`. *Why:* not yet reviewed; its loops are an accepted exception (spec 106).
 
 ### Compile sandbox
 

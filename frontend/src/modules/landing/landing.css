@@ -187,18 +187,6 @@
   animation: float-soft 7s ease-in-out infinite;
 }
 
-@keyframes drift {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-.marquee-track {
-  animation: drift 38s linear infinite;
-}
-
 @keyframes pulse-dot {
   0%,
   100% {
@@ -256,7 +244,6 @@
     transition: none;
   }
   .landing-root .float-soft,
-  .landing-root .marquee-track,
   .landing-root .pulse-dot,
   .landing-root .caret,
   .landing-root .cursor-bob,

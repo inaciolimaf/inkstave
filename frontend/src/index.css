@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Spec 106. Light is warm paper under daylight; dark is carbon paper at night, a warm near-black with
+ * chalky ink. Each theme is its own set of decisions, not an inversion.
+ */
 @layer base {
   /* Tokens that do not change with the theme. Mirrored for scripts in src/lib/motion.ts. */
   :root {
@@ -19,24 +23,24 @@
   }
 
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 45%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --background: 40 40% 97.5%;
+    --foreground: 222 47% 11%;
+    --card: 40 40% 97.5%;
+    --card-foreground: 222 47% 11%;
+    --popover: 40 40% 97.5%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 40 40% 97.5%;
+    --secondary: 39 32% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 39 32% 94%;
+    --muted-foreground: 221 19% 34%;
+    --accent: 36 26% 91%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 48%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 36 22% 84%;
+    --input: 36 22% 74%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
 
@@ -54,31 +58,31 @@
 
     /* Solid focus outline, at least 3:1 on every surface; `--ring` stays the soft halo. */
     --focus: 222 80% 42%;
-    --border-strong: 215 14% 52%;
+    --border-strong: 36 12% 48%;
     --backdrop: 222 47% 6%;
     /* A rendered PDF page is white in both themes. */
     --page: 0 0% 100%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 30 6% 9%;
+    --foreground: 40 25% 88%;
+    --card: 30 6% 9%;
+    --card-foreground: 40 25% 88%;
+    --popover: 30 6% 9%;
+    --popover-foreground: 40 25% 88%;
+    --primary: 40 30% 86%;
+    --primary-foreground: 30 6% 10%;
+    --secondary: 30 6% 15%;
+    --secondary-foreground: 40 25% 88%;
+    --muted: 30 6% 15%;
+    --muted-foreground: 38 10% 68%;
+    --accent: 30 6% 18%;
+    --accent-foreground: 40 25% 88%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 30 6% 21%;
+    --input: 30 6% 30%;
     --ring: 212.7 26.8% 83.9%;
 
     --success: 142 60% 32%;
@@ -93,7 +97,7 @@
     --error-text: 0 90% 82%;
 
     --focus: 212 95% 72%;
-    --border-strong: 215 16% 55%;
+    --border-strong: 36 8% 55%;
     --backdrop: 222 47% 3%;
     --page: 0 0% 100%;
   }

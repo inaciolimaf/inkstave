@@ -17,12 +17,7 @@ const dict = {
   },
   table: {
     caption: "Your projects",
-    name: "Name",
     lastModified: "Last modified",
-    actions: "Actions",
-  },
-  card: {
-    lastModified: "Last modified {{date}}",
   },
   actionsMenu: {
     label: "Project actions",

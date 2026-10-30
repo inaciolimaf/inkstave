@@ -40,8 +40,8 @@ Budgets: one solid action per screen. Red appears only for what needs action, an
 
 ## 4. Type
 
-Newsreader for titles, JetBrains Mono for LaTeX; the interface face is chosen by the user on the pilot
-among Inter, IBM Plex Sans and Source Sans 3. Sizes are the tokens `small`, `body`, `heading`, `title`,
+Newsreader for titles, JetBrains Mono for LaTeX, Source Sans 3 for the interface: the user chose it on
+the pilot over Inter and IBM Plex Sans. The landing keeps Inter. Sizes are the tokens `small`, `body`, `heading`, `title`,
 `figure`. Tabular figures on dates and counts.
 
 ## 5. Themes
@@ -53,7 +53,9 @@ ink, its own decisions rather than an inversion.
 
 Almost none: this is a tool used for hours. The material is ink settling: opacity and a small
 `transform`, at most `--motion-base`. No entrance animation on screens. Only loading loops. The
-landing keeps its richer motion.
+landing is the one exception, by the user's decision: it is a marketing page rather than a tool, so its
+rich motion and the loops of `float-soft`, `pulse-dot`, `cursor-bob` and the agent demo stay, and all of
+them stop under reduced motion.
 
 ## 7. Screens
 

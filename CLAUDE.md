@@ -193,7 +193,8 @@ the event loop. Every wait has a deadline. Settings come from the cached `get_se
 
 **Frontend.** TypeScript strict. API types are generated (`make web-types`) and the generated
 file is never edited. Modules are imported through their `index.ts`. Every interface string
-goes through i18n, in both languages. Screens must fit 390 px.
+goes through i18n, in both languages. Screens must fit 390 px. A new `fontSize` token in `tailwind.config.ts` also goes in
+`frontend/src/lib/utils.ts`, or `cn` drops it as a colour.
 
 ## Tests
 

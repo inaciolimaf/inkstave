@@ -1,11 +1,13 @@
 import jetbrainsLatinExt from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2";
 import jetbrainsLatin from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2";
+import sourceSansLatinExt from "@fontsource-variable/source-sans-3/files/source-sans-3-latin-ext-wght-normal.woff2";
+import sourceSansLatin from "@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2";
 import newsreaderLatinExt from "@fontsource-variable/newsreader/files/newsreader-latin-ext-opsz-normal.woff2";
 import newsreaderLatin from "@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2";
 
 /*
- * The faces every screen may need: `font-mono` (JetBrains Mono) and the logo's
- * `font-serif` (upright Newsreader). Inter and Newsreader italics are landing-only
+ * The faces every screen may need: the interface (Source Sans 3), `font-mono`
+ * (JetBrains Mono) and `font-serif` (upright Newsreader). Inter and Newsreader italics are landing-only
  * and live in modules/landing/landing.css.
  *
  * Registered here rather than through Fontsource's stylesheets so that only latin
@@ -26,3 +28,5 @@ register("JetBrains Mono Variable", "100 800", jetbrainsLatin, LATIN);
 register("JetBrains Mono Variable", "100 800", jetbrainsLatinExt, LATIN_EXT);
 register("Newsreader Variable", "200 800", newsreaderLatin, LATIN);
 register("Newsreader Variable", "200 800", newsreaderLatinExt, LATIN_EXT);
+register("Source Sans 3 Variable", "200 900", sourceSansLatin, LATIN);
+register("Source Sans 3 Variable", "200 900", sourceSansLatinExt, LATIN_EXT);

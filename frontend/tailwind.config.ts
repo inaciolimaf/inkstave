@@ -80,8 +80,8 @@ export default {
         },
         rule: "hsl(var(--rule))",
       },
-      // `sans` stays the Tailwind default: the app keeps its system stack until the pilot of spec 106.
       fontFamily: {
+        sans: ['"Source Sans 3 Variable"', "ui-sans-serif", "system-ui", "sans-serif"],
         serif: ['"Newsreader Variable"', "Georgia", "Cambria", "serif"],
         mono: ['"JetBrains Mono Variable"', "ui-monospace", "SFMono-Regular", "monospace"],
       },

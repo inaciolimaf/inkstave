@@ -353,10 +353,9 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
 
 The `frontend-standard` skill applies, with the identity in `specs/106-visual-identity-manuscript/spec.md`.
 
-- **Skeleton.** `Manuscript`, `ManuscriptHeader` and `Rule` (`frontend/src/components/manuscript.tsx`) are the
-  root of a screen. Only the projects screen uses them so far, as the spec 106 pilot, and the palette in
-  `frontend/src/components/manuscript.css` applies inside that root only. `?face=inter|plex|source` compares
-  the interface typeface until the user chooses.
+- **Skeleton.** `Manuscript`, `TitlePage` and `Desk` (`frontend/src/components/manuscript.tsx`) are the root
+  of a screen, each marked `data-manuscript`; `ManuscriptHeader` and `Rule` build it. The palette is in
+  `frontend/src/index.css`.
 - **Shell.** `AppShell` (`frontend/src/components/app-shell.tsx`) is the root route's element. It renders a
   skip link, moves focus to the screen's `h1` (or `main`) when the pathname changes, and sets
   `document.title` from the route's `handle.title`, a key of the `common` namespace. Screens render one
@@ -371,7 +370,7 @@ The `frontend-standard` skill applies, with the identity in `specs/106-visual-id
 - **Motion.** Durations are `duration-fast|base|slow`, or `var(--motion-*)` in CodeMirror themes, mirrored in
   `frontend/src/lib/motion.ts`. Reduced motion is global in `frontend/src/index.css`.
 - **Fonts.** Self-hosted from Fontsource, latin and latin-ext only. `frontend/src/fonts.ts` registers
-  JetBrains Mono and upright Newsreader; Inter and Newsreader italics load with the landing chunk.
+  Source Sans 3, JetBrains Mono and upright Newsreader; Inter and Newsreader italics load with the landing chunk.
 
 | Rule | Guarantee |
 |---|---|

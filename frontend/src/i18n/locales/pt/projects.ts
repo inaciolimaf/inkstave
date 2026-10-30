@@ -19,12 +19,7 @@ const dict: Dict = {
   },
   table: {
     caption: "Seus projetos",
-    name: "Nome",
     lastModified: "Última modificação",
-    actions: "Ações",
-  },
-  card: {
-    lastModified: "Última modificação {{date}}",
   },
   actionsMenu: {
     label: "Ações do projeto",
