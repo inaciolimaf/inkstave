@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { ProjectCardGrid, ProjectTable } from "./project-table";
+import { ProjectIndex } from "./project-index";
 import type { Project } from "./types";
 
 function ProjectListSkeleton() {
@@ -21,7 +21,7 @@ function ProjectListSkeleton() {
 function ProjectListEmpty({ onCreate }: { onCreate: () => void }) {
   const { t } = useTranslation("projects");
   return (
-    <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-12 text-center">
+    <div className="flex flex-col items-start gap-4 py-12">
       <FolderPlus className="size-10 text-muted-foreground" />
       <div>
         <p className="font-medium">{t("list.emptyTitle")}</p>
@@ -35,7 +35,7 @@ function ProjectListEmpty({ onCreate }: { onCreate: () => void }) {
 function ProjectListNoResults({ term, onClear }: { term: string; onClear: () => void }) {
   const { t } = useTranslation("projects");
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-12 text-center">
+    <div className="flex flex-col items-start gap-3 py-12">
       <p className="text-sm text-muted-foreground">{t("list.noResults", { term })}</p>
       <Button variant="outline" onClick={onClear}>
         {t("list.clearSearch")}
@@ -47,10 +47,7 @@ function ProjectListNoResults({ term, onClear }: { term: string; onClear: () => 
 function ProjectListError({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation("projects");
   return (
-    <div
-      role="alert"
-      className="flex flex-col items-center gap-3 rounded-lg border border-destructive/40 p-12 text-center"
-    >
+    <div role="alert" className="flex flex-col items-start gap-3 py-12">
       <p className="text-sm text-error-text">{t("list.loadError")}</p>
       <Button variant="outline" onClick={onRetry}>
         {t("common:action.retry")}
@@ -91,15 +88,5 @@ export function ProjectListView({
   if (total === 0) return <ProjectListEmpty onCreate={onCreate} />;
   if (visible.length === 0) return <ProjectListNoResults term={searchTerm} onClear={onClearSearch} />;
 
-  const actions = { onOpen, onRename, onDelete };
-  return (
-    <>
-      <div className="hidden md:block">
-        <ProjectTable projects={visible} {...actions} />
-      </div>
-      <div className="md:hidden">
-        <ProjectCardGrid projects={visible} {...actions} />
-      </div>
-    </>
-  );
+  return <ProjectIndex projects={visible} onOpen={onOpen} onRename={onRename} onDelete={onDelete} />;
 }

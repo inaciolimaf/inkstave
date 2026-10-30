@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider } from "react-router-dom";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 
 import { AuthProvider } from "@/modules/auth/auth-context";
 import { tokenStore } from "@/lib/token-store";
@@ -79,4 +79,9 @@ export async function renderScreen(url: string, { signedIn = false }: { signedIn
     </QueryClientProvider>,
   );
   return { ...view, router, queryClient, user: userEvent.setup() };
+}
+
+/** Spec 106: a screen is one sheet. */
+export function expectOneManuscript() {
+  expect(document.querySelectorAll("[data-manuscript]")).toHaveLength(1);
 }

@@ -1,0 +1,62 @@
+/*
+ * Spec 106, pilot: the manuscript palette and the interface faces under comparison. Scoped to the
+ * pilot screen until the user's verdict; then the values move to src/index.css, under the contrast test.
+ */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource-variable/source-sans-3/wght.css";
+
+/* Warm paper under daylight. */
+.manuscript-root {
+  --background: 40 40% 97.5%;
+  --foreground: 222 47% 11%;
+  --card: 40 40% 97.5%;
+  --card-foreground: 222 47% 11%;
+  --primary: 222 47% 11%;
+  --primary-foreground: 40 40% 97.5%;
+  --secondary: 39 32% 94%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 39 32% 94%;
+  --muted-foreground: 221 19% 34%;
+  --accent: 36 26% 91%;
+  --accent-foreground: 222 47% 11%;
+  --border: 36 22% 84%;
+  --input: 36 22% 74%;
+  --border-strong: 36 12% 48%;
+}
+
+/* Carbon paper at night: a warm near-black with chalky ink, not the light theme inverted. */
+.dark .manuscript-root {
+  --background: 30 6% 9%;
+  --foreground: 40 25% 88%;
+  --card: 30 6% 9%;
+  --card-foreground: 40 25% 88%;
+  --primary: 40 30% 86%;
+  --primary-foreground: 30 6% 10%;
+  --secondary: 30 6% 15%;
+  --secondary-foreground: 40 25% 88%;
+  --muted: 30 6% 15%;
+  --muted-foreground: 38 10% 68%;
+  --accent: 30 6% 18%;
+  --accent-foreground: 40 25% 88%;
+  --border: 30 6% 21%;
+  --input: 30 6% 30%;
+  --border-strong: 36 8% 55%;
+}
+
+.manuscript-root {
+  font-family: var(--face), ui-sans-serif, system-ui, sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.manuscript-root[data-face="source"] {
+  --face: "Source Sans 3 Variable";
+}
+.manuscript-root[data-face="plex"] {
+  --face: "IBM Plex Sans";
+}
+.manuscript-root[data-face="inter"] {
+  --face: "Inter Variable";
+}

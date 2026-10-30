@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/modules/auth";
 import { InkstaveLogo } from "@/components/inkstave-logo";
+import { Manuscript, ManuscriptHeader, Rule } from "@/components/manuscript";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,30 +40,36 @@ function ProjectsHeader({
   const { t } = useTranslation("projects");
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("header.title")}</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onImport}>
-            <Upload />
-            {t("import.cta")}
-          </Button>
-          <Button onClick={onCreate}>
-            <Plus />
-            {t("header.newProject")}
-          </Button>
-        </div>
-      </div>
+      <ManuscriptHeader
+        title={t("header.title")}
+        actions={
+          <>
+            <Button variant="outline" onClick={onImport}>
+              <Upload />
+              {t("import.cta")}
+            </Button>
+            <Button onClick={onCreate}>
+              <Plus />
+              {t("header.newProject")}
+            </Button>
+          </>
+        }
+      />
+      <Rule />
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex items-center gap-3 border-b border-border">
         <Input
           aria-label={t("header.searchLabel")}
           placeholder={t("header.searchPlaceholder")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="max-w-xs"
+          className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 shadow-none"
         />
         <Select value={sortKey} onValueChange={(v) => onSortChange(v as SortKey)}>
-          <SelectTrigger aria-label={t("header.sortLabel")} className="w-48">
+          <SelectTrigger
+            aria-label={t("header.sortLabel")}
+            className="w-auto shrink-0 gap-2 border-0 bg-transparent px-0 text-muted-foreground shadow-none"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -103,43 +110,44 @@ export function ProjectsPage() {
   };
 
   return (
-    <div className="min-h-dvh">
-      <header className="flex items-center justify-between border-b px-6 py-3">
-        <InkstaveLogo />
-        <div className="flex items-center gap-2">
-          <NotificationsBell />
-          <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
-            {t("nav.settings")}
-          </Button>
-          <Button variant="outline" size="sm" onClick={onLogout}>
-            {t("common:action.signOut")}
-          </Button>
+    <Manuscript
+      bar={
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+          <InkstaveLogo />
+          <div className="flex items-center gap-1">
+            <NotificationsBell />
+            <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+              {t("nav.settings")}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onLogout}>
+              {t("common:action.signOut")}
+            </Button>
+          </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-4xl space-y-6 p-6">
-        <ProjectsHeader
-          search={search}
-          onSearchChange={setSearch}
-          sortKey={sortKey}
-          onSortChange={setSortKey}
-          onCreate={() => setDialog({ type: "create" })}
-          onImport={() => setDialog({ type: "import" })}
-        />
+      }
+    >
+      <ProjectsHeader
+        search={search}
+        onSearchChange={setSearch}
+        sortKey={sortKey}
+        onSortChange={setSortKey}
+        onCreate={() => setDialog({ type: "create" })}
+        onImport={() => setDialog({ type: "import" })}
+      />
 
-        <ProjectListView
-          isLoading={projectsQuery.isLoading}
-          isError={projectsQuery.isError}
-          onRetry={() => void projectsQuery.refetch()}
-          total={projects.length}
-          searchTerm={debouncedSearch}
-          visible={visible}
-          onCreate={() => setDialog({ type: "create" })}
-          onClearSearch={() => setSearch("")}
-          onOpen={(p) => navigate(`/projects/${p.id}`)}
-          onRename={(p) => setDialog({ type: "rename", project: p })}
-          onDelete={(p) => setDialog({ type: "delete", project: p })}
-        />
-      </main>
+      <ProjectListView
+        isLoading={projectsQuery.isLoading}
+        isError={projectsQuery.isError}
+        onRetry={() => void projectsQuery.refetch()}
+        total={projects.length}
+        searchTerm={debouncedSearch}
+        visible={visible}
+        onCreate={() => setDialog({ type: "create" })}
+        onClearSearch={() => setSearch("")}
+        onOpen={(p) => navigate(`/projects/${p.id}`)}
+        onRename={(p) => setDialog({ type: "rename", project: p })}
+        onDelete={(p) => setDialog({ type: "delete", project: p })}
+      />
 
       <CreateProjectDialog open={dialog.type === "create"} onOpenChange={closeDialog} />
       <ImportProjectDialog open={dialog.type === "import"} onOpenChange={closeDialog} />
@@ -153,6 +161,6 @@ export function ProjectsPage() {
         onOpenChange={closeDialog}
         project={dialog.project ?? null}
       />
-    </div>
+    </Manuscript>
   );
 }

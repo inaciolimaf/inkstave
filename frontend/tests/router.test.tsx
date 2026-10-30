@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { tokenStore } from "@/lib/token-store";
 
-import { FAKE_USER, fakeApi, renderScreen } from "./helpers/screen";
+import { FAKE_USER, expectOneManuscript, fakeApi, renderScreen } from "./helpers/screen";
 
 const SESSION = {
   "POST /auth/refresh": { access_token: "a", refresh_token: "r", token_type: "bearer" },
@@ -40,6 +40,7 @@ describe("createAppRouter", () => {
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
     expect(await screen.findByRole("heading", { name: "Your projects" })).toBeInTheDocument();
+    expectOneManuscript();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
   });
 

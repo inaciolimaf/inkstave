@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,16 +14,6 @@ import {
 import { formatDate } from "@/lib/formatting";
 
 import { useDownloadProject } from "./use-download-project";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
 import type { Project } from "./types";
 
 interface RowActions {
@@ -74,60 +63,33 @@ export function RowActionsMenu({ project, onOpen, onRename, onDelete }: { projec
   );
 }
 
-export function ProjectTable({ projects, ...actions }: { projects: Project[] } & RowActions) {
+/** The index of works: each project a line of a table of contents, title, leader and date. */
+export function ProjectIndex({ projects, ...actions }: { projects: Project[] } & RowActions) {
   const { t } = useTranslation("projects");
   return (
-    <Table>
-      <TableCaption className="sr-only">{t("table.caption")}</TableCaption>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{t("table.name")}</TableHead>
-          <TableHead>{t("table.lastModified")}</TableHead>
-          <TableHead className="w-12 text-right">
-            <span className="sr-only">{t("table.actions")}</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {projects.map((project) => (
-          <TableRow key={project.id}>
-            <TableCell className="font-medium">
-              <Link to={`/projects/${project.id}`} className="hover:underline">
-                {project.name}
-              </Link>
-            </TableCell>
-            <TableCell className="text-muted-foreground">{formatDate(project.updatedAt)}</TableCell>
-            <TableCell className="text-right">
-              <RowActionsMenu project={project} {...actions} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-export function ProjectCardGrid({ projects, ...actions }: { projects: Project[] } & RowActions) {
-  const { t } = useTranslation("projects");
-  return (
-    <ul className="grid gap-3">
+    <ol aria-label={t("table.caption")}>
       {projects.map((project) => (
-        <li key={project.id}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base">
-                <Link to={`/projects/${project.id}`} className="hover:underline">
-                  {project.name}
-                </Link>
-              </CardTitle>
-              <RowActionsMenu project={project} {...actions} />
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {t("card.lastModified", { date: formatDate(project.updatedAt) })}
-            </CardContent>
-          </Card>
+        <li key={project.id} className="flex items-center gap-2 border-b border-border">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-3 sm:flex-row sm:items-baseline sm:gap-3">
+            <Link
+              to={`/projects/${project.id}`}
+              title={project.name}
+              className="truncate font-serif text-heading underline-offset-4 hover:underline"
+            >
+              {project.name}
+            </Link>
+            <span
+              aria-hidden="true"
+              className="hidden flex-1 border-b border-dotted border-border-strong sm:block"
+            />
+            <span className="whitespace-nowrap text-small tabular-nums text-muted-foreground">
+              <span className="sr-only">{t("table.lastModified")}: </span>
+              {formatDate(project.updatedAt)}
+            </span>
+          </div>
+          <RowActionsMenu project={project} {...actions} />
         </li>
       ))}
-    </ul>
+    </ol>
   );
 }

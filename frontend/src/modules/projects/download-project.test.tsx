@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils";
 
 import { downloadProjectZip } from "./api";
-import { ProjectTable } from "./project-table";
+import { ProjectIndex } from "./project-index";
 import type { Project } from "./types";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
@@ -44,7 +44,7 @@ describe("downloadProjectZip", () => {
 describe("RowActionsMenu download item", () => {
   function setup() {
     return renderWithProviders(
-      <ProjectTable projects={[project]} onOpen={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />,
+      <ProjectIndex projects={[project]} onOpen={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />,
     );
   }
 

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { ProjectTable } from "./project-table";
+import { ProjectIndex } from "./project-index";
 import type { Project } from "./types";
 
 const projects: Project[] = [
@@ -20,21 +20,21 @@ function setup() {
   const handlers = { onOpen: vi.fn(), onRename: vi.fn(), onDelete: vi.fn() };
   render(
     <MemoryRouter>
-      <ProjectTable projects={projects} {...handlers} />
+      <ProjectIndex projects={projects} {...handlers} />
     </MemoryRouter>,
   );
   return handlers;
 }
 
-describe("ProjectTable", () => {
+describe("ProjectIndex", () => {
   it("links each project name to its editor route", () => {
     setup();
     expect(screen.getByRole("link", { name: "Thesis" })).toHaveAttribute("href", "/projects/abc");
   });
 
-  it("has a visually-hidden caption for screen readers", () => {
+  it("names the list for screen readers", () => {
     setup();
-    expect(screen.getByText("Your projects")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Your projects" })).toBeInTheDocument();
   });
 
   it("exposes Open / Rename / Delete in the row actions menu", async () => {

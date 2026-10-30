@@ -96,7 +96,7 @@ const hasLink = async (name: string) =>
 const noLink = (name: string) => expect(screen.queryAllByRole("link", { name })).toHaveLength(0);
 
 async function openRowMenu(name: string) {
-  const row = screen.getByRole("row", { name: new RegExp(name) });
+  const row = screen.getByRole("link", { name }).closest("li") as HTMLElement;
   await userEvent.click(within(row).getByRole("button", { name: "Project actions" }));
 }
 
