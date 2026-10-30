@@ -13,10 +13,9 @@ from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.cache import RedisCache, project_meta_key
 from inkstave.infra.deps import get_object_store
-from inkstave.modules.auth.deps import get_current_user
-from inkstave.modules.collab.rooms.flush import flush_open_project_docs
-from inkstave.modules.compile.outputs.repository import OutputRepository
-from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.auth import get_current_user
+from inkstave.modules.collab import flush_open_project_docs
+from inkstave.modules.compile import OutputRepository, OutputStore
 from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
 from inkstave.modules.projects.access.deps import require_capability
 from inkstave.modules.projects.access.service import role_for
@@ -37,7 +36,7 @@ if TYPE_CHECKING:
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
     from inkstave.modules.projects.models.project import Project
 
 router = APIRouter(prefix="/projects", tags=["projects"])

@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import Depends, Request
+from fastapi import Depends, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from inkstave.core.config.settings import Settings
@@ -126,4 +126,17 @@ async def authenticate_ws_token(token: str, token_service: TokenService, session
     Reused by spec 29's WebSocket layer. Raises :class:`NotAuthenticatedError`
     on any invalid/expired token or unknown user.
     """
+    return await _resolve_user(token, token_service, session)
+
+
+async def sse_user(
+    access_token: str | None = Query(None),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token_service: TokenService = Depends(get_token_service),
+    session: AsyncSession = Depends(get_db_session),
+) -> User:
+    """SSE auth: token via the Authorization header **or** an ``?access_token=`` query."""
+    token = (credentials.credentials if credentials else None) or access_token
+    if not token:
+        raise NotAuthenticatedError()
     return await _resolve_user(token, token_service, session)

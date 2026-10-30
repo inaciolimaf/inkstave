@@ -20,7 +20,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects import Document
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

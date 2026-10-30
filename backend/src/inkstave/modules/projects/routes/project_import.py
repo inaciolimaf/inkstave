@@ -18,9 +18,7 @@ from inkstave.core.db.session import get_db_session
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ErrorEnvelope, NotFoundError
 from inkstave.infra.deps import get_object_store
-from inkstave.modules.auth.deps import get_current_user
-from inkstave.modules.auth.throttling.policies import rate_limit_named
-from inkstave.modules.compile.routes.helpers import _sse_user
+from inkstave.modules.auth import get_current_user, rate_limit_named, sse_user
 from inkstave.modules.projects.access.capabilities import Capability
 from inkstave.modules.projects.access.deps import require_capability
 from inkstave.modules.projects.access.service import role_for
@@ -40,7 +38,7 @@ if TYPE_CHECKING:
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
     from inkstave.modules.projects.models.project import Project
     from inkstave.modules.projects.models.project_import import ProjectImport
 
@@ -212,7 +210,7 @@ async def get_import(
 async def import_events(
     import_id: UUID,
     project_id: UUID,
-    user: User = Depends(_sse_user),
+    user: User = Depends(sse_user),
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),

@@ -16,10 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.errors import BadRequestError, GoneError
 from inkstave.infra.mailer.templates import render_email
+from inkstave.modules.auth import hash_token
 from inkstave.modules.auth.credentials.auth_tokens import consume_token, issue_token
 from inkstave.modules.auth.models.auth_token import AuthToken
 from inkstave.modules.auth.models.user import User
-from inkstave.modules.projects.sharing.common import hash_token
 from tests.factories.user import UserFactory
 from tests.unit._clock import FrozenClock
 

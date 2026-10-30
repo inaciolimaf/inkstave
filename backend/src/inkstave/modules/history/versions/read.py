@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 
-from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth import User
 from inkstave.modules.history.models import HistoryLabel, HistoryUpdate
 from inkstave.modules.history.schemas import (
     AuthorInfo,

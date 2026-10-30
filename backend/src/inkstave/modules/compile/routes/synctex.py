@@ -15,15 +15,14 @@ from inkstave.modules.compile.outputs.store import OutputStore
 from inkstave.modules.compile.queue.repository import CompileRepository
 from inkstave.modules.compile.synctex.models import ForwardResult, InverseResult
 from inkstave.modules.compile.synctex.service import SyncTexNotAvailableError, SyncTexService
-from inkstave.modules.projects.access.capabilities import Capability
-from inkstave.modules.projects.access.deps import require_capability
+from inkstave.modules.projects import Capability, require_capability
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
-    from inkstave.modules.projects.models.project import Project
+    from inkstave.modules.projects import Project
 
 router = APIRouter(prefix="/projects/{project_id}/synctex", tags=["synctex"])
 

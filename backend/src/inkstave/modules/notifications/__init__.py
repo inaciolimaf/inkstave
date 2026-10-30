@@ -1,1 +1,7 @@
-"""In-app notifications: model service, endpoints, invite hook, sweep job (spec 39)."""
+"""The notifications inbox."""
+
+from inkstave.modules.notifications.inbox.invite_hook import notify_invite
+
+__all__ = [
+    "notify_invite",
+]

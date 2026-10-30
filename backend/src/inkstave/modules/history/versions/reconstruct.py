@@ -15,8 +15,7 @@ from sqlalchemy import select
 
 from inkstave.core.errors import NotFoundError
 from inkstave.core.invariants import require
-from inkstave.modules.collab.crdt.ydocument import YDocument
-from inkstave.modules.collab.models import CrdtDocumentState, CrdtUpdate
+from inkstave.modules.collab import CrdtDocumentState, CrdtUpdate, YDocument
 from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
 
 if TYPE_CHECKING:

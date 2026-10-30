@@ -13,14 +13,12 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 
-from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth import User, generate_token, hash_token
 from inkstave.modules.projects.models.invite import InviteStatus, ProjectInvite
 from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
 from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.sharing.common import (
     _now,
-    generate_token,
-    hash_token,
     membership_of,
     require_owner,
 )

@@ -1,1 +1,7 @@
-"""Server-side version-history capture from the CRDT update stream (spec 36)."""
+"""Document history: capture, reconstruction and restore of versions."""
+
+from inkstave.modules.history.versions.capture import HistoryCaptureService
+
+__all__ = [
+    "HistoryCaptureService",
+]

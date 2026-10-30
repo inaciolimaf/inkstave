@@ -26,15 +26,14 @@ from fastapi import APIRouter, Query, WebSocket
 from inkstave.core.config.settings import get_settings
 from inkstave.core.observability.context import bind_context, clear_context
 from inkstave.core.observability.metrics import track_ws
-from inkstave.modules.auth.credentials.tokens import build_token_service
-from inkstave.modules.auth.deps import NotAuthenticatedError, authenticate_ws_token
+from inkstave.modules.auth import NotAuthenticatedError, authenticate_ws_token, build_token_service
 from inkstave.modules.collab.crdt.protocol import encode_awareness, encode_sync_step1
 from inkstave.modules.collab.ws.connection import _authorize, _cleanup, _force_close, _make_forwarder, _writer
 from inkstave.modules.collab.ws.messaging import _dispatch, _receive_loop
 from inkstave.modules.collab.ws.rooms import CLOSE_DEAD, CLOSE_UNAUTHORIZED, Connection
 
 if TYPE_CHECKING:
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
     from inkstave.modules.collab.rooms.manager import OpenDocument
     from inkstave.modules.collab.ws.components import CollabComponents
 

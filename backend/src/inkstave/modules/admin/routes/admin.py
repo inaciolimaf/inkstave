@@ -5,8 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 
 from inkstave.core.errors import ErrorEnvelope
-from inkstave.modules.auth.deps import require_admin
-from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth import User, require_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

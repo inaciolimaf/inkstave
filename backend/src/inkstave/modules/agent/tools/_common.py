@@ -6,10 +6,15 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from inkstave.modules.agent.tools.base import ToolContext, ToolError
-from inkstave.modules.projects.content.documents import NotADocumentError, get_document
-from inkstave.modules.projects.models.document import Document
-from inkstave.modules.projects.models.tree_entity import TreeEntity
-from inkstave.modules.projects.tree.service import EntityNotFoundError, compute_path, get_tree
+from inkstave.modules.projects import (
+    Document,
+    EntityNotFoundError,
+    NotADocumentError,
+    TreeEntity,
+    compute_path,
+    get_document,
+    get_tree,
+)
 
 if TYPE_CHECKING:
     pass

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from inkstave.core.db.session import get_db_session
 from inkstave.core.errors import ErrorEnvelope
-from inkstave.modules.auth.deps import get_current_user
+from inkstave.modules.auth import get_current_user
 from inkstave.modules.notifications.inbox.service import NotificationService
 from inkstave.modules.notifications.schemas import (
     MarkAllResult,
@@ -22,7 +22,7 @@ from inkstave.modules.notifications.schemas import (
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 

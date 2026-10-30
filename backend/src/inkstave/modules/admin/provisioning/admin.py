@@ -12,9 +12,7 @@ import logging
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.modules.auth.accounts.users import normalise_email
-from inkstave.modules.auth.credentials.password import PasswordHasher
-from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth import PasswordHasher, User, normalise_email
 
 logger = logging.getLogger("inkstave.bootstrap")
 

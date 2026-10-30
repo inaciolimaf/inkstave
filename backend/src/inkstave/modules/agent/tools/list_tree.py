@@ -9,9 +9,7 @@ from sqlalchemy import select
 
 from inkstave.modules.agent.tools._common import depth_of, load_tree
 from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
-from inkstave.modules.projects.models.document import Document
-from inkstave.modules.projects.models.file import File
-from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.modules.projects import Document, File, TreeEntity, TreeEntityType
 
 
 class ListTreeArgs(BaseModel):

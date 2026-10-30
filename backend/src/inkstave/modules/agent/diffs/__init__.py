@@ -17,8 +17,8 @@ from inkstave.modules.agent.diffs.compute import (
 )
 from inkstave.modules.agent.diffs.models import ProposedDiff, ProposedDiffStatus
 from inkstave.modules.agent.graph.edits import EditMode
-from inkstave.modules.projects.content.documents import NotADocumentError, get_document
-from inkstave.modules.projects.tree.service import EntityNotFoundError
+from inkstave.modules.projects import NotADocumentError, get_document
+from inkstave.modules.projects import EntityNotFoundError
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from inkstave.modules.agent.graph.edits import StagedEdit
     from inkstave.modules.agent.graph.state import AgentState
     from inkstave.modules.agent.models import AgentSession
-    from inkstave.modules.projects.models.document import Document
+    from inkstave.modules.projects import Document
 
 logger = logging.getLogger("inkstave.agent.diffs")
 

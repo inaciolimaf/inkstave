@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 
-from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth import User
 from inkstave.modules.notifications.inbox.service import NotificationService
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.mailer.enqueuer import EmailEnqueuer
-    from inkstave.modules.projects.models.invite import ProjectInvite
+    from inkstave.modules.projects import ProjectInvite
 
 
 async def notify_invite(

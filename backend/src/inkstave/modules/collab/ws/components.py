@@ -13,7 +13,7 @@ from inkstave.modules.collab.rooms.manager import CollabSettings, DocumentManage
 from inkstave.modules.collab.rooms.store import CrdtStore, SessionFactory
 from inkstave.modules.collab.ws.redis_bridge import RedisBridge, Subscription
 from inkstave.modules.collab.ws.rooms import RoomManager
-from inkstave.modules.history.versions.capture import HistoryCaptureService
+from inkstave.modules.history import HistoryCaptureService
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis

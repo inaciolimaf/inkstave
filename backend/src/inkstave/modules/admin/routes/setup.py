@@ -11,9 +11,7 @@ from inkstave.core.db.session import get_db_session
 from inkstave.core.errors import ConflictError
 from inkstave.core.schemas import StrictModel
 from inkstave.modules.admin.provisioning.admin import admin_exists, ensure_initial_admin
-from inkstave.modules.auth.credentials.password import PasswordHasher
-from inkstave.modules.auth.deps import get_password_hasher
-from inkstave.modules.auth.schemas.user import RegisterRequest, UserPublic
+from inkstave.modules.auth import PasswordHasher, RegisterRequest, UserPublic, get_password_hasher
 
 router = APIRouter(prefix="/api/setup", tags=["setup"])
 

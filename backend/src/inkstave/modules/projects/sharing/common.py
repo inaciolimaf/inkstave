@@ -6,8 +6,6 @@ re-exported from :mod:`inkstave.modules.projects.sharing`.
 
 from __future__ import annotations
 
-import hashlib
-import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -22,9 +20,6 @@ from inkstave.modules.projects.sharing.errors import NotProjectOwnerError
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-
-_TOKEN_BYTES = 32
-
 
 # --- value objects --------------------------------------------------------- #
 
@@ -43,14 +38,6 @@ class MemberInfo:
 
 def _now() -> datetime:
     return datetime.now(UTC)
-
-
-def hash_token(raw: str) -> str:
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def generate_token() -> str:
-    return secrets.token_urlsafe(_TOKEN_BYTES)
 
 
 async def _active_project(session: AsyncSession, project_id: UUID) -> Project:

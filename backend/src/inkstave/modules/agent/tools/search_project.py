@@ -9,8 +9,7 @@ from pydantic import BaseModel, Field
 from inkstave.modules.agent.tools._common import load_tree
 from inkstave.modules.agent.tools._latex import scan_headings
 from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
-from inkstave.modules.projects.content.documents import read_content_for_collab
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects import TreeEntityType, read_content_for_collab
 
 _SNIPPET_MAX = 240
 _PAYLOAD_SOFT_CAP = 8192

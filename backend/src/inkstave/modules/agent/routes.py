@@ -29,29 +29,22 @@ from inkstave.modules.agent.schemas import (
     ProposedDiffSummary,
     SessionDetailOut,
 )
-from inkstave.modules.auth.deps import (
-    NotAuthenticatedError,
-    _resolve_user,
-    bearer_scheme,
+from inkstave.modules.auth import (
     get_current_user,
-    get_token_service,
+    rate_limit_named,
+    sse_user,
 )
-from inkstave.modules.auth.throttling.policies import rate_limit_named
-from inkstave.modules.collab.rooms.flush import flush_open_project_docs
-from inkstave.modules.projects.access.service import role_for
-from inkstave.modules.projects.catalog.service import ProjectNotFoundError
-from inkstave.modules.projects.models.project import Project
+from inkstave.modules.collab import flush_open_project_docs
+from inkstave.modules.projects import Project, ProjectNotFoundError, role_for
 
 if TYPE_CHECKING:
-    from fastapi.security import HTTPAuthorizationCredentials
     from redis.asyncio import Redis
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.core.config.settings import Settings
     from inkstave.modules.agent.diffs.models import ProposedDiff
     from inkstave.modules.agent.runs.enqueuer import AgentEnqueuer
-    from inkstave.modules.auth.credentials.tokens import TokenService
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
 
 router = APIRouter(prefix="/projects/{project_id}/agent", tags=["agent"])
 
@@ -250,24 +243,12 @@ async def cancel_run(
 # --- SSE event stream (query-param token auth) ----------------------------- #
 
 
-async def _sse_user(
-    access_token: str | None = Query(None),
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    token_service: TokenService = Depends(get_token_service),
-    session: AsyncSession = Depends(get_db_session),
-) -> User:
-    token = (credentials.credentials if credentials else None) or access_token
-    if not token:
-        raise NotAuthenticatedError()
-    return await _resolve_user(token, token_service, session)
-
-
 @router.get("/sessions/{session_id}/runs/{run_id}/events", responses=_ERRORS)
 async def run_events(
     project_id: UUID,
     session_id: UUID,
     run_id: UUID,
-    user: User = Depends(_sse_user),
+    user: User = Depends(sse_user),
     session: AsyncSession = Depends(get_db_session),
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:

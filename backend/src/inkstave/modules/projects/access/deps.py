@@ -22,7 +22,7 @@ from sqlalchemy import and_, select
 from inkstave.core.config.settings import Settings
 from inkstave.core.db.session import get_db_session
 from inkstave.core.deps import get_settings_dep
-from inkstave.modules.auth.deps import get_current_user
+from inkstave.modules.auth import get_current_user
 from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
 from inkstave.modules.projects.access.service import InsufficientRoleError
 from inkstave.modules.projects.catalog.service import ProjectNotFoundError
@@ -32,7 +32,7 @@ from inkstave.modules.projects.models.project import Project
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
 
 
 async def _resolve(

@@ -10,15 +10,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from fastapi import Depends, Query, status
-from fastapi.security import HTTPAuthorizationCredentials
+from fastapi import Depends, status
 
 from inkstave.core.db.session import get_db_session
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope, NotFoundError
 from inkstave.infra.deps import get_object_store
-from inkstave.modules.auth.credentials.tokens import TokenService
-from inkstave.modules.auth.deps import NotAuthenticatedError, _resolve_user, bearer_scheme, get_token_service
 from inkstave.modules.compile.outputs.repository import OutputRepository
 from inkstave.modules.compile.outputs.store import OutputStore, StoredObject
 from inkstave.modules.compile.queue.repository import CompileRepository
@@ -28,7 +25,6 @@ if TYPE_CHECKING:
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
-    from inkstave.modules.auth.models.user import User
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_401_UNAUTHORIZED: {"model": ErrorEnvelope},
@@ -64,16 +60,3 @@ def _pdf_headers(obj: StoredObject, settings: Settings) -> dict[str, str]:
         "Cache-Control": f"private, max-age={settings.compile_pdf_cache_max_age_s}",
         "Content-Disposition": 'inline; filename="output.pdf"',
     }
-
-
-async def _sse_user(
-    access_token: str | None = Query(None),
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    token_service: TokenService = Depends(get_token_service),
-    session: AsyncSession = Depends(get_db_session),
-) -> User:
-    """SSE auth: token via the Authorization header **or** an ``?access_token=`` query."""
-    token = (credentials.credentials if credentials else None) or access_token
-    if not token:
-        raise NotAuthenticatedError()
-    return await _resolve_user(token, token_service, session)

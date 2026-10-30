@@ -12,7 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from inkstave.core.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
-    from inkstave.modules.projects.models.project import Project
+    from inkstave.modules.projects import Project
 
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):

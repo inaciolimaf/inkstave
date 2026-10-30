@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 
 from inkstave.core.errors import ConflictError, NotFoundError
 from inkstave.modules.history.models import HistoryLabel, HistoryUpdate
-from inkstave.modules.projects.models.document import Document
+from inkstave.modules.projects import Document
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

@@ -26,8 +26,7 @@ from inkstave.modules.compile.running.limits import CancelToken
 from inkstave.modules.compile.running.result import CompileResult, CompileStatus
 from inkstave.modules.compile.running.service import CompileOptions
 from inkstave.modules.compile.schemas import CompileStatusResponse
-from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
-from inkstave.modules.projects.access.service import role_for
+from inkstave.modules.projects import Capability, capabilities_for, role_for
 
 logger = logging.getLogger(__name__)
 

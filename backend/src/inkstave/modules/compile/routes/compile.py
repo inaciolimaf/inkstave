@@ -11,9 +11,8 @@ from fastapi.responses import StreamingResponse
 
 from inkstave.core.db.session import get_db_session
 from inkstave.core.deps import get_redis, get_settings_dep
-from inkstave.modules.auth.deps import get_current_user
-from inkstave.modules.auth.throttling.policies import rate_limit_named
-from inkstave.modules.collab.rooms.flush import flush_open_project_docs
+from inkstave.modules.auth import get_current_user, rate_limit_named, sse_user
+from inkstave.modules.collab import flush_open_project_docs
 from inkstave.modules.compile.deps import get_compile_enqueuer
 from inkstave.modules.compile.models.compile import CompileJobStatus, is_terminal
 from inkstave.modules.compile.outputs.store import OutputStore, RangeResult, parse_range
@@ -26,23 +25,19 @@ from inkstave.modules.compile.routes.helpers import (
     CompileNotFoundError,
     _pdf_headers,
     _require_compile,
-    _sse_user,
     get_output_store,
 )
 from inkstave.modules.compile.schemas import CompileRequest, CompileStatusResponse, OutputSummary
-from inkstave.modules.projects.access.capabilities import Capability
-from inkstave.modules.projects.access.deps import require_capability
-from inkstave.modules.projects.access.service import role_for
-from inkstave.modules.projects.catalog.service import ProjectNotFoundError
+from inkstave.modules.projects import Capability, ProjectNotFoundError, require_capability, role_for
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.core.config.settings import Settings
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
     from inkstave.modules.compile.models.compile import Compile
-    from inkstave.modules.projects.models.project import Project
+    from inkstave.modules.projects import Project
 
 router = APIRouter(prefix="/projects/{project_id}/compile", tags=["compile"])
 
@@ -245,7 +240,7 @@ async def get_output_log(
 async def compile_events(
     compile_id: UUID,
     project_id: UUID,
-    user: User = Depends(_sse_user),
+    user: User = Depends(sse_user),
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),

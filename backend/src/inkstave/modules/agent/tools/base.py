@@ -16,8 +16,7 @@ from pydantic import BaseModel
 
 from inkstave.modules.agent.graph.edits import StagedEdit
 from inkstave.modules.agent.llm.base import ToolSpec
-from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
-from inkstave.modules.projects.access.service import role_for
+from inkstave.modules.projects import Capability, capabilities_for, role_for
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

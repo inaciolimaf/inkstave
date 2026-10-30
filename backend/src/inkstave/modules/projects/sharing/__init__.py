@@ -16,10 +16,9 @@ modules (``sharing_errors``, ``sharing_common``, ``sharing_members``,
 
 from __future__ import annotations
 
+from inkstave.modules.auth import generate_token, hash_token
 from inkstave.modules.projects.sharing.common import (
     MemberInfo,
-    generate_token,
-    hash_token,
     membership_of,
     require_member,
     require_owner,

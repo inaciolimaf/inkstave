@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from inkstave.modules.collab.rooms.store import SessionFactory
-from inkstave.modules.projects.content.documents import read_content_for_collab, set_content_from_collab
+from inkstave.modules.projects import read_content_for_collab, set_content_from_collab
 
 if TYPE_CHECKING:
     pass

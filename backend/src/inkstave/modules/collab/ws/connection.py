@@ -16,14 +16,18 @@ from inkstave.core.tasks import spawn
 from inkstave.modules.collab.crdt.protocol import encode_awareness
 from inkstave.modules.collab.ws.redis_bridge import OnMessage
 from inkstave.modules.collab.ws.rooms import CLOSE_FORBIDDEN, CLOSE_NOT_FOUND, CLOSE_SLOW_CONSUMER, Connection
-from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
-from inkstave.modules.projects.access.service import role_for
-from inkstave.modules.projects.models.project import Project
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
-from inkstave.modules.projects.tree.service import EntityNotFoundError, get_entity
+from inkstave.modules.projects import (
+    Capability,
+    EntityNotFoundError,
+    Project,
+    TreeEntityType,
+    capabilities_for,
+    get_entity,
+    role_for,
+)
 
 if TYPE_CHECKING:
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
     from inkstave.modules.collab.ws.components import CollabComponents
 
 

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from inkstave.modules.agent.tools._common import load_tree, resolve_document
 from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
-from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.modules.projects import TreeEntity, TreeEntityType
 
 
 class ReadFileArgs(BaseModel):

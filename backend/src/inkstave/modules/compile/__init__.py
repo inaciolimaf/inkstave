@@ -6,6 +6,9 @@ from inkstave.modules.compile.running.runner import LocalTectonicRunner, Tectoni
 from inkstave.modules.compile.running.sandbox import SandboxedTectonicRunner
 from inkstave.modules.compile.running.service import CompileOptions, CompileService
 
+from inkstave.modules.compile.outputs.repository import OutputRepository
+from inkstave.modules.compile.outputs.store import OutputStore
+
 __all__ = [
     "CancelToken",
     "CompileArtifact",
@@ -14,6 +17,8 @@ __all__ = [
     "CompileService",
     "CompileStatus",
     "LocalTectonicRunner",
+    "OutputRepository",
+    "OutputStore",
     "ResourceLimits",
     "RunOutcome",
     "SandboxedTectonicRunner",

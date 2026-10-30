@@ -13,13 +13,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import Settings
-from inkstave.modules.auth.accounts.users import normalise_email
-from inkstave.modules.auth.credentials.password import PasswordHasher
-from inkstave.modules.auth.models.user import User
-from inkstave.modules.projects.catalog.service import create_project
-from inkstave.modules.projects.content.documents import set_content_from_collab
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
-from inkstave.modules.projects.tree.service import create_entity
+from inkstave.modules.auth import PasswordHasher, User, normalise_email
+from inkstave.modules.projects import TreeEntityType, create_entity, create_project, set_content_from_collab
 
 logger = logging.getLogger("inkstave.bootstrap")
 

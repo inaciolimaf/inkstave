@@ -25,7 +25,7 @@ from pycrdt import merge_updates
 from sqlalchemy import func, select
 
 from inkstave.core.tasks import spawn
-from inkstave.modules.collab.crdt.ydocument import YDocument
+from inkstave.modules.collab import YDocument
 from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
 from inkstave.modules.history.versions.reconstruct import reconstruct_doc, reconstruct_state
 

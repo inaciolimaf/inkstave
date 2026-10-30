@@ -15,7 +15,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth import User
 from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
 from inkstave.modules.projects.sharing.common import (
     MemberInfo,

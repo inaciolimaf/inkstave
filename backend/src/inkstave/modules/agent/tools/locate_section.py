@@ -11,8 +11,7 @@ from inkstave.modules.agent.context import locate_section as resolve_sections
 from inkstave.modules.agent.context.models import SectionMatch
 from inkstave.modules.agent.tools._common import load_tree
 from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
-from inkstave.modules.projects.content.documents import read_content_for_collab
-from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from inkstave.modules.projects import TreeEntity, TreeEntityType, read_content_for_collab
 
 
 class LocateSectionArgs(BaseModel):

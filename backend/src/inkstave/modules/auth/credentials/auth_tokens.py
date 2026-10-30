@@ -19,8 +19,8 @@ from sqlalchemy import select, update
 
 from inkstave.core.errors import BadRequestError, GoneError
 from inkstave.core.time import SYSTEM_CLOCK, Clock
+from inkstave.modules.auth.credentials.opaque_tokens import generate_token, hash_token
 from inkstave.modules.auth.models.auth_token import AuthToken
-from inkstave.modules.projects.sharing.common import generate_token, hash_token
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

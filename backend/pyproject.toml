@@ -50,6 +50,7 @@ dev = [
     "pytest-xdist>=3.8.0",
     "pyyaml>=6.0.3",
     "asyncpg-stubs>=0.31.3",
+    "import-linter>=2.15",
 ]
 
 [tool.uv]
@@ -129,6 +130,9 @@ max-statements = 50
 # The in-process ASGI WebSocket test client exposes idiomatic `timeout=` params
 # (mirroring Starlette's TestClient / the `websockets` API); ASYNC109 doesn't fit.
 "tests/collab_ws_harness.py" = ["ASYNC109"]
+# A module's public interface imports models and schemas first and services after: while
+# cycles between modules remain, that order is what makes the import work.
+"src/inkstave/modules/*/__init__.py" = ["I001"]
 # The fake S3 client mirrors boto3's PascalCase keyword arguments (Bucket, Key, Body…).
 "tests/unit/test_storage.py" = ["N803"]
 # The standard's test exceptions: bandit's heuristics do not apply (fixture secrets are
@@ -162,6 +166,94 @@ plugins = ["pydantic.mypy"]
 # These ship no complete type stubs.
 module = ["pythonjsonlogger.*"]
 ignore_missing_imports = true
+
+[tool.importlinter]
+root_packages = ["inkstave"]
+# TYPE_CHECKING imports never run, so they create no cycle; runtime imports are what is enforced.
+exclude_type_checking_imports = true
+
+# The composition root (app, cli, main, router, worker, models) gathers everything and stays out
+# of the contracts. Each ignore_imports entry is an existing exception, with its way out as
+# "Target:"; the end state is every list empty, and tests/unit/test_architecture.py only lets
+# the count go down.
+
+[[tool.importlinter.contracts]]
+name = "layers: modules -> infra -> core"
+type = "layers"
+layers = ["inkstave.modules", "inkstave.infra", "inkstave.core"]
+
+[[tool.importlinter.contracts]]
+name = "module order, top to bottom"
+type = "layers"
+containers = ["inkstave.modules"]
+layers = ["admin | agent", "compile", "history", "collab", "projects", "notifications", "auth"]
+ignore_imports = [
+    # The room builds the history capture service and feeds it each CRDT update, while history
+    # reads CRDT state back. Target: collab emits an update event that history subscribes to.
+    "inkstave.modules.collab.ws.components -> inkstave.modules.history",
+    # The export flushes open rooms first so documents leave with their live content.
+    # Target: a domain event asked of collab, or the export moves up to a coordinating module.
+    "inkstave.modules.projects.routes.projects -> inkstave.modules.collab",
+    # Project deletion sweeps the compile outputs. Target: projects emits ProjectDeleted and
+    # compile subscribes.
+    "inkstave.modules.projects.routes.projects -> inkstave.modules.compile",
+]
+
+[[tool.importlinter.contracts]]
+name = "admin: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.admin.models", "inkstave.modules.admin.provisioning", "inkstave.modules.admin.routes"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "agent: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.agent.context", "inkstave.modules.agent.deps", "inkstave.modules.agent.diffs", "inkstave.modules.agent.graph", "inkstave.modules.agent.llm", "inkstave.modules.agent.models", "inkstave.modules.agent.routes", "inkstave.modules.agent.runs", "inkstave.modules.agent.safety", "inkstave.modules.agent.schemas", "inkstave.modules.agent.tools"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "auth: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.auth.accounts", "inkstave.modules.auth.credentials", "inkstave.modules.auth.deps", "inkstave.modules.auth.models", "inkstave.modules.auth.routes", "inkstave.modules.auth.schemas", "inkstave.modules.auth.throttling"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "collab: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.collab.crdt", "inkstave.modules.collab.models", "inkstave.modules.collab.rooms", "inkstave.modules.collab.ws"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "compile: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.compile.assembly", "inkstave.modules.compile.deps", "inkstave.modules.compile.logparse", "inkstave.modules.compile.models", "inkstave.modules.compile.outputs", "inkstave.modules.compile.queue", "inkstave.modules.compile.routes", "inkstave.modules.compile.running", "inkstave.modules.compile.schemas", "inkstave.modules.compile.synctex"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "history: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.history.models", "inkstave.modules.history.routes", "inkstave.modules.history.schemas", "inkstave.modules.history.versions"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "notifications: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.notifications.inbox", "inkstave.modules.notifications.models", "inkstave.modules.notifications.routes", "inkstave.modules.notifications.schemas"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "projects: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications"]
+forbidden_modules = ["inkstave.modules.projects.access", "inkstave.modules.projects.catalog", "inkstave.modules.projects.content", "inkstave.modules.projects.deps", "inkstave.modules.projects.models", "inkstave.modules.projects.routes", "inkstave.modules.projects.schemas", "inkstave.modules.projects.sharing", "inkstave.modules.projects.transfer", "inkstave.modules.projects.tree"]
+allow_indirect_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

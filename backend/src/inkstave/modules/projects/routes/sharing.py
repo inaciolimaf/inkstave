@@ -17,8 +17,8 @@ from inkstave.core.db.session import get_db_session
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.deps import get_email_enqueuer
-from inkstave.modules.auth.deps import get_current_user
-from inkstave.modules.notifications.inbox.invite_hook import notify_invite
+from inkstave.modules.auth import get_current_user
+from inkstave.modules.notifications import notify_invite
 from inkstave.modules.projects import sharing as sharing_service
 from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.schemas.sharing import (
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.mailer.enqueuer import EmailEnqueuer
-    from inkstave.modules.auth.models.user import User
+    from inkstave.modules.auth import User
 
 router = APIRouter(prefix="/projects", tags=["sharing"])
 invites_router = APIRouter(prefix="/invites", tags=["sharing"])

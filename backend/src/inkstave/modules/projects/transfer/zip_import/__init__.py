@@ -4,7 +4,7 @@ The security-critical, pure-ish core of project import: validate an archive's
 central directory *without decompressing* (zip-slip / symlink / zip-bomb
 defences), then reconstruct the tree by reusing the existing tree / document /
 file services. Isolated here so it can be unit-tested over tiny in-memory zips
-and so the ARQ job (``services/import_jobs.py``) stays thin.
+and so the ARQ job (``transfer/jobs.py``) stays thin.
 
 This is an independent implementation; it shares no code with Overleaf's
 ``ArchiveManager`` (read for understanding only — AGPLv3 vs MIT).

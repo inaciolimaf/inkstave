@@ -13,10 +13,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from inkstave.modules.projects.models.document import Document
-from inkstave.modules.projects.models.file import File
-from inkstave.modules.projects.models.tree_entity import TreeEntity
-from inkstave.modules.projects.tree.service import compute_path, get_tree
+from inkstave.modules.projects import Document, File, TreeEntity, compute_path, get_tree
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

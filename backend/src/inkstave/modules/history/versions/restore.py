@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 
 from inkstave.core.errors import AppError
 from inkstave.core.invariants import require
-from inkstave.modules.collab.crdt.protocol import encode_update
+from inkstave.modules.collab import encode_update
 from inkstave.modules.history.models import HistoryUpdate
 from inkstave.modules.history.schemas import (
     DocRestoreResult,

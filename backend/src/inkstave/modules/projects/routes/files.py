@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from inkstave.core.db.session import get_db_session
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.deps import get_object_store
-from inkstave.modules.auth.throttling.policies import rate_limit_named
+from inkstave.modules.auth import rate_limit_named
 from inkstave.modules.projects.access.capabilities import Capability
 from inkstave.modules.projects.access.deps import require_capability
 from inkstave.modules.projects.content import files as file_service

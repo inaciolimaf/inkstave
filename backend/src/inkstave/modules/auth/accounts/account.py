@@ -16,11 +16,11 @@ from inkstave.core.config.settings import Settings
 from inkstave.core.errors import BadRequestError, ConflictError, GoneError, UnauthorizedError
 from inkstave.core.time import SYSTEM_CLOCK, Clock
 from inkstave.modules.auth.accounts.users import email_exists, normalise_email
+from inkstave.modules.auth.credentials.opaque_tokens import generate_token, hash_token
 from inkstave.modules.auth.credentials.password import PasswordHasher
 from inkstave.modules.auth.credentials.refresh_store import RefreshStore
 from inkstave.modules.auth.models.user import User
 from inkstave.modules.auth.schemas.user import EditorPreferences
-from inkstave.modules.projects.sharing import generate_token, hash_token
 
 
 async def _require_password(hasher: PasswordHasher, user: User, password: str) -> None:
