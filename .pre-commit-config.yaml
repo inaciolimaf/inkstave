@@ -1,6 +1,6 @@
 # Pre-commit hooks for Inkstave. Install with `just hooks`, run on everything
 # with `pre-commit run --all-files`. Hook repos are pinned to concrete release
-# tags (no floating refs).
+# tags (no floating refs). They are a fast subset of `make lint`, on the same config.
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
