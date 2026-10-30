@@ -76,7 +76,7 @@ function PdfPageView({
       ref={registerRef}
       data-page={pageNumber}
       onDoubleClick={handleDoubleClick}
-      className="relative mx-auto my-2 w-fit bg-page shadow"
+      className="relative mx-auto my-2 w-fit bg-page ring-1 ring-border"
       aria-label={t("viewer.page", { pageNumber })}
     >
       <canvas ref={canvasRef} className="block" />
@@ -178,7 +178,7 @@ export function PdfViewer({
       onScroll={onScroll}
       role="document"
       aria-label={t("pane.pdfPreview")}
-      className="h-full overflow-auto bg-muted/30 p-2"
+      className="h-full overflow-auto p-2"
     >
       {Array.from({ length: numPages }, (_, i) => (
         <PdfPageView

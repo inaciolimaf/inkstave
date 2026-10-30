@@ -24,7 +24,7 @@ import { useEditorPreferences } from "./use-editor-preferences";
 function EmptyState() {
   const { t } = useTranslation("editor");
   return (
-    <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+    <div className="flex h-full items-center justify-center p-6 text-center text-body text-muted-foreground">
       {t("pane.selectFile")}
     </div>
   );
@@ -44,7 +44,7 @@ function LoadingState() {
 function ErrorState({ onRetry, notFound }: { onRetry: () => void; notFound: boolean }) {
   const { t } = useTranslation("editor");
   return (
-    <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-sm">
+    <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-body">
       <p className="text-error-text">{notFound ? t("pane.documentGone") : t("pane.loadFailed")}</p>
       {!notFound && (
         <Button variant="outline" size="sm" onClick={onRetry}>
@@ -58,7 +58,7 @@ function ErrorState({ onRetry, notFound }: { onRetry: () => void; notFound: bool
 function BinaryNotice() {
   const { t } = useTranslation("editor");
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-body text-muted-foreground">
       <FileText className="size-8" />
       <p>{t("pane.binaryFile")}</p>
     </div>
@@ -195,7 +195,7 @@ export function EditorPane({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b px-3 py-1.5">
-        <span className="mr-auto truncate text-sm font-medium">
+        <span className="mr-auto truncate font-serif text-heading">
           {openEntity?.name ?? t("pane.noFileOpen")}
         </span>
         {isDoc && !collabActive && (

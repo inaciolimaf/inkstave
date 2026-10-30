@@ -30,7 +30,7 @@ export function PreviewErrorState({
   return (
     <div
       role="alert"
-      className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm"
+      className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-body"
     >
       <AlertTriangle className="size-8 text-error-text" aria-hidden="true" />
       <div className="space-y-1">

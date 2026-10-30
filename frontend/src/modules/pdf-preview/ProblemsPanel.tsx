@@ -45,7 +45,7 @@ function ProblemRow({
         message: problem.message,
         location: location ? ` (${location})` : "",
       })}
-      className="flex w-full items-start gap-2 px-3 py-1 text-left text-xs hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
+      className="flex w-full items-start gap-2 px-3 py-1 text-left text-small hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
     >
       <meta.Icon className={cn("mt-0.5 size-3.5 shrink-0", meta.className)} aria-hidden="true" />
       <span className="min-w-0 flex-1 truncate">{problem.message}</span>
@@ -84,7 +84,7 @@ export function ProblemsSummary({
         return (
           <span
             key={severity}
-            className="flex items-center gap-0.5 text-xs text-muted-foreground"
+            className="flex items-center gap-0.5 text-small text-muted-foreground"
             aria-label={t("problems.countSeverity", { count, severity })}
           >
             <meta.Icon className={cn("size-3.5", meta.className)} aria-hidden="true" />
@@ -93,7 +93,7 @@ export function ProblemsSummary({
         );
       })}
       {(loading || stale) && (
-        <span className="text-xs text-muted-foreground">
+        <span className="text-small text-muted-foreground">
           {stale ? t("problems.updating") : t("problems.loading")}
         </span>
       )}
@@ -115,9 +115,9 @@ export function ProblemsPanel({
 
   let body: React.ReactNode;
   if (reason === "log_unavailable") {
-    body = <p className="px-3 py-2 text-xs text-muted-foreground">{t("problems.noLogYet")}</p>;
+    body = <p className="px-3 py-2 text-small text-muted-foreground">{t("problems.noLogYet")}</p>;
   } else if (total === 0) {
-    body = <p className="px-3 py-2 text-xs text-muted-foreground">{t("problems.noProblems")}</p>;
+    body = <p className="px-3 py-2 text-small text-muted-foreground">{t("problems.noProblems")}</p>;
   } else {
     body = SEVERITY_ORDER.map((severity) => {
       const group = problems!.problems.filter((p) => p.severity === severity);
@@ -125,7 +125,7 @@ export function ProblemsPanel({
       const meta = SEVERITY_META[severity];
       return (
         <div key={severity}>
-          <p className="px-3 pt-1.5 pb-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          <p className="px-3 pt-1.5 pb-0.5 text-small font-medium text-muted-foreground">
             {t("problems.group", { label: t(meta.labelKey), count: group.length })}
           </p>
           {group.map((problem, i) => (

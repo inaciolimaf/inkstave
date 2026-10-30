@@ -21,7 +21,7 @@ function LoadingOverlay() {
       aria-label={t("collab.loadingDocument")}
       aria-busy="true"
     >
-      <p className="text-sm text-muted-foreground">{t("collab.loadingDocument")}</p>
+      <p className="text-body text-muted-foreground">{t("collab.loadingDocument")}</p>
     </div>
   );
 }
@@ -46,14 +46,11 @@ export function CollabEditor({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-1 text-xs">
+      <div className="flex items-center gap-2 border-b px-3 py-1 text-small">
         <ConnectionStatusBadge status={session.status} />
         {!session.synced && <span className="text-muted-foreground">{t("collab.syncing")}</span>}
         {session.readOnly && (
-          <span
-            className="rounded bg-warning-soft px-1.5 py-0.5 font-medium text-warning-text"
-            aria-live="polite"
-          >
+          <span className="font-medium text-warning-text" aria-live="polite">
             {t("collab.viewOnly")}
           </span>
         )}

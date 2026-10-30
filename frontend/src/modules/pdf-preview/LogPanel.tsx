@@ -67,7 +67,7 @@ export function LogPanel({
     <div className="flex flex-col">
       {(line || log != null) && (
         <div className="flex items-center gap-2 border-b px-3 py-1.5">
-          {line && <span className="truncate text-xs text-muted-foreground">{line}</span>}
+          {line && <span className="truncate text-small text-muted-foreground">{line}</span>}
           {log != null && (
             <Button
               size="sm"
@@ -87,7 +87,7 @@ export function LogPanel({
         role="region"
         aria-label={t("log.compileLog")}
         tabIndex={0}
-        className="max-h-48 overflow-auto bg-muted/40 px-3 py-2 font-mono text-xs whitespace-pre-wrap"
+        className="max-h-48 overflow-auto px-3 py-2 font-mono text-small whitespace-pre-wrap"
       >
         {loading && <span className="text-muted-foreground">{t("log.loadingLog")}</span>}
         {error && <span className="text-error-text">{error}</span>}

@@ -6,7 +6,7 @@ export function PreviewEmptyState() {
   const { t } = useTranslation("preview");
   return (
     <div
-      className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"
+      className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-body text-muted-foreground"
       aria-label={t("empty.noPreview")}
     >
       <FileText className="size-8" aria-hidden="true" />

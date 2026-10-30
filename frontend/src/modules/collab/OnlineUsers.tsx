@@ -67,7 +67,7 @@ export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[
               <button
                 type="button"
                 aria-label={t("presence.moreOnline", { count: overflow.length })}
-                className="flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium text-muted-foreground"
+                className="flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted text-small font-medium text-muted-foreground"
               >
                 +{overflow.length}
               </button>
@@ -75,7 +75,7 @@ export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[
             <PopoverContent className="w-48 p-2">
               <ul className="space-y-1">
                 {overflow.map((user) => (
-                  <li key={user.id} className="flex items-center gap-2 text-sm">
+                  <li key={user.id} className="flex items-center gap-2 text-body">
                     <span
                       className="size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: user.color }}
