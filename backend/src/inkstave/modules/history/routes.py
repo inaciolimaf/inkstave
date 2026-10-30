@@ -14,6 +14,7 @@ from inkstave.core.errors import BadRequestError, ErrorEnvelope
 from inkstave.infra.storage.factory import get_object_store
 from inkstave.modules.auth import get_current_user
 from inkstave.modules.history.schemas import (
+    DiffResponse,
     LabelCreate,
     LabelRead,
     ProjectLabelCreate,
@@ -99,7 +100,11 @@ async def get_updates(
     return await list_updates(session, doc_id, from_v=from_, to_v=to)
 
 
-@router.get("/docs/{doc_id}/history/diff", responses=_ERRORS)
+@router.get(
+    "/docs/{doc_id}/history/diff",
+    response_model=DiffResponse,
+    responses={**_ERRORS, status.HTTP_413_CONTENT_TOO_LARGE: {"model": DiffResponse}},
+)
 async def get_history_diff(
     doc_id: UUID,
     from_: int = Query(..., alias="from", ge=1),

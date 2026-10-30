@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from inkstave.core.schemas import StrictModel
+from inkstave.modules.compile.models.compile import CompileJobStatus
 
 
 class CompileRequest(StrictModel):
@@ -31,7 +32,7 @@ class CompileStatusResponse(BaseModel):
 
     id: UUID
     project_id: UUID
-    status: str
+    status: CompileJobStatus
     main_file: str
     has_pdf: bool
     created_at: datetime

@@ -107,8 +107,8 @@ async def _owned_session(
 
 def _diff_summary(diff: ProposedDiff, *, include_hunks: bool) -> ProposedDiffSummary:
     out = ProposedDiffSummary.model_validate(diff)
-    if include_hunks:
-        out.hunks = diff.hunks
+    if not include_hunks:
+        out.hunks = None
     return out
 
 

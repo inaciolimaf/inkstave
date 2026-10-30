@@ -9,6 +9,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 from inkstave.core.schemas import StrictModel
+from inkstave.modules.projects.models.invite import InviteRole
+from inkstave.modules.projects.models.membership import MembershipRole
 
 InviteRoleLiteral = Literal["editor", "viewer"]
 
@@ -19,7 +21,7 @@ class MemberRead(BaseModel):
     user_id: UUID
     name: str
     email: str
-    role: str
+    role: MembershipRole
     status: str
 
 
@@ -46,7 +48,7 @@ class InviteRead(BaseModel):
     id: UUID
     project_id: UUID
     email: str
-    role: str
+    role: InviteRole
     status: str
     expires_at: datetime
     created_at: datetime
@@ -64,10 +66,10 @@ class InvitePreview(BaseModel):
     project_id: UUID
     project_name: str
     inviter_name: str
-    role: str
+    role: InviteRole
     email: str
 
 
 class AcceptResponse(BaseModel):
     project_id: UUID
-    role: str
+    role: MembershipRole
