@@ -73,9 +73,6 @@ async def _doc(db_session: AsyncSession) -> tuple[UUID, UUID]:
     return project.id, entity.id
 
 
-# --- flush-on-shutdown (data-loss fix) ------------------------------------- #
-
-
 async def test_flush_all_persists_buffered_updates(db_session: AsyncSession, tmp_path: Any) -> None:
     pid, doc_id = await _doc(db_session)
     svc = HistoryCaptureService(
@@ -96,9 +93,6 @@ async def test_flush_all_persists_buffered_updates(db_session: AsyncSession, tmp
 
     rows = await db_session.scalar(select(func.count()).select_from(HistoryUpdate))
     assert rows == 1  # the buffered run was flushed, not lost
-
-
-# --- payload/blob XOR DB constraint ---------------------------------------- #
 
 
 async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_path: Any) -> None:
@@ -128,9 +122,6 @@ async def test_payload_xor_check_rejects_bad_row(db_session: AsyncSession, tmp_p
     )
     with pytest.raises(IntegrityError):
         await db_session.flush()
-
-
-# --- compaction preserves reconstructed state (AC4) ------------------------ #
 
 
 async def test_compact_preserves_reconstructed_state(db_session: AsyncSession, tmp_path: Any) -> None:
@@ -163,9 +154,6 @@ async def test_compact_preserves_reconstructed_state(db_session: AsyncSession, t
 
     after = await reconstruct_state(db_session, store, doc_id, head)
     assert after == before  # AC4: reconstruction byte-identical after compaction
-
-
-# --- restore fail-fast on duplicate label (atomicity) ---------------------- #
 
 
 @pytest.fixture

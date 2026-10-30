@@ -33,9 +33,6 @@ async def _auth(db_session: AsyncSession) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-# --- hot-read cache: hit + invalidation (AC7) ------------------------------- #
-
-
 async def test_project_metadata_cache_hit_and_invalidation(
     async_client: AsyncClient, db_session: AsyncSession, redis: Any
 ) -> None:
@@ -65,9 +62,6 @@ async def test_cache_helper_disabled_mode_bypasses(redis: Any) -> None:
     await cache.set_json("k", {"a": 1})
     assert await cache.get_json("k") is None  # disabled → never reads/writes Redis
     assert await redis.get("k") is None
-
-
-# --- N+1 query bound (AC6) -------------------------------------------------- #
 
 
 async def test_file_tree_query_count_is_bounded(
@@ -192,9 +186,6 @@ async def test_collaborators_list_query_count_is_bounded(
 
     assert with_five == with_thirty  # users joined eagerly — no per-row lazy load
     assert with_thirty <= 3
-
-
-# --- DB connection pool: config + no leak (AC8) ----------------------------- #
 
 
 @pytest.mark.usefixtures("_template_db", "test_database_env")

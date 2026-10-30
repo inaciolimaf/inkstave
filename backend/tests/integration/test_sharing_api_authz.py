@@ -25,9 +25,6 @@ pytestmark = pytest.mark.integration
 __all__ = ["enqueuer"]
 
 
-# --- authorization --------------------------------------------------------- #
-
-
 async def test_non_owner_owner_only_endpoints_403(
     async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
 ) -> None:

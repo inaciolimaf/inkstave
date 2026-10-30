@@ -54,9 +54,6 @@ def _tool_call(name: str, args: dict[str, Any]) -> LLMResponse:
     )
 
 
-# --- #1: capped turn must not duplicate the assistant row -------------------- #
-
-
 async def test_capped_turn_does_not_duplicate_assistant(
     seed: SimpleNamespace, db_session: AsyncSession
 ) -> None:
@@ -73,9 +70,6 @@ async def test_capped_turn_does_not_duplicate_assistant(
     assistants = [r for r in rows if r.role == "assistant"]
     assert len(assistants) == 1  # not duplicated
     assert result.final_response == "partial answer"
-
-
-# --- #2: token cap ends the turn gracefully --------------------------------- #
 
 
 async def test_token_cap_ends_turn_without_exception(seed: SimpleNamespace, db_session: AsyncSession) -> None:
@@ -100,9 +94,6 @@ async def test_per_call_max_tokens_is_passed(seed: SimpleNamespace, db_session: 
     assert fake.calls[0]["max_tokens"] == 512  # AC4: per-call cap wired through
 
 
-# --- #11: read_file windowed path respects the char cap --------------------- #
-
-
 async def test_read_file_windowed_respects_cap(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     big = await create_entity(db_session, seed.project.id, TreeEntityType.doc, "big.tex", None)
     await set_content_from_collab(db_session, big.id, "\n".join(f"line {i}" for i in range(1000)))
@@ -118,9 +109,6 @@ async def test_read_file_windowed_respects_cap(seed: SimpleNamespace, db_session
     assert result.ok and result.data is not None
     assert result.data["truncated"] is True
     assert len(result.data["content"]) <= 50
-
-
-# --- AC3: prompt-injection in a read document does not auto-apply ----------- #
 
 
 async def test_adversarial_document_does_not_auto_apply(

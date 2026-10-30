@@ -71,8 +71,6 @@ class OpenRouterLLMClient:
     def model(self) -> str:
         return self._model
 
-    # --- request mapping ---------------------------------------------------- #
-
     @staticmethod
     def _to_openai_messages(messages: list[LLMMessage]) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -124,8 +122,6 @@ class OpenRouterLLMClient:
                 args = {"_raw": getattr(tc.function, "arguments", None)}
             calls.append(ToolCall(id=tc.id, name=tc.function.name, arguments=args))
         return calls, had_error
-
-    # --- API ---------------------------------------------------------------- #
 
     async def _create(self, messages: list[LLMMessage], **overrides: Any) -> Any:
         """One chat-completions call with this client's defaults applied."""

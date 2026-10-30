@@ -1,5 +1,3 @@
-"""Project-import API response schema (spec 101)."""
-
 from __future__ import annotations
 
 from datetime import datetime

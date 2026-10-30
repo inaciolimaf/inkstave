@@ -101,9 +101,6 @@ async def _handshake_and_sync(ws: ASGIWebSocketClient) -> YDocument:
     return local
 
 
-# --- AC1–AC4: auth rejection before accept, no room, no manager acquire ------ #
-
-
 async def test_missing_token_rejected_4401_no_room(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     project, entity, _ = await _setup(db_session)
@@ -158,9 +155,6 @@ async def test_non_member_4403_and_unknown_4404(app: Any, db_session: AsyncSessi
     # Valid token, unknown project/doc ids → 4404.
     async with ASGIWebSocketClient(app, _path(uuid4(), uuid4()), query=f"token={tokens['editor']}") as ws:
         assert await ws.close_code() == CLOSE_NOT_FOUND  # AC5
-
-
-# --- AC6/AC7: reconnect re-sync, lossless + convergent ----------------------- #
 
 
 async def test_reconnect_resyncs_seeded_text_losslessly(
@@ -218,9 +212,6 @@ async def test_two_editors_converge_after_drop(app: Any, db_session: AsyncSessio
     assert "X" in resynced.text and "Y" in resynced.text  # AC7
     assert resynced.text.count("X") == 1
     assert resynced.text.count("Y") == 1
-
-
-# --- AC8: viewer read-only (drops writes, still reads) ----------------------- #
 
 
 async def test_viewer_write_dropped_but_reads(app: Any, db_session: AsyncSession, redis: Any) -> None:

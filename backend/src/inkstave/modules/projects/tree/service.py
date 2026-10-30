@@ -63,11 +63,6 @@ __all__ = [
 ]
 
 
-# --------------------------------------------------------------------------- #
-# Queries / operations
-# --------------------------------------------------------------------------- #
-
-
 async def get_tree(
     session: AsyncSession, project_id: UUID, *, max_nodes: int | None = None
 ) -> list[TreeEntity]:

@@ -83,9 +83,6 @@ class _RecordingFiles:
             yield path, stream  # type: ignore[misc]
 
 
-# --- safe_join ------------------------------------------------------------- #
-
-
 def test_safe_join_accepts_in_tree(tmp_path: Path) -> None:
     assert safe_join(tmp_path, "a/b.tex") == tmp_path.resolve() / "a" / "b.tex"
 
@@ -104,9 +101,6 @@ def test_safe_join_rejects_symlink_escape(tmp_path: Path) -> None:
     (base / "link").symlink_to(outside, target_is_directory=True)
     with pytest.raises(UnsafePathError):
         safe_join(base, "link/x.tex")
-
-
-# --- workdir lifecycle ----------------------------------------------------- #
 
 
 async def test_create_workdir_makes_input_output(tmp_path: Path) -> None:

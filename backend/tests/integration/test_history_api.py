@@ -22,9 +22,6 @@ pytestmark = pytest.mark.integration
 __all__ = ["hist"]
 
 
-# --- versions / updates ---------------------------------------------------- #
-
-
 async def test_list_versions(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     r = await async_client.get(_hist_url(hist.pid, hist.doc_id, "versions"), headers=hist.viewer_h)
     assert r.status_code == 200

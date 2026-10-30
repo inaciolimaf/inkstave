@@ -28,9 +28,6 @@ pytestmark = pytest.mark.integration
 __all__ = ["hist"]
 
 
-# --- diff ------------------------------------------------------------------ #
-
-
 async def test_diff_between_versions(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     r = await async_client.get(_hist_url(hist.pid, hist.doc_id, "diff?from=1&to=2"), headers=hist.viewer_h)
     assert r.status_code == 200

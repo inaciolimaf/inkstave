@@ -1,5 +1,3 @@
-"""Notification API schemas (spec 39)."""
-
 from __future__ import annotations
 
 from datetime import datetime

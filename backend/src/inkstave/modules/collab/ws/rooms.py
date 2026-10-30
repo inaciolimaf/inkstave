@@ -12,7 +12,6 @@ import asyncio
 from dataclasses import dataclass, field
 from uuid import UUID
 
-# --- WebSocket close codes (spec 29 §5.2.5) ------------------------------- #
 CLOSE_NORMAL = 1000
 CLOSE_DEAD = 4000  # ping timeout / connection dead
 CLOSE_BAD_MESSAGE = 4400  # bad/oversize message

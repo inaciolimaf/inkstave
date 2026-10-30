@@ -112,9 +112,6 @@ def _diff_summary(diff: ProposedDiff, *, include_hunks: bool) -> ProposedDiffSum
     return out
 
 
-# --- sessions -------------------------------------------------------------- #
-
-
 @router.post(
     "/sessions",
     status_code=status.HTTP_201_CREATED,
@@ -170,9 +167,6 @@ async def get_session_detail(
             if d.status == ProposedDiffStatus.proposed.value
         ],
     )
-
-
-# --- messages + run -------------------------------------------------------- #
 
 
 @router.post(
@@ -236,9 +230,6 @@ async def cancel_run(
     return {"status": "cancelling"}
 
 
-# --- SSE event stream (query-param token auth) ----------------------------- #
-
-
 @router.get("/sessions/{session_id}/runs/{run_id}/events", responses=_ERRORS)
 async def run_events(
     project_id: UUID,
@@ -255,9 +246,6 @@ async def run_events(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
-
-
-# --- diffs ----------------------------------------------------------------- #
 
 
 @router.get("/sessions/{session_id}/diffs", response_model=list[ProposedDiffSummary], responses=_ERRORS)

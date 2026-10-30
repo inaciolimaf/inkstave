@@ -68,9 +68,6 @@ def _user(**over: Any) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
-# --- change_password --------------------------------------------------------- #
-
-
 async def test_change_password_rehashes_and_revokes_sessions() -> None:
     user = _user()
     hasher = _FakeHasher(valid_plain="correct-old")
@@ -109,9 +106,6 @@ async def test_change_password_rejects_wrong_current_password() -> None:
 
     assert user.hashed_password == "old-hash"  # unchanged
     assert store.revoked == []  # no session revocation on a failed re-auth
-
-
-# --- confirm_email_change ---------------------------------------------------- #
 
 
 async def test_confirm_email_change_matches_hashed_token_never_raw() -> None:

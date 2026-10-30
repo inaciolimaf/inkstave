@@ -1,5 +1,3 @@
-"""User-facing schemas: registration request and public representation."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -55,8 +53,6 @@ class RegisterRequest(StrictModel):
         return self
 
 
-# --- Editor preferences (spec 59) -------------------------------------------- #
-
 EditorTheme = Literal["light", "dark", "system"]
 EditorKeymap = Literal["default", "vim", "emacs"]
 FONT_SIZE_MIN = 10
@@ -101,9 +97,6 @@ class UserMe(UserPublic):
     avatar_url: str | None = None
     editor_preferences: EditorPreferences = EditorPreferences()
     pending_email: str | None = None
-
-
-# --- Settings requests (spec 59) --------------------------------------------- #
 
 
 class UpdateProfileRequest(StrictModel):

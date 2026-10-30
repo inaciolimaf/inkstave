@@ -69,9 +69,6 @@ async def _verify_doc(session: AsyncSession, project_id: UUID, doc_id: UUID) -> 
         raise ProjectNotFoundError()
 
 
-# --- list / diff (any member) ---------------------------------------------- #
-
-
 @router.get("/docs/{doc_id}/history/versions", response_model=VersionsResponse, responses=_ERRORS)
 async def get_versions(
     doc_id: UUID,
@@ -127,9 +124,6 @@ async def get_history_diff(
     return JSONResponse(result.model_dump(by_alias=True), status_code=code)
 
 
-# --- restore (editor / owner) ---------------------------------------------- #
-
-
 @router.post("/docs/{doc_id}/history/restore", response_model=RestoreResponse, responses=_ERRORS)
 async def restore_doc(
     request: Request,
@@ -169,9 +163,6 @@ async def restore_whole_project(
         markers=label.payload or {},
         author_id=user.id,
     )
-
-
-# --- labels CRUD ----------------------------------------------------------- #
 
 
 @router.post(

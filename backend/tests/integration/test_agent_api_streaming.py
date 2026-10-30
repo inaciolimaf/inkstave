@@ -23,9 +23,6 @@ __all__ = ["seed"]
 pytestmark = pytest.mark.integration
 
 
-# --- job: streaming events ------------------------------------------------- #
-
-
 async def test_token_stream_and_done(seed: SimpleNamespace, db_session: AsyncSession, redis: Any) -> None:
     session = await _make_session(db_session, seed)
     run_id = str(session.active_run_id)

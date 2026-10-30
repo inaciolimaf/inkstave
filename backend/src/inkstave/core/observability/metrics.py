@@ -34,8 +34,6 @@ def _metric(cls: type, name: str, documentation: str, **kwargs: Any) -> Any:
     return cls(name, documentation, registry=REGISTRY, **kwargs)
 
 
-# --- catalogue (counters use base names; prometheus appends _total) ----------- #
-
 http_requests = _metric(
     Counter, "inkstave_http_requests", "HTTP requests", labelnames=("method", "path", "status")
 )
@@ -74,9 +72,6 @@ build_info = _metric(Gauge, "inkstave_build_info", "Build info", labelnames=("ve
 rate_limit_errors = _metric(
     Counter, "inkstave_rate_limit_errors", "Rate-limit backend failures", labelnames=("policy",)
 )
-
-
-# --- helpers ----------------------------------------------------------------- #
 
 
 def observe_http(method: str, path: str, status: int, duration_s: float) -> None:

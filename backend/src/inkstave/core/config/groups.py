@@ -57,7 +57,7 @@ class CoreSettingsMixin:
 
     request_id_header: str = "X-Request-ID"
 
-    # --- Performance: DB pool + hot-read cache (spec 53) ---
+    # Performance: DB pool + hot-read cache (spec 53)
     db_pool_size: int = 10
     db_max_overflow: int = 5
     db_pool_timeout: int = 30
@@ -71,7 +71,7 @@ class CoreSettingsMixin:
     cache_enabled: bool = True
     cache_ttl_seconds: int = 30
 
-    # --- Observability (spec 51) ---
+    # Observability (spec 51)
     log_format: Literal["json", "console"] = "json"
     log_stacks: bool = True
     service_name: str = "inkstave-backend"
@@ -139,7 +139,7 @@ class AuthSettingsMixin:
 class SecuritySettingsMixin:
     """HTTP security hardening, upload allow-lists and document limits (spec 52)."""
 
-    # --- Security hardening (spec 52) ---
+    # Security hardening (spec 52)
     hsts_enabled: bool = False
     csp_policy: str = (
         "default-src 'self'; img-src 'self' data:; object-src 'none'; "

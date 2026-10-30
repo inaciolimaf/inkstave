@@ -104,9 +104,6 @@ def _inv(pid: str) -> str:
     return f"/api/v1/projects/{pid}/synctex/pdf-to-code"
 
 
-# --- forward (code -> pdf) ------------------------------------------------- #
-
-
 async def test_forward_same_file(
     async_client: AsyncClient, db_session: AsyncSession, backend: LocalObjectStore, tmp_path: Path
 ) -> None:
@@ -156,9 +153,6 @@ async def test_forward_bad_params_422(
     assert resp.status_code == 422
 
 
-# --- inverse (pdf -> code) ------------------------------------------------- #
-
-
 async def test_inverse_inside_box(
     async_client: AsyncClient, db_session: AsyncSession, backend: LocalObjectStore, tmp_path: Path
 ) -> None:
@@ -197,9 +191,6 @@ async def test_inverse_multi_file(
     body = resp.json()
     assert body["file"] == "sections/intro.tex"
     assert body["line"] == 5
-
-
-# --- no synctex / auth ----------------------------------------------------- #
 
 
 async def test_forward_no_synctex_is_unavailable(
@@ -253,9 +244,6 @@ async def test_non_member_is_denied(
         headers=other,
     )
     assert resp.status_code == 404  # 404 by design (see comment above), not 403
-
-
-# --- coordinate round-trip over HTTP (criterion 9) ------------------------- #
 
 
 async def test_round_trip_over_http(

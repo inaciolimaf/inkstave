@@ -23,18 +23,12 @@ from inkstave.modules.auth.throttling.limiter import rate_limit
 pytestmark = pytest.mark.integration
 
 
-# --- Spec 51: redaction denylist closes the S3 access-key gap ----------------- #
-
-
 def test_secret_access_key_is_redacted() -> None:
     # s3_access_key_id contains "access_key_id" — it did NOT match the old denylist
     # ("api_key"), so it would have leaked. Spec 55 added "access_key".
     out = redact({"s3_access_key_id": "AKIAEXAMPLE", "user_id": "u1", "count": 3})
     assert out["s3_access_key_id"] == "***REDACTED***"
     assert out["user_id"] == "u1" and out["count"] == 3  # benign fields untouched
-
-
-# --- Spec 51: the agent job binds + always clears correlation context --------- #
 
 
 async def test_agent_job_binds_and_clears_context(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -56,9 +50,6 @@ async def test_agent_job_binds_and_clears_context(monkeypatch: pytest.MonkeyPatc
         request_id_var.reset(token)
 
 
-# --- Spec 52: auth limiter sets the TTL atomically (no key without expiry) ----- #
-
-
 async def test_auth_limiter_sets_ttl_on_first_hit(redis: Any) -> None:
     settings = Settings(_env_file=None, rate_limit_refresh="5/60")  # type: ignore[call-arg]
     dep = rate_limit("refresh")
@@ -67,8 +58,6 @@ async def test_auth_limiter_sets_ttl_on_first_hit(redis: Any) -> None:
     ttl = await redis.ttl("ratelimit:refresh:1.2.3.4")
     assert ttl > 0, "INCR+EXPIRE must be atomic so a counter is never left un-expiring"
 
-
-# --- Spec 52: every sensitive route carries a rate-limit policy ---------------- #
 
 _AGENT = "/api/v1/projects/{project_id}/agent"
 _SENSITIVE: frozenset[tuple[str, str]] = frozenset(
@@ -107,9 +96,6 @@ def test_every_sensitive_route_is_rate_limited() -> None:
         if not _has_rate_limit(route):
             missing.append(key)
     assert missing == [], f"sensitive routes without a rate-limit policy: {missing}"
-
-
-# --- Spec 52: secure headers on error/404 responses; extra fields rejected ----- #
 
 
 async def test_security_headers_present_on_error_responses(async_client: AsyncClient) -> None:

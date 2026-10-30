@@ -1,5 +1,3 @@
-"""Pydantic schemas for proposed diffs (spec 43)."""
-
 from __future__ import annotations
 
 from datetime import datetime

@@ -23,9 +23,6 @@ async def _collect(stream: AsyncIterator[bytes]) -> bytes:
     return b"".join([chunk async for chunk in stream])
 
 
-# --- LocalObjectStore -------------------------------------------------------- #
-
-
 @pytest.fixture
 def local_store(tmp_path: Any) -> LocalObjectStore:
     return LocalObjectStore(tmp_path, 8)  # tiny chunk to exercise streaming
@@ -75,9 +72,6 @@ async def test_objectstore_get_streams(local_store: LocalObjectStore) -> None:
     await local_store.put("k", b"streamed")
     stream = await local_store.get("k")
     assert await _collect(stream) == b"streamed"
-
-
-# --- streaming hash/size/limit helper + atomic write (spec 14 §8) ----------- #
 
 
 def _streaming_hash_size_limit(chunks: list[bytes], *, limit: int):
@@ -155,9 +149,6 @@ async def test_local_put_writes_temp_then_replaces_atomically(
     assert await store.exists("projects/p/files/f")
 
 
-# --- factory + settings validation ------------------------------------------ #
-
-
 def test_factory_selects_local() -> None:
     settings = Settings(_env_file=None, file_storage_backend="local")  # type: ignore[call-arg]
     assert isinstance(get_object_store(settings), LocalObjectStore)
@@ -173,9 +164,6 @@ def test_s3_requires_bucket() -> None:
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None, file_storage_backend="s3", s3_bucket="")  # type: ignore[call-arg]
-
-
-# --- S3ObjectStore against a faked client (no network) ---------------------- #
 
 
 class _FakeBody:

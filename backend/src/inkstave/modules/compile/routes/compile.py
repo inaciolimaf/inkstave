@@ -144,11 +144,6 @@ async def cancel_compile(
     return CompileStatusResponse.model_validate(row)
 
 
-# --------------------------------------------------------------------------- #
-# Output retrieval (spec 23)
-# --------------------------------------------------------------------------- #
-
-
 @router.get(
     "/{compile_id}/outputs",
     response_model=list[OutputSummary],

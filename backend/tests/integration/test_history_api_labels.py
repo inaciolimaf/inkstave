@@ -23,9 +23,6 @@ pytestmark = pytest.mark.integration
 __all__ = ["hist"]
 
 
-# --- labels ---------------------------------------------------------------- #
-
-
 async def test_labels_crud_and_duplicate(hist: SimpleNamespace, async_client: AsyncClient) -> None:
     url = _hist_url(hist.pid, hist.doc_id, "labels")
     created = await async_client.post(url, json={"version": 2, "name": "submitted"}, headers=hist.editor_h)
@@ -51,9 +48,6 @@ async def test_label_shows_in_versions(hist: SimpleNamespace, async_client: Asyn
     ).json()["versions"]
     v3 = next(v for v in versions if v["version"] == 3)
     assert [label["name"] for label in v3["labels"]] == ["final"]
-
-
-# --- auth ------------------------------------------------------------------ #
 
 
 async def test_viewer_cannot_label_or_restore(hist: SimpleNamespace, async_client: AsyncClient) -> None:

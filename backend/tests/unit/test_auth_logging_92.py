@@ -33,9 +33,6 @@ _SUB = uuid4()
 _FAMILY = uuid4()
 
 
-# --- fakes ----------------------------------------------------------------- #
-
-
 class _ScalarResult:
     def __init__(self, user: Any) -> None:
         self._user = user
@@ -128,9 +125,6 @@ def _records(caplog: pytest.LogCaptureFixture, logger: str) -> list[logging.LogR
     return [r for r in caplog.records if r.name == logger]
 
 
-# --- #A1: auth-flow logging ------------------------------------------------ #
-
-
 async def test_failed_login_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     session = FakeAuthSession(user=None)
     with caplog.at_level(logging.DEBUG), pytest.raises(InvalidCredentialsError):
@@ -187,9 +181,6 @@ async def test_logout_logs_info(caplog: pytest.LogCaptureFixture) -> None:
     infos = [r for r in _records(caplog, "inkstave.modules.auth.accounts.login") if r.levelno == logging.INFO]
     assert any("logout" in r.getMessage() for r in infos)
     assert REFRESH_RAW not in caplog.text
-
-
-# --- #A2: registration logging --------------------------------------------- #
 
 
 class FakeRegResult:
@@ -250,9 +241,6 @@ async def test_register_integrity_race_logs_warning(caplog: pytest.LogCaptureFix
     assert warnings and PASSWORD not in caplog.text
 
 
-# --- #A4: rate-limit body-parse fallback ----------------------------------- #
-
-
 async def test_rate_limit_body_parse_fallback_logs_and_uses_ip(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -271,9 +259,6 @@ async def test_rate_limit_body_parse_fallback_logs_and_uses_ip(
         identity = await _identity(BadRequest(), "register", settings)
     assert identity == "203.0.113.7"  # IP-only fallback, behaviour unchanged
     assert any(r.name == "inkstave.ratelimit" for r in caplog.records)
-
-
-# --- shared module-logger sanity ------------------------------------------- #
 
 
 def test_modules_have_loggers() -> None:

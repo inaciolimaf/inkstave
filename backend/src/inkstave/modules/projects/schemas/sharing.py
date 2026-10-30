@@ -1,5 +1,3 @@
-"""Schemas for collaborators & sharing (spec 33)."""
-
 from __future__ import annotations
 
 from datetime import datetime

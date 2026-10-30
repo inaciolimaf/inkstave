@@ -17,10 +17,6 @@ from inkstave.core.db.session import get_db_session, get_session_factory
 from inkstave.core.deps import get_redis
 from inkstave.infra.deps import get_email_enqueuer
 
-# --------------------------------------------------------------------------- #
-# Redis fake
-# --------------------------------------------------------------------------- #
-
 
 @pytest_asyncio.fixture
 async def redis() -> AsyncIterator[Any]:
@@ -33,11 +29,6 @@ async def redis() -> AsyncIterator[Any]:
     finally:
         await client.flushall()
         await client.aclose()
-
-
-# --------------------------------------------------------------------------- #
-# Wired app + client
-# --------------------------------------------------------------------------- #
 
 
 @pytest_asyncio.fixture

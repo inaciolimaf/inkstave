@@ -87,7 +87,6 @@ async def _open_database(app: FastAPI, settings: Settings, redis: Any) -> None:
     # Migration gate (spec 57): refuse to start unless the DB is at head, or apply
     # migrations now in convenience mode.
     await _ensure_migrations(engine, settings)
-    # --- Collaboration (CRDT WebSocket) components (spec 28/29) ---
     app.state.collab = build_collab_components(
         redis=redis,
         session_factory=sessionmaker,

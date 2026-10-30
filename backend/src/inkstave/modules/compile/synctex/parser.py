@@ -262,8 +262,6 @@ class SyncTexIndex:
     lines_by_file: dict[str, list[int]]  # sorted unique lines per file
     version: str = field(default="")
 
-    # ----------------------------------------------------------------- parse #
-
     @classmethod
     def from_gz_bytes(cls, data: bytes) -> SyncTexIndex:
         try:
@@ -291,8 +289,6 @@ class SyncTexIndex:
             lines_by_file=lines_by_file,
             version=pre.version,
         )
-
-    # --------------------------------------------------------------- queries #
 
     def forward(self, file: str, line: int, column: int | None = None) -> ForwardResult:
         """code -> pdf. Boxes for the nearest indexed line ``>= line`` in that

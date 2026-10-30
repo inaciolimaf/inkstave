@@ -21,9 +21,6 @@ sys.modules["check_test_budget"] = gate  # so the module's @dataclass resolves
 _spec.loader.exec_module(gate)
 
 
-# --- CI budget gate self-test (AC1, gate self-test) ------------------------- #
-
-
 def test_gate_passes_under_budget() -> None:
     result = gate.evaluate({"total_s": 60, "slowest": []})
     assert result.ok
@@ -55,9 +52,6 @@ def test_gate_fails_a_slow_non_marked_test_but_excludes_slow_marked() -> None:  
     assert not any("test_nightly" in m for m in result.messages)  # @slow excluded
 
 
-# --- CLI main() exit codes (spec 53 §8) ------------------------------------- #
-
-
 def test_gate_main_exits_nonzero_over_budget(tmp_path: Any) -> None:
     timing = tmp_path / "test-timing.json"
     timing.write_text(json.dumps({"total_s": 130, "slowest": []}))
@@ -70,17 +64,11 @@ def test_gate_main_exits_zero_under_budget(tmp_path: Any) -> None:
     assert gate.main(["check_test_budget.py", str(timing)]) == 0
 
 
-# --- outbound-network guard (AC3) ------------------------------------------- #
-
-
 def test_real_network_is_blocked() -> None:
     with pytest.raises(RuntimeError, match="Real network access"):
         socket.getaddrinfo("api.openrouter.ai", 443)
     # Localhost / IP literals (the test DB) remain reachable.
     socket.getaddrinfo("127.0.0.1", 5432)
-
-
-# --- CRDT throughput sanity (AC9) ------------------------------------------- #
 
 
 def test_crdt_burst_converges_within_bound() -> None:

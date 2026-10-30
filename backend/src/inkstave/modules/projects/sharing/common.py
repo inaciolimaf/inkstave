@@ -21,8 +21,6 @@ from inkstave.modules.projects.sharing.errors import NotProjectOwnerError
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-# --- value objects --------------------------------------------------------- #
-
 
 @dataclass(frozen=True)
 class MemberInfo:
@@ -31,9 +29,6 @@ class MemberInfo:
     email: str
     role: str
     status: str
-
-
-# --- helpers --------------------------------------------------------------- #
 
 
 def _now() -> datetime:

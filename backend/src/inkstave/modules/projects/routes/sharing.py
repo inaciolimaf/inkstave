@@ -54,9 +54,6 @@ def _member_read(info: sharing_service.MemberInfo) -> MemberRead:
     )
 
 
-# --- members --------------------------------------------------------------- #
-
-
 @router.get("/{project_id}/members", response_model=list[MemberRead], responses=_NOT_FOUND)
 async def list_members(
     project_id: UUID,
@@ -102,9 +99,6 @@ async def transfer_ownership(
 ) -> MemberRead:
     member = await sharing_service.transfer_ownership(session, project_id, user.id, data.to_user_id)
     return _member_read(member)
-
-
-# --- invites (owner) ------------------------------------------------------- #
 
 
 @router.get("/{project_id}/invites", response_model=list[InviteRead], responses=_NOT_FOUND)
@@ -160,9 +154,6 @@ async def revoke_invite(
     session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await sharing_service.revoke_invite(session, project_id, user.id, invite_id)
-
-
-# --- token-based accept / decline / preview -------------------------------- #
 
 
 @invites_router.get("/{token}", response_model=InvitePreview, responses=_NOT_FOUND)

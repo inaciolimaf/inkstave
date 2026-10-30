@@ -80,9 +80,6 @@ async def actors(app: Any, async_client: AsyncClient, db_session: AsyncSession) 
     )
 
 
-# --- reads: owner/editor/viewer succeed, non-member 404 -------------------- #
-
-
 async def test_project_read(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     for hdr in (actors.owner, actors.editor, actors.viewer):
         assert (await async_client.get(f"{PROJECTS}/{actors.pid}", headers=hdr)).status_code == 200
@@ -96,9 +93,6 @@ async def test_doc_and_tree_read(actors: SimpleNamespace, async_client: AsyncCli
     for hdr in (actors.owner, actors.editor, actors.viewer):  # AC3 viewer reads
         assert (await async_client.get(url, headers=hdr)).status_code == 200
     assert (await async_client.get(url, headers=actors.outsider)).status_code == 404
-
-
-# --- writes: viewer 403, non-member 404, editor/owner succeed -------------- #
 
 
 async def test_project_write_is_owner_only(actors: SimpleNamespace, async_client: AsyncClient) -> None:
@@ -138,9 +132,6 @@ async def test_tree_write_is_editor_plus(actors: SimpleNamespace, async_client: 
     assert (await async_client.post(url, json=body, headers=actors.editor)).status_code == 201
 
 
-# --- sharing: owner-only --------------------------------------------------- #
-
-
 async def test_share_is_owner_only(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}/invites"
     body = {"email": "new@example.com", "role": "viewer"}
@@ -149,18 +140,12 @@ async def test_share_is_owner_only(actors: SimpleNamespace, async_client: AsyncC
     assert (await async_client.post(url, json=body, headers=actors.outsider)).status_code == 404
 
 
-# --- compile: members (incl. viewer) allowed, non-member denied ------------ #
-
-
 async def test_compile_allows_members(actors: SimpleNamespace, async_client: AsyncClient) -> None:
     url = f"{PROJECTS}/{actors.pid}/compile"
     for hdr in (actors.owner, actors.editor, actors.viewer):  # AC9 + viewer-compile default
         resp = await async_client.post(url, json={}, headers=hdr)
         assert resp.status_code == 202, (hdr, resp.text)
     assert (await async_client.post(url, json={}, headers=actors.outsider)).status_code == 404
-
-
-# --- /permissions ---------------------------------------------------------- #
 
 
 async def test_permissions_per_role(actors: SimpleNamespace, async_client: AsyncClient) -> None:

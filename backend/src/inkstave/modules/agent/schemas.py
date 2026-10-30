@@ -1,5 +1,3 @@
-"""HTTP schemas for the agent API (spec 44)."""
-
 from __future__ import annotations
 
 from datetime import datetime

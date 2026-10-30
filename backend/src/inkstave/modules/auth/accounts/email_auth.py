@@ -54,9 +54,6 @@ def _validate_new_password(user: User, new_password: str) -> None:
         raise BadRequestError("Password must not contain your email address.")
 
 
-# --- email verification ---------------------------------------------------- #
-
-
 async def request_email_verification(
     session: AsyncSession,
     user: User,
@@ -92,9 +89,6 @@ async def confirm_email_verification(
     user.email_confirmed = True
     await session.flush()
     return user
-
-
-# --- magic-link passwordless login ----------------------------------------- #
 
 
 async def request_magic_login(
@@ -144,9 +138,6 @@ async def complete_magic_login(
     return pair
 
 
-# --- password reset -------------------------------------------------------- #
-
-
 async def request_password_reset(
     session: AsyncSession,
     *,
@@ -193,9 +184,6 @@ async def complete_password_reset(
     await session.flush()
     await refresh_store.revoke_user(user.id)
     logger.info("password_reset_completed", extra={"user_id": user.id})
-
-
-# --- internals ------------------------------------------------------------- #
 
 
 async def _load_user(session: AsyncSession, user_id: object) -> User:

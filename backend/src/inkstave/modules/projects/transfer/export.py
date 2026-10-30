@@ -229,11 +229,6 @@ async def stream_project_zip(
     yield buffer.drain()  # the central directory written by close()
 
 
-# --------------------------------------------------------------------------- #
-# Filename / Content-Disposition helpers
-# --------------------------------------------------------------------------- #
-
-
 def zip_filename_for(project_name: str) -> str:
     """Derive a safe ``<name>.zip`` from a project name (fallback ``project.zip``)."""
     cleaned = "".join(" " if ord(ch) < 0x20 else ch for ch in project_name)

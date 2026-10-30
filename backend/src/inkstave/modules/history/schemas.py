@@ -1,5 +1,3 @@
-"""History API schemas (spec 37)."""
-
 from __future__ import annotations
 
 from datetime import datetime

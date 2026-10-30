@@ -26,9 +26,6 @@ from tests.unit._clock import FrozenClock
 BASE = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
-# --- the abstraction itself ------------------------------------------------ #
-
-
 def test_system_clock_is_utc_aware_and_default() -> None:
     assert isinstance(SYSTEM_CLOCK, SystemClock)
     now = SYSTEM_CLOCK.now()
@@ -42,9 +39,6 @@ def test_frozen_clock_is_a_clock_and_advances() -> None:
     assert clock.now() == BASE
     clock.advance(seconds=30)
     assert clock.now() == BASE + timedelta(seconds=30)
-
-
-# --- #5.2 token expiry boundary -------------------------------------------- #
 
 
 def _unverified_claims(token: str) -> dict[str, Any]:
@@ -88,9 +82,6 @@ def test_token_default_clock_lifetime_unchanged() -> None:
     assert r["exp"] - r["iat"] == settings.refresh_token_ttl_seconds
 
 
-# --- #5.3 refresh rotation / revocation cutoff ----------------------------- #
-
-
 async def test_refresh_revocation_cutoff_uses_injected_clock(redis: Any) -> None:
     store = build_refresh_store(redis, get_settings())
     uid, fam = uuid4(), uuid4()
@@ -109,9 +100,6 @@ async def test_refresh_revocation_cutoff_uses_injected_clock(redis: Any) -> None
     )
     rec_new = await store.get_refresh("jti-new")
     assert rec_new is not None and await store.is_user_revoked(rec_new) is False
-
-
-# --- #5.4 email-change token expiry ---------------------------------------- #
 
 
 class _FirstResult:

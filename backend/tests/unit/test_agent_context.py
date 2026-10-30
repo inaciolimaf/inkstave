@@ -146,9 +146,6 @@ def test_verbatim_percent_does_not_swallow_rest_of_file() -> None:
     assert "One" in titles and "Two" in titles  # Two is not swallowed by verbatim
 
 
-# --- locate_section --------------------------------------------------------- #
-
-
 def _map(text: str):
     return build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
 
@@ -168,9 +165,6 @@ def test_locate_synonyms_ordinals_and_no_match() -> None:  # AC4
 def test_locate_by_label() -> None:
     pm = _map("\n".join([r"\section{Introduction}", r"\label{intro}", "x"]))
     assert locate_section(pm, "intro")[0].reason in {"label", "synonym", "exact title"}
-
-
-# --- select_context --------------------------------------------------------- #
 
 
 def test_select_respects_budget_and_truncates() -> None:  # AC5
@@ -215,9 +209,6 @@ def test_select_includes_outline_summary() -> None:
     bundle = select_context(pm, {"main.tex": text}.get, "introduction", budget_tokens=8000)
     assert any(c.kind == "outline" for c in bundle.chunks)
     assert estimate_tokens("abcd") == 1
-
-
-# --- build_project_map ------------------------------------------------------ #
 
 
 def test_project_map_stitches_inputs_and_detects_main() -> None:  # AC3

@@ -19,9 +19,6 @@ __all__ = ["seed"]
 pytestmark = pytest.mark.integration
 
 
-# --- HTTP: SSE events route (query-param token auth) ----------------------- #
-
-
 async def _await_subscriber(redis: Any, channel: str) -> None:
     """Block until the SSE endpoint has actually SUBSCRIBED.
 
@@ -89,9 +86,6 @@ async def test_sse_events_route_requires_auth(
     token = outsider_h["Authorization"].removeprefix("Bearer ")
     denied = await async_client.get(f"{base}?access_token={token}")
     assert denied.status_code == 403  # authenticated non-member
-
-
-# --- HTTP: cancel run ------------------------------------------------------ #
 
 
 async def test_cancel_run_http(

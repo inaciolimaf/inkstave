@@ -139,6 +139,17 @@ def test_ownership_is_never_checked_by_hand() -> None:
     assert offenders == []
 
 
+def test_no_comment_separators() -> None:
+    separator = re.compile(r"^\s*#\s*(---|[-=]{5,})")
+    offenders = [
+        f"{_relative(path)}:{number}"
+        for path in _source_files()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1)
+        if separator.match(line)
+    ]
+    assert offenders == []
+
+
 def test_no_folder_holds_more_than_eight_files() -> None:
     sizes = Counter(p.parent for p in _source_files() if p.name != "__init__.py")
     crowded = {str(folder): n for folder, n in sizes.items() if n > MAX_FILES_PER_FOLDER}

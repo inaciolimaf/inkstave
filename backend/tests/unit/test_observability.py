@@ -23,9 +23,6 @@ def _record(name: str = "test.logger", msg: str = "hi", **extra: object) -> logg
     return record
 
 
-# --- redaction (AC4) -------------------------------------------------------- #
-
-
 def test_redact_removes_denylisted_keys_case_insensitive_and_nested() -> None:
     out = redact(
         {
@@ -46,9 +43,6 @@ def test_redact_removes_denylisted_keys_case_insensitive_and_nested() -> None:
     assert out["nested"]["safe"] == "ok"
     assert out["tokens_prompt"] == 5  # benign keys are not false-positived
     assert out["request_id"] == "r1"
-
-
-# --- JSON formatter (AC1, AC4) ---------------------------------------------- #
 
 
 def test_formatter_emits_single_line_json_with_schema_and_context() -> None:
@@ -77,9 +71,6 @@ def test_formatter_omits_unbound_context_fields() -> None:
     assert "request_id" not in data and "user_id" not in data  # no null spam
 
 
-# --- request context (AC3) -------------------------------------------------- #
-
-
 def test_bind_and_clear_context_no_leak_between_requests() -> None:
     t1 = bind_context(request_id="a", user_id="u")
     assert current_context() == {"request_id": "a", "user_id": "u"}
@@ -89,9 +80,6 @@ def test_bind_and_clear_context_no_leak_between_requests() -> None:
     t2 = bind_context(request_id="b")
     assert current_context() == {"request_id": "b"}  # no stale user_id from before
     clear_context(t2)
-
-
-# --- metric helpers (AC11) -------------------------------------------------- #
 
 
 def test_metrics_module_reimport_does_not_raise() -> None:
@@ -122,9 +110,6 @@ def test_track_ws_gauge_returns_to_baseline_on_exception() -> None:
         assert sample() == before + 1  # raised by 1 inside
         raise ValueError("handler crashed")
     assert sample() == before  # decremented in finally
-
-
-# --- route-template extraction (AC: spec 51 §8) ----------------------------- #
 
 
 def _scope(app: FastAPI, method: str, path: str) -> dict[str, object]:

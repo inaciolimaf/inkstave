@@ -29,9 +29,6 @@ def _edit(mode: str, new_text: str, start: int | None = None, end: int | None = 
     )
 
 
-# --- apply_staged_edits ---------------------------------------------------- #
-
-
 def test_full_replacement() -> None:
     assert apply_staged_edits("old\ntext\n", [_edit("full", "brand\nnew\n")]) == "brand\nnew\n"
 
@@ -63,9 +60,6 @@ def test_trailing_newline_preserved_and_absent() -> None:
     assert apply_staged_edits("a\nb\n", [_edit("range", "B", start=1, end=2)]) == "a\nB\n"
 
 
-# --- compute_diff ---------------------------------------------------------- #
-
-
 def test_compute_diff_headers_and_ops() -> None:
     # AC1/AC8: 1-based headers, per-line ops, additions/deletions.
     current = "a\nb\nc\nd\ne\n"
@@ -94,17 +88,11 @@ def test_full_file_replacement_has_hunks() -> None:
     assert stats["hunk_count"] >= 1 and hunks  # AC2
 
 
-# --- drift ----------------------------------------------------------------- #
-
-
 def test_is_stale_on_version_or_hash_change() -> None:
     diff = SimpleNamespace(base_version="3", base_hash=content_hash("abc"))
     assert is_stale(diff, "abc", 3) is False  # AC6: unchanged
     assert is_stale(diff, "abc", 4) is True  # version changed
     assert is_stale(diff, "abcX", 3) is True  # hash changed
-
-
-# --- oversized-doc handling (AC9) ------------------------------------------ #
 
 
 def test_is_oversized_skips_past_threshold() -> None:
