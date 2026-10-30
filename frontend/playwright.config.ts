@@ -26,6 +26,8 @@ const backendEnv: Record<string, string> = {
   LOG_JSON: "false",
   COMPILE_MODE: process.env.COMPILE_MODE ?? "mock",
   LLM_STUB: process.env.LLM_STUB ?? "true",
+  // Keeps a stub run in flight long enough for the Stop journey; cancellation is read between steps.
+  LLM_STUB_DELAY_MS: "400",
   COMPILE_WORKDIR_ROOT: process.env.E2E_COMPILE_WORKDIR ?? "/tmp/inkstave-e2e-compiles",
   // Flush captured history quickly so the history journey sees versions promptly.
   HISTORY_DEBOUNCE_MS: process.env.E2E_HISTORY_DEBOUNCE_MS ?? "200",

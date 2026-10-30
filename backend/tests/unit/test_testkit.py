@@ -121,3 +121,14 @@ async def test_stub_llm_streams_final_reply(chunks: int) -> None:
     ]
     pieces = [c.delta async for c in stub.stream(history)]
     assert "".join(p for p in pieces if p) == FINAL_REPLY
+
+
+async def test_stub_llm_waits_before_replying(monkeypatch: pytest.MonkeyPatch) -> None:
+    pauses: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        pauses.append(seconds)
+
+    monkeypatch.setattr("inkstave.modules.agent.llm.stub.asyncio.sleep", fake_sleep)
+    await StubAgentLLM(delay_s=0.4).complete([])
+    assert pauses == [0.4]

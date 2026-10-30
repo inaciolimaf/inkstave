@@ -6,11 +6,6 @@
  */
 import { expect, type Locator, type Page } from "@playwright/test";
 
-/** Escape a string for safe embedding in a RegExp (project names contain spaces/parens). */
-function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export class LoginPage {
   constructor(private readonly page: Page) {}
 
@@ -59,9 +54,9 @@ export class DashboardPage {
     return this.page.getByRole("link", { name });
   }
 
-  /** The table row for one project (scoped so parallel specs don't collide). */
+  /** The index line of one project (scoped so parallel specs don't collide). */
   row(name: string): Locator {
-    return this.page.getByRole("row", { name: new RegExp(escapeRe(name)) });
+    return this.page.getByRole("listitem").filter({ has: this.projectLink(name) });
   }
 
   async open(name: string): Promise<void> {

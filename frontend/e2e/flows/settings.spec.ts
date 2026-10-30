@@ -29,7 +29,7 @@ test("profile, editor prefs, email-change and delete gating @smoke", async ({ pa
 
   // Email change: shows the "confirmation sent" state, active email unchanged.
   await page.getByLabel("New email").fill(`changed-${uniqueId("e")}@example.com`);
-  await page.getByLabel("Password", { exact: true }).fill(E2E_PASSWORD);
+  await page.getByRole("region", { name: "Email" }).getByLabel("Password").fill(E2E_PASSWORD);
   await page.getByRole("button", { name: "Change email" }).click();
   await expect(page.getByText(/confirmation link/i)).toBeVisible();
 
@@ -37,7 +37,7 @@ test("profile, editor prefs, email-change and delete gating @smoke", async ({ pa
   await page.getByRole("button", { name: "Delete my account" }).click();
   const confirm = page.getByRole("button", { name: "Delete account" });
   await expect(confirm).toBeDisabled();
-  await page.getByLabel("Password", { exact: true }).fill(E2E_PASSWORD);
+  await page.getByRole("alertdialog").getByLabel("Password").fill(E2E_PASSWORD);
   await page.getByLabel("Type DELETE").fill("DELETE");
   await expect(confirm).toBeEnabled();
   await page.getByRole("button", { name: "Cancel" }).click(); // never actually delete User A

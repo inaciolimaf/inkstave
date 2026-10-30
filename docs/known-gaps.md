@@ -23,10 +23,6 @@ no such list.
 
 ### Frontend standard
 
-**`frontend/e2e/a11y.spec.ts` never ran against the real stack.** *Why:* this machine has no Redis. A stub
-run of the same axe tags found only the colour contrast failures fixed since, and that run was not
-repeated after the fix. CI will be its first real run, and its cost against the 2-minute budget is unknown.
-
 **Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
 
 **The editor has two bars, not the one spec 106 asks for.** The route's bar and the `EditorWorkspace` toolbar

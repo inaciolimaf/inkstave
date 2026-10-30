@@ -226,6 +226,8 @@ class CompileSettingsMixin:
     # deterministic, network-free stub that scripts a search → read → propose_edit
     # tool sequence and a fixed reply. Production defaults to False (real provider).
     llm_stub: bool = False
+    # Pause before each stub reply, so a run stays in flight long enough to be stopped.
+    llm_stub_delay_ms: int = Field(default=0, ge=0, le=5_000)
     tectonic_bin: str = "tectonic"
     tectonic_cache_dir: str = "/var/cache/tectonic"
     tectonic_bundle_url: str = ""

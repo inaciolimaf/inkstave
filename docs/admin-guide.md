@@ -305,6 +305,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `COMPILE_SANDBOX_PIDS_LIMIT` | No | `256` | container --pids-limit (fork-bomb guard) | worker |
 | `COMPILE_SANDBOX_TMPFS_MB` | No | `256` | size of the writable /tmp tmpfs in the container | worker |
 | `LLM_STUB` | No | `false` | true swaps the agent LLM for a deterministic in-process stub (no network); e2e uses true | backend, worker |
+| `LLM_STUB_DELAY_MS` | No | `0` | Pause before each stub reply, 0 to 5000; only the e2e sets it |
 | `E2E_BASE_URL` | No | `http://localhost:4173` | where Playwright points the browser (Vite preview origin) | tests |
 | `E2E_API_URL` | No | `http://localhost:8099` | backend origin the e2e frontend talks to | tests |
 | `E2E_DATABASE_URL` | No | `postgresql+asyncpg://inkstave:inkstave@localhost:5433/inkstave_e2e` | docker-compose.test.yml Postgres | tests |

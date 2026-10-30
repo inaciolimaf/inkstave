@@ -15,6 +15,7 @@ result, so the stub works against whatever project the e2e seeds.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections.abc import AsyncIterator
 from uuid import uuid4
@@ -53,9 +54,10 @@ _DOC_ID_RE = re.compile(r'"doc_id"\s*:\s*"([0-9a-fA-F-]{36})"')
 class StubAgentLLM:
     """Scripted agent LLM: search → read → propose_edit → final reply."""
 
-    def __init__(self, *, model: str = "stub/agent", stream_chunks: int = 3) -> None:
+    def __init__(self, *, model: str = "stub/agent", stream_chunks: int = 3, delay_s: float = 0) -> None:
         self._model = model
         self._stream_chunks = stream_chunks
+        self._delay_s = delay_s
 
     @property
     def model(self) -> str:
@@ -96,6 +98,7 @@ class StubAgentLLM:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ) -> LLMResponse:
+        await asyncio.sleep(self._delay_s)
         return self._plan(messages)
 
     async def stream(
@@ -106,6 +109,7 @@ class StubAgentLLM:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ) -> AsyncIterator[LLMStreamChunk]:
+        await asyncio.sleep(self._delay_s)
         response = self._plan(messages)
         text = response.content or ""
         size = max(1, -(-len(text) // max(self._stream_chunks, 1)))
