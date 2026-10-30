@@ -2,6 +2,8 @@
 # Never commit real secrets; .env.example holds placeholders only.
 # Keep the !.env.example re-include AFTER *.env or it would be ignored too.
 .env
+.env.*
+!.env.example
 *.env
 !.env.example
 
@@ -51,5 +53,12 @@ Thumbs.db
 # --- test run artifacts ---
 test-junit.xml
 test-timing.json
+
+# --- build artifacts ---
+*.tsbuildinfo
+coverage/
+
+# --- local session notes (may hold secrets) ---
+conversations/
 
 # NOTE: lockfiles are committed — do NOT ignore uv.lock or pnpm-lock.yaml.
