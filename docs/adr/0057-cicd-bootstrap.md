@@ -2,6 +2,9 @@
 
 **Status:** accepted (spec 57) · **Phase:** 7 — Hardening, packaging & docs
 
+> **Note:** `.github/workflows/cd.yml` was removed in commit `c252ce9`; the repository has only
+> `ci.yml`. The CD section below is kept as history.
+
 ## Context
 
 Inkstave needs a gated CI pipeline, a CD build for the spec-56 images, and the

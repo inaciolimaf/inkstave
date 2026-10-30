@@ -81,4 +81,4 @@ host (or push it to a registry the host can pull).
 
 The container the runner launches is fixed and contains **no** user-controlled
 arguments — filenames are validated and the project is bind-mounted read-only; see
-`backend/src/inkstave/compile/runner.py::SandboxedTectonicRunner`.
+`backend/src/inkstave/modules/compile/running/sandbox.py::SandboxedTectonicRunner`.

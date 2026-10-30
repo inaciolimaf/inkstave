@@ -37,11 +37,11 @@ The review gate. Each item links to the code and/or test that proves it.
 - [x] Explicit allow-list, never `*`+credentials, empty in prod fails boot — `config.py::_guard_production_cors`; `test_security.py::test_cors_guard_rejects_wildcard_and_empty_prod`, `test_security_api.py::test_cors_preflight_allows_configured_origin`
 
 ## Compile sandbox
-- [x] **Per-compile gVisor isolation for public multi-tenant use** (spec 105) — `COMPILE_RUNNER=sandbox` runs each compile in a throwaway `runsc` container: `--runtime=runsc --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user 65534` + hard `--memory/--pids-limit/--cpus/--tmpfs` caps — `compile/runner.py::SandboxedTectonicRunner`; `test_compile_sandbox_runner.py`
+- [x] **Per-compile gVisor isolation for public multi-tenant use** (spec 105) — `COMPILE_RUNNER=sandbox` runs each compile in a throwaway `runsc` container: `--runtime=runsc --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user 65534` + hard `--memory/--pids-limit/--cpus/--tmpfs` caps — `modules/compile/running/sandbox.py::SandboxedTectonicRunner`; `test_compile_sandbox_runner.py`
 - [x] No user-controlled data in the docker argv — fixed argv via `create_subprocess_exec` (no shell); `main_file` validated — `runner.py::validate_main_file`; `test_compile_sandbox_runner.py::test_*filename*`
 - [x] Daily anti-DoS compile quota (30/user/24h → 429 + Retry-After) + per-user concurrency cap — `security/rate_limit.py` (`compile_daily` policy), `compile/coordinator.py`; `test_compile_daily_quota.py`
 - [x] Shell-escape / `\write18` off — Tectonic has no such flag; `test_compile_runner.py::test_compile_sandbox_no_shell_escape_no_inherited_secrets`
-- [x] Timeout + output/size limit — `compile/runner.py` (timeout_s → `docker kill`), spec 21
+- [x] Timeout — `modules/compile/running/sandbox.py` (timeout_s → `docker kill`), spec 21. `COMPILE_MAX_OUTPUT_BYTES` is **not** enforced (see `docs/known-gaps.md`)
 - [x] No inherited secrets in the compile env — `runner.py::build_command` (minimal allow-listed env); same test + `test_compile_sandbox_runner.py`
 - [x] Temp workdir per compile, cleaned up — `compile/jobs.py` (cleanup backstop)
 - [x] Network egress blocked in sandbox mode (`--network none`) + pinned, prewarmed package set (`--only-cached`) — `infra/tectonic/Dockerfile`, spec 21
@@ -63,7 +63,7 @@ Inkstave supports two compile postures, selected by `COMPILE_RUNNER`:
 
 - **`local` (default).** Tectonic runs in-process with process-level hardening
   (no shell-escape, a per-compile working directory that is cleaned up, a CPU
-  timeout and output cap, and a **minimal environment with no application
+  timeout, and a **minimal environment with no application
   secrets**). Suitable when **all users of an instance trust each other**
   (single-team / single-tenant).
 - **`sandbox` (public multi-tenant).** Every compile runs in a **throwaway

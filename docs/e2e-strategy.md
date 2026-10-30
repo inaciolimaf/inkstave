@@ -23,8 +23,16 @@ phase and runs as the **smoke tier** inside the global 2-minute budget (spec 53)
 4. **Global setup** (`e2e/global-setup.ts`) registers the two e2e users via the
    API and writes `e2e/.auth/run-context.json` (git-ignored).
 
-Run the suite: `pnpm exec playwright test` (from `frontend/`). The default
-project is `smoke`; `full` is opt-in.
+Run the suite with `make e2e-smoke`, after `make e2e-infra`. The Playwright projects, each with
+its own target:
+
+| Project | Target | What it runs |
+| --- | --- | --- |
+| `routes` | `make e2e` | `e2e/routes.spec.ts`: every route opens |
+| `mobile` | `make mobile` | `e2e/mobile.spec.ts`: every route at 390x844 |
+| `flows` | `make e2e-flows` | `e2e/flows/*.spec.ts`: real journeys, one file per domain, without `@full` |
+| `smoke` | `make e2e-smoke` | the whole in-budget tier, what CI runs |
+| `full` | `make e2e-all` | smoke plus the opt-in `@full` tests |
 
 ## Auth: per-context fresh login (not a shared storage-state)
 
@@ -38,8 +46,9 @@ register/login through the UI.
 
 ## Stubs (deterministic, env-selected, production untouched)
 
-Both live in `backend/src/inkstave/testkit/` and are activated **only** by env
-flags; the default production paths never import them.
+They live in `backend/src/inkstave/modules/compile/running/stub.py` and
+`backend/src/inkstave/modules/agent/llm/stub.py`, and are activated **only** by env
+flags.
 
 - **`COMPILE_MODE=mock`** → `MockTectonicRunner` writes a tiny, valid one-page PDF
   (built in-process, correct xref) plus a canned log into the compile output dir —
@@ -50,7 +59,7 @@ flags; the default production paths never import them.
   `search_project → read_file → propose_edit` tool sequence and a fixed reply,
   producing a deterministic per-file diff against the seeded document — no network.
 
-The ARQ worker (`compile/worker.py`) selects these at startup based on the flags.
+The ARQ worker (`backend/src/inkstave/worker.py`) selects these at startup based on the flags.
 
 ## Smoke vs full
 
@@ -65,7 +74,7 @@ The ARQ worker (`compile/worker.py`) selects these at startup based on the flags
 | 7. AI agent diff              | stub proposes diff → review → apply; nothing applied before confirm | multi-hunk partial accept/reject |
 | Harness sanity                | stub PDF/log + stub agent diff (API-only)           | —                                              |
 
-Run full: `pnpm exec playwright test --project=full`. The `full` project is
+Run full: `make e2e-all`. The `full` project is
 **excluded from the default run** (and the budget) — it is invoked explicitly and
 may add a second browser engine, real Tectonic, and partial-accept paths.
 
