@@ -31,6 +31,18 @@ from inkstave.core.config.groups import (
     StorageSettingsMixin,
 )
 
+# The `.env.example` value: it is public, so a deploy that copied it signs tokens anyone can forge.
+# tests/unit/test_production_secrets.py fails if this drifts from the file.
+EXAMPLE_JWT_SECRET = "change-me-dev-only-secret-change-me-0123456789"  # noqa: S105
+_WEAK_SECRETS = frozenset(
+    {"changeme", "secret", "dev", "development", "test", "insecure", "default", "key", EXAMPLE_JWT_SECRET}
+)
+_MIN_SECRET_BYTES = 32
+
+
+def _is_weak_secret(secret: str) -> bool:
+    return len(secret.encode()) < _MIN_SECRET_BYTES or secret.lower() in _WEAK_SECRETS
+
 
 class Settings(
     # Bases are listed in REVERSE of the desired field order: pydantic v2 builds
@@ -99,13 +111,30 @@ class Settings(
 
     @model_validator(mode="after")
     def _guard_production_secret(self) -> Settings:
-        """Refuse to boot in production with a missing/weak/default JWT secret (spec 52)."""
+        """Refuse to boot in production with a missing/weak/example JWT secret (spec 52).
+
+        Retired secrets still verify tokens, so they get the same check as the current one.
+        """
         if self.environment != "prod":
             return self
-        secret = self.jwt_secret or ""
-        weak = {"changeme", "secret", "dev", "development", "test", "insecure", "default", "key"}
-        if len(secret.encode()) < 32 or secret.lower() in weak:
+        if _is_weak_secret(self.jwt_secret or ""):
             raise ValueError("JWT_SECRET must be a strong, non-default value (>=32 bytes) in production")
+        if any(_is_weak_secret(secret) for secret in self.jwt_secret_previous):
+            raise ValueError(
+                "JWT_SECRET_PREVIOUS entries must be strong, non-default values (>=32 bytes) in production"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _guard_production_email(self) -> Settings:
+        """EMAIL_BACKEND=resend is an explicit choice, so a missing key is never intentional.
+
+        OPENROUTER_API_KEY stays out of this boot guard on purpose: no setting says "this
+        deploy has no agent", so refusing here would brick one that simply does not use it.
+        `check-config` still reports it.
+        """
+        if self.environment == "prod" and self.email_backend == "resend" and not self.resend_api_key.strip():
+            raise ValueError("RESEND_API_KEY: required when EMAIL_BACKEND=resend")
         return self
 
     @model_validator(mode="after")
