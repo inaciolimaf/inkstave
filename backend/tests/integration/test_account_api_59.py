@@ -56,9 +56,6 @@ def _headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-# --- profile + preferences --------------------------------------------------- #
-
-
 async def test_get_and_patch_profile(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user = await _user(db_session)
     h = _headers(user)
@@ -90,9 +87,6 @@ async def test_editor_preferences_round_trip_and_clamp(
     # Bad enum → 422.
     bad = await async_client.put(f"{USERS}/me/editor-preferences", json={"keymap": "nano"}, headers=h)
     assert bad.status_code == 422
-
-
-# --- change password --------------------------------------------------------- #
 
 
 async def test_change_password_success_and_revokes_sessions(
@@ -141,9 +135,6 @@ async def test_change_password_wrong_current_is_rejected(
     await db_session.refresh(user)
     # Nothing changed: the original password still verifies.
     assert build_password_hasher(get_settings()).verify(PASSWORD, user.hashed_password)
-
-
-# --- change email + confirm -------------------------------------------------- #
 
 
 async def test_change_email_then_confirm(
@@ -211,9 +202,6 @@ async def test_confirm_expired_token_is_gone(
     assert r.status_code == 410
 
 
-# --- account deletion -------------------------------------------------------- #
-
-
 async def test_delete_account_cascades_and_revokes(
     async_client: AsyncClient, db_session: AsyncSession
 ) -> None:
@@ -248,9 +236,6 @@ async def test_delete_requires_confirm_and_correct_password(
             "DELETE", f"{USERS}/me", json={"password": "nope1234", "confirm": True}, headers=h
         )
     ).status_code == 401
-
-
-# --- authz ------------------------------------------------------------------- #
 
 
 @pytest.mark.parametrize(

@@ -60,9 +60,6 @@ async def _seed_user(db_session: AsyncSession, *, is_admin: bool = False) -> Use
     return user
 
 
-# --- /users/me ----------------------------------------------------------- #
-
-
 async def test_me_with_valid_token(async_client: AsyncClient, db_session: AsyncSession) -> None:
     user = await _seed_user(db_session)
     resp = await async_client.get(ME, headers=_auth(_access_token_for(user)))
@@ -97,9 +94,6 @@ async def test_me_with_unknown_user_is_401(async_client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
-# --- admin gate ---------------------------------------------------------- #
-
-
 async def test_admin_ping_allows_admin(async_client: AsyncClient, db_session: AsyncSession) -> None:
     admin = await _seed_user(db_session, is_admin=True)
     resp = await async_client.get(ADMIN_PING, headers=_auth(_access_token_for(admin)))
@@ -122,9 +116,6 @@ async def test_admin_check_is_db_authoritative(async_client: AsyncClient, db_ses
     assert resp.status_code == 403
 
 
-# --- optional auth ------------------------------------------------------- #
-
-
 async def test_optional_auth_route(app: Any, async_client: AsyncClient) -> None:
     async def whoami(user: User | None = Depends(get_optional_user)) -> dict[str, str | None]:
         return {"user": str(user.id) if user else None}
@@ -137,9 +128,6 @@ async def test_optional_auth_route(app: Any, async_client: AsyncClient) -> None:
 
     invalid = await async_client.get("/_test/whoami", headers=_auth("garbage"))
     assert invalid.status_code == 401
-
-
-# --- WS auth helper ------------------------------------------------------ #
 
 
 async def test_authenticate_ws_token(db_session: AsyncSession) -> None:
@@ -156,9 +144,6 @@ async def test_authenticate_ws_token(db_session: AsyncSession) -> None:
     expired = _craft_access_token(sub=str(user.id), is_admin=False, expired=True)
     with pytest.raises(NotAuthenticatedError):
         await authenticate_ws_token(expired, service, db_session)
-
-
-# --- revocation chain (spec 07 + 08) ------------------------------------- #
 
 
 async def test_revoked_family_cannot_mint_access(
@@ -179,9 +164,6 @@ async def test_revoked_family_cannot_mint_access(
     # No usable access token can be minted from the revoked family.
     after = await async_client.post(REFRESH, json={"refresh_token": pair2["refresh_token"]})
     assert after.status_code == 401
-
-
-# --- rate limiting ------------------------------------------------------- #
 
 
 async def test_login_rate_limit_fails_open_when_redis_errors(

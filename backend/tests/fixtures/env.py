@@ -74,6 +74,7 @@ def _test_overrides() -> dict[str, str]:
         "JWT_SECRET": "test-secret-not-for-production-0123456789abcdef",
         # High rate limits by default (spec 08); the 429 test overrides these.
         "RATE_LIMIT_LOGIN": "1000/300",
+        "RATE_LIMIT_LOGIN_IP": "1000/300",
         "RATE_LIMIT_REGISTER": "1000/3600",
         "RATE_LIMIT_REFRESH": "1000/300",
     }

@@ -102,6 +102,8 @@ def _register_compile(ctx: dict[str, Any], settings: Any, store: Any, packages: 
             docs=DbDocumentSource(session),
             files=StorageFileSource(session, store),
             packages=packages,
+            # Everything is read: Tectonic can outlast the idle limit, so no transaction waits on it.
+            on_assembled=session.commit,
         )
 
     async def persist_outputs(
@@ -125,7 +127,11 @@ async def startup(ctx: dict[str, Any]) -> None:
     ctx["settings"] = settings
     ctx["engine"] = engine
     ctx["session_factory"] = sessionmaker
-    ctx["redis"] = await create_redis_pool(settings.redis_url)
+    ctx["redis"] = await create_redis_pool(
+        settings.redis_url,
+        connect_timeout_s=settings.redis_connect_timeout_s,
+        socket_timeout_s=settings.redis_socket_timeout_s,
+    )
     ctx["object_store"] = store  # used by the history compaction job (spec 36)
     ctx["email_sender"] = get_email_sender(settings)  # used by the email job (spec 39)
     _register_compile(ctx, settings, store, load_package_config(_PACKAGES_TOML, settings))

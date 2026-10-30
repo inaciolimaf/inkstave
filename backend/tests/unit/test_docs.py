@@ -17,8 +17,6 @@ _ROOT = Path(__file__).resolve().parents[3]
 _DOCS = _ROOT / "docs"
 
 
-# --- §7.1/7.2/7.4/7.5/7.7/7.10: required docs and their section headings ------ #
-
 _REQUIRED_SECTIONS: dict[str, list[str]] = {
     "README.md": [
         "Quickstart",
@@ -118,9 +116,6 @@ def test_user_guide_states_agent_needs_approval() -> None:
     assert "apply" in text and "review" in text
 
 
-# --- §7.3: every .env.example variable appears in the admin guide ------------- #
-
-
 def test_admin_guide_documents_every_env_var() -> None:
     env = (_ROOT / ".env.example").read_text("utf-8")
     names = {m.group(1) for line in env.splitlines() if (m := re.match(r"^([A-Z][A-Z0-9_]*)=", line))}
@@ -129,17 +124,11 @@ def test_admin_guide_documents_every_env_var() -> None:
     assert undocumented == [], f"env vars missing from the admin guide: {undocumented}"
 
 
-# --- §7.8: the no-Overleaf-code originality clause ---------------------------- #
-
-
 def test_contributing_has_originality_clause() -> None:
     text = (_ROOT / "CONTRIBUTING.md").read_text("utf-8").lower()
     assert "no overleaf" in text or "no-overleaf" in text
     assert "agpl" in text and "mit" in text
     assert "original work" in text
-
-
-# --- §7.9: internal links and anchors resolve -------------------------------- #
 
 
 def _slug(heading: str) -> str:
@@ -180,9 +169,6 @@ def test_internal_links_resolve() -> None:
             if problem is not None:
                 broken.append(f"{md.relative_to(_ROOT)} -> {target} ({problem})")
     assert broken == [], "broken internal links:\n" + "\n".join(broken)
-
-
-# --- §7.6: the committed OpenAPI artifact is in sync -------------------------- #
 
 
 def _load_export_module() -> object:

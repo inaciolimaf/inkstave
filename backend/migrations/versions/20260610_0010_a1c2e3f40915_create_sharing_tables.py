@@ -64,12 +64,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project_memberships")),
         sa.UniqueConstraint("project_id", "user_id", name="uq_membership_project_user"),
     )
-    op.create_index(
-        "ix_project_memberships_project_id", "project_memberships", ["project_id"], unique=False
-    )
-    op.create_index(
-        "ix_project_memberships_user_id", "project_memberships", ["user_id"], unique=False
-    )
+    op.create_index("ix_project_memberships_project_id", "project_memberships", ["project_id"], unique=False)
+    op.create_index("ix_project_memberships_user_id", "project_memberships", ["user_id"], unique=False)
     op.create_index(
         "uq_membership_one_owner",
         "project_memberships",
@@ -101,9 +97,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.CheckConstraint(
-            "role IN ('editor','viewer')", name=op.f("ck_project_invites_invite_role_valid")
-        ),
+        sa.CheckConstraint("role IN ('editor','viewer')", name=op.f("ck_project_invites_invite_role_valid")),
         sa.CheckConstraint(
             "status IN ('pending','accepted','declined','revoked','expired')",
             name=op.f("ck_project_invites_invite_status_valid"),

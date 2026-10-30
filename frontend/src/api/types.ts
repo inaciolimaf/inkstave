@@ -112,8 +112,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Revoke a refresh token (and its family)
-         * @description Idempotently revoke the token's family; unknown tokens still return 200.
+         * End the session of a refresh token (its family and its access tokens)
+         * @description Idempotently end the token's session; unknown tokens still return 200.
          */
         post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
@@ -1411,8 +1411,7 @@ export interface components {
              * Format: uuid
              */
             project_id: string;
-            /** Role */
-            role: string;
+            role: components["schemas"]["MembershipRole"];
         };
         /** AgentMessageOut */
         AgentMessageOut: {
@@ -1428,8 +1427,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /** Role */
-            role: string;
+            role: components["schemas"]["AgentMessageRole"];
             /** Seq */
             seq: number;
             /** Token Usage */
@@ -1439,10 +1437,13 @@ export interface components {
             /** Tool Call Id */
             tool_call_id: string | null;
             /** Tool Calls */
-            tool_calls: {
-                [key: string]: unknown;
-            }[] | null;
+            tool_calls: components["schemas"]["ToolCall"][] | null;
         };
+        /**
+         * AgentMessageRole
+         * @enum {string}
+         */
+        AgentMessageRole: "system" | "user" | "assistant" | "tool";
         /** AgentSessionOut */
         AgentSessionOut: {
             /** Active Run Id */
@@ -1521,6 +1522,11 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /**
+         * CompileJobStatus
+         * @enum {string}
+         */
+        CompileJobStatus: "queued" | "running" | "success" | "failure" | "timeout" | "cancelled" | "error";
         /** CompileProblems */
         CompileProblems: {
             /** Compile Id */
@@ -1581,8 +1587,7 @@ export interface components {
             project_id: string;
             /** Started At */
             started_at: string | null;
-            /** Status */
-            status: string;
+            status: components["schemas"]["CompileJobStatus"];
         };
         /** ConfirmEmailChangeRequest */
         ConfirmEmailChangeRequest: {
@@ -1615,6 +1620,48 @@ export interface components {
             confirm: boolean;
             /** Password */
             password: string;
+        };
+        /** DiffHunk */
+        DiffHunk: {
+            /** New Lines */
+            new_lines: number;
+            /** New Start */
+            new_start: number;
+            /** Old Lines */
+            old_lines: number;
+            /** Old Start */
+            old_start: number;
+            /** Segments */
+            segments: components["schemas"]["DiffSegment"][];
+        };
+        /** DiffResponse */
+        DiffResponse: {
+            /**
+             * Binary
+             * @default false
+             */
+            binary: boolean;
+            /** From */
+            from: number;
+            /** Hunks */
+            hunks: components["schemas"]["DiffHunk"][];
+            /** To */
+            to: number | "current";
+            /**
+             * Too Large
+             * @default false
+             */
+            too_large: boolean;
+        };
+        /** DiffSegment */
+        DiffSegment: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "context" | "added" | "removed";
+            /** Value */
+            value: string;
         };
         /** DocRestoreResult */
         DocRestoreResult: {
@@ -1786,6 +1833,37 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** Hunk */
+        Hunk: {
+            /** Additions */
+            additions: number;
+            /** Deletions */
+            deletions: number;
+            /** Header */
+            header: string;
+            /** Hunk Id */
+            hunk_id: string;
+            /** Lines */
+            lines: components["schemas"]["HunkLine"][];
+            /** New Lines */
+            new_lines: number;
+            /** New Start */
+            new_start: number;
+            /** Old Lines */
+            old_lines: number;
+            /** Old Start */
+            old_start: number;
+        };
+        /** HunkLine */
+        HunkLine: {
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: " " | "-" | "+";
+            /** Text */
+            text: string;
+        };
         /**
          * InverseResult
          * @description pdf -> code: the best source location for a PDF point.
@@ -1838,8 +1916,7 @@ export interface components {
              * Format: uuid
              */
             project_id: string;
-            /** Role */
-            role: string;
+            role: components["schemas"]["InviteRole"];
             /** Status */
             status: string;
             /** Token */
@@ -1861,8 +1938,7 @@ export interface components {
             project_id: string;
             /** Project Name */
             project_name: string;
-            /** Role */
-            role: string;
+            role: components["schemas"]["InviteRole"];
         };
         /**
          * InviteRead
@@ -1891,11 +1967,15 @@ export interface components {
              * Format: uuid
              */
             project_id: string;
-            /** Role */
-            role: string;
+            role: components["schemas"]["InviteRole"];
             /** Status */
             status: string;
         };
+        /**
+         * InviteRole
+         * @enum {string}
+         */
+        InviteRole: "editor" | "viewer";
         /** LabelBrief */
         LabelBrief: {
             /**
@@ -1963,8 +2043,7 @@ export interface components {
             email: string;
             /** Name */
             name: string;
-            /** Role */
-            role: string;
+            role: components["schemas"]["MembershipRole"];
             /** Status */
             status: string;
             /**
@@ -1978,6 +2057,11 @@ export interface components {
             /** Role */
             role: string;
         };
+        /**
+         * MembershipRole
+         * @enum {string}
+         */
+        MembershipRole: "owner" | "editor" | "viewer";
         /** MessageResponse */
         MessageResponse: {
             /** Detail */
@@ -2041,8 +2125,7 @@ export interface components {
         PermissionsRead: {
             /** Capabilities */
             capabilities: string[];
-            /** Role */
-            role: string;
+            role: components["schemas"]["MembershipRole"];
         };
         /** PostMessageIn */
         PostMessageIn: {
@@ -2194,9 +2277,7 @@ export interface components {
              */
             doc_id: string;
             /** Hunks */
-            hunks?: {
-                [key: string]: unknown;
-            }[] | null;
+            hunks?: components["schemas"]["Hunk"][] | null;
             /**
              * Id
              * Format: uuid
@@ -2318,6 +2399,17 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /** ToolCall */
+        ToolCall: {
+            /** Arguments */
+            arguments?: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** TransferRequest */
         TransferRequest: {
@@ -2729,6 +2821,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
@@ -4498,7 +4599,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DiffResponse"];
                 };
             };
             /** @description Forbidden */
@@ -4517,6 +4618,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiffResponse"];
                 };
             };
             /** @description Validation Error */

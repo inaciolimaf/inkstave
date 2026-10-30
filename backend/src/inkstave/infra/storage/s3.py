@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import aioboto3  # type: ignore[import-untyped]
+from aiobotocore.config import AioConfig  # type: ignore[import-untyped]
 from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from inkstave.infra.storage.base import ObjectNotFoundError, ObjectStat, ObjectStore, PutData
@@ -22,6 +23,17 @@ def _is_not_found(error: ClientError) -> bool:
     code = error.response.get("Error", {}).get("Code", "")
     status = error.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
     return code in ("NoSuchKey", "NotFound", "404") or status == 404
+
+
+_MAX_ATTEMPTS = 2
+
+
+def client_config(*, connect_timeout_s: int = 5, read_timeout_s: int = 30) -> AioConfig:
+    return AioConfig(
+        connect_timeout=connect_timeout_s,
+        read_timeout=read_timeout_s,
+        retries={"total_max_attempts": _MAX_ATTEMPTS, "mode": "standard"},
+    )
 
 
 class S3ObjectStore(ObjectStore):
@@ -34,10 +46,15 @@ class S3ObjectStore(ObjectStore):
         endpoint_url: str | None = None,
         access_key: str | None = None,
         secret_key: str | None = None,
+        config: AioConfig | None = None,
     ) -> None:
         self._bucket = bucket
         self._chunk = chunk_size
-        self._client_kwargs: dict[str, Any] = {"service_name": "s3", "region_name": region}
+        self._client_kwargs: dict[str, Any] = {
+            "service_name": "s3",
+            "region_name": region,
+            "config": config or client_config(),
+        }
         if endpoint_url:
             self._client_kwargs["endpoint_url"] = endpoint_url
         if access_key:

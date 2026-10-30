@@ -39,9 +39,6 @@ async def _auth(db_session: AsyncSession) -> tuple[dict[str, str], Any]:
     return {"Authorization": f"Bearer {token}"}, user
 
 
-# --- secure headers (AC5) --------------------------------------------------- #
-
-
 async def test_security_headers_present_on_404_and_200(async_client: AsyncClient) -> None:
     for path in ("/healthz", "/this-route-does-not-exist"):
         resp = await async_client.get(path)
@@ -51,9 +48,6 @@ async def test_security_headers_present_on_404_and_200(async_client: AsyncClient
         assert resp.headers["x-content-type-options"] == "nosniff"
         assert "x-powered-by" not in resp.headers  # framework banner stripped
         assert "strict-transport-security" not in resp.headers  # HSTS off in test
-
-
-# --- body size limit (AC4: 413) --------------------------------------------- #
 
 
 async def test_body_size_limit_returns_413() -> None:
@@ -75,9 +69,6 @@ async def test_body_size_limit_returns_413() -> None:
     assert big.status_code == 413
 
 
-# --- strict validation (AC4: 422 extra) ------------------------------------- #
-
-
 async def test_extra_field_is_rejected_422(async_client: AsyncClient, db_session: AsyncSession) -> None:
     headers, user = await _auth(db_session)
     project = await create_project(db_session, user.id, "P")
@@ -88,9 +79,6 @@ async def test_extra_field_is_rejected_422(async_client: AsyncClient, db_session
         headers=headers,
     )
     assert resp.status_code == 422
-
-
-# --- rate limiting (AC1/AC3) ------------------------------------------------ #
 
 
 def _request(ip: str = "1.2.3.4") -> Request:
@@ -134,9 +122,6 @@ async def test_rate_limit_fails_open_when_redis_errors() -> None:
     dep = rate_limit(RateLimitPolicy(name="sec-open", limit=1, window_seconds=60, key="ip"))
     # Must NOT raise — the limiter fails open when the backend is unavailable (AC2).
     await dep(_request(), Response(), user=None, redis=_Raising(), settings=get_settings())
-
-
-# --- CORS (AC6) ------------------------------------------------------------- #
 
 
 async def test_cors_preflight_allows_configured_origin(async_client: AsyncClient) -> None:

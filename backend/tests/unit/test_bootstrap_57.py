@@ -30,9 +30,6 @@ def _prod(**over: Any) -> dict[str, Any]:
     return base
 
 
-# --- Spec 57 §5.6: fail-fast production guards -------------------------------- #
-
-
 def test_production_requires_strong_jwt_secret() -> None:
     with pytest.raises(ValueError, match="JWT_SECRET"):
         Settings(_env_file=None, **_prod(jwt_secret="secret"))  # type: ignore[arg-type]
@@ -60,9 +57,6 @@ def test_dev_settings_use_lenient_defaults() -> None:
     assert settings.environment == "dev" and settings.cors_origins
 
 
-# --- Spec 57 §5.3: migration runner ------------------------------------------ #
-
-
 class _FakeConn:
     def __init__(self, calls: list[str]) -> None:
         self._calls = calls
@@ -73,7 +67,8 @@ class _FakeConn:
     def __exit__(self, *exc: object) -> bool:
         return False
 
-    def exec_driver_sql(self, sql: str, params: dict[str, Any] | None = None) -> None:
+    def execute(self, statement: Any) -> None:
+        sql = str(statement)
         if "pg_advisory_lock" in sql:
             self._calls.append("lock")
         elif "pg_advisory_unlock" in sql:
@@ -121,7 +116,7 @@ class _FakeAsyncConn:
     async def __aexit__(self, *exc: object) -> bool:
         return False
 
-    async def exec_driver_sql(self, sql: str) -> _FakeResult:
+    async def execute(self, _statement: Any) -> _FakeResult:
         return _FakeResult(self._value)
 
 
@@ -138,9 +133,6 @@ async def test_is_database_at_head_compares_to_script_head(monkeypatch: pytest.M
     assert await migrate.is_database_at_head(_FakeAsyncEngine("rev_head"))  # type: ignore[arg-type]
     assert not await migrate.is_database_at_head(_FakeAsyncEngine("rev_old"))  # type: ignore[arg-type]
     assert not await migrate.is_database_at_head(_FakeAsyncEngine(None))  # type: ignore[arg-type]
-
-
-# --- Spec 57 §8 / AC5: strict mode refuses to start when DB is behind head --- #
 
 
 async def test_strict_mode_refuses_to_start_when_db_behind_head(
@@ -163,9 +155,6 @@ async def test_strict_mode_refuses_to_start_when_db_behind_head(
         await app_module._ensure_migrations(object(), settings)
 
 
-# --- Spec 57 §5.5: seed refuses in production -------------------------------- #
-
-
 async def test_seed_demo_refuses_in_production() -> None:
     from inkstave.modules.admin.provisioning.seed import seed_demo
 
@@ -173,9 +162,6 @@ async def test_seed_demo_refuses_in_production() -> None:
     with pytest.raises(RuntimeError, match="production"):
         # The prod guard fires before any DB access, so a dummy session is fine.
         await seed_demo(MagicMock(), MagicMock(), settings=settings, force=False)
-
-
-# --- Spec 57 §5.6: check-config CLI exit codes ------------------------------- #
 
 
 def test_check_config_cli_exit_codes(monkeypatch: pytest.MonkeyPatch) -> None:

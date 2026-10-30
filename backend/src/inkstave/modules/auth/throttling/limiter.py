@@ -27,9 +27,8 @@ logger = logging.getLogger("inkstave.ratelimit")
 # Scopes whose identity also includes the submitted email (credential stuffing).
 # The verify/magic request endpoints throttle per address AND per IP; their
 # token-only callbacks carry no email, so ``_identity`` falls back to IP for them.
-_EMAIL_SCOPES = {"login", "register", "verify_email", "magic_link"}
+_EMAIL_SCOPES = {"register", "verify_email", "magic_link"}
 _SCOPE_SETTING = {
-    "login": "rate_limit_login",
     "register": "rate_limit_register",
     "refresh": "rate_limit_refresh",
     # Sensitive public auth endpoints (spec 52/103): forgot-password reuses the
@@ -90,7 +89,7 @@ async def _identity(request: Request, scope: str, settings: Settings) -> str:
     return ip
 
 
-async def _hit(redis: Redis, key: str, window: int) -> tuple[int, int]:
+async def hit_window(redis: Redis, key: str, window: int) -> tuple[int, int]:
     """Increment the window counter for `key`, returning ``(count, ttl)``."""
     try:
         count, ttl = await redis.eval(_WINDOW_LUA, 1, key, str(window))  # type: ignore[misc]
@@ -105,7 +104,7 @@ async def _hit(redis: Redis, key: str, window: int) -> tuple[int, int]:
 
 async def _enforce(redis: Redis, key: str, limit: int, window: int) -> None:
     """Raise :class:`RateLimitError` once the scope's limit is exceeded."""
-    count, ttl = await _hit(redis, key, window)
+    count, ttl = await hit_window(redis, key, window)
     if count > limit:
         raise RateLimitError(retry_after_seconds=ttl if ttl > 0 else window)
 

@@ -26,9 +26,6 @@ from tests.unit._clock import FrozenClock
 BASE = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
-# --- the abstraction itself ------------------------------------------------ #
-
-
 def test_system_clock_is_utc_aware_and_default() -> None:
     assert isinstance(SYSTEM_CLOCK, SystemClock)
     now = SYSTEM_CLOCK.now()
@@ -44,9 +41,6 @@ def test_frozen_clock_is_a_clock_and_advances() -> None:
     assert clock.now() == BASE + timedelta(seconds=30)
 
 
-# --- #5.2 token expiry boundary -------------------------------------------- #
-
-
 def _unverified_claims(token: str) -> dict[str, Any]:
     return jwt.decode(token, options={"verify_signature": False})
 
@@ -54,7 +48,7 @@ def _unverified_claims(token: str) -> dict[str, Any]:
 def test_access_token_exp_derives_from_injected_clock() -> None:
     settings = get_settings()
     svc = build_token_service(settings)
-    user = SimpleNamespace(id=uuid4(), is_admin=False)
+    user = SimpleNamespace(id=uuid4(), is_admin=False, session_version=0)
     clock = FrozenClock(BASE)
 
     token, expires_in = svc.create_access_token(user, clock=clock)
@@ -77,18 +71,15 @@ def test_access_token_exp_derives_from_injected_clock() -> None:
 def test_token_default_clock_lifetime_unchanged() -> None:
     settings = get_settings()
     svc = build_token_service(settings)
-    user = SimpleNamespace(id=uuid4(), is_admin=False)
+    user = SimpleNamespace(id=uuid4(), is_admin=False, session_version=0)
 
     access, _ = svc.create_access_token(user)  # no clock -> system clock
     a = _unverified_claims(access)
     assert a["exp"] - a["iat"] == settings.access_token_ttl_seconds
 
-    refresh, _ = svc.create_refresh_token(uuid4(), uuid4())
+    refresh, _ = svc.create_refresh_token(user, uuid4())
     r = _unverified_claims(refresh)
     assert r["exp"] - r["iat"] == settings.refresh_token_ttl_seconds
-
-
-# --- #5.3 refresh rotation / revocation cutoff ----------------------------- #
 
 
 async def test_refresh_revocation_cutoff_uses_injected_clock(redis: Any) -> None:
@@ -109,9 +100,6 @@ async def test_refresh_revocation_cutoff_uses_injected_clock(redis: Any) -> None
     )
     rec_new = await store.get_refresh("jti-new")
     assert rec_new is not None and await store.is_user_revoked(rec_new) is False
-
-
-# --- #5.4 email-change token expiry ---------------------------------------- #
 
 
 class _FirstResult:

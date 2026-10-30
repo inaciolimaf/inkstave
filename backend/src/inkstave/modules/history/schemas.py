@@ -1,8 +1,7 @@
-"""History API schemas (spec 37)."""
-
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -52,7 +51,7 @@ class UpdatesResponse(BaseModel):
 
 
 class DiffSegment(BaseModel):
-    type: str
+    type: Literal["context", "added", "removed"]
     value: str
 
 
@@ -68,7 +67,7 @@ class DiffResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     from_: int = Field(alias="from")
-    to: int | str
+    to: int | Literal["current"]
     binary: bool = False
     too_large: bool = False
     hunks: list[DiffHunk]

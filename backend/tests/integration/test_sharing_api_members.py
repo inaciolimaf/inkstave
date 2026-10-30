@@ -30,9 +30,6 @@ pytestmark = pytest.mark.integration
 __all__ = ["enqueuer"]
 
 
-# --- member management ----------------------------------------------------- #
-
-
 async def test_change_role_and_owner_rejected(
     async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
 ) -> None:

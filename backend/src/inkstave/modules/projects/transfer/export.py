@@ -151,7 +151,7 @@ class _StreamBuffer(io.RawIOBase):
         return len(self._buf)
 
 
-async def _doc_contents(session: AsyncSession, plan: list[ExportEntry]) -> dict[UUID, str]:
+async def read_doc_contents(session: AsyncSession, plan: list[ExportEntry]) -> dict[UUID, str]:
     """One bulk read of doc text (post-flush) keyed by entity id — no N queries."""
     doc_ids = [e.entity_id for e in plan if e.type is TreeEntityType.doc]
     if not doc_ids:
@@ -201,12 +201,14 @@ async def _write_blob(
 
 async def stream_project_zip(
     plan: list[ExportEntry],
+    contents: dict[UUID, str],
     store: ObjectStore,
-    session: AsyncSession,
     settings: Settings,
 ) -> AsyncIterator[bytes]:
-    """Yield the project archive as a stream — never the whole zip at once."""
-    contents = await _doc_contents(session, plan)
+    """Yield the project archive as a stream — never the whole zip at once.
+
+    Takes the doc text already read: a slow download must not hold a transaction open.
+    """
     chunk_size = settings.storage_stream_chunk_bytes
     buffer = _StreamBuffer()
     zf = zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED)
@@ -225,11 +227,6 @@ async def stream_project_zip(
     finally:
         zf.close()
     yield buffer.drain()  # the central directory written by close()
-
-
-# --------------------------------------------------------------------------- #
-# Filename / Content-Disposition helpers
-# --------------------------------------------------------------------------- #
 
 
 def zip_filename_for(project_name: str) -> str:

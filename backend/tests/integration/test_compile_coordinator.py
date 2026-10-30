@@ -118,7 +118,6 @@ async def test_user_concurrency_cap_raises(db_session: AsyncSession) -> None:
         await coord.request_compile(project_id=project.id, user_id=user.id, main_file="main.tex", force=True)
 
 
-# --- CompileRepository unit tests (issue 79 / spec 22 §8) ------------------- #
 #
 # CRUD, active counts and latest lookups exercised directly against the test DB,
 # in isolation from the coordinator.

@@ -58,6 +58,7 @@ def _user(**over: Any) -> SimpleNamespace:
         "id": "user-1",
         "email": "ada@example.com",
         "hashed_password": "old-hash",
+        "session_version": 0,
         "pending_email": None,
         "email_change_token_hash": None,
         "email_change_expires_at": None,
@@ -65,9 +66,6 @@ def _user(**over: Any) -> SimpleNamespace:
     }
     base.update(over)
     return SimpleNamespace(**base)
-
-
-# --- change_password --------------------------------------------------------- #
 
 
 async def test_change_password_rehashes_and_revokes_sessions() -> None:
@@ -108,9 +106,6 @@ async def test_change_password_rejects_wrong_current_password() -> None:
 
     assert user.hashed_password == "old-hash"  # unchanged
     assert store.revoked == []  # no session revocation on a failed re-auth
-
-
-# --- confirm_email_change ---------------------------------------------------- #
 
 
 async def test_confirm_email_change_matches_hashed_token_never_raw() -> None:

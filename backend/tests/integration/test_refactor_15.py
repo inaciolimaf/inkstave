@@ -72,9 +72,6 @@ async def _create_entity(
     return str(resp.json()["id"])
 
 
-# --- No N+1 on hot paths (AC3) --------------------------------------------- #
-
-
 async def test_tree_list_issues_constant_queries(
     async_client: AsyncClient, db_session: AsyncSession, query_counter: dict[str, int]
 ) -> None:
@@ -139,9 +136,6 @@ async def test_file_get_is_few_queries(
         assert query_counter["count"] <= 5
     finally:
         app.dependency_overrides.pop(get_object_store, None)
-
-
-# --- Unique-constraint race maps to 409, not 500 (AC6) --------------------- #
 
 
 async def test_create_name_race_maps_to_409(
@@ -217,9 +211,6 @@ async def test_move_name_race_maps_to_409(
     )
     assert resp.status_code == 409
     assert resp.json()["error"]["type"] == "name_conflict"
-
-
-# --- Ownership = existence (404, never 403) across resource types (AC2) ----- #
 
 
 async def test_ownership_is_404_across_resources(async_client: AsyncClient, db_session: AsyncSession) -> None:

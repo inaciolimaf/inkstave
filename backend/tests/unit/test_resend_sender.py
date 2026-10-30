@@ -22,11 +22,6 @@ def _sender(handler: Any, key: str = "re_secret_key") -> ResendEmailSender:
     )
 
 
-# --------------------------------------------------------------------------- #
-# ResendEmailSender
-# --------------------------------------------------------------------------- #
-
-
 async def test_resend_posts_expected_payload() -> None:
     captured: dict[str, Any] = {}
 
@@ -92,11 +87,6 @@ def test_factory_selects_resend_and_keeps_others() -> None:
     assert isinstance(get_email_sender(console), ConsoleEmailSender)
 
 
-# --------------------------------------------------------------------------- #
-# email_verification template
-# --------------------------------------------------------------------------- #
-
-
 def test_email_verification_template_renders_and_escapes() -> None:
     subject, text, html = render_email(
         "email_verification",
@@ -107,11 +97,6 @@ def test_email_verification_template_renders_and_escapes() -> None:
     assert "http://x/verify?token=t&a=1" in text  # link present in text
     assert "&amp;a=1" in html  # URL escaped in the HTML href
     assert "&lt;b&gt;Ann" in html  # user name escaped (no raw tags)
-
-
-# --------------------------------------------------------------------------- #
-# send-test-email CLI
-# --------------------------------------------------------------------------- #
 
 
 class _FakeSender:
@@ -144,11 +129,6 @@ async def test_cli_send_test_email_fail_nonzero(capsys: pytest.CaptureFixture[st
     assert rc == 1
     err = capsys.readouterr().err
     assert "FAIL" in err and "Traceback" not in err
-
-
-# --------------------------------------------------------------------------- #
-# Config validator
-# --------------------------------------------------------------------------- #
 
 
 def test_validator_flags_missing_resend_key(monkeypatch: pytest.MonkeyPatch) -> None:

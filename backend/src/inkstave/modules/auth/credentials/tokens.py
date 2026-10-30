@@ -38,33 +38,43 @@ class TokenService:
         self._access_ttl = settings.access_token_ttl_seconds
         self._refresh_ttl = settings.refresh_token_ttl_seconds
 
+    @property
+    def refresh_ttl_seconds(self) -> int:
+        return self._refresh_ttl
+
     def _encode(self, claims: dict[str, Any]) -> str:
         return jwt.encode(claims, self._secret, algorithm=self._algorithm)
 
-    def create_access_token(self, user: User, *, clock: Clock = SYSTEM_CLOCK) -> tuple[str, int]:
-        """Return ``(token, expires_in_seconds)`` for the user's access token."""
+    def create_access_token(
+        self, user: User, *, session_id: UUID | None = None, clock: Clock = SYSTEM_CLOCK
+    ) -> tuple[str, int]:
+        """Return ``(token, expires_in_seconds)``; ``session_id`` is the refresh family it belongs to."""
         now = clock.now()
-        claims = {
+        claims: dict[str, Any] = {
             "sub": str(user.id),
             "type": "access",
             "is_admin": user.is_admin,
+            "sv": user.session_version,
             "iss": self._issuer,
             "iat": now,
             "exp": now + timedelta(seconds=self._access_ttl),
             "jti": uuid4().hex,
         }
+        if session_id is not None:
+            claims["sid"] = str(session_id)
         return self._encode(claims), self._access_ttl
 
     def create_refresh_token(
-        self, user_id: UUID, family_id: UUID, *, clock: Clock = SYSTEM_CLOCK
+        self, user: User, family_id: UUID, *, clock: Clock = SYSTEM_CLOCK
     ) -> tuple[str, str]:
         """Return ``(token, jti)`` for a refresh token in the given family."""
         now = clock.now()
         jti = uuid4().hex
         claims = {
-            "sub": str(user_id),
+            "sub": str(user.id),
             "type": "refresh",
             "family_id": str(family_id),
+            "sv": user.session_version,
             "iss": self._issuer,
             "iat": now,
             "exp": now + timedelta(seconds=self._refresh_ttl),

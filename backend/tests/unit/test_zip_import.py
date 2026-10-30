@@ -62,11 +62,6 @@ def _symlink_zip(name: str, target: bytes) -> zipfile.ZipFile:
     return zipfile.ZipFile(buf)
 
 
-# --------------------------------------------------------------------------- #
-# plan_entries — happy path
-# --------------------------------------------------------------------------- #
-
-
 def test_plan_happy_path_classifies_and_counts() -> None:
     zf = _zip(
         {
@@ -109,11 +104,6 @@ def test_plan_empty_archive_raises() -> None:
         plan_entries(_zip({"notes.exe": b"MZ", "__MACOSX/x": b"j"}), _limits())
 
 
-# --------------------------------------------------------------------------- #
-# plan_entries — security: zip-slip, symlink, bombs
-# --------------------------------------------------------------------------- #
-
-
 @pytest.mark.parametrize("name", ["../../etc/passwd", "/etc/passwd", "a/../../b", "..\\..\\x"])
 def test_plan_rejects_zip_slip(name: str) -> None:
     with pytest.raises(ZipSlipError):
@@ -147,11 +137,6 @@ def test_plan_rejects_too_many_entries() -> None:
         plan_entries(_zip(entries), _limits(max_entries=3))
 
 
-# --------------------------------------------------------------------------- #
-# decode_text
-# --------------------------------------------------------------------------- #
-
-
 def test_decode_latin1_without_raising() -> None:
     raw = "café résumé".encode("latin-1")
     assert decode_text(raw) == "café résumé"
@@ -165,11 +150,6 @@ def test_decode_cp1252_smart_quotes() -> None:
 def test_decode_strips_bom_and_normalises_newlines() -> None:
     raw = b"\xef\xbb\xbfline1\r\nline2\rline3"
     assert decode_text(raw) == "line1\nline2\nline3"
-
-
-# --------------------------------------------------------------------------- #
-# detect_root_doc
-# --------------------------------------------------------------------------- #
 
 
 def _entry(*parts: str) -> PlannedEntry:

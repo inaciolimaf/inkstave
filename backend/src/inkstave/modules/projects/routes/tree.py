@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.deps import get_object_store
 from inkstave.modules.projects.access.capabilities import Capability
@@ -65,7 +65,7 @@ async def _read(session: AsyncSession, project_id: UUID, entity: TreeEntity) -> 
 @router.get("", response_model=TreeRead, summary="List the project's file tree")
 async def get_tree(
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> TreeRead:
     entities = await tree_service.get_tree(session, project.id)
     return tree_service.build_tree(entities)
@@ -81,7 +81,7 @@ async def get_tree(
 async def create_entity(
     data: CreateEntityIn,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> TreeEntityRead:
     entity = await tree_service.create_entity(
         session, project.id, TreeEntityType(data.type), data.name, data.parent_id
@@ -99,7 +99,7 @@ async def rename_entity(
     entity_id: UUID,
     data: RenameEntityIn,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> TreeEntityRead:
     entity = await tree_service.rename_entity(session, project.id, entity_id, data.name)
     return await _read(session, project.id, entity)
@@ -115,7 +115,7 @@ async def move_entity(
     entity_id: UUID,
     data: MoveEntityIn,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> TreeEntityRead:
     entity = await tree_service.move_entity(session, project.id, entity_id, data.new_parent_id)
     return await _read(session, project.id, entity)
@@ -130,7 +130,7 @@ async def move_entity(
 async def delete_entity(
     entity_id: UUID,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
 ) -> None:
     await tree_service.delete_entity(session, project.id, entity_id, store=store)

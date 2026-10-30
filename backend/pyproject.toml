@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 # Runtime dependencies. SQLAlchemy/Alembic arrive in spec 03; auth libs in
 # 06-08; ARQ in spec 22. Only the FastAPI substrate + Redis client live here.
 dependencies = [
-    "fastapi>=0.115",
+    "fastapi>=0.121",
     "uvicorn[standard]>=0.34",
     "pydantic>=2.10",
     "pydantic-settings>=2.2",

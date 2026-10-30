@@ -82,6 +82,14 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `DB_POOL_SIZE` | No | `10` | SQLAlchemy async pool size | backend, worker |
 | `DB_MAX_OVERFLOW` | No | `5` | extra connections beyond the pool | backend, worker |
 | `DB_POOL_TIMEOUT` | No | `30` | seconds to wait for a pooled connection | backend, worker |
+| `DB_LOCK_TIMEOUT_S` | No | `10` | per connection, 0 turns it off; migrations are exempt | backend, worker |
+| `DB_STATEMENT_TIMEOUT_S` | No | `30` | per connection, 0 turns it off; migrations are exempt | backend, worker |
+| `DB_IDLE_IN_TRANSACTION_TIMEOUT_S` | No | `120` | keep above the S3 and SMTP timeouts | backend, worker |
+| `REDIS_CONNECT_TIMEOUT_S` | No | `3` | seconds to open a Redis connection | backend, worker |
+| `REDIS_SOCKET_TIMEOUT_S` | No | `5` | seconds a Redis command may wait | backend, worker |
+| `S3_CONNECT_TIMEOUT_S` | No | `5` | seconds to open an S3 connection | backend, worker |
+| `S3_READ_TIMEOUT_S` | No | `30` | seconds an S3 read may wait | backend, worker |
+| `SMTP_TIMEOUT_S` | No | `30` | seconds per SMTP operation | backend, worker |
 | `CACHE_ENABLED` | No | `true` | hot-read Redis cache master switch | backend |
 | `CACHE_TTL_SECONDS` | No | `30` | hot-read cache TTL | backend |
 | `SUITE_BUDGET_SECONDS` | No | `120` | hard CI gate: fail if the suite exceeds this | tests |
@@ -108,7 +116,8 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `ACCESS_TOKEN_TTL_SECONDS` | No | `900` | access token lifetime (15 min) | backend |
 | `REFRESH_TOKEN_TTL_SECONDS` | No | `1209600` | refresh token lifetime / Redis TTL (14 days) | backend |
 | `RATE_LIMIT_ENABLED` | No | `true` | master switch for the limiter | backend |
-| `RATE_LIMIT_AUTH_LOGIN` | No | `10/300` | login cap, `<limit>/<window_seconds>` per IP+email (legacy alias: `RATE_LIMIT_LOGIN`) | backend |
+| `RATE_LIMIT_AUTH_LOGIN` | No | `10/300` | wrong passwords, `<limit>/<window_seconds>` per e-mail; success resets it (legacy alias: `RATE_LIMIT_LOGIN`) | backend |
+| `RATE_LIMIT_LOGIN_IP` | No | `50/300` | wrong passwords per IP; behind a proxy it needs `TRUST_PROXY_HEADERS=true`, otherwise only the per-e-mail limit applies | backend |
 | `RATE_LIMIT_REGISTER` | No | `5/3600` | per IP | backend |
 | `RATE_LIMIT_REFRESH` | No | `30/300` | per IP | backend |
 | `RATE_LIMIT_AUTH_PASSWORD` | No | `5/3600` | change-password / sensitive-auth cap, `<limit>/<window_seconds>` per user-or-IP | backend |
@@ -333,6 +342,9 @@ section and [docs/e2e-strategy.md](e2e-strategy.md) for the mock path used in te
   healthchecks use these.
 - **Tracing** — optional OpenTelemetry (`OTEL_ENABLED=true`,
   `OTEL_EXPORTER_OTLP_ENDPOINT`); a true no-op when disabled.
+
+
+**Locking an account out.** `python -m inkstave.cli deactivate-user --email user@example.com` blocks login and ends every session. Undo it with `UPDATE users SET is_active = true`.
 
 ## Upgrades
 

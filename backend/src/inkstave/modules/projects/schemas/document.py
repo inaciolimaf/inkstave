@@ -1,5 +1,3 @@
-"""Document content request/response schemas (spec 13)."""
-
 from __future__ import annotations
 
 from datetime import datetime

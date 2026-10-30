@@ -9,8 +9,7 @@
             "type": "string"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/MembershipRole"
           }
         },
         "required": [
@@ -44,8 +43,7 @@
             "type": "string"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/AgentMessageRole"
           },
           "seq": {
             "title": "Seq",
@@ -78,8 +76,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/ToolCall"
                 },
                 "type": "array"
               },
@@ -102,6 +99,16 @@
         ],
         "title": "AgentMessageOut",
         "type": "object"
+      },
+      "AgentMessageRole": {
+        "enum": [
+          "system",
+          "user",
+          "assistant",
+          "tool"
+        ],
+        "title": "AgentMessageRole",
+        "type": "string"
       },
       "AgentSessionOut": {
         "properties": {
@@ -302,6 +309,19 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "CompileJobStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "success",
+          "failure",
+          "timeout",
+          "cancelled",
+          "error"
+        ],
+        "title": "CompileJobStatus",
+        "type": "string"
+      },
       "CompileProblems": {
         "properties": {
           "compile_id": {
@@ -470,8 +490,7 @@
             "title": "Started At"
           },
           "status": {
-            "title": "Status",
-            "type": "string"
+            "$ref": "#/components/schemas/CompileJobStatus"
           }
         },
         "required": [
@@ -579,6 +598,109 @@
           "password"
         ],
         "title": "DeleteAccountRequest",
+        "type": "object"
+      },
+      "DiffHunk": {
+        "properties": {
+          "new_lines": {
+            "title": "New Lines",
+            "type": "integer"
+          },
+          "new_start": {
+            "title": "New Start",
+            "type": "integer"
+          },
+          "old_lines": {
+            "title": "Old Lines",
+            "type": "integer"
+          },
+          "old_start": {
+            "title": "Old Start",
+            "type": "integer"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/DiffSegment"
+            },
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "old_start",
+          "old_lines",
+          "new_start",
+          "new_lines",
+          "segments"
+        ],
+        "title": "DiffHunk",
+        "type": "object"
+      },
+      "DiffResponse": {
+        "properties": {
+          "binary": {
+            "default": false,
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "from": {
+            "title": "From",
+            "type": "integer"
+          },
+          "hunks": {
+            "items": {
+              "$ref": "#/components/schemas/DiffHunk"
+            },
+            "title": "Hunks",
+            "type": "array"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "const": "current",
+                "type": "string"
+              }
+            ],
+            "title": "To"
+          },
+          "too_large": {
+            "default": false,
+            "title": "Too Large",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "hunks"
+        ],
+        "title": "DiffResponse",
+        "type": "object"
+      },
+      "DiffSegment": {
+        "properties": {
+          "type": {
+            "enum": [
+              "context",
+              "added",
+              "removed"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "title": "DiffSegment",
         "type": "object"
       },
       "DocRestoreResult": {
@@ -905,6 +1027,85 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "Hunk": {
+        "properties": {
+          "additions": {
+            "title": "Additions",
+            "type": "integer"
+          },
+          "deletions": {
+            "title": "Deletions",
+            "type": "integer"
+          },
+          "header": {
+            "title": "Header",
+            "type": "string"
+          },
+          "hunk_id": {
+            "title": "Hunk Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/HunkLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "new_lines": {
+            "title": "New Lines",
+            "type": "integer"
+          },
+          "new_start": {
+            "title": "New Start",
+            "type": "integer"
+          },
+          "old_lines": {
+            "title": "Old Lines",
+            "type": "integer"
+          },
+          "old_start": {
+            "title": "Old Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hunk_id",
+          "header",
+          "old_start",
+          "old_lines",
+          "new_start",
+          "new_lines",
+          "lines",
+          "additions",
+          "deletions"
+        ],
+        "title": "Hunk",
+        "type": "object"
+      },
+      "HunkLine": {
+        "properties": {
+          "op": {
+            "enum": [
+              " ",
+              "-",
+              "+"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "text"
+        ],
+        "title": "HunkLine",
+        "type": "object"
+      },
       "InverseResult": {
         "description": "pdf -> code: the best source location for a PDF point.",
         "properties": {
@@ -987,8 +1188,7 @@
             "type": "string"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/InviteRole"
           },
           "status": {
             "title": "Status",
@@ -1033,8 +1233,7 @@
             "type": "string"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/InviteRole"
           }
         },
         "required": [
@@ -1075,8 +1274,7 @@
             "type": "string"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/InviteRole"
           },
           "status": {
             "title": "Status",
@@ -1094,6 +1292,14 @@
         ],
         "title": "InviteRead",
         "type": "object"
+      },
+      "InviteRole": {
+        "enum": [
+          "editor",
+          "viewer"
+        ],
+        "title": "InviteRole",
+        "type": "string"
       },
       "LabelBrief": {
         "properties": {
@@ -1250,8 +1456,7 @@
             "type": "string"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/MembershipRole"
           },
           "status": {
             "title": "Status",
@@ -1286,6 +1491,15 @@
         ],
         "title": "MemberRoleUpdate",
         "type": "object"
+      },
+      "MembershipRole": {
+        "enum": [
+          "owner",
+          "editor",
+          "viewer"
+        ],
+        "title": "MembershipRole",
+        "type": "string"
       },
       "MessageResponse": {
         "properties": {
@@ -1437,8 +1651,7 @@
             "type": "array"
           },
           "role": {
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/MembershipRole"
           }
         },
         "required": [
@@ -1820,8 +2033,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/Hunk"
                 },
                 "type": "array"
               },
@@ -2144,6 +2356,29 @@
           "expires_in"
         ],
         "title": "TokenPair",
+        "type": "object"
+      },
+      "ToolCall": {
+        "properties": {
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ToolCall",
         "type": "object"
       },
       "TransferRequest": {
@@ -2892,6 +3127,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
           }
         },
         "summary": "Log in and receive an access + refresh token pair",
@@ -2902,7 +3147,7 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "Idempotently revoke the token's family; unknown tokens still return 200.",
+        "description": "Idempotently end the token's session; unknown tokens still return 200.",
         "operationId": "logout_api_v1_auth_logout_post",
         "requestBody": {
           "content": {
@@ -2936,7 +3181,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Revoke a refresh token (and its family)",
+        "summary": "End the session of a refresh token (its family and its access tokens)",
         "tags": [
           "auth"
         ]
@@ -5537,7 +5782,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DiffResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5561,6 +5808,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiffResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
           },
           "422": {
             "content": {

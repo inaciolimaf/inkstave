@@ -18,6 +18,7 @@ from inkstave.core.time import SYSTEM_CLOCK, Clock
 from inkstave.modules.auth.accounts.login import issue_token_pair
 from inkstave.modules.auth.accounts.users import get_user_by_email
 from inkstave.modules.auth.credentials.auth_tokens import consume_token, issue_token
+from inkstave.modules.auth.credentials.sessions import end_every_session
 from inkstave.modules.auth.schemas.auth import TokenPair
 from inkstave.modules.auth.schemas.user import (
     PASSWORD_MAX_LENGTH,
@@ -51,9 +52,6 @@ def _validate_new_password(user: User, new_password: str) -> None:
         raise BadRequestError(str(exc)) from exc
     if user.email.split("@", 1)[0].lower() in new_password.lower():
         raise BadRequestError("Password must not contain your email address.")
-
-
-# --- email verification ---------------------------------------------------- #
 
 
 async def request_email_verification(
@@ -93,9 +91,6 @@ async def confirm_email_verification(
     return user
 
 
-# --- magic-link passwordless login ----------------------------------------- #
-
-
 async def request_magic_login(
     session: AsyncSession,
     *,
@@ -133,7 +128,7 @@ async def complete_magic_login(
     """
     token = await consume_token(session, raw_token=raw_token, purpose="magic_login", clock=clock)
     user = await _load_user(session, token.user_id)
-    if user.email.lower() != token.email.lower():
+    if user.email.lower() != token.email.lower() or not user.is_active:
         raise BadRequestError("Invalid or already-used link.")
     if not user.email_confirmed:
         user.email_confirmed = True
@@ -141,9 +136,6 @@ async def complete_magic_login(
     pair = await issue_token_pair(token_service, refresh_store, user)
     logger.info("magic_login_succeeded", extra={"user_id": user.id})
     return pair
-
-
-# --- password reset -------------------------------------------------------- #
 
 
 async def request_password_reset(
@@ -188,12 +180,10 @@ async def complete_password_reset(
     user.hashed_password = await asyncio.to_thread(hasher.hash, new_password)
     if not user.email_confirmed:
         user.email_confirmed = True
+    end_every_session(user)
     await session.flush()
     await refresh_store.revoke_user(user.id)
     logger.info("password_reset_completed", extra={"user_id": user.id})
-
-
-# --- internals ------------------------------------------------------------- #
 
 
 async def _load_user(session: AsyncSession, user_id: object) -> User:

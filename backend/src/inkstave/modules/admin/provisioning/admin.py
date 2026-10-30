@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.modules.auth import PasswordHasher, User, normalise_email
@@ -40,7 +40,7 @@ async def ensure_initial_admin(
     automatically at transaction end, so the serialization is leak-free.
     """
     # Serialize concurrent callers: the second waits here, then sees the admin.
-    await session.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _ADMIN_LOCK_KEY})
+    await session.execute(select(func.pg_advisory_xact_lock(_ADMIN_LOCK_KEY)))
     if await admin_exists(session):
         return None
 

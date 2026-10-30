@@ -59,10 +59,10 @@ async def test_limiter_disabled_is_noop(redis: Any) -> None:
 
 
 async def test_identity_falls_back_to_ip_when_body_unparseable(redis: Any) -> None:
-    # login/register identities try to read the email from the body; a body that
+    # register identities try to read the email from the body; a body that
     # cannot be parsed must fall back to IP-only keying without raising.
-    settings = _settings(rate_limit_login="5/60")
-    dep = rate_limit("login")
+    settings = _settings(rate_limit_register="5/60")
+    dep = rate_limit("register")
 
     class BadBodyRequest:
         headers: dict[str, str] = {}
@@ -72,7 +72,7 @@ async def test_identity_falls_back_to_ip_when_body_unparseable(redis: Any) -> No
             raise ValueError("not json")
 
     await dep(BadBodyRequest(), redis, settings)  # type: ignore[arg-type]
-    assert await redis.exists("ratelimit:login:1.2.3.4") == 1
+    assert await redis.exists("ratelimit:register:1.2.3.4") == 1
 
 
 async def test_limiter_fails_open_when_redis_errors() -> None:

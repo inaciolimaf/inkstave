@@ -19,9 +19,6 @@ __all__ = ["enqueuer", "seed"]
 pytestmark = pytest.mark.integration
 
 
-# --- HTTP: sessions + authz ------------------------------------------------ #
-
-
 async def test_session_create_authz(
     seed: SimpleNamespace, async_client: AsyncClient, db_session: AsyncSession
 ) -> None:
@@ -108,9 +105,6 @@ async def test_too_long_message_is_400(
         f"{base}/sessions/{sid}/messages", json={"content": oversized}, headers=seed.headers
     )
     assert r.status_code == 400
-
-
-# --- HTTP: list sessions (paginated) --------------------------------------- #
 
 
 async def test_list_sessions_http(

@@ -18,9 +18,6 @@ def _multi() -> SyncTexIndex:
     return SyncTexIndex.from_gz_bytes(gz(MULTI_FILE))
 
 
-# --- preamble / conversion ------------------------------------------------- #
-
-
 def test_parses_preamble_and_inputs() -> None:
     index = _single()
     assert index.version == "1"
@@ -58,9 +55,6 @@ def test_malformed_records_are_skipped() -> None:
 # operates on already-bounded bytes and has no size knowledge of its own.
 
 
-# --- forward (code -> pdf) ------------------------------------------------- #
-
-
 def test_forward_same_file_exact_line() -> None:
     result = _single().forward("main.tex", 10)
     assert result.boxes
@@ -87,9 +81,6 @@ def test_forward_unknown_file_is_empty() -> None:
     assert _single().forward("nope.tex", 1).boxes == []
 
 
-# --- inverse (pdf -> code) ------------------------------------------------- #
-
-
 def test_inverse_inside_box() -> None:
     result = _single().inverse(1, 150.0, 201.0)
     assert result is not None
@@ -112,9 +103,6 @@ def test_multi_file_inverse_returns_relative_path() -> None:
     assert result is not None
     assert result.file == "sections/intro.tex"
     assert result.line == 5
-
-
-# --- coordinate round-trip (criterion 9) ----------------------------------- #
 
 
 def test_forward_inverse_round_trip_is_stable() -> None:

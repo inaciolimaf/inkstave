@@ -7,8 +7,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, exists, func, or_, select
 
+from inkstave.modules.compile.models.compile import Compile
 from inkstave.modules.compile.models.compile_output import CompileOutput
 
 if TYPE_CHECKING:
@@ -112,22 +113,15 @@ class OutputRepository:
     ) -> list[UUID]:
         """Compile ids whose outputs should be pruned: beyond the per-project
         keep-window **or** older than the age cutoff (and still holding outputs)."""
-        sql = text(
-            """
-            SELECT id FROM (
-                SELECT c.id, c.created_at,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY c.project_id ORDER BY c.created_at DESC
-                       ) AS rn
-                FROM compiles c
-            ) ranked
-            WHERE (rn > :keep OR created_at < :cutoff)
-              AND EXISTS (SELECT 1 FROM compile_outputs o WHERE o.compile_id = ranked.id)
-            ORDER BY created_at ASC
-            LIMIT :batch
-            """
+        newest_first = func.row_number().over(
+            partition_by=Compile.project_id, order_by=Compile.created_at.desc()
         )
-        result = await self._session.execute(
-            sql, {"keep": keep_per_project, "cutoff": max_age_cutoff, "batch": batch}
+        ranked = select(Compile.id, Compile.created_at, newest_first.label("rn")).subquery("ranked")
+        has_outputs = exists().where(CompileOutput.compile_id == ranked.c.id)
+        rows = await self._session.scalars(
+            select(ranked.c.id)
+            .where(or_(ranked.c.rn > keep_per_project, ranked.c.created_at < max_age_cutoff), has_outputs)
+            .order_by(ranked.c.created_at)
+            .limit(batch)
         )
-        return [row[0] for row in result.all()]
+        return list(rows)

@@ -20,7 +20,7 @@ from fastapi import Depends, Request
 from sqlalchemy import and_, select
 
 from inkstave.core.config.settings import Settings
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.modules.auth import get_current_user
 from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
@@ -73,7 +73,7 @@ def require_capability(cap: Capability) -> Callable[..., Awaitable[Project]]:
         project_id: UUID,  # bound + validated from the {project_id} path segment
         request: Request,
         user: User = Depends(get_current_user),
-        session: AsyncSession = Depends(get_db_session),
+        session: AsyncSession = UNIT_OF_WORK,
         settings: Settings = Depends(get_settings_dep),
     ) -> Project:
         project, role = await _resolve(request, session, user.id, project_id)

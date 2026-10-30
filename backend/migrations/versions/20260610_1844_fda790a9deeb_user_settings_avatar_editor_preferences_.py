@@ -35,9 +35,7 @@ def upgrade() -> None:
     )
     op.add_column("users", sa.Column("pending_email", postgresql.CITEXT(), nullable=True))
     op.add_column("users", sa.Column("email_change_token_hash", sa.Text(), nullable=True))
-    op.add_column(
-        "users", sa.Column("email_change_expires_at", sa.DateTime(timezone=True), nullable=True)
-    )
+    op.add_column("users", sa.Column("email_change_expires_at", sa.DateTime(timezone=True), nullable=True))
     # Index the token hash for confirm-email-change lookups (partial: only rows
     # with a pending change), and pending_email so duplicate checks are cheap.
     op.create_index(

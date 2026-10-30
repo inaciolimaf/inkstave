@@ -87,7 +87,6 @@ async def _open_database(app: FastAPI, settings: Settings, redis: Any) -> None:
     # Migration gate (spec 57): refuse to start unless the DB is at head, or apply
     # migrations now in convenience mode.
     await _ensure_migrations(engine, settings)
-    # --- Collaboration (CRDT WebSocket) components (spec 28/29) ---
     app.state.collab = build_collab_components(
         redis=redis,
         session_factory=sessionmaker,
@@ -121,7 +120,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.db_engine = None
     app.state.db_sessionmaker = None
     app.state.collab = None
-    redis = await create_redis_pool(settings.redis_url)
+    redis = await create_redis_pool(
+        settings.redis_url,
+        connect_timeout_s=settings.redis_connect_timeout_s,
+        socket_timeout_s=settings.redis_socket_timeout_s,
+    )
     app.state.redis = redis
 
     # Everything created above is disposed in the finally block, so a failure while

@@ -36,9 +36,7 @@ def upgrade() -> None:
         sa.Column("read_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("dismissed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.id"],

@@ -185,12 +185,14 @@ async def _process_archive(
     session: Any, store: Any, row: ProjectImport, tmp_path: Path, settings: Any
 ) -> dict[str, Any]:
     try:
-        zf = zipfile.ZipFile(tmp_path)
+        zf = await asyncio.to_thread(zipfile.ZipFile, tmp_path)
     except zipfile.BadZipFile as exc:
         raise InvalidZipError("The uploaded file is not a valid zip archive.") from exc
-    with zf:
-        plan = plan_entries(zf, limits_from_settings(settings))
+    try:
+        plan = await asyncio.to_thread(plan_entries, zf, limits_from_settings(settings))
         outcome = await reconstruct_tree(session, store, row.project_id, zf, plan, settings=settings)
+    finally:
+        await asyncio.to_thread(zf.close)
 
     await session.execute(
         update(Project).where(Project.id == row.project_id).values(root_doc_id=outcome.root_doc_entity_id)

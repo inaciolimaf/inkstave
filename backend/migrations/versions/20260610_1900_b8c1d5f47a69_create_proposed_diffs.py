@@ -38,12 +38,8 @@ def upgrade() -> None:
         sa.Column("stats", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("status", sa.Text(), server_default="proposed", nullable=False),
         sa.Column("rationale", sa.Text(), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint(f"status IN ({_STATUS})", name="proposed_diff_status_valid"),
         sa.ForeignKeyConstraint(
             ["session_id"],
@@ -71,12 +67,8 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_proposed_diffs")),
     )
-    op.create_index(
-        "ix_proposed_diffs_session_created", "proposed_diffs", ["session_id", "created_at"]
-    )
-    op.create_index(
-        "ix_proposed_diffs_project_status", "proposed_diffs", ["project_id", "status"]
-    )
+    op.create_index("ix_proposed_diffs_session_created", "proposed_diffs", ["session_id", "created_at"])
+    op.create_index("ix_proposed_diffs_project_status", "proposed_diffs", ["project_id", "status"])
     op.create_index("ix_proposed_diffs_doc", "proposed_diffs", ["doc_id"])
 
 

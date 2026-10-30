@@ -114,11 +114,9 @@ async def test_not_a_document_for_file_entity(db_session: AsyncSession) -> None:
         await replace_content(db_session, project.id, file_entity.id, "x", base_version=0)
 
 
-# --------------------------------------------------------------------------- #
 # Pure, no-DB unit assertions for replace_content's logic (spec 13 §8). These
 # exercise the size_bytes byte-count recomputation and the version-branch
 # decision without touching Postgres, so they run as fast pure-logic checks.
-# --------------------------------------------------------------------------- #
 
 
 def test_size_bytes_counts_multibyte_utf8() -> None:

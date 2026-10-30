@@ -87,8 +87,6 @@ class HistoryCaptureService:
             self._locks[doc_id] = lock
         return lock
 
-    # --- capture (non-blocking) -------------------------------------------- #
-
     async def capture_update(
         self,
         *,
@@ -126,8 +124,6 @@ class HistoryCaptureService:
         # Fire-and-forget by design: a failed flush is logged and retried by the next edit
         # or the periodic compaction job.
         spawn(self.flush_doc(doc_id=doc_id, reason="idle"), name="history-idle-flush")
-
-    # --- flush (the actual write) ------------------------------------------ #
 
     def _take(self, doc_id: UUID) -> _Pending | None:
         """Detach the doc's buffer and return its merged contents, if any."""
@@ -224,13 +220,9 @@ class HistoryCaptureService:
             await self._new_chunk(session, project_id, doc_id, current_state, base_version=version)
             await session.commit()
 
-    # --- reconstruction (used by spec 37 + our own tests) ------------------ #
-
     async def reconstruct_state(self, *, doc_id: UUID, version: int) -> bytes:
         async with self._session_factory() as session:
             return await reconstruct_state(session, self._store, doc_id, version)
-
-    # --- helpers ----------------------------------------------------------- #
 
     async def _replica(
         self, session: AsyncSession, doc_id: UUID, open_chunk: HistoryChunk | None

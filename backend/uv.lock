@@ -1266,7 +1266,7 @@ requires-dist = [
     { name = "arq", specifier = ">=0.26" },
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "email-validator", specifier = ">=2.2" },
-    { name = "fastapi", specifier = ">=0.115" },
+    { name = "fastapi", specifier = ">=0.121" },
     { name = "langchain-core", specifier = ">=1.4.3" },
     { name = "langgraph", specifier = ">=1.2.4" },
     { name = "openai", specifier = ">=2.41.0" },

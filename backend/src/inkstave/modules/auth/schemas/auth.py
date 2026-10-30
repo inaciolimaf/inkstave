@@ -1,5 +1,3 @@
-"""Authentication request/response schemas (spec 07)."""
-
 from __future__ import annotations
 
 from typing import Literal

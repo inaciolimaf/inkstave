@@ -16,8 +16,6 @@ from inkstave.modules.auth.schemas.user import (
     UpdateProfileRequest,
 )
 
-# --- EditorPreferences font-size clamping + enum validation ------------------ #
-
 
 def test_font_size_clamps_below_min() -> None:
     prefs = EditorPreferences(font_size=2)
@@ -45,9 +43,6 @@ def test_editor_preferences_forbids_extra_fields() -> None:
         EditorPreferences(font_size=14, bogus=True)  # type: ignore[call-arg]
 
 
-# --- UpdateProfileRequest display-name trimming + bounds --------------------- #
-
-
 def test_display_name_is_trimmed() -> None:
     assert UpdateProfileRequest(display_name="  Ada  ").display_name == "Ada"
 
@@ -67,9 +62,6 @@ def test_update_profile_all_optional() -> None:
     req = UpdateProfileRequest()
     assert req.display_name is None
     assert "avatar_url" not in req.model_fields_set
-
-
-# --- ChangePasswordRequest reuses the password policy ----------------------- #
 
 
 def test_change_password_rejects_weak_password() -> None:

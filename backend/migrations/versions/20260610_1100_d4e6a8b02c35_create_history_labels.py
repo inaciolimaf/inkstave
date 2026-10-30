@@ -30,9 +30,7 @@ def upgrade() -> None:
         sa.Column("version", sa.BigInteger(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("created_by", sa.UUID(), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.ForeignKeyConstraint(
             ["project_id"],
@@ -55,9 +53,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_history_labels")),
     )
     op.create_index("ix_history_labels_doc", "history_labels", ["doc_id", "version"], unique=False)
-    op.create_index(
-        "ix_history_labels_project", "history_labels", ["project_id", "created_at"], unique=False
-    )
+    op.create_index("ix_history_labels_project", "history_labels", ["project_id", "created_at"], unique=False)
     op.create_index(
         "uq_history_labels_doc_name",
         "history_labels",

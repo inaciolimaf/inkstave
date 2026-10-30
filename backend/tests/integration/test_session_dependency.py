@@ -8,7 +8,6 @@ isolated and rolled back.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -36,9 +35,8 @@ async def test_get_db_session_commits_on_success(db_engine: Any) -> None:
         autoflush=False,
         join_transaction_mode="create_savepoint",
     )
-    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(db_sessionmaker=sessionmaker)))
     try:
-        gen = get_db_session(request)  # type: ignore[arg-type]
+        gen = get_db_session(sessionmaker)
         session = await anext(gen)
         session.add(Ping(note="dep-commit"))
         with pytest.raises(StopAsyncIteration):
@@ -58,9 +56,8 @@ async def test_get_db_session_rolls_back_on_error(db_engine: Any) -> None:
         autoflush=False,
         join_transaction_mode="create_savepoint",
     )
-    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(db_sessionmaker=sessionmaker)))
     try:
-        gen = get_db_session(request)  # type: ignore[arg-type]
+        gen = get_db_session(sessionmaker)
         session = await anext(gen)
         session.add(Ping(note="dep-rollback"))
         await session.flush()

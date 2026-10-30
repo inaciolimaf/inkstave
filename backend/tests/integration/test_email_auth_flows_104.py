@@ -70,9 +70,6 @@ async def _expire_all(db: AsyncSession) -> None:
     await db.commit()
 
 
-# --- email verification ---------------------------------------------------- #
-
-
 async def test_register_enqueues_one_verification_with_real_token(
     async_client: AsyncClient, db_session: AsyncSession, emails: FakeEmailEnqueuer
 ) -> None:
@@ -153,9 +150,6 @@ async def test_resend_unconfirmed_enqueues_one(
     assert emails.calls[0]["template"] == "email_verification"
 
 
-# --- magic link ------------------------------------------------------------ #
-
-
 async def test_magic_link_unknown_is_non_enumerating(
     async_client: AsyncClient, emails: FakeEmailEnqueuer
 ) -> None:
@@ -202,9 +196,6 @@ async def test_magic_link_expired_returns_410(
     await _expire_all(db_session)
     gone = await async_client.post(f"{AUTH}/magic-link/callback", json={"token": raw})
     assert gone.status_code == 410
-
-
-# --- password reset -------------------------------------------------------- #
 
 
 async def test_forgot_password_unknown_is_non_enumerating(
@@ -273,9 +264,6 @@ async def test_reset_password_weak_is_400(
     assert weak.status_code == 400
 
 
-# --- rate limiting (spec 52 reuse) ----------------------------------------- #
-
-
 async def test_magic_link_request_rate_limited(
     async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -290,9 +278,6 @@ async def test_magic_link_request_rate_limited(
     assert third.status_code == 429
     assert third.json()["error"]["type"] == "rate_limited"
     _gs.cache_clear()
-
-
-# --- login flag (parametrized) --------------------------------------------- #
 
 
 @pytest.mark.parametrize("require_verified", [True, False])

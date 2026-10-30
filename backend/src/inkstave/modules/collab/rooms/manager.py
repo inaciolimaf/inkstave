@@ -59,8 +59,6 @@ class DocumentManager:
             raise KeyError(f"document {document_id} is not acquired")
         return entry
 
-    # --------------------------------------------------------------- lifecycle #
-
     async def acquire(self, document_id: UUID) -> OpenDocument:
         # Retry guards the rare race where eviction swaps out this document's lock
         # (to keep the locks map bounded) while we were waiting on the old one: the
@@ -144,8 +142,6 @@ class DocumentManager:
             if self._locks.get(document_id) is lock:
                 self._locks.pop(document_id, None)
 
-    # ----------------------------------------------------------------- protocol #
-
     async def handle_sync_step1(self, document_id: UUID, state_vector: bytes) -> tuple[bytes, bytes]:
         """Return ``(sync_step2_for_client, server_sync_step1)`` as encoded messages."""
         async with self._lock(document_id):
@@ -210,8 +206,6 @@ class DocumentManager:
     async def handle_awareness(self, document_id: UUID, update: bytes) -> bytes:
         """Merge an awareness update and return the raw blob to relay (ephemeral)."""
         return self._aw.apply(document_id, update)
-
-    # -------------------------------------------------------------- maintenance #
 
     def _schedule_flush(self, document_id: UUID) -> None:
         entry = self._entries.get(document_id)

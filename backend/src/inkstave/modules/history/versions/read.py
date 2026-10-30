@@ -26,12 +26,20 @@ from inkstave.modules.history.versions.reconstruct import (
     reconstruct_state,
     text_from_state,
 )
+from inkstave.modules.projects import Document
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
+
+
+async def doc_belongs_to_project(session: AsyncSession, project_id: UUID, doc_id: UUID) -> bool:
+    found = await session.scalar(
+        select(Document.entity_id).where(Document.entity_id == doc_id, Document.project_id == project_id)
+    )
+    return found is not None
 
 
 async def _max_version(session: AsyncSession, doc_id: UUID) -> int:

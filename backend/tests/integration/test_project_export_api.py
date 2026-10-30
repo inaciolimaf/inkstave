@@ -88,11 +88,6 @@ def _open_zip(content: bytes) -> zipfile.ZipFile:
     return zipfile.ZipFile(io.BytesIO(content))
 
 
-# --------------------------------------------------------------------------- #
-# Endpoint, headers, complete tree, ordering, fidelity (AC 1, 3, 5, 6)
-# --------------------------------------------------------------------------- #
-
-
 async def test_export_returns_zip_with_complete_ordered_tree(
     async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore
 ) -> None:
@@ -128,11 +123,6 @@ async def test_export_is_deterministic(
     assert all(za.read(n) == zb.read(n) for n in za.namelist())
 
 
-# --------------------------------------------------------------------------- #
-# Authorization (AC 1, 2)
-# --------------------------------------------------------------------------- #
-
-
 async def test_non_member_gets_404(
     async_client: AsyncClient, db_session: AsyncSession, store: ObjectStore
 ) -> None:
@@ -149,11 +139,6 @@ async def test_requires_auth(async_client: AsyncClient, db_session: AsyncSession
     headers, _ = await _auth(db_session)
     pid = await _project(async_client, headers)
     assert (await async_client.get(f"/api/v1/projects/{pid}/export.zip")).status_code == 401
-
-
-# --------------------------------------------------------------------------- #
-# Empty project, size cap, missing blob, current content (AC 4, 7, 10, 11)
-# --------------------------------------------------------------------------- #
 
 
 async def test_empty_project_exports_valid_zip(
@@ -218,11 +203,6 @@ async def test_exports_flushed_current_content(
     assert _open_zip(resp.content).read("main.tex") == b"FLUSHED LIVE TEXT"
 
 
-# --------------------------------------------------------------------------- #
-# Streaming (AC 8)
-# --------------------------------------------------------------------------- #
-
-
 async def test_builder_yields_multiple_chunks(db_session: AsyncSession, store: ObjectStore) -> None:
     from inkstave.modules.projects.models.tree_entity import TreeEntityType
     from inkstave.modules.projects.transfer.export import ExportEntry, stream_project_zip
@@ -237,13 +217,8 @@ async def test_builder_yields_multiple_chunks(db_session: AsyncSession, store: O
         ExportEntry("a.png", TreeEntityType.file, uuid4(), "k1", 1000),
         ExportEntry("b.png", TreeEntityType.file, uuid4(), "k2", 1000),
     ]
-    chunks = [c async for c in stream_project_zip(plan, store, db_session, get_settings()) if c]
+    chunks = [c async for c in stream_project_zip(plan, {}, store, get_settings()) if c]
     assert len(chunks) > 1  # not one big buffer
-
-
-# --------------------------------------------------------------------------- #
-# Round-trip via spec-101 import (AC 13)
-# --------------------------------------------------------------------------- #
 
 
 class _SessionCtx:

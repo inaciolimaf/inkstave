@@ -7,14 +7,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import BadRequestError, ErrorEnvelope
 from inkstave.infra.storage.factory import get_object_store
 from inkstave.modules.auth import get_current_user
 from inkstave.modules.history.schemas import (
+    DiffResponse,
     LabelCreate,
     LabelRead,
     ProjectLabelCreate,
@@ -26,9 +26,14 @@ from inkstave.modules.history.schemas import (
     VersionsResponse,
 )
 from inkstave.modules.history.versions import labels as labels_service
-from inkstave.modules.history.versions.read import get_diff, list_updates, list_versions
+from inkstave.modules.history.versions.read import (
+    doc_belongs_to_project,
+    get_diff,
+    list_updates,
+    list_versions,
+)
 from inkstave.modules.history.versions.restore import RestoreScope, restore_document, restore_project
-from inkstave.modules.projects import Capability, Document, ProjectNotFoundError, require_capability
+from inkstave.modules.projects import Capability, ProjectNotFoundError, require_capability
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,14 +65,8 @@ def _components(request: Request) -> CollabComponents | None:
 
 async def _verify_doc(session: AsyncSession, project_id: UUID, doc_id: UUID) -> None:
     """404 (anti-enumeration) if the doc is not a document of this project."""
-    exists = await session.scalar(
-        select(Document.entity_id).where(Document.entity_id == doc_id, Document.project_id == project_id)
-    )
-    if exists is None:
+    if not await doc_belongs_to_project(session, project_id, doc_id):
         raise ProjectNotFoundError()
-
-
-# --- list / diff (any member) ---------------------------------------------- #
 
 
 @router.get("/docs/{doc_id}/history/versions", response_model=VersionsResponse, responses=_ERRORS)
@@ -76,7 +75,7 @@ async def get_versions(
     before: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1),
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
 ) -> VersionsResponse:
     await _verify_doc(session, project.id, doc_id)
@@ -90,7 +89,7 @@ async def get_updates(
     from_: int | None = Query(None, alias="from", ge=1),
     to: int | None = Query(None, ge=1),
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UpdatesResponse:
     await _verify_doc(session, project.id, doc_id)
     if from_ is not None and to is not None and from_ > to:
@@ -98,13 +97,17 @@ async def get_updates(
     return await list_updates(session, doc_id, from_v=from_, to_v=to)
 
 
-@router.get("/docs/{doc_id}/history/diff", responses=_ERRORS)
+@router.get(
+    "/docs/{doc_id}/history/diff",
+    response_model=DiffResponse,
+    responses={**_ERRORS, status.HTTP_413_CONTENT_TOO_LARGE: {"model": DiffResponse}},
+)
 async def get_history_diff(
     doc_id: UUID,
     from_: int = Query(..., alias="from", ge=1),
     to: str = Query(...),
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     store: ObjectStore = Depends(_store),
 ) -> JSONResponse:
@@ -121,9 +124,6 @@ async def get_history_diff(
     return JSONResponse(result.model_dump(by_alias=True), status_code=code)
 
 
-# --- restore (editor / owner) ---------------------------------------------- #
-
-
 @router.post("/docs/{doc_id}/history/restore", response_model=RestoreResponse, responses=_ERRORS)
 async def restore_doc(
     request: Request,
@@ -131,7 +131,7 @@ async def restore_doc(
     body: RestoreRequest,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(_store),
 ) -> RestoreResponse:
     await _verify_doc(session, project.id, doc_id)
@@ -151,7 +151,7 @@ async def restore_whole_project(
     body: ProjectRestoreRequest,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(_store),
 ) -> ProjectRestoreResponse:
     label = await labels_service.get_project_label(session, project_id=project.id, label_id=body.label_id)
@@ -165,9 +165,6 @@ async def restore_whole_project(
     )
 
 
-# --- labels CRUD ----------------------------------------------------------- #
-
-
 @router.post(
     "/docs/{doc_id}/history/labels",
     status_code=status.HTTP_201_CREATED,
@@ -179,7 +176,7 @@ async def create_label(
     body: LabelCreate,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> LabelRead:
     await _verify_doc(session, project.id, doc_id)
     row = await labels_service.create_doc_label(
@@ -197,7 +194,7 @@ async def create_label(
 async def get_labels(
     doc_id: UUID,
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[LabelRead]:
     await _verify_doc(session, project.id, doc_id)
     return [
@@ -214,7 +211,7 @@ async def delete_label(
     doc_id: UUID,
     label_id: UUID,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await _verify_doc(session, project.id, doc_id)
     await labels_service.delete_doc_label(session, project_id=project.id, doc_id=doc_id, label_id=label_id)
@@ -230,7 +227,7 @@ async def create_project_label(
     body: ProjectLabelCreate,
     project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> LabelRead:
     row = await labels_service.create_project_label(
         session, project_id=project.id, name=body.name, created_by=user.id
@@ -241,7 +238,7 @@ async def create_project_label(
 @router.get("/history/labels", response_model=list[LabelRead], responses=_ERRORS)
 async def get_project_labels(
     project: Project = Depends(read_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> list[LabelRead]:
     rows = await labels_service.list_project_labels(session, project.id)
     return [LabelRead.model_validate(label) for label in rows]
@@ -255,6 +252,6 @@ async def get_project_labels(
 async def delete_project_label(
     label_id: UUID,
     project: Project = Depends(write_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> None:
     await labels_service.delete_project_label(session, project_id=project.id, label_id=label_id)

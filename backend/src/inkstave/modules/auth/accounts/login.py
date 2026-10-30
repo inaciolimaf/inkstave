@@ -14,6 +14,7 @@ from sqlalchemy import select
 from inkstave.core.errors import UnauthorizedError
 from inkstave.modules.auth.accounts.users import normalise_email
 from inkstave.modules.auth.credentials.refresh_store import RefreshRecord
+from inkstave.modules.auth.credentials.sessions import is_alive, revoke_session
 from inkstave.modules.auth.credentials.tokens import TokenError
 from inkstave.modules.auth.models.user import User
 from inkstave.modules.auth.schemas.auth import TokenPair
@@ -64,7 +65,7 @@ async def authenticate_user(
         return None
     if not await asyncio.to_thread(hasher.verify, password, user.hashed_password):
         return None
-    return user
+    return user if user.is_active else None
 
 
 class EmailNotVerifiedError(UnauthorizedError):
@@ -85,8 +86,8 @@ async def issue_token_pair(
     paths produce an identical, rotatable access+refresh pair.
     """
     family_id = uuid4()
-    access_token, expires_in = token_service.create_access_token(user)
-    refresh_token, jti = token_service.create_refresh_token(user.id, family_id)
+    access_token, expires_in = token_service.create_access_token(user, session_id=family_id)
+    refresh_token, jti = token_service.create_refresh_token(user, family_id)
     await refresh_store.store_refresh(jti=jti, user_id=user.id, family_id=family_id)
     return TokenPair(access_token=access_token, refresh_token=refresh_token, expires_in=expires_in)
 
@@ -148,24 +149,27 @@ async def refresh_tokens(
 
     await _validate_refresh(refresh_store, claims)
     user = await session.get(User, UUID(claims["sub"]))
-    if user is None:
-        logger.warning("auth refresh rejected: unknown user", extra={"user_id": claims["sub"]})
+    if user is None or not await is_alive(session, user, claims):
+        logger.warning("auth refresh rejected: session ended", extra={"user_id": claims["sub"]})
         raise RefreshError(_INVALID_REFRESH)
 
     family_id = UUID(claims["family_id"])
     await refresh_store.rotate_refresh(claims["jti"])
-    access_token, expires_in = token_service.create_access_token(user)
-    new_refresh, new_jti = token_service.create_refresh_token(user.id, family_id)
+    access_token, expires_in = token_service.create_access_token(user, session_id=family_id)
+    new_refresh, new_jti = token_service.create_refresh_token(user, family_id)
     await refresh_store.store_refresh(jti=new_jti, user_id=user.id, family_id=family_id)
     logger.info("auth refresh rotated", extra={"user_id": user.id})
     return TokenPair(access_token=access_token, refresh_token=new_refresh, expires_in=expires_in)
 
 
-async def logout(token_service: TokenService, refresh_store: RefreshStore, refresh_token: str) -> None:
-    """Revoke the token's family. Idempotent: invalid tokens are a no-op."""
+async def logout(
+    session: AsyncSession, token_service: TokenService, refresh_store: RefreshStore, refresh_token: str
+) -> None:
+    """End the token's session, access tokens included. Idempotent: invalid tokens are a no-op."""
     try:
         claims = token_service.decode_token(refresh_token, "refresh")
     except TokenError:
         return
     await refresh_store.revoke_family(claims["family_id"])
+    await revoke_session(session, claims["family_id"], ttl_seconds=token_service.refresh_ttl_seconds)
     logger.info("auth logout", extra={"user_id": claims["sub"]})

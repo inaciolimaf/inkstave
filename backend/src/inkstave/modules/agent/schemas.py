@@ -1,5 +1,3 @@
-"""HTTP schemas for the agent API (spec 44)."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -9,6 +7,9 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from inkstave.core.schemas import StrictModel
+from inkstave.modules.agent.diffs.schemas import Hunk
+from inkstave.modules.agent.llm.base import ToolCall
+from inkstave.modules.agent.models import AgentMessageRole
 
 
 class AgentSessionOut(BaseModel):
@@ -30,9 +31,9 @@ class AgentMessageOut(BaseModel):
 
     id: UUID
     seq: int
-    role: str
+    role: AgentMessageRole
     content: str | None
-    tool_calls: list[dict[str, Any]] | None
+    tool_calls: list[ToolCall] | None
     tool_call_id: str | None
     token_usage: dict[str, Any] | None
     created_at: datetime
@@ -49,7 +50,7 @@ class ProposedDiffSummary(BaseModel):
     status: str
     rationale: str | None
     created_at: datetime
-    hunks: list[dict[str, Any]] | None = None
+    hunks: list[Hunk] | None = None
 
 
 class SessionDetailOut(BaseModel):

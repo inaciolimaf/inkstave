@@ -15,6 +15,7 @@ from inkstave.modules.agent.models import (
 )
 from inkstave.modules.agent.safety.models import AgentAuditAction, AgentAuditLog
 from inkstave.modules.auth.models.auth_token import AuthToken
+from inkstave.modules.auth.models.revoked_session import RevokedSession
 from inkstave.modules.auth.models.user import User
 from inkstave.modules.collab.models import CrdtDocumentState, CrdtUpdate
 from inkstave.modules.compile.models.compile import Compile, CompileJobStatus
@@ -63,6 +64,7 @@ __all__ = [
     "ProjectMembership",
     "ProposedDiff",
     "ProposedDiffStatus",
+    "RevokedSession",
     "TreeEntity",
     "TreeEntityType",
     "User",

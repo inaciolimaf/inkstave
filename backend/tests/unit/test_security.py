@@ -23,9 +23,6 @@ def _settings(**over: Any) -> Settings:
     return Settings(**{**base, **over})  # type: ignore[arg-type]
 
 
-# --- rate limiter (fakeredis) ----------------------------------------------- #
-
-
 @pytest.mark.integration
 async def test_limiter_allows_then_blocks_then_resets(redis: Any) -> None:
     policy = RateLimitPolicy(name="t", limit=2, window_seconds=60, key="ip")
@@ -38,9 +35,6 @@ async def test_limiter_allows_then_blocks_then_resets(redis: Any) -> None:
     # A different scope has its own independent window.
     other = await check_rate_limit(redis, policy, "9.9.9.9", now=1000.0)
     assert other.allowed
-
-
-# --- upload sanitization ----------------------------------------------------- #
 
 
 def test_sanitize_filename_strips_traversal_nul_and_charset() -> None:
@@ -64,9 +58,6 @@ def test_extension_allow_list_and_content_match() -> None:
     assert content_matches_extension("refs.bib", "application/octet-stream")
 
 
-# --- secret boot guard ------------------------------------------------------- #
-
-
 def test_production_secret_guard() -> None:
     with pytest.raises(ValueError, match="JWT_SECRET"):
         _settings(environment="prod", jwt_secret="changeme", cors_origins=["https://a.com"])
@@ -83,9 +74,6 @@ def test_cors_guard_rejects_wildcard_and_empty_prod() -> None:
         _settings(cors_origins=["*"])
     with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS must be set"):
         _settings(environment="prod", jwt_secret="z" * 48, cors_origins=[])
-
-
-# --- dependency audit gate (AC11; fast, no network) ------------------------- #
 
 
 def test_audit_script_exists_and_runs_both_tools() -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, DateTime, Index, String, Text, text
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     email_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    # Claim `sv`: moving it ends every session of the account (credentials/sessions.py).
+    session_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
 
     # Profile + preferences (spec 59).
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)

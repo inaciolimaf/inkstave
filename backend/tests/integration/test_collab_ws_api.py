@@ -48,9 +48,6 @@ def _path(project_id: Any, document_id: Any) -> str:
     return f"/ws/collab/projects/{project_id}/documents/{document_id}"
 
 
-# --- auth / authz (criteria 1-2) ------------------------------------------- #
-
-
 async def test_missing_token_closes_4401(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     _user, project, entity, _token = await _setup(db_session)
@@ -89,9 +86,6 @@ async def test_unknown_document_closes_4404(app: Any, db_session: AsyncSession, 
         assert await ws.close_code() == 4404
 
 
-# --- handshake (criterion 3) ----------------------------------------------- #
-
-
 async def test_handshake_sends_server_step1(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session, content="seed")
@@ -124,9 +118,6 @@ async def test_handshake_sends_awareness_snapshot(app: Any, db_session: AsyncSes
         assert isinstance(read_message(second), AwarenessMessage)
 
 
-# --- two-client convergence + no echo (criterion 4) ------------------------ #
-
-
 async def test_two_clients_converge(app: Any, db_session: AsyncSession, redis: Any) -> None:
     install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
@@ -147,9 +138,6 @@ async def test_two_clients_converge(app: Any, db_session: AsyncSession, redis: A
         local = YDocument()
         apply_update_message(local, relayed)
         assert local.text == "hi"
-
-
-# --- awareness relay + offline (criterion 6) ------------------------------- #
 
 
 async def test_awareness_relay_and_offline(app: Any, db_session: AsyncSession, redis: Any) -> None:
@@ -173,9 +161,6 @@ async def test_awareness_relay_and_offline(app: Any, db_session: AsyncSession, r
         assert isinstance(read_message(offline), AwarenessMessage)
 
 
-# --- persistence integration (criterion 7) --------------------------------- #
-
-
 async def test_update_persists_and_bridges_text(app: Any, db_session: AsyncSession, redis: Any) -> None:
     components = install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
@@ -193,9 +178,6 @@ async def test_update_persists_and_bridges_text(app: Any, db_session: AsyncSessi
         await components.manager.flush(entity.id)
         content = await db_session.scalar(select(Document.content).where(Document.entity_id == entity.id))
         assert content == "Hello WS"
-
-
-# --- disconnect cleanup (criterion 8) -------------------------------------- #
 
 
 async def test_ws_connection_gauge_rises_and_returns(app: Any, db_session: AsyncSession, redis: Any) -> None:
@@ -232,9 +214,6 @@ async def test_disconnect_tears_down_room(app: Any, db_session: AsyncSession, re
     assert entity.id not in components.subscriptions
     entry = components.manager._entries.get(entity.id)
     assert entry is None or entry.refcount == 0
-
-
-# --- bad / oversize / rate-limited frames (criteria 10-11) ----------------- #
 
 
 async def test_text_frame_closes_4400(app: Any, db_session: AsyncSession, redis: Any) -> None:

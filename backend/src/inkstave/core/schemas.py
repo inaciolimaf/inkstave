@@ -1,5 +1,3 @@
-"""Shared request-model base enforcing strict validation (spec 52 §5.2.2)."""
-
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict

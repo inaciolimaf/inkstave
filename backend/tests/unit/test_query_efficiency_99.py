@@ -37,9 +37,6 @@ def _entities(n: int) -> list[Any]:
     return [SimpleNamespace(id=uuid4()) for _ in range(n)]
 
 
-# --- #6.2 get_tree cap ----------------------------------------------------- #
-
-
 async def test_get_tree_returns_rows_within_cap() -> None:
     items = _entities(2)
     assert await get_tree(FakeSession(items), uuid4(), max_nodes=2) == items
@@ -66,17 +63,11 @@ def test_tree_too_large_error_shape_and_export() -> None:
     assert "TreeTooLargeError" in tree_service.__all__
 
 
-# --- #6.1 no standalone entity-name lookup --------------------------------- #
-
-
 def test_files_route_has_no_standalone_entity_name_lookup() -> None:
     from inkstave.modules.projects.routes import files as files_mod
 
     # The per-file TreeEntity SELECT helper is gone; _read uses file_row.entity.name.
     assert not hasattr(files_mod, "_entity_name")
-
-
-# --- #6.3 compile sources route through the bounded get_tree --------------- #
 
 
 async def test_compile_entities_by_id_uses_get_tree(monkeypatch: pytest.MonkeyPatch) -> None:

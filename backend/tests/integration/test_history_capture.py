@@ -74,9 +74,6 @@ async def _count(db_session: AsyncSession, model: Any, doc_id: UUID) -> int:
 _NOW = datetime(2026, 6, 10, tzinfo=UTC)
 
 
-# --- capture --------------------------------------------------------------- #
-
-
 async def test_first_edit_creates_chunk_and_update(db_session: AsyncSession, tmp_path: Path) -> None:
     _u, project_id, doc_id = await _make_doc(db_session)
     svc = _service(db_session, tmp_path)

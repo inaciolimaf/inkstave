@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, status
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.core.invariants import require
@@ -33,6 +33,7 @@ from inkstave.modules.auth.schemas.auth import (
 )
 from inkstave.modules.auth.schemas.user import RegisterRequest, UserPublic
 from inkstave.modules.auth.throttling.limiter import rate_limit
+from inkstave.modules.auth.throttling.login_attempts import LoginThrottle, get_login_throttle
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,7 +65,7 @@ _RESET_ON_ITS_WAY = "If that email is registered, a reset link is on its way."
 )
 async def register(
     data: RegisterRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
@@ -93,7 +94,7 @@ async def register(
 )
 async def forgot_password(
     data: ForgotPasswordRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> MessageResponse:
@@ -127,7 +128,7 @@ async def forgot_password(
 )
 async def resend_verification(
     data: EmailOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> MessageResponse:
@@ -158,7 +159,7 @@ async def resend_verification(
 )
 async def confirm_verification(
     data: TokenOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> UserPublic:
     """Consume the verification token and set ``email_confirmed`` (idempotent)."""
     user = await email_auth.confirm_email_verification(session, raw_token=data.token)
@@ -174,7 +175,7 @@ async def confirm_verification(
 )
 async def magic_link(
     data: EmailOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     emails: EmailEnqueuer = Depends(get_email_enqueuer),
 ) -> MessageResponse:
@@ -203,7 +204,7 @@ async def magic_link(
 )
 async def magic_link_callback(
     data: TokenOnlyRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> TokenPair:
@@ -220,7 +221,7 @@ async def magic_link_callback(
 )
 async def reset_password(
     data: ResetPasswordRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> MessageResponse:
@@ -239,30 +240,31 @@ async def reset_password(
     "/login",
     response_model=TokenPair,
     summary="Log in and receive an access + refresh token pair",
-    dependencies=[Depends(rate_limit("login"))],
-    responses=_UNAUTHORIZED,
+    responses={**_UNAUTHORIZED, status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorEnvelope}},
 )
 async def login(
     data: LoginRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     hasher: PasswordHasher = Depends(get_password_hasher),
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
     settings: Settings = Depends(get_settings_dep),
+    throttle: LoginThrottle = Depends(get_login_throttle),
 ) -> TokenPair:
     """Authenticate credentials and issue a new token family.
 
     When ``require_verified_email_to_login`` is on (spec 104), an unconfirmed user
     is rejected; the magic-link / reset flows still let them in (they confirm).
     """
-    return await auth_service.login(
-        session,
-        hasher,
-        token_service,
-        refresh_store,
-        data,
-        require_verified_email=settings.require_verified_email_to_login,
-    )
+    async with throttle.attempt(data.email):
+        return await auth_service.login(
+            session,
+            hasher,
+            token_service,
+            refresh_store,
+            data,
+            require_verified_email=settings.require_verified_email_to_login,
+        )
 
 
 @router.post(
@@ -274,7 +276,7 @@ async def login(
 )
 async def refresh(
     data: RefreshRequest,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> TokenPair:
@@ -285,13 +287,14 @@ async def refresh(
 @router.post(
     "/logout",
     response_model=MessageResponse,
-    summary="Revoke a refresh token (and its family)",
+    summary="End the session of a refresh token (its family and its access tokens)",
 )
 async def logout(
     data: LogoutRequest,
+    session: AsyncSession = UNIT_OF_WORK,
     token_service: TokenService = Depends(get_token_service),
     refresh_store: RefreshStore = Depends(get_refresh_store),
 ) -> MessageResponse:
-    """Idempotently revoke the token's family; unknown tokens still return 200."""
-    await auth_service.logout(token_service, refresh_store, data.refresh_token)
+    """Idempotently end the token's session; unknown tokens still return 200."""
+    await auth_service.logout(session, token_service, refresh_store, data.refresh_token)
     return MessageResponse(detail="Logged out.")

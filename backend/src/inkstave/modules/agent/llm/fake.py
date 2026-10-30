@@ -81,8 +81,6 @@ class FakeLLM:
             yield LLMStreamChunk(delta=piece)
         yield LLMStreamChunk(usage=response.usage, finish_reason=response.finish_reason or "stop")
 
-    # --- ergonomics --------------------------------------------------------- #
-
     @classmethod
     def scripted(cls, responses: list[ScriptItem], **kwargs: object) -> FakeLLM:
         return cls(script=responses, **kwargs)  # type: ignore[arg-type]

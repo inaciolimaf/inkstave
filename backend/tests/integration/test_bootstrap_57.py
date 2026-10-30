@@ -32,9 +32,6 @@ async def _admin_count(session: AsyncSession) -> int:
     )
 
 
-# --- first-admin bootstrap service ------------------------------------------- #
-
-
 async def test_ensure_initial_admin_creates_once_then_noops(db_session: AsyncSession) -> None:
     hasher = _hasher()
     admin = await ensure_initial_admin(
@@ -50,9 +47,6 @@ async def test_ensure_initial_admin_creates_once_then_noops(db_session: AsyncSes
     assert again is None
     assert await admin_exists(db_session)
     assert await _admin_count(db_session) == 1
-
-
-# --- setup endpoints (mounted at /api/setup) --------------------------------- #
 
 
 async def test_setup_status_then_admin_then_locked(async_client: AsyncClient) -> None:
@@ -89,18 +83,12 @@ async def test_setup_admin_second_attempt_creates_nothing(
     assert await _admin_count(db_session) == 1
 
 
-# --- migration runner -------------------------------------------------------- #
-
-
 async def test_run_upgrade_is_idempotent_against_test_db(db_engine: Any, settings_override: Settings) -> None:
     # The test DB is already at head (conftest migrates the template). The
     # advisory-locked upgrade is a clean no-op, and re-running it is also a no-op.
     await asyncio.to_thread(run_upgrade, settings_override)
     await asyncio.to_thread(run_upgrade, settings_override)
     assert await is_database_at_head(db_engine)
-
-
-# --- demo seed --------------------------------------------------------------- #
 
 
 async def test_seed_demo_is_idempotent_in_dev(db_session: AsyncSession) -> None:

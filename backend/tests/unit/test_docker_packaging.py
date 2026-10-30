@@ -29,9 +29,6 @@ def compose() -> dict:
     return yaml.safe_load(_COMPOSE.read_text("utf-8"))
 
 
-# --- docker-compose.prod.yml --------------------------------------------------- #
-
-
 def test_expected_services_present(compose: dict) -> None:
     services = compose["services"]
     assert {"postgres", "redis", "backend", "worker", "frontend"} <= set(services)
@@ -95,9 +92,6 @@ def test_packages_toml_baked_into_image_and_tectonic_cache_mounted(compose: dict
         assert any("/var/cache/tectonic" in m for m in mounts), name
 
 
-# --- nginx reverse proxy ------------------------------------------------------- #
-
-
 def test_nginx_main_has_gzip_and_no_server_tokens() -> None:
     main = _NGINX_MAIN.read_text("utf-8")
     assert "server_tokens off;" in main
@@ -131,9 +125,6 @@ def test_nginx_spa_fallback() -> None:
     assert "try_files $uri $uri/ /index.html;" in server
 
 
-# --- .dockerignore ------------------------------------------------------------- #
-
-
 def test_dockerignore_excludes_secrets_tests_caches() -> None:
     body = _DOCKERIGNORE.read_text("utf-8")
     patterns = [line.strip() for line in body.splitlines() if line.strip() and not line.startswith("#")]
@@ -142,9 +133,6 @@ def test_dockerignore_excludes_secrets_tests_caches() -> None:
     assert any(".venv" in p for p in patterns)
     assert any("tests" in p for p in patterns)
     assert any("__pycache__" in p for p in patterns)
-
-
-# --- Dockerfiles --------------------------------------------------------------- #
 
 
 def test_backend_dockerfile_multistage_alpine_nonroot() -> None:
@@ -164,9 +152,6 @@ def test_frontend_dockerfile_builds_then_serves_with_nginx() -> None:
     # No Node toolchain in the runtime stage: nothing after the nginx FROM installs node.
     runtime = body.split("AS runtime", 1)[1]
     assert "node" not in runtime.lower()
-
-
-# --- infra/tectonic/packages.toml ---------------------------------------------- #
 
 
 def test_packages_toml_parses_and_documents_how_to_add() -> None:

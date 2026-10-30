@@ -1,5 +1,3 @@
-"""Project request/response schemas (spec 11)."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from inkstave.core.schemas import StrictModel
+from inkstave.modules.projects.models.membership import MembershipRole
 
 NAME_MAX_LENGTH = 255
 
@@ -52,5 +51,5 @@ class ProjectList(BaseModel):
 class PermissionsRead(BaseModel):
     """The caller's effective role + capability codes on a project (spec 34)."""
 
-    role: str
+    role: MembershipRole
     capabilities: list[str]

@@ -19,10 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from tests.fixtures.env import test_database_url
 from tests.fixtures.paths import ALEMBIC_INI
 
-# --------------------------------------------------------------------------- #
-# Test database: provision + migrate ONCE (template), rollback per test
-# --------------------------------------------------------------------------- #
-
 
 async def _admin_exec(admin_url: Any, statements: list[str]) -> None:
     import asyncpg

@@ -72,9 +72,6 @@ async def _poll(predicate: Any, attempts: int = 100, step: float = 0.01) -> None
         await asyncio.sleep(step)
 
 
-# --- bounded per-document maps (criterion 5) ------------------------------- #
-
-
 async def test_locks_and_load_count_bounded_after_eviction(db_session: AsyncSession) -> None:
     manager = _manager(db_session, idle_evict_seconds=0.02)
     doc_ids = [await _make_doc(db_session) for _ in range(3)]
@@ -86,9 +83,6 @@ async def test_locks_and_load_count_bounded_after_eviction(db_session: AsyncSess
     assert manager._entries == {}
     assert manager._locks == {}  # the per-document lock map does not grow unbounded
     assert manager.load_count == {}
-
-
-# --- refcount + eviction invariants (criterion 4) -------------------------- #
 
 
 async def test_refcount_never_negative(db_session: AsyncSession) -> None:
@@ -180,9 +174,6 @@ async def test_concurrent_acquire_evicted_lock_swap_loads_once(
     await manager.release(doc_id)
 
 
-# --- convergence under reordered delivery (criterion 4) -------------------- #
-
-
 async def test_reordered_updates_converge_through_manager(db_session: AsyncSession) -> None:
     """AC4: delivering the same set of concurrent updates in two different orders
     through ``DocumentManager.handle_update`` converges to the same final state.
@@ -232,9 +223,6 @@ async def test_reordered_updates_converge_through_manager(db_session: AsyncSessi
     # content has fully converged — text equality is the convergence invariant.)
     assert handle_a.text == handle_b.text  # converged regardless of delivery order
     assert handle_a.text == "hi hello world"  # the deterministic CRDT merge of both inserts
-
-
-# --- persistence integrity (criterion 7) ----------------------------------- #
 
 
 async def test_text_synced_seq_is_maintained(db_session: AsyncSession) -> None:

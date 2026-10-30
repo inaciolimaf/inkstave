@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.cache import RedisCache, project_meta_key
@@ -63,7 +63,7 @@ _EXPORT_ERRORS: dict[int | str, dict[str, Any]] = {
 async def create_project(
     data: ProjectCreate,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> ProjectRead:
     project = await project_service.create_project(session, user.id, data.name)
     return ProjectRead.model_validate(project)
@@ -74,7 +74,7 @@ async def list_projects(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> ProjectList:
     items, total = await project_service.list_projects(session, user.id, limit, offset)
     return ProjectList(items=[ProjectRead.model_validate(p) for p in items], total=total)
@@ -113,7 +113,7 @@ async def get_project(
 async def get_permissions(
     project_id: UUID,
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
 ) -> PermissionsRead:
     role = await role_for(session, user.id, project_id)
@@ -134,7 +134,7 @@ async def rename_project(
     data: ProjectRename,
     _project: Project = Depends(write_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     redis: Redis = Depends(get_redis),
     settings: Settings = Depends(get_settings_dep),
 ) -> ProjectRead:
@@ -153,7 +153,7 @@ async def delete_project(
     project_id: UUID,
     _project: Project = Depends(delete_access),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
@@ -173,7 +173,7 @@ async def delete_project(
 async def export_project_zip(
     request: Request,
     project: Project = Depends(download_access),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     store: ObjectStore = Depends(get_object_store),
     settings: Settings = Depends(get_settings_dep),
 ) -> StreamingResponse:
@@ -183,13 +183,14 @@ async def export_project_zip(
     # Build the deterministic plan (and enforce the size cap) BEFORE streaming so a
     # 413 is returned cleanly rather than mid-stream.
     plan = await export_service.build_export_plan(session, project.id, settings)
+    contents = await export_service.read_doc_contents(session, plan)
     headers = {
         "Content-Disposition": export_service.content_disposition(
             export_service.zip_filename_for(project.name)
         )
     }
     return StreamingResponse(
-        export_service.stream_project_zip(plan, store, session, settings),
+        export_service.stream_project_zip(plan, contents, store, settings),
         media_type="application/zip",
         headers=headers,
     )

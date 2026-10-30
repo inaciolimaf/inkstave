@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import StreamingResponse
 
-from inkstave.core.db.session import get_db_session
+from inkstave.core.db.session import UNIT_OF_WORK, get_session_factory
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.modules.auth import get_current_user, rate_limit_named, sse_user
 from inkstave.modules.collab import flush_open_project_docs
@@ -32,7 +32,7 @@ from inkstave.modules.projects import Capability, ProjectNotFoundError, require_
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
     from inkstave.core.config.settings import Settings
     from inkstave.modules.auth import User
@@ -64,7 +64,7 @@ async def enqueue_compile(
     request: Request,
     project: Project = Depends(owned_project),
     user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     enqueuer: CompileEnqueuer = Depends(get_compile_enqueuer),
 ) -> CompileStatusResponse:
@@ -89,7 +89,7 @@ async def enqueue_compile(
 )
 async def get_latest_compile(
     project: Project = Depends(owned_project),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> CompileStatusResponse:
     row = await CompileRepository(session).get_latest(project.id)
     if row is None:
@@ -106,7 +106,7 @@ async def get_latest_compile(
 async def get_compile(
     compile_id: UUID,
     project: Project = Depends(owned_project),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
 ) -> CompileStatusResponse:
     row = await CompileRepository(session).get(project.id, compile_id)
     if row is None:
@@ -123,7 +123,7 @@ async def get_compile(
 async def cancel_compile(
     compile_id: UUID,
     project: Project = Depends(owned_project),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> CompileStatusResponse:
@@ -144,11 +144,6 @@ async def cancel_compile(
     return CompileStatusResponse.model_validate(row)
 
 
-# --------------------------------------------------------------------------- #
-# Output retrieval (spec 23)
-# --------------------------------------------------------------------------- #
-
-
 @router.get(
     "/{compile_id}/outputs",
     response_model=list[OutputSummary],
@@ -158,7 +153,7 @@ async def cancel_compile(
 async def list_outputs(
     compile_id: UUID,
     project: Project = Depends(owned_project),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     outputs: OutputStore = Depends(get_output_store),
 ) -> list[OutputSummary]:
     await _require_compile(session, project.id, compile_id)
@@ -175,7 +170,7 @@ async def get_output_pdf(
     compile_id: UUID,
     request: Request,
     project: Project = Depends(owned_project),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     outputs: OutputStore = Depends(get_output_store),
     settings: Settings = Depends(get_settings_dep),
 ) -> Response:
@@ -218,7 +213,7 @@ async def get_output_pdf(
 async def get_output_log(
     compile_id: UUID,
     project: Project = Depends(owned_project),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
     outputs: OutputStore = Depends(get_output_store),
 ) -> StreamingResponse:
     await _require_compile(session, project.id, compile_id)
@@ -241,7 +236,8 @@ async def compile_events(
     compile_id: UUID,
     project_id: UUID,
     user: User = Depends(sse_user),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = UNIT_OF_WORK,
+    sessions: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
@@ -249,12 +245,13 @@ async def compile_events(
     # inline: any active member may read compile events (COMPILE capability).
     if await role_for(session, user.id, project_id) is None:
         raise ProjectNotFoundError()  # 404 — non-member / missing project
-    repo = CompileRepository(session)
-    if await repo.get(project_id, compile_id) is None:
+    if await CompileRepository(session).get(project_id, compile_id) is None:
         raise CompileNotFoundError()
 
     async def snapshot() -> dict[str, Any] | None:
-        row: Compile | None = await repo.get(project_id, compile_id)
+        # Runs inside the stream, after the request's unit of work has closed.
+        async with sessions() as stream_session:
+            row: Compile | None = await CompileRepository(stream_session).get(project_id, compile_id)
         return status_payload(row) if row is not None else None
 
     return StreamingResponse(

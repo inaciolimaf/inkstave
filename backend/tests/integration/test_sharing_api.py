@@ -31,9 +31,6 @@ pytestmark = pytest.mark.integration
 __all__ = ["enqueuer"]
 
 
-# --- invite lifecycle ------------------------------------------------------ #
-
-
 async def test_invite_create_enqueues_and_lists(
     async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
 ) -> None:
