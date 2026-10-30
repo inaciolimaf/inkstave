@@ -38,6 +38,9 @@ def decode_envelope(data: bytes) -> tuple[str, str, bytes]:
     return instance_id, origin_conn_id, payload
 
 
+_POLL_SECONDS = 1.0
+
+
 class Subscription:
     def __init__(self, pubsub: object, task: asyncio.Task[None]) -> None:
         self._pubsub = pubsub
@@ -76,8 +79,10 @@ class RedisBridge:
         return Subscription(pubsub, task)
 
     async def _reader(self, pubsub: object, on_message: OnMessage) -> None:
-        async for message in pubsub.listen():  # type: ignore[attr-defined]
-            if message.get("type") != "message":
+        # Not listen(): it blocks with the client's socket timeout and raises on a quiet channel.
+        while True:
+            message = await pubsub.get_message(timeout=_POLL_SECONDS)  # type: ignore[attr-defined]
+            if message is None or message.get("type") != "message":
                 continue
             data = message["data"]
             if not isinstance(data, bytes | bytearray):

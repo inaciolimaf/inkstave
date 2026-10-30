@@ -88,12 +88,14 @@ class SmtpEmailSender:
         password: str,
         use_tls: bool,
         default_from: str,
+        timeout_s: float = 30.0,
     ) -> None:
         self._host = host
         self._port = port
         self._user = user
         self._password = password
         self._use_tls = use_tls
+        self._timeout_s = timeout_s
         self._default_from = default_from
 
     async def send(self, email: OutgoingEmail) -> None:
@@ -116,6 +118,7 @@ class SmtpEmailSender:
             username=self._user or None,
             password=self._password or None,
             start_tls=self._use_tls,
+            timeout=self._timeout_s,
         )
 
 
@@ -211,6 +214,7 @@ def get_email_sender(settings: Settings) -> EmailSender:
             password=settings.smtp_password,
             use_tls=settings.smtp_use_tls,
             default_from=settings.email_from,
+            timeout_s=settings.smtp_timeout_s,
         )
     if settings.email_backend == "file":
         return FileEmailSender(settings.email_file_dir, settings.email_from)

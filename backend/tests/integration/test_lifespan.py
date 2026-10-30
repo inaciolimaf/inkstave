@@ -34,7 +34,7 @@ class RecordingRedis:
 async def test_lifespan_opens_and_disposes(_template_db: str, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = RecordingRedis()
 
-    async def _fake_pool(_url: str) -> RecordingRedis:
+    async def _fake_pool(_url: str, **_timeouts: float) -> RecordingRedis:
         return fake
 
     monkeypatch.setattr(appmod, "create_redis_pool", _fake_pool)
@@ -56,7 +56,7 @@ async def test_lifespan_disposes_redis_when_db_wiring_fails(
 ) -> None:
     fake = RecordingRedis()
 
-    async def _fake_pool(_url: str) -> RecordingRedis:
+    async def _fake_pool(_url: str, **_timeouts: float) -> RecordingRedis:
         return fake
 
     def _boom(_settings: Any) -> Any:

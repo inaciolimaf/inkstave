@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
+from inkstave.core.db.session import allow_idle
 from inkstave.modules.agent.diffs import materialize_diffs
 from inkstave.modules.agent.graph import repository as repo
 from inkstave.modules.agent.graph.builder import build_graph
@@ -131,6 +132,10 @@ async def run_turn(
     deps: AgentDeps,
     db: AsyncSession,
 ) -> AgentTurnResult:
+    # The whole turn is one transaction, so its model calls happen inside it: a failed turn
+    # leaves no trace of its messages. It cannot end early, so it gets the job's whole budget.
+    await allow_idle(db, deps.settings.agent_job_timeout_s)
+
     # 1. Build the transcript from the stored history + the new user message.
     transcript = await _build_transcript(db, session, user_message)
 

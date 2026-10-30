@@ -43,6 +43,9 @@ class CoreSettingsMixin:
     )
 
     redis_url: str = "redis://localhost:6379/0"
+    redis_connect_timeout_s: float = Field(default=3.0, gt=0)
+    # Pub/sub readers must poll below this: a blocking listen() would die on any quiet channel.
+    redis_socket_timeout_s: float = Field(default=5.0, gt=0)
     # Reserved for spec 03 (database layer): read but unused here. Optional so
     # the app never fails to construct when it is absent (e.g. in tests).
     database_url: str | None = None
@@ -58,6 +61,13 @@ class CoreSettingsMixin:
     db_pool_size: int = 10
     db_max_overflow: int = 5
     db_pool_timeout: int = 30
+    # Limits set on every application connection (0 turns one off). Migrations do not go through
+    # this engine. The idle limit stays above the slowest external call made inside a request's
+    # transaction, today S3 at (connect + read) * attempts; a job that waits longer ends its
+    # transaction first or calls ``allow_idle``.
+    db_lock_timeout_s: int = Field(default=10, ge=0)
+    db_statement_timeout_s: int = Field(default=30, ge=0)
+    db_idle_in_transaction_timeout_s: int = Field(default=120, ge=0)
     cache_enabled: bool = True
     cache_ttl_seconds: int = 30
 
@@ -186,6 +196,8 @@ class StorageSettingsMixin:
     s3_bucket: str = ""
     s3_access_key_id: str = ""
     s3_secret_access_key: str = ""
+    s3_connect_timeout_s: int = Field(default=5, gt=0)
+    s3_read_timeout_s: int = Field(default=30, gt=0)
 
 
 class CompileSettingsMixin:
@@ -372,6 +384,7 @@ class CollaborationSettingsMixin:
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
+    smtp_timeout_s: float = Field(default=30.0, gt=0)
     # Native Resend HTTP-API sender (spec 103); required only when EMAIL_BACKEND=resend.
     resend_api_key: str = ""
     app_base_url: str = "http://localhost"  # base for accept_url / reset_url in emails

@@ -82,6 +82,14 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `DB_POOL_SIZE` | No | `10` | SQLAlchemy async pool size | backend, worker |
 | `DB_MAX_OVERFLOW` | No | `5` | extra connections beyond the pool | backend, worker |
 | `DB_POOL_TIMEOUT` | No | `30` | seconds to wait for a pooled connection | backend, worker |
+| `DB_LOCK_TIMEOUT_S` | No | `10` | per connection, 0 turns it off; migrations are exempt | backend, worker |
+| `DB_STATEMENT_TIMEOUT_S` | No | `30` | per connection, 0 turns it off; migrations are exempt | backend, worker |
+| `DB_IDLE_IN_TRANSACTION_TIMEOUT_S` | No | `120` | keep above the S3 and SMTP timeouts | backend, worker |
+| `REDIS_CONNECT_TIMEOUT_S` | No | `3` | seconds to open a Redis connection | backend, worker |
+| `REDIS_SOCKET_TIMEOUT_S` | No | `5` | seconds a Redis command may wait | backend, worker |
+| `S3_CONNECT_TIMEOUT_S` | No | `5` | seconds to open an S3 connection | backend, worker |
+| `S3_READ_TIMEOUT_S` | No | `30` | seconds an S3 read may wait | backend, worker |
+| `SMTP_TIMEOUT_S` | No | `30` | seconds per SMTP operation | backend, worker |
 | `CACHE_ENABLED` | No | `true` | hot-read Redis cache master switch | backend |
 | `CACHE_TTL_SECONDS` | No | `30` | hot-read cache TTL | backend |
 | `SUITE_BUDGET_SECONDS` | No | `120` | hard CI gate: fail if the suite exceeds this | tests |

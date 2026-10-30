@@ -16,13 +16,18 @@ if TYPE_CHECKING:
     from redis.asyncio.client import PubSub
 
 
-async def create_redis_pool(url: str) -> Redis:
+async def create_redis_pool(url: str, *, connect_timeout_s: float, socket_timeout_s: float) -> Redis:
     """Create a pooled asyncio Redis client from a DSN.
 
     Does not connect eagerly; the first command (e.g. the lifespan ping)
     establishes a connection.
     """
-    client: Redis = Redis.from_url(url, decode_responses=False)
+    client: Redis = Redis.from_url(
+        url,
+        decode_responses=False,
+        socket_connect_timeout=connect_timeout_s,
+        socket_timeout=socket_timeout_s,
+    )
     return client
 
 

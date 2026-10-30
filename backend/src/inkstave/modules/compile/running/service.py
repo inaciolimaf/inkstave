@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -69,12 +70,14 @@ class CompileService:
         docs: DocumentSource,
         files: FileSource,
         packages: PackageConfig,
+        on_assembled: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self._settings = settings
         self._runner = runner
         self._docs = docs
         self._files = files
         self._packages = packages
+        self._on_assembled = on_assembled
 
     def _limits(self) -> ResourceLimits:
         s = self._settings
@@ -126,6 +129,8 @@ class CompileService:
         if cancel.is_cancelled():
             return _empty(CompileStatus.CANCELLED)
 
+        if self._on_assembled is not None:
+            await self._on_assembled()
         outcome = await self._runner.run(
             workdir=workdir,
             main_file=root,

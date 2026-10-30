@@ -15,9 +15,12 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from fastapi import Depends, Request
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from inkstave.core.deps import ServiceUnavailableError
+
+LONG_STATEMENT_SECONDS = 300
 
 
 def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
@@ -45,3 +48,13 @@ async def get_db_session(
 
 
 UNIT_OF_WORK = Depends(get_db_session, scope="function")
+
+
+async def allow_idle(session: AsyncSession, seconds: int) -> None:
+    """Raise the idle limit for this transaction, before a wait that cannot happen outside one."""
+    await session.execute(select(func.set_config("idle_in_transaction_session_timeout", f"{seconds}s", True)))
+
+
+async def allow_long_statements(session: AsyncSession, seconds: int = LONG_STATEMENT_SECONDS) -> None:
+    """Raise the statement limit for this transaction, for a known heavy statement."""
+    await session.execute(select(func.set_config("statement_timeout", f"{seconds}s", True)))

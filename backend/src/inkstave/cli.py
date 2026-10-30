@@ -74,7 +74,11 @@ async def _default_redis_check(settings: Settings) -> bool:
     """Real Redis probe: ``PING`` honouring the readiness timeout."""
     from inkstave.infra.redis import create_redis_pool, ping_redis
 
-    redis = await create_redis_pool(settings.redis_url)
+    redis = await create_redis_pool(
+        settings.redis_url,
+        connect_timeout_s=settings.redis_connect_timeout_s,
+        socket_timeout_s=settings.redis_socket_timeout_s,
+    )
     try:
         return await ping_redis(redis, settings.readiness_check_timeout_s)
     finally:

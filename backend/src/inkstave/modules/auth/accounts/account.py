@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import Settings
+from inkstave.core.db.session import allow_long_statements
 from inkstave.core.errors import BadRequestError, ConflictError, GoneError, UnauthorizedError
 from inkstave.core.time import SYSTEM_CLOCK, Clock
 from inkstave.modules.auth.accounts.users import email_exists, normalise_email
@@ -152,6 +153,7 @@ async def delete_account(
     revoked. See docs/adr/0059."""
     await _require_password(hasher, user, password)
     user_id = user.id
+    await allow_long_statements(session)  # the cascade reaches every project's history
     await session.delete(user)
     await session.flush()
     # Revoke after the delete succeeds: a failed delete rolls back without having

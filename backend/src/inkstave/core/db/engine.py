@@ -49,6 +49,13 @@ def create_engine_and_sessionmaker(
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
         pool_timeout=settings.db_pool_timeout,
+        connect_args={
+            "server_settings": {
+                "lock_timeout": f"{settings.db_lock_timeout_s}s",
+                "statement_timeout": f"{settings.db_statement_timeout_s}s",
+                "idle_in_transaction_session_timeout": f"{settings.db_idle_in_transaction_timeout_s}s",
+            }
+        },
     )
     sessionmaker = async_sessionmaker(
         engine,
