@@ -10,8 +10,10 @@ import { e2e } from "./e2e/support/env";
  *
  * Bring-up is Option A: Playwright `webServer` starts the backend (which resets
  * the DB + runs the worker) and the Vite preview of a prebuilt bundle; Postgres
- * and Redis come from `docker-compose.test.yml`. Two projects: `smoke` (default,
- * in-budget) and `full` (opt-in, `@full` — real Tectonic, edge cases).
+ * and Redis come from `docker-compose.test.yml`. Projects: `smoke` (everything
+ * in-budget), its slices `routes`, `mobile` and `flows` (one Makefile target each),
+ * and `full` (opt-in, `@full` — real Tectonic, edge cases). Always name the projects
+ * (`make e2e-all`): a bare `playwright test` runs the slices on top of `smoke`.
  */
 
 // Backend env, injected into the bring-up command (nothing hard-coded per machine).
@@ -74,6 +76,14 @@ export default defineConfig({
     // shared static storageState unusable across parallel contexts) — see support/auth.ts.
     {
       name: "smoke",
+      grepInvert: /@full/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    { name: "routes", testMatch: /\/routes\.spec\.ts$/, use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile", testMatch: /\/mobile\.spec\.ts$/, use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "flows",
+      testMatch: /\/flows\/.*\.spec\.ts$/,
       grepInvert: /@full/,
       use: { ...devices["Desktop Chrome"] },
     },
