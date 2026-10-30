@@ -26,13 +26,15 @@ pnpm dev
 ```
 
 The collaboration WebSocket runs inside the backend process. The AI agent and
-LaTeX compiles run in the ARQ worker: `uv run arq inkstave.compile.worker.WorkerSettings`.
+LaTeX compiles run in the ARQ worker: `uv run arq inkstave.worker.WorkerSettings`.
+
+The `Makefile` is the source of truth for commands: `make` with no target lists them.
 
 ## Running the test suite
 
 ```bash
-# Backend (unit + integration; needs the dev Postgres). -n auto for parallel.
-cd backend && uv run pytest                # add -n auto to parallelize
+# Backend (unit + integration; tests that need Postgres skip when it is unreachable).
+cd backend && uv run pytest                # already parallel: addopts sets -n auto
 # Frontend unit tests:
 cd frontend && pnpm test
 # End-to-end (real-stack smoke; see docs/e2e-strategy.md):
@@ -49,13 +51,15 @@ jobs and must be stubbed in the fast tiers. Mark genuinely heavy tests `@slow`
 ### Lint / format / type-check
 
 ```bash
-cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy src
-cd frontend && pnpm lint && pnpm format:check && pnpm typecheck
+make lint types docs      # ruff, format check, size ceilings, import contracts, strict mypy, doc paths
+make web-lint web-typecheck
 ```
 
 When you change an API endpoint or schema, regenerate the committed OpenAPI
-artifact: `cd backend && uv run python scripts/export_openapi.py` (a test fails on
-drift).
+artifact and the frontend types: `make web-types` (a test fails on drift).
+
+Run `mypy` as `make types` or from `backend/`: `mypy backend/src` from the repository root
+reads no configuration and misses `strict`.
 
 ## The spec-driven workflow
 
@@ -98,7 +102,7 @@ the PR description.
 
 - [ ] Tests added/updated and **green**; the suite stays **under 2 minutes**.
 - [ ] `ruff` / `mypy` / `eslint` / `tsc` clean; formatting checked.
-- [ ] Docs updated if behavior/config changed (and `docs/api/openapi.json`
-      regenerated for API changes).
+- [ ] `docs/system/` updated in the same commit if behavior/config changed, and
+      `make docs` passes (`docs/api/openapi.json` regenerated for API changes).
 - [ ] An Alembic migration accompanies any schema change.
 - [ ] **No Overleaf code copied** — original work affirmed.
