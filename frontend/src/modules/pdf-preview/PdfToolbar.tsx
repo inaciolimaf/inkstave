@@ -34,7 +34,11 @@ export function PdfToolbar({ viewport, onDownload }: { viewport: PdfViewport; on
       >
         <ZoomOut aria-hidden="true" />
       </Button>
-      <span className="min-w-12 text-center text-small tabular-nums" aria-label={t("toolbar.zoomLevel")}>
+      <span
+        role="group"
+        className="min-w-12 text-center text-small tabular-nums"
+        aria-label={t("toolbar.zoomLevel")}
+      >
         {zoomPercent}%
       </span>
       <Button

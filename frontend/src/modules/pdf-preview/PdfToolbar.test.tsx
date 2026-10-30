@@ -30,7 +30,7 @@ describe("PdfToolbar", () => {
     const vp = makeViewport();
     render(<PdfToolbar viewport={vp} />);
 
-    expect(screen.getByLabelText("Zoom level")).toHaveTextContent("100%");
+    expect(screen.getByRole("group", { name: "Zoom level" })).toHaveTextContent("100%");
     await userEvent.click(screen.getByRole("button", { name: "Zoom in" }));
     await userEvent.click(screen.getByRole("button", { name: "Zoom out" }));
     await userEvent.click(screen.getByRole("button", { name: "Fit width" }));

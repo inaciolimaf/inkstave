@@ -85,6 +85,7 @@ export function ProblemsSummary({
           <span
             key={severity}
             className="flex items-center gap-0.5 text-small text-muted-foreground"
+            role="img"
             aria-label={t("problems.countSeverity", { count, severity })}
           >
             <meta.Icon className={cn("size-3.5", meta.className)} aria-hidden="true" />
