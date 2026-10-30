@@ -52,7 +52,7 @@ export function fakeApi(routes: Record<string, FakeResponse> = {}) {
   const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
-    const path = url.pathname.replace(/^\/api\/v1/, "");
+    const path = url.pathname.replace(/^\/api(\/v1)?/, "");
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : init?.body;
     const route = `${method} ${path}`;
     const request = { method, path, query: url.searchParams, body };

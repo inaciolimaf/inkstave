@@ -83,7 +83,7 @@ export default tseslint.config(
   { ignores: ["dist", "node_modules", "playwright-report", "test-results", "coverage"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -101,7 +101,12 @@ export default tseslint.config(
   {
     // Vendored shadcn/ui primitives export variants/hooks alongside components;
     // fast-refresh granularity is irrelevant for these leaf files.
-    files: ["src/components/ui/**/*.{ts,tsx}", "src/test/**/*.{ts,tsx}"],
+    files: [
+      "src/components/ui/**/*.{ts,tsx}",
+      "src/test/**/*.{ts,tsx}",
+      "tests/**/*.{ts,tsx}",
+      "src/router.tsx",
+    ],
     rules: { "react-refresh/only-export-components": "off" },
   },
   {

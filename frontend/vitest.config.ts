@@ -14,7 +14,7 @@ export default defineConfig({
     environment: "./src/test/jsdom-environment.ts",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     // Explicit thread pool so parallelism is spec-defined rather than implicit
     // (spec 53 §5.3 / AC10). maxThreads is capped for CI cores.
     pool: "threads",

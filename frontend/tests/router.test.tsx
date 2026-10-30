@@ -9,7 +9,11 @@ const SESSION = {
   "POST /auth/refresh": { access_token: "a", refresh_token: "r", token_type: "bearer" },
   "GET /users/me": FAKE_USER,
 };
-const PAGE = { total: 0, limit: 100, offset: 0 };
+const PROJECT = { id: "p1", name: "Thesis", owner_id: "user-1", root_doc_id: null };
+const TIMES = { created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
+// Sorting by the missing `updated_at` crashes the screen while rendering.
+const MALFORMED = { total: 2, items: [PROJECT, { ...PROJECT, id: "p2" }] };
+const HEALTHY = { total: 1, items: [{ ...PROJECT, ...TIMES }] };
 
 afterEach(() => {
   tokenStore.clear();
@@ -24,7 +28,7 @@ describe("createAppRouter", () => {
     fakeApi({
       ...SESSION,
       "GET /notifications/unread-count": { count: 0 },
-      "GET /projects": () => (healthy ? { ...PAGE, items: [] } : { ...PAGE, items: "malformed" }),
+      "GET /projects": () => (healthy ? HEALTHY : MALFORMED),
     });
 
     const { user } = await renderScreen("/projects", { signedIn: true });
@@ -35,7 +39,7 @@ describe("createAppRouter", () => {
     healthy = true;
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(await screen.findByRole("heading", { name: "Projects" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Your projects" })).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
   });
 
