@@ -26,7 +26,9 @@ async def _auth(db_session: AsyncSession) -> tuple[Any, dict[str, str]]:
 
 
 async def _notify(db_session: AsyncSession, user_id: Any, **payload: Any) -> Any:
-    n = await NotificationService(db_session).create(user_id=user_id, type="generic", payload=payload)
+    n = await NotificationService(db_session).create(
+        user_id=user_id, notification_type="generic", payload=payload
+    )
     await db_session.commit()
     return n
 

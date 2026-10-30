@@ -85,10 +85,7 @@ async def upload_file(
         store,
         project.id,
         parent_id,
-        effective_name,
-        file.read,
-        file.content_type,
-        file.filename,
+        file_service.UploadSource(effective_name, file.read, file.content_type, file.filename),
     )
     return await _read(session, file_row)
 

@@ -161,7 +161,7 @@ async def _doc_contents(session: AsyncSession, plan: list[ExportEntry]) -> dict[
             select(Document.entity_id, Document.content).where(Document.entity_id.in_(doc_ids))
         )
     ).all()
-    return {eid: content for eid, content in rows}
+    return {row.entity_id: row.content for row in rows}
 
 
 def _zip_info(path: str, *, is_dir: bool = False) -> zipfile.ZipInfo:

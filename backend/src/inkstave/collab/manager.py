@@ -17,7 +17,7 @@ from inkstave.collab.protocol import encode_sync_step1, encode_sync_step2
 from inkstave.collab.state import (
     CollabSettings,
     OpenDocument,
-    UpdateTooLarge,
+    UpdateTooLargeError,
     _Entry,
 )
 from inkstave.collab.ydocument import YDocument
@@ -31,7 +31,7 @@ __all__ = [
     "CollabSettings",
     "DocumentManager",
     "OpenDocument",
-    "UpdateTooLarge",
+    "UpdateTooLargeError",
 ]
 
 
@@ -162,7 +162,7 @@ class DocumentManager:
     async def handle_update(self, document_id: UUID, update: bytes, origin: str | None) -> bytes:
         """Apply, persist, schedule a text flush, and return the raw update to relay."""
         if len(update) > self._settings.max_update_bytes:
-            raise UpdateTooLarge(len(update), self._settings.max_update_bytes)
+            raise UpdateTooLargeError(len(update), self._settings.max_update_bytes)
         async with self._lock(document_id):
             entry = self._require(document_id)
             entry.ydoc.apply_update(update, origin=origin)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+from itertools import pairwise
 from typing import TYPE_CHECKING, Any
 
 from inkstave.agent.edits import EditMode
@@ -36,7 +37,7 @@ def apply_staged_edits(current_text: str, edits: list[StagedEdit]) -> str:
     else:
         lines = current_text.splitlines()
         ordered = sorted(ranges, key=lambda e: e.start_line or 0)
-        for a, b in zip(ordered, ordered[1:], strict=False):
+        for a, b in pairwise(ordered):
             if (a.end_line or 0) > (b.start_line or 0):
                 raise DiffConflictError(
                     f"overlapping range edits: [{a.start_line},{a.end_line}) and "

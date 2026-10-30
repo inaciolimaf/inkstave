@@ -38,7 +38,7 @@ class CollabSettings:
         )
 
 
-class UpdateTooLarge(Exception):
+class UpdateTooLargeError(Exception):
     """A single update exceeded ``COLLAB_MAX_UPDATE_BYTES``."""
 
     def __init__(self, size: int, limit: int) -> None:

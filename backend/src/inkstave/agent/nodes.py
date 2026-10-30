@@ -110,7 +110,7 @@ async def _stream_prose(events: EventSink | None, content: str | None) -> None:
         await _emit(events, "token", text=chunk)
 
 
-class _PlanAborted(Exception):
+class _PlanAbortedError(Exception):
     """The model call failed; `error` is the sentinel to end the turn with."""
 
     def __init__(self, error: str) -> None:
@@ -134,7 +134,7 @@ def _budget_exceeded(state: AgentState, settings: AgentSettings, model: str) -> 
 async def _complete(
     deps: AgentDeps, messages: list[LLMMessage], tool_specs: list[ToolSpec] | None
 ) -> LLMResponse:
-    """One model call, with every failure mode turned into `_PlanAborted`.
+    """One model call, with every failure mode turned into `_PlanAbortedError`.
 
     Deliberate deviation from spec 44 §5.4.1 (which calls for `LLMClient.stream`):
     we use `complete()` because the full response is needed for `tool_calls`/`usage`
@@ -150,10 +150,10 @@ async def _complete(
             max_tokens=deps.settings.agent_max_tokens_per_call,
         )
     except LLMError as exc:
-        raise _PlanAborted(str(exc)) from exc
+        raise _PlanAbortedError(str(exc)) from exc
     except Exception as exc:  # never crash the graph
         logger.exception("plan node failed")
-        raise _PlanAborted(f"agent error: {exc}") from exc
+        raise _PlanAbortedError(f"agent error: {exc}") from exc
 
 
 def _unparsed_tool_call(response: LLMResponse) -> str | None:
@@ -197,7 +197,7 @@ def make_plan(deps: AgentDeps) -> Any:
         logger.info("agent plan: iteration=%d calling LLM (%d messages)", iteration, len(messages))
         try:
             response = await _complete(deps, messages, tool_specs)
-        except _PlanAborted as aborted:
+        except _PlanAbortedError as aborted:
             return _terminal(aborted.error)
 
         logger.info(

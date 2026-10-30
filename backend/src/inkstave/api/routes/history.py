@@ -18,7 +18,7 @@ from inkstave.dependencies import get_settings_dep
 from inkstave.errors import BadRequestError, ErrorEnvelope
 from inkstave.history import labels as labels_service
 from inkstave.history.read import get_diff, list_updates, list_versions
-from inkstave.history.restore import restore_document, restore_project
+from inkstave.history.restore import RestoreScope, restore_document, restore_project
 from inkstave.schemas.history import (
     LabelCreate,
     LabelRead,
@@ -142,10 +142,8 @@ async def restore_doc(
         session,
         _components(request),
         store,
-        project_id=project.id,
-        doc_id=doc_id,
+        scope=RestoreScope(project.id, doc_id, user.id),
         target_version=body.version,
-        author_id=user.id,
         label_name=body.label_name,
     )
 

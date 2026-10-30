@@ -39,7 +39,7 @@ class NotificationService:
         self,
         *,
         user_id: UUID,
-        type: str,
+        notification_type: str,
         payload: dict[str, Any],
         expires_at: datetime | None = None,
         dedupe_on: tuple[str, str] | None = None,
@@ -49,7 +49,7 @@ class NotificationService:
             existing = await self._session.scalar(
                 select(Notification).where(
                     Notification.user_id == user_id,
-                    Notification.type == type,
+                    Notification.type == notification_type,
                     Notification.dismissed_at.is_(None),
                     Notification.payload[key].astext == value,
                 )
@@ -63,7 +63,9 @@ class NotificationService:
                 await self._session.flush()
                 return existing
 
-        notification = Notification(user_id=user_id, type=type, payload=payload, expires_at=expires_at)
+        notification = Notification(
+            user_id=user_id, type=notification_type, payload=payload, expires_at=expires_at
+        )
         self._session.add(notification)
         await self._session.flush()
         return notification

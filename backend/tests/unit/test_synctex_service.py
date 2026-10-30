@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from inkstave.config import Settings
-from inkstave.synctex.service import SyncTexNotAvailable, SyncTexService
+from inkstave.synctex.service import SyncTexNotAvailableError, SyncTexService
 from tests.synctex_fixtures import SINGLE_FILE, gz
 
 
@@ -66,20 +66,20 @@ async def test_missing_compile_is_unavailable() -> None:
         output_store=_FakeStore(_FakeStored(gz(SINGLE_FILE))),  # type: ignore[arg-type]
         settings=_settings(),
     )
-    with pytest.raises(SyncTexNotAvailable):
+    with pytest.raises(SyncTexNotAvailableError):
         await service.load_index(uuid4(), None)
 
 
 async def test_no_synctex_artifact_is_unavailable() -> None:
     service = _service(_FakeStore(None))
-    with pytest.raises(SyncTexNotAvailable):
+    with pytest.raises(SyncTexNotAvailableError):
         await service.load_index(uuid4(), None)
 
 
 async def test_oversize_synctex_is_refused() -> None:
     big = _FakeStored(gz(SINGLE_FILE), size=10_000_000)
     service = _service(_FakeStore(big), synctex_max_gz_bytes=1)
-    with pytest.raises(SyncTexNotAvailable):
+    with pytest.raises(SyncTexNotAvailableError):
         await service.load_index(uuid4(), None)
 
 

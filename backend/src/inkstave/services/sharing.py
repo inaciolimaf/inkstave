@@ -52,35 +52,30 @@ from inkstave.services.sharing_members import (
 )
 
 __all__ = [
-    # errors
     "AlreadyMemberError",
     "CannotChangeOwnerRoleError",
     "InvalidRoleError",
     "InviteEmailMismatchError",
     "InviteGoneError",
     "InviteNotFoundError",
+    "MemberInfo",
     "MemberNotFoundError",
     "NotAMemberError",
     "NotProjectOwnerError",
     "OwnerCannotLeaveError",
-    # value objects
-    "MemberInfo",
-    # token helpers & guards
-    "generate_token",
-    "hash_token",
-    "membership_of",
-    "require_member",
-    "require_owner",
-    # members
-    "change_role",
-    "list_members",
-    "remove_member",
-    "transfer_ownership",
-    # invites
     "accept_invite",
+    "change_role",
     "create_invite",
     "decline_invite",
+    "generate_token",
     "get_invite_preview",
+    "hash_token",
     "list_invites",
+    "list_members",
+    "membership_of",
+    "remove_member",
+    "require_member",
+    "require_owner",
     "revoke_invite",
+    "transfer_ownership",
 ]

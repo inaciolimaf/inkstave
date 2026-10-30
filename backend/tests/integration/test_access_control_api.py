@@ -54,7 +54,7 @@ async def actors(app: Any, async_client: AsyncClient, db_session: AsyncSession) 
     app.dependency_overrides[get_compile_enqueuer] = lambda: _FakeEnqueuer()
     app.dependency_overrides[get_email_enqueuer] = lambda: _FakeEnqueuer()
 
-    owner, owner_h = await _user(db_session)
+    _owner, owner_h = await _user(db_session)
     pid = (await async_client.post(PROJECTS, json={"name": "P"}, headers=owner_h)).json()["id"]
     doc = await async_client.post(
         f"{PROJECTS}/{pid}/tree/entities",

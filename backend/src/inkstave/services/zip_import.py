@@ -452,9 +452,9 @@ async def reconstruct_tree(
             await _import_text(session, project_id, parent_id, zf, entry, settings, state)
             continue
         try:
-            await _import_binary(session, store, project_id, parent_id, entry.parts[-1], zf, entry, settings)
+            await _import_binary(session, store, (project_id, parent_id), zf, entry, settings)
             state.outcome.files_created += 1
-        except _SkipEntry:
+        except _SkipEntryError:
             state.outcome.skipped += 1
 
     root = detect_root_doc(plan.entries, state.text_blobs)
@@ -464,27 +464,28 @@ async def reconstruct_tree(
     return state.outcome
 
 
-class _SkipEntry(Exception):
+class _SkipEntryError(Exception):
     """Internal: a binary entry could not be imported and is recorded as skipped."""
 
 
 async def _import_binary(
     session: AsyncSession,
     store: ObjectStore,
-    project_id: UUID,
-    parent_id: UUID | None,
-    name: str,
+    location: tuple[UUID, UUID | None],
     zf: zipfile.ZipFile,
     entry: PlannedEntry,
     settings: Settings,
 ) -> None:
+    """Import one binary entry at ``location``, a ``(project_id, parent_id)`` pair."""
+    project_id, parent_id = location
+    name = entry.parts[-1]
     cap = min(settings.import_max_file_bytes, settings.max_upload_bytes)
     data = await asyncio.to_thread(_read_member_bounded, zf, entry.zip_name, cap)
     # Validate the sniffed type BEFORE creating any entity, so a rejected binary
     # leaves no orphan tree node behind.
     content_type = sniff_content_type(data[: settings.storage_stream_chunk_bytes], None)
     if content_type not in settings.allowed_upload_mime or not content_matches_extension(name, content_type):
-        raise _SkipEntry()
+        raise _SkipEntryError()
 
     pos = {"i": 0}
 
@@ -495,11 +496,15 @@ async def _import_binary(
 
     try:
         await file_service.upload_file(
-            session, store, project_id, parent_id, name, reader, content_type, name
+            session,
+            store,
+            project_id,
+            parent_id,
+            file_service.UploadSource(name, reader, content_type, name),
         )
     except (
         file_service.UnsupportedMediaTypeError,
         file_service.FileTooLargeError,
         tree_service.NameConflictError,
     ) as exc:
-        raise _SkipEntry() from exc
+        raise _SkipEntryError() from exc

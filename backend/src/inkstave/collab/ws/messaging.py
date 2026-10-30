@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from pycrdt import Decoder
 
-from inkstave.collab.manager import UpdateTooLarge
+from inkstave.collab.manager import UpdateTooLargeError
 from inkstave.collab.protocol import (
     AwarenessMessage,
     SyncStep1,
@@ -108,7 +108,7 @@ async def _handle_update(
         return False
     try:
         relayable = await components.manager.handle_update(conn.document_id, parsed.update, origin=conn.id)
-    except UpdateTooLarge:
+    except UpdateTooLargeError:
         await _force_close(conn, CLOSE_BAD_MESSAGE)
         return False
     await components.redis_bridge.publish(conn.document_id, conn.id, encode_update(relayable))

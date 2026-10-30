@@ -13,7 +13,6 @@ from inkstave.agent.api import routes as agent_routes
 from inkstave.api.routes import (
     admin,
     auth,
-    compile,
     documents,
     files,
     history,
@@ -23,6 +22,9 @@ from inkstave.api.routes import (
     sharing,
     tree,
     users,
+)
+from inkstave.api.routes import (
+    compile as compile_routes,
 )
 from inkstave.logparse import router as logparse
 from inkstave.synctex import router as synctex
@@ -38,7 +40,7 @@ api_v1.include_router(sharing.invites_router)
 api_v1.include_router(tree.router)
 api_v1.include_router(documents.router)
 api_v1.include_router(files.router)
-api_v1.include_router(compile.router)
+api_v1.include_router(compile_routes.router)
 api_v1.include_router(synctex.router)
 api_v1.include_router(logparse.router)
 api_v1.include_router(history.router)

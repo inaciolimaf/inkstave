@@ -66,11 +66,10 @@ async def test_resend_raises_on_non_2xx_and_hides_key(caplog: pytest.LogCaptureF
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(422, json={"message": "invalid recipient"})
 
-    with caplog.at_level(logging.WARNING):
-        with pytest.raises(httpx.HTTPStatusError):
-            await _sender(handler, key="re_TOPSECRET").send(
-                OutgoingEmail(to="b@x.com", subject="s", text_body="t")
-            )
+    with caplog.at_level(logging.WARNING), pytest.raises(httpx.HTTPStatusError):
+        await _sender(handler, key="re_TOPSECRET").send(
+            OutgoingEmail(to="b@x.com", subject="s", text_body="t")
+        )
     assert "re_TOPSECRET" not in caplog.text
     assert "422" in caplog.text  # status logged for the bounce
 

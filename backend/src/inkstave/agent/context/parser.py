@@ -247,7 +247,7 @@ def parse_latex_structure(
     text: str, file_path: str, extra_commands: Sequence[str] = ()
 ) -> list[StructureNode]:
     lines = text.split("\n")
-    scan = _Scan(file_path, _line_starts(lines), {name: 1 for name in extra_commands})
+    scan = _Scan(file_path, _line_starts(lines), dict.fromkeys(extra_commands, 1))
 
     for line_idx, raw in enumerate(lines):
         line_no = line_idx + 1

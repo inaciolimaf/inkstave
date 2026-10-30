@@ -114,7 +114,7 @@ async def test_track_job_records_status_even_on_exception() -> None:
 
 
 def test_track_ws_gauge_returns_to_baseline_on_exception() -> None:
-    sample = lambda: (  # noqa: E731
+    sample = lambda: (  # noqa: E731 - a named one-liner reads better here
         REGISTRY.get_sample_value("inkstave_ws_connections_active", {"kind": "collab"}) or 0.0
     )
     before = sample()

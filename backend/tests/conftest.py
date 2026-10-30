@@ -42,11 +42,11 @@ pytest_plugins = (
 )
 
 __all__ = [
+    "_ALEMBIC_INI",
+    "_DEFAULT_TEST_DB",
     "FakeEngineBroken",
     "FakeEngineOk",
     "FakeRedisHanging",
     "FakeRedisRaising",
     "_FakeConnection",
-    "_ALEMBIC_INI",
-    "_DEFAULT_TEST_DB",
 ]

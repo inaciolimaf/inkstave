@@ -32,7 +32,7 @@ async def test_job_persists_outputs_and_cleans_workdir(
 ) -> None:
     from inkstave.compile.jobs import run_compile
 
-    _, project, compile_row = await _seed(db_session)
+    _, _project, compile_row = await _seed(db_session)
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"  # the job cleans this up after persisting
     backend = LocalObjectStore(tmp_path / "blobs", 65536)
@@ -82,7 +82,7 @@ async def test_job_persists_before_terminal_status_event(
     import inkstave.compile.jobs as jobs_module
     from inkstave.compile.jobs import run_compile
 
-    _, project, compile_row = await _seed(db_session)
+    _, _project, compile_row = await _seed(db_session)
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"
     settings = Settings(_env_file=None)  # type: ignore[call-arg]

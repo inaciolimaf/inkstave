@@ -15,12 +15,14 @@ from inkstave.agent.nodes import make_act, make_observe, make_plan, make_respond
 from inkstave.agent.state import AgentState
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langgraph.graph.state import CompiledStateGraph
 
     from inkstave.agent.deps import AgentDeps
 
 
-def _make_router(deps: AgentDeps):
+def _make_router(deps: AgentDeps) -> Callable[[AgentState], Literal["act", "respond"]]:
     settings = deps.settings
 
     def route_after_plan(state: AgentState) -> Literal["act", "respond"]:

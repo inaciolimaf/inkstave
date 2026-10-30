@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from collections.abc import AsyncIterator, Awaitable, Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -27,6 +28,16 @@ if TYPE_CHECKING:
 
 # Reader for the upload body: returns up to ``size`` bytes, empty when exhausted.
 ByteReader = Callable[[int], Awaitable[bytes]]
+
+
+@dataclass(frozen=True, slots=True)
+class UploadSource:
+    """The incoming file: its target name, its body and what the client said about it."""
+
+    name: str
+    read: ByteReader
+    declared_content_type: str | None
+    original_filename: str | None
 
 
 class NotAFileError(ConflictError):
@@ -152,12 +163,11 @@ async def upload_file(
     store: ObjectStore,
     project_id: UUID,
     parent_id: UUID | None,
-    name: str,
-    read: ByteReader,
-    declared_content_type: str | None,
-    original_filename: str | None,
+    source: UploadSource,
 ) -> File:
     settings = get_settings()
+    name, read = source.name, source.read
+    original_filename = source.original_filename
 
     # Create the file tree entity first (validates name, resolves the folder
     # parent, and rejects duplicate sibling names).
@@ -169,7 +179,7 @@ async def upload_file(
         raise UnsupportedMediaTypeError()
 
     head = await read(settings.storage_stream_chunk_bytes)
-    content_type = _validated_content_type(name, head, declared_content_type, settings)
+    content_type = _validated_content_type(name, head, source.declared_content_type, settings)
 
     hasher = hashlib.sha256()
     total = {"size": 0}

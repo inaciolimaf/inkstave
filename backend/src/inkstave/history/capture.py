@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pycrdt import merge_updates
 from sqlalchemy import func, select
 
+from inkstave.background import spawn
 from inkstave.collab.ydocument import YDocument
 from inkstave.db.models.history import HistoryChunk, HistoryUpdate
 from inkstave.history.reconstruct import reconstruct_doc, reconstruct_state
@@ -122,9 +123,9 @@ class HistoryCaptureService:
         buf.timer = asyncio.get_running_loop().call_later(delay, self._on_timer, doc_id)
 
     def _on_timer(self, doc_id: UUID) -> None:
-        # Fire-and-forget by design: the debounce timer owns no task handle, and a
-        # failed flush is retried by the next edit or the periodic compaction job.
-        asyncio.ensure_future(self.flush_doc(doc_id=doc_id, reason="idle"))
+        # Fire-and-forget by design: a failed flush is logged and retried by the next edit
+        # or the periodic compaction job.
+        spawn(self.flush_doc(doc_id=doc_id, reason="idle"), name="history-idle-flush")
 
     # --- flush (the actual write) ------------------------------------------ #
 

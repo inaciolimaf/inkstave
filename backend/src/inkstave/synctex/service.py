@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class SyncTexNotAvailable(Exception):
+class SyncTexNotAvailableError(Exception):
     """No usable ``output.synctex.gz`` for the requested compile."""
 
 
@@ -66,19 +66,19 @@ class SyncTexService:
             try:
                 cid = UUID(compile_id)
             except ValueError as exc:
-                raise SyncTexNotAvailable() from exc
+                raise SyncTexNotAvailableError() from exc
             row = await self._repo.get(project_id, cid)
         else:
             row = await self._repo.get_latest_successful(project_id)
         if row is None:
-            raise SyncTexNotAvailable()
+            raise SyncTexNotAvailableError()
         return row.id
 
     async def load_index(self, project_id: UUID, compile_id: str | None) -> SyncTexIndex:
         cid = await self._resolve_compile_id(project_id, compile_id)
         obj = await self._store.open_synctex(cid)
         if obj is None:
-            raise SyncTexNotAvailable()
+            raise SyncTexNotAvailableError()
         if obj.size > self._settings.synctex_max_gz_bytes:
             logger.warning(
                 "synctex file for compile %s is %d bytes (> limit %d); refusing to parse",
@@ -86,7 +86,7 @@ class SyncTexService:
                 obj.size,
                 self._settings.synctex_max_gz_bytes,
             )
-            raise SyncTexNotAvailable()
+            raise SyncTexNotAvailableError()
 
         key = (cid, obj.etag)
         cached = _CACHE.get(key)

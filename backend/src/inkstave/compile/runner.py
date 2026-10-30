@@ -140,7 +140,7 @@ class LocalTectonicRunner:
         proc.terminate()
         try:
             await asyncio.wait_for(proc.wait(), timeout=2.0)
-        except (TimeoutError, asyncio.TimeoutError):  # noqa: UP041
+        except TimeoutError:
             proc.kill()
             await proc.wait()
 
@@ -231,6 +231,16 @@ def validate_main_file(name: str) -> str:
     return name
 
 
+@dataclass(frozen=True, slots=True)
+class SandboxCaps:
+    """Hard resource caps of the throwaway compile container."""
+
+    memory_mb: int = 2048
+    cpus: float = 1.0
+    pids_limit: int = 256
+    tmpfs_mb: int = 256
+
+
 class SandboxedTectonicRunner:
     """Runs each compile in an ephemeral, gVisor-isolated container (spec 105).
 
@@ -248,19 +258,13 @@ class SandboxedTectonicRunner:
         image: str,
         runtime: str = "runsc",
         docker_bin: str = "docker",
-        memory_mb: int = 2048,
-        cpus: float = 1.0,
-        pids_limit: int = 256,
-        tmpfs_mb: int = 256,
+        caps: SandboxCaps | None = None,
         output_format: str = "latex",
     ) -> None:
         self._image = image
         self._runtime = runtime
         self._docker_bin = docker_bin
-        self._memory_mb = memory_mb
-        self._cpus = cpus
-        self._pids_limit = pids_limit
-        self._tmpfs_mb = tmpfs_mb
+        self._caps = caps or SandboxCaps()
         # Reused only to build the inner tectonic argv; offline + cache live in the
         # image, so the bundle url / cache dir here are irrelevant to the container.
         self._inner = LocalTectonicRunner(
@@ -274,7 +278,7 @@ class SandboxedTectonicRunner:
     def _memory_for(self, limits: ResourceLimits) -> int:
         if limits.address_space_bytes is not None:
             return max(1, limits.address_space_bytes // (1024 * 1024))
-        return self._memory_mb
+        return self._caps.memory_mb
 
     def _sandbox_flags(self, limits: ResourceLimits, container_name: str) -> list[str]:
         """The fixed hardening flags for the throwaway compile container."""
@@ -286,7 +290,7 @@ class SandboxedTectonicRunner:
             "--tmpfs",
             # Not a host path: `/tmp` here is the tmpfs mount point *inside* the
             # throwaway container, which has no writable filesystem otherwise.
-            f"/tmp:size={self._tmpfs_mb}m",  # noqa: S108 — see above
+            f"/tmp:size={self._caps.tmpfs_mb}m",  # noqa: S108 — see above
             "--user",
             "65534",
             "--cap-drop",
@@ -294,11 +298,11 @@ class SandboxedTectonicRunner:
             "--security-opt",
             "no-new-privileges",
             "--pids-limit",
-            str(self._pids_limit),
+            str(self._caps.pids_limit),
             "--memory",
             f"{self._memory_for(limits)}m",
             "--cpus",
-            str(self._cpus),
+            str(self._caps.cpus),
             "--name",
             container_name,
         ]

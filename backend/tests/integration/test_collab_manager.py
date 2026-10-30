@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.collab.awareness import AwarenessRegistry
 from inkstave.collab.content_bridge import ContentBridge
-from inkstave.collab.manager import CollabSettings, DocumentManager, UpdateTooLarge
+from inkstave.collab.manager import CollabSettings, DocumentManager, UpdateTooLargeError
 from inkstave.collab.store import CrdtStore
 from inkstave.collab.ydocument import YDocument
 from inkstave.db.models.crdt import CrdtDocumentState, CrdtUpdate
@@ -206,7 +206,7 @@ async def test_update_size_guard(db_session: AsyncSession) -> None:
     doc_id = await _make_doc(db_session, content="x")
     manager = _manager(db_session, max_update_bytes=10)
     await manager.acquire(doc_id)
-    with pytest.raises(UpdateTooLarge):
+    with pytest.raises(UpdateTooLargeError):
         await manager.handle_update(doc_id, b"x" * 50, origin=None)
 
 

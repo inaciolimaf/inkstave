@@ -198,10 +198,7 @@ class CompileService:
         output_dir: Path, main_file: str, outcome: RunOutcome, limits: ResourceLimits
     ) -> tuple[str, bool]:
         log_path = output_dir / f"{Path(main_file).stem}.log"
-        if log_path.is_file():
-            raw = log_path.read_bytes()
-        else:
-            raw = outcome.stdout.encode("utf-8")
+        raw = log_path.read_bytes() if log_path.is_file() else outcome.stdout.encode("utf-8")
         truncated = len(raw) > limits.max_log_bytes
         return raw[: limits.max_log_bytes].decode("utf-8", "replace"), truncated
 

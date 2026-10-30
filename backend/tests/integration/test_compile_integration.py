@@ -70,10 +70,7 @@ async def _seed_project(db_session: AsyncSession, store: LocalObjectStore):
         store,
         project.id,
         folder.id,
-        "logo.png",
-        _byte_reader(PNG),
-        "image/png",
-        "logo.png",
+        file_service.UploadSource("logo.png", _byte_reader(PNG), "image/png", "logo.png"),
     )
     return project
 

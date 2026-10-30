@@ -39,7 +39,7 @@ async def test_doc_creation_yields_empty_document(db_session: AsyncSession) -> N
 
 
 async def test_ensure_document_is_idempotent(db_session: AsyncSession) -> None:
-    project, entity = await _doc_entity(db_session)
+    _project, entity = await _doc_entity(db_session)
     first = await ensure_document(db_session, entity)
     second = await ensure_document(db_session, entity)
     assert first.entity_id == second.entity_id

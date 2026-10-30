@@ -15,7 +15,7 @@ from inkstave.db.session import get_db_session
 from inkstave.dependencies import get_object_store, get_settings_dep
 from inkstave.errors import ErrorEnvelope, NotFoundError
 from inkstave.logparse.models import CompileProblems
-from inkstave.logparse.service import LogNotAvailable, LogProblemsService
+from inkstave.logparse.service import LogNotAvailableError, LogProblemsService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,5 +65,5 @@ async def get_problems(
 ) -> CompileProblems:
     try:
         return await service.problems_for(project.id, compile_id)
-    except LogNotAvailable as exc:
+    except LogNotAvailableError as exc:
         raise LogUnavailableError() from exc

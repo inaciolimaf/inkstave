@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from inkstave.storage.base import ObjectStore
 
 
-class HistoryVersionNotFound(NotFoundError):
+class HistoryVersionNotFoundError(NotFoundError):
     error_type = "history_version_not_found"
 
     def __init__(self, doc_id: UUID, version: int) -> None:
@@ -77,7 +77,7 @@ async def reconstruct_doc(session: AsyncSession, store: ObjectStore, doc_id: UUI
         )
     ).scalar_one_or_none()
     if chunk is None:
-        raise HistoryVersionNotFound(doc_id, version)
+        raise HistoryVersionNotFoundError(doc_id, version)
     doc = YDocument()
     doc.apply_update(await _chunk_base(store, chunk))
     rows = (

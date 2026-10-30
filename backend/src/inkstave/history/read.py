@@ -11,7 +11,7 @@ from inkstave.db.models.history import HistoryLabel, HistoryUpdate
 from inkstave.db.models.user import User
 from inkstave.history.diff import diff_text
 from inkstave.history.reconstruct import (
-    HistoryVersionNotFound,
+    HistoryVersionNotFoundError,
     current_text,
     is_binary,
     reconstruct_state,
@@ -163,4 +163,4 @@ async def get_diff(
     return DiffResponse.model_validate({**base, "binary": False, "hunks": hunks})
 
 
-__all__ = ["HistoryVersionNotFound", "get_diff", "list_updates", "list_versions"]
+__all__ = ["HistoryVersionNotFoundError", "get_diff", "list_updates", "list_versions"]

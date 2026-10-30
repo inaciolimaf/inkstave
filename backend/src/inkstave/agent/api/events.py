@@ -32,9 +32,9 @@ def last_event_key(run_id: UUID | str) -> str:
     return f"agent:run:{run_id}:last"
 
 
-def build_event(run_id: str, seq: int, type: str, payload: dict[str, Any]) -> dict[str, Any]:
+def build_event(run_id: str, seq: int, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
     return {
-        "type": type,
+        "type": event_type,
         "run_id": run_id,
         "seq": seq,
         "ts": datetime.now(UTC).isoformat(),
@@ -45,7 +45,7 @@ def build_event(run_id: str, seq: int, type: str, payload: dict[str, Any]) -> di
 class EventSink(Protocol):
     run_id: str
 
-    async def emit(self, type: str, **payload: Any) -> dict[str, Any]: ...
+    async def emit(self, event_type: str, **payload: Any) -> dict[str, Any]: ...
 
 
 class InMemoryEventSink:
@@ -56,8 +56,8 @@ class InMemoryEventSink:
         self.events: list[dict[str, Any]] = []
         self._seq = 0
 
-    async def emit(self, type: str, **payload: Any) -> dict[str, Any]:
-        event = build_event(self.run_id, self._seq, type, payload)
+    async def emit(self, event_type: str, **payload: Any) -> dict[str, Any]:
+        event = build_event(self.run_id, self._seq, event_type, payload)
         self._seq += 1
         self.events.append(event)
         return event
@@ -72,12 +72,12 @@ class RedisEventSink:
         self._ttl = ttl_seconds
         self._seq = 0
 
-    async def emit(self, type: str, **payload: Any) -> dict[str, Any]:
-        event = build_event(self.run_id, self._seq, type, payload)
+    async def emit(self, event_type: str, **payload: Any) -> dict[str, Any]:
+        event = build_event(self.run_id, self._seq, event_type, payload)
         self._seq += 1
         data = json.dumps(event, default=str).encode()
         await self._redis.publish(run_channel(self.run_id), data)
-        if type in TERMINAL_TYPES:
+        if event_type in TERMINAL_TYPES:
             # Let a late subscriber replay the terminal event.
             await self._redis.set(last_event_key(self.run_id), data, ex=self._ttl)
         return event

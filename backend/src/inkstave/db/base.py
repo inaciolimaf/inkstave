@@ -44,7 +44,7 @@ class TimestampMixin:
     """Adds timezone-aware ``created_at`` / ``updated_at`` columns."""
 
     @declared_attr.directive
-    def __mapper_args__(cls) -> dict[str, Any]:
+    def __mapper_args__(cls) -> dict[str, Any]:  # noqa: N805 - declared_attr receives the class
         # ``updated_at`` carries a server-side ``onupdate``: after an UPDATE the ORM
         # expires the attribute and would refresh it lazily on next access. Under the
         # async engine that lazy SELECT raises ``MissingGreenlet``. ``eager_defaults``

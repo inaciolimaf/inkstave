@@ -58,33 +58,57 @@ dev = [
 [tool.ruff]
 line-length = 110
 target-version = "py312"
-# Forward-looking: Alembic migrations (added in spec 03) are not linted.
+# Alembic migrations are generated and never edited again, so they are not linted.
 # Deliberately `extend-exclude` (not a plain `exclude`): plain `exclude` would
 # *replace* ruff's built-in default excludes (.venv, .git, __pycache__, …),
 # whereas `extend-exclude` preserves them and merely adds `migrations/` on top.
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-# `C901` + the `PLR09xx` family cap structural complexity; `S` (bandit) covers the
-# security surface; `RUF100` keeps suppressions honest by failing on any `noqa`
-# that no longer silences anything. Thresholds and rationale:
-# docs/adr/0106-complexity-and-security-lint.md. The line ceiling per function
-# (30) has no ruff equivalent and is enforced by scripts/lint_function_length.py.
+# The project standard's ruleset, plus the project's stricter structural budget:
+# `C901` + the `PLR09xx` family cap complexity (the standard only has PLR0913).
+# Thresholds and rationale: docs/adr/0106-complexity-and-security-lint.md. The line
+# ceiling per function (30) has no ruff equivalent and is enforced by
+# scripts/lint_function_length.py.
 select = [
     "E",
     "F",
+    "W",
     "I",
+    "N",
     "UP",
     "B",
+    "A",
+    "C4",
+    "SIM",
+    "RUF",
+    "ANN",
+    "S",
     "ASYNC",
     "C901",
     "PLR0911",
     "PLR0912",
     "PLR0913",
     "PLR0915",
-    "RUF100",
-    "S",
 ]
+ignore = [
+    # `Any` is sometimes the honest annotation (structlog-style kwargs, raw JSON); strict mypy
+    # still enforces the rest.
+    "ANN401",
+    # Ambiguous characters: product text and docs legitimately use –, —, × and typographic quotes.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # Clashes with pydantic's `model_config` and SQLAlchemy's `__table_args__`.
+    "RUF012",
+    # `assert` is used for invariants and to narrow types.
+    "S101",
+    # Non-cryptographic `random` is fine for jitter/backoff; tokens and secrets use `secrets`.
+    "S311",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["inkstave", "tests"]
 
 [tool.ruff.lint.mccabe]
 # Deliberately stricter than ruff's default of 10: a function with more than six
@@ -92,10 +116,10 @@ select = [
 max-complexity = 6
 
 [tool.ruff.lint.pylint]
-# `max-args` is loosened from ruff's default of 5 — DI-heavy FastAPI/service
-# constructors legitimately take more — while the other three are ruff's
-# defaults, restated here so the whole complexity budget is readable in one place.
-max-args = 8
+# The standard's cap: DI-heavy FastAPI/service constructors may take up to 7 arguments,
+# more becomes a dataclass/DTO. The other three are ruff's defaults, restated here so the
+# whole complexity budget is readable in one place.
+max-args = 7
 max-branches = 12
 max-returns = 6
 max-statements = 50
@@ -104,15 +128,18 @@ max-statements = 50
 # The in-process ASGI WebSocket test client exposes idiomatic `timeout=` params
 # (mirroring Starlette's TestClient / the `websockets` API); ASYNC109 doesn't fit.
 "tests/collab_ws_harness.py" = ["ASYNC109"]
-# Tests are held to the same complexity budget as `src`, but bandit's credential
-# and sandbox heuristics do not apply to them: `assert` *is* the assertion
-# mechanism, fixture passwords/tokens are deliberately fake, `0.0.0.0` appears in
-# bind-address assertions, and `/tmp` paths are settings fixtures, not real I/O.
-"tests/**" = ["S101", "S104", "S105", "S106", "S107", "S108"]
+# The fake S3 client mirrors boto3's PascalCase keyword arguments (Bucket, Key, Body…).
+"tests/unit/test_storage.py" = ["N803"]
+# The standard's test exceptions: bandit's heuristics do not apply (fixture secrets are
+# fake, `0.0.0.0` appears in bind-address assertions, `/tmp` paths are settings fixtures),
+# fixtures and tests are not annotated, a test takes many fixtures, inline data is long.
+# Tests stay under the same complexity budget as `src`.
+"tests/**" = ["S", "ANN", "PLR0913", "E501"]
 
 [tool.ruff.lint.flake8-bugbear]
-# FastAPI's dependency-injection markers are designed to be call expressions in
-# parameter defaults; they are effectively immutable, so B008 does not apply.
+# B008 stays on. FastAPI's dependency-injection markers are designed to be call expressions in
+# parameter defaults and are effectively immutable; the project has ~276 `x = Depends(...)`
+# sites, kept in preference to churning every route to `Annotated` in this pass.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Header", "fastapi.Cookie", "fastapi.Body", "fastapi.Form", "fastapi.Security"]
 
 [tool.ruff.format]

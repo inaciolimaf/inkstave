@@ -9,7 +9,7 @@ import pytest
 
 from inkstave.config import Settings
 from inkstave.logparse.models import ProblemSeverity
-from inkstave.logparse.service import LogNotAvailable, LogProblemsService
+from inkstave.logparse.service import LogNotAvailableError, LogProblemsService
 from tests.logparse_fixtures import SAMPLE_LOG
 
 
@@ -70,7 +70,7 @@ async def test_counts_match_severities() -> None:
 
 
 async def test_no_log_raises() -> None:
-    with pytest.raises(LogNotAvailable):
+    with pytest.raises(LogNotAvailableError):
         await _service(None).problems_for(uuid4(), None)
 
 

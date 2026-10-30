@@ -44,7 +44,7 @@ async def notify_invite(
     if invitee is not None:
         await NotificationService(session).create(
             user_id=invitee.id,
-            type="project_invite",
+            notification_type="project_invite",
             payload={
                 "project_id": str(invite.project_id),
                 "project_name": project_name,

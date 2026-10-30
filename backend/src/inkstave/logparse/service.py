@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class LogNotAvailable(Exception):
+class LogNotAvailableError(Exception):
     """The requested compile has no usable ``output.log``."""
 
 
@@ -34,12 +34,12 @@ class LogProblemsService:
             try:
                 cid = UUID(compile_id)
             except ValueError as exc:
-                raise LogNotAvailable() from exc
+                raise LogNotAvailableError() from exc
             row = await self._repo.get(project_id, cid)
         else:
             row = await self._repo.get_latest(project_id)
         if row is None:
-            raise LogNotAvailable()
+            raise LogNotAvailableError()
         return row
 
     def _bounded_text(self, data: bytes, compile_id: UUID) -> tuple[str, bool]:
@@ -74,7 +74,7 @@ class LogProblemsService:
         row = await self._resolve_compile(project_id, compile_id)
         obj = await self._store.open_log(row.id)
         if obj is None:
-            raise LogNotAvailable()
+            raise LogNotAvailableError()
 
         data = b"".join([chunk async for chunk in obj.stream()])
         text, truncated = self._bounded_text(data, row.id)

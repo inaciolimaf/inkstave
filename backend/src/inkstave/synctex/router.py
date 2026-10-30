@@ -15,7 +15,7 @@ from inkstave.db.session import get_db_session
 from inkstave.dependencies import get_object_store, get_settings_dep
 from inkstave.errors import ErrorEnvelope, NotFoundError
 from inkstave.synctex.models import ForwardResult, InverseResult
-from inkstave.synctex.service import SyncTexNotAvailable, SyncTexService
+from inkstave.synctex.service import SyncTexNotAvailableError, SyncTexService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,7 +89,7 @@ async def code_to_pdf(
 ) -> ForwardResult:
     try:
         result = await service.code_to_pdf(project.id, compile_id, file, line, column)
-    except SyncTexNotAvailable as exc:
+    except SyncTexNotAvailableError as exc:
         raise SyncTexUnavailableError() from exc
     if not result.boxes:
         raise SyncTexNoMatchError()
@@ -112,7 +112,7 @@ async def pdf_to_code(
 ) -> InverseResult:
     try:
         result = await service.pdf_to_code(project.id, compile_id, page, h, v)
-    except SyncTexNotAvailable as exc:
+    except SyncTexNotAvailableError as exc:
         raise SyncTexUnavailableError() from exc
     if result is None:
         raise SyncTexNoMatchError()

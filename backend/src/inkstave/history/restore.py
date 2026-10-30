@@ -52,7 +52,7 @@ async def _max_version(session: AsyncSession, doc_id: UUID) -> int:
 
 
 @dataclass(slots=True)
-class _RestoreScope:
+class RestoreScope:
     """The document being restored and who is restoring it."""
 
     project_id: UUID
@@ -61,7 +61,7 @@ class _RestoreScope:
 
 
 async def _record_restore(
-    session: AsyncSession, components: CollabComponents, scope: _RestoreScope, update: bytes
+    session: AsyncSession, components: CollabComponents, scope: RestoreScope, update: bytes
 ) -> int:
     """Capture the restore as a brand-new version, authored by the restoring user."""
     history = require(components.history, "restore reached recording with no history service")
@@ -77,7 +77,7 @@ async def _record_restore(
 
 
 async def _label_restore(
-    session: AsyncSession, scope: _RestoreScope, version: int, name: str | None
+    session: AsyncSession, scope: RestoreScope, version: int, name: str | None
 ) -> LabelRead | None:
     """Attach the requested label to the freshly created version, if one was asked for."""
     if not name:
@@ -97,7 +97,7 @@ async def _rewind_room(
     session: AsyncSession,
     components: CollabComponents,
     store: ObjectStore,
-    scope: _RestoreScope,
+    scope: RestoreScope,
     *,
     target_version: int,
     label_name: str | None,
@@ -105,7 +105,7 @@ async def _rewind_room(
 ) -> bytes:
     """Rewind the live room to `target_version`, returning the applied update."""
     doc_id = scope.doc_id
-    # Reconstruct the target version's text (raises HistoryVersionNotFound -> 404).
+    # Reconstruct the target version's text (raises HistoryVersionNotFoundError -> 404).
     target_text = text_from_state(await reconstruct_state(session, store, doc_id, target_version))
 
     # Fail fast on a duplicate label name *before* mutating the live doc, so a doomed
@@ -124,16 +124,13 @@ async def restore_document(
     components: CollabComponents | None,
     store: ObjectStore,
     *,
-    project_id: UUID,
-    doc_id: UUID,
+    scope: RestoreScope,
     target_version: int,
-    author_id: UUID | None,
     label_name: str | None = None,
 ) -> RestoreResponse:
     if components is None or components.history is None:
         raise RoomUnreachableError()
 
-    scope = _RestoreScope(project_id, doc_id, author_id)
     origin = f"restore-{uuid4().hex}"
     update = await _rewind_room(
         session,
@@ -149,10 +146,10 @@ async def restore_document(
 
     # Broadcast LAST: only after the new version is recorded (and labelled), so clients
     # never observe a restore that failed to persist to history (spec 40).
-    await components.redis_bridge.publish(doc_id, origin, encode_update(update))
+    await components.redis_bridge.publish(scope.doc_id, origin, encode_update(update))
 
     return RestoreResponse(
-        doc_id=doc_id,
+        doc_id=scope.doc_id,
         restored_from_version=target_version,
         new_version=new_version,
         label=label,
@@ -184,10 +181,8 @@ async def restore_project(
                 session,
                 components,
                 store,
-                project_id=project_id,
-                doc_id=doc_id,
+                scope=RestoreScope(project_id, doc_id, author_id),
                 target_version=version,
-                author_id=author_id,
             )
             results.append(DocRestoreResult(doc_id=doc_id, status="restored", new_version=res.new_version))
         except Exception as exc:  # broad on purpose: report the failure, do not abort the sweep

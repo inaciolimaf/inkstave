@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict, Unpack
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -11,6 +11,15 @@ from inkstave.agent.models import AgentMessage, AgentSession
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class MessageFields(TypedDict, total=False):
+    """The optional columns of an agent message; absent means NULL."""
+
+    content: str | None
+    tool_calls: list[dict[str, Any]] | None
+    tool_call_id: str | None
+    token_usage: dict[str, Any] | None
 
 
 async def create_session(
@@ -58,20 +67,9 @@ async def add_message(
     session_id: UUID,
     seq: int,
     role: str,
-    content: str | None = None,
-    tool_calls: list[dict[str, Any]] | None = None,
-    tool_call_id: str | None = None,
-    token_usage: dict[str, Any] | None = None,
+    **fields: Unpack[MessageFields],
 ) -> AgentMessage:
-    message = AgentMessage(
-        session_id=session_id,
-        seq=seq,
-        role=role,
-        content=content,
-        tool_calls=tool_calls,
-        tool_call_id=tool_call_id,
-        token_usage=token_usage,
-    )
+    message = AgentMessage(session_id=session_id, seq=seq, role=role, **fields)
     db.add(message)
     await db.flush()
     return message

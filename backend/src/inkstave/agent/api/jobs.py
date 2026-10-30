@@ -43,7 +43,7 @@ from inkstave.agent.tools import default_registry
 from inkstave.observability.context import bind_context, clear_context
 from inkstave.observability.metrics import inc_agent_request
 
-__all__ = ["run_agent_turn", "agent_audit_cleanup"]
+__all__ = ["agent_audit_cleanup", "run_agent_turn"]
 
 logger = logging.getLogger("inkstave.agent.api")
 

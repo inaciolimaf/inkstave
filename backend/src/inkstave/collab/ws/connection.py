@@ -14,6 +14,7 @@ from uuid import UUID
 
 from inkstave.authorization.capabilities import Capability, capabilities_for
 from inkstave.authorization.service import role_for
+from inkstave.background import spawn
 from inkstave.collab.protocol import encode_awareness
 from inkstave.collab.ws.redis_bridge import OnMessage
 from inkstave.collab.ws.rooms import (
@@ -87,7 +88,7 @@ def _make_forwarder(components: CollabComponents, document_id: UUID) -> OnMessag
     async def on_message(payload: bytes, exclude: str | None) -> None:
         overflowed = components.rooms.local_broadcast(document_id, payload, exclude)
         for conn in overflowed:
-            asyncio.create_task(_force_close(conn, CLOSE_SLOW_CONSUMER))
+            spawn(_force_close(conn, CLOSE_SLOW_CONSUMER), name="collab-force-close")
 
     return on_message
 
