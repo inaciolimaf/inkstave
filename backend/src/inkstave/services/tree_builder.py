@@ -7,11 +7,10 @@ service module re-exports these so existing import paths keep working.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import cast
 from uuid import UUID
 
 from inkstave.db.models.tree_entity import TreeEntity, TreeEntityType
-from inkstave.schemas.tree import TreeEntityTypeLiteral, TreeNode, TreeRead
+from inkstave.schemas.tree import TreeNode, TreeRead
 from inkstave.services.tree_errors import EntityNotFoundError
 
 
@@ -59,7 +58,7 @@ def _to_node(
         id=entity.id,
         project_id=entity.project_id,
         parent_id=entity.parent_id,
-        type=cast(TreeEntityTypeLiteral, entity.type.value),
+        type=entity.type.value,
         name=entity.name,
         is_root=entity.is_root,
         created_at=entity.created_at,

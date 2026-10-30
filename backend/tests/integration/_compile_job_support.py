@@ -68,7 +68,7 @@ class CancelAwareWorkdirService:
         self.workdir = workdir
         self.running.set()  # signal the test that run() is in-flight
         await cancel.wait()  # block until the job's watcher trips the token
-        self.cancel_seen = cancel.is_cancelled
+        self.cancel_seen = cancel.is_cancelled()
         return CompileResult(
             status=CompileStatus.CANCELLED,
             pdf=None,

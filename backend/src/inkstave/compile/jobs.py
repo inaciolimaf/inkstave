@@ -83,7 +83,7 @@ async def _cancel_watcher(redis: Any, compile_id: UUID, cancel: CancelToken) -> 
     # flag-polling is functionally equivalent and strictly simpler/lower-risk in
     # the worker (no subscription lifecycle to manage). Pub/sub subscription is
     # deliberately NOT used here.
-    while not cancel.is_cancelled:
+    while not cancel.is_cancelled():
         if await is_cancel_requested(redis, compile_id):
             cancel.cancel()
             return
@@ -177,7 +177,8 @@ async def _compile_with_cancel(job: _Job, service: Any, settings: Any) -> Compil
             compile_id=job.cid,
             keep_workdir=True,  # the job owns cleanup, after persisting outputs
         )
-        return await service.compile(opts, cancel)
+        result: CompileResult = await service.compile(opts, cancel)
+        return result
     finally:
         watcher.cancel()
         with contextlib.suppress(asyncio.CancelledError):

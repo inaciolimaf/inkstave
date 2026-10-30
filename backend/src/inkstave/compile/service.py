@@ -107,7 +107,7 @@ class CompileService:
     async def _run(self, workdir: Path, opts: CompileOptions, cancel: CancelToken) -> CompileResult:
         """Assemble, resolve the root document, and run Tectonic once."""
         limits = self._limits()
-        if cancel.is_cancelled:
+        if cancel.is_cancelled():
             return _empty(CompileStatus.CANCELLED)
 
         assembly_error = await self._assemble(workdir, opts, limits)
@@ -123,7 +123,7 @@ class CompileService:
                     "project has no .tex file to compile."
                 ),
             )
-        if cancel.is_cancelled:
+        if cancel.is_cancelled():
             return _empty(CompileStatus.CANCELLED)
 
         outcome = await self._runner.run(

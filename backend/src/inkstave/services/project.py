@@ -86,7 +86,7 @@ async def rename_project(session: AsyncSession, owner_id: UUID, project_id: UUID
     project.name = name
     # clock_timestamp() (wall clock) is strictly monotonic even within a single
     # transaction, so updated_at always advances on rename.
-    project.updated_at = func.clock_timestamp()  # type: ignore[assignment]
+    project.updated_at = func.clock_timestamp()
     await session.flush()
     await session.refresh(project)
     return project
@@ -94,5 +94,5 @@ async def rename_project(session: AsyncSession, owner_id: UUID, project_id: UUID
 
 async def soft_delete_project(session: AsyncSession, owner_id: UUID, project_id: UUID) -> None:
     project = await get_owned_project(session, owner_id, project_id)
-    project.deleted_at = func.now()  # type: ignore[assignment]
+    project.deleted_at = func.now()
     await session.flush()

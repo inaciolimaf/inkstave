@@ -42,7 +42,7 @@ def _to_llm_message(
 ) -> LLMMessage:
     calls = [ToolCall.model_validate(tc) for tc in tool_calls] if isinstance(tool_calls, list) else None
     return LLMMessage(
-        role=role,  # type: ignore[arg-type]
+        role=role,
         content=content,
         tool_calls=calls,
         tool_call_id=tool_call_id,

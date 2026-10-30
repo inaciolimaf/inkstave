@@ -70,5 +70,5 @@ def deserialize_state(data: dict[str, Any]) -> AgentState:
     }
     for key in ("session_id", "project_id", "user_id"):
         if data.get(key) is not None:
-            state[key] = data[key]  # type: ignore[literal-required]
+            state[key] = data[key]
     return state

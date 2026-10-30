@@ -63,7 +63,7 @@ def policy_from_setting(name: str, value: str, key: str) -> RateLimitPolicy:
         name=name,
         limit=int(limit_str),
         window_seconds=int(window_str),
-        key=key,  # type: ignore[arg-type]
+        key=key,
     )
 
 

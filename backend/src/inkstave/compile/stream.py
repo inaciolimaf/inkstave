@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from inkstave.db.models.compile import CompileJobStatus, is_terminal
+from inkstave.redis_client import close_pubsub
 from inkstave.sse import Keepalive, event_pump
 
 if TYPE_CHECKING:
@@ -85,4 +86,4 @@ async def sse_stream(
             yield frame
     finally:
         await pubsub.unsubscribe(events_channel(compile_id))
-        await pubsub.aclose()
+        await close_pubsub(pubsub)

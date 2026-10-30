@@ -151,4 +151,4 @@ def get_settings() -> Settings:
     """Return the cached settings instance — the single construction point."""
     # Required fields (e.g. jwt_secret) are populated from the environment by
     # pydantic-settings, which mypy cannot see.
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

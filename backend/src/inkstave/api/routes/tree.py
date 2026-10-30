@@ -6,7 +6,7 @@ Every route resolves ``project_id`` through the spec-11 ownership rule first
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -22,7 +22,6 @@ from inkstave.schemas.tree import (
     MoveEntityIn,
     RenameEntityIn,
     TreeEntityRead,
-    TreeEntityTypeLiteral,
     TreeRead,
 )
 from inkstave.services import tree_service
@@ -54,7 +53,7 @@ async def _read(session: AsyncSession, project_id: UUID, entity: TreeEntity) -> 
         id=entity.id,
         project_id=entity.project_id,
         parent_id=entity.parent_id,
-        type=cast(TreeEntityTypeLiteral, entity.type.value),
+        type=entity.type.value,
         name=entity.name,
         is_root=entity.is_root,
         created_at=entity.created_at,

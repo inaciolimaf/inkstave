@@ -133,7 +133,7 @@ async def track_job(job_name: str) -> AsyncIterator[None]:
 async def sample_queue_depth(redis: Redis, queue: str = _ARQ_QUEUE_KEY) -> None:
     """Update the queue-depth gauge at scrape time; fail soft if Redis is unreachable."""
     try:
-        depth = await redis.zcard(queue)  # type: ignore[misc]
+        depth = await redis.zcard(queue)
         if not depth:
             depth = await redis.llen(queue)  # type: ignore[misc]
         job_queue_depth.labels(queue=queue).set(float(depth))

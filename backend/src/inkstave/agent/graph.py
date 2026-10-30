@@ -39,8 +39,8 @@ def _make_router(deps: AgentDeps) -> Callable[[AgentState], Literal["act", "resp
     return route_after_plan
 
 
-def build_graph(deps: AgentDeps) -> CompiledStateGraph:
-    builder: StateGraph = StateGraph(AgentState)
+def build_graph(deps: AgentDeps) -> CompiledStateGraph[AgentState]:
+    builder: StateGraph[AgentState] = StateGraph(AgentState)
     builder.add_node("plan", make_plan(deps))
     builder.add_node("act", make_act(deps))
     builder.add_node("observe", make_observe(deps))

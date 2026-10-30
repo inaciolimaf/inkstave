@@ -49,6 +49,7 @@ dev = [
     "fakeredis>=2.26",
     "pytest-xdist>=3.8.0",
     "pyyaml>=6.0.3",
+    "asyncpg-stubs>=0.31.3",
 ]
 
 [tool.uv]
@@ -148,11 +149,14 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 [tool.mypy]
 python_version = "3.12"
 strict = true
-warn_unused_ignores = true
+warn_unreachable = true
+# Paths are relative to where mypy runs, and it only finds this file from `backend/`:
+# run it as `cd backend && uv run mypy`. `mypy backend/src` from the repository root
+# reads no configuration at all, misses `strict` and reports a false pass.
+files = ["src", "scripts", "../scripts"]
 # The pydantic plugin teaches mypy that BaseSettings fields are populated from
 # the environment (so they are not required __init__ args).
 plugins = ["pydantic.mypy"]
-files = ["src"]
 
 [[tool.mypy.overrides]]
 # These ship no complete type stubs.

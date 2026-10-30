@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from inkstave.agent.api.events import TERMINAL_TYPES, last_event_key, run_channel
+from inkstave.redis_client import close_pubsub
 from inkstave.sse import Keepalive, event_pump
 
 if TYPE_CHECKING:
@@ -73,4 +74,4 @@ async def sse_stream(redis: Redis, run_id: UUID | str, heartbeat_seconds: int) -
             yield frame
     finally:
         await pubsub.unsubscribe(run_channel(run_id))
-        await pubsub.aclose()
+        await close_pubsub(pubsub)

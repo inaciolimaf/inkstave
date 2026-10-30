@@ -230,7 +230,7 @@ async def rename_entity(session: AsyncSession, project_id: UUID, entity_id: UUID
     ):
         raise NameConflictError()
     entity.name = clean
-    entity.updated_at = func.clock_timestamp()  # type: ignore[assignment]
+    entity.updated_at = func.clock_timestamp()
     try:
         await session.flush()
     except IntegrityError as exc:
@@ -253,7 +253,7 @@ async def move_entity(
         raise NameConflictError()
 
     entity.parent_id = new_parent_id
-    entity.updated_at = func.clock_timestamp()  # type: ignore[assignment]
+    entity.updated_at = func.clock_timestamp()
     try:
         await session.flush()
     except IntegrityError as exc:
