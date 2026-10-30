@@ -157,7 +157,7 @@ warn_unreachable = true
 # Paths are relative to where mypy runs, and it only finds this file from `backend/`:
 # run it as `cd backend && uv run mypy`. `mypy backend/src` from the repository root
 # reads no configuration at all, misses `strict` and reports a false pass.
-files = ["src", "scripts", "../scripts"]
+files = ["src", "scripts", "../scripts", "../tools"]
 # The pydantic plugin teaches mypy that BaseSettings fields are populated from
 # the environment (so they are not required __init__ args).
 plugins = ["pydantic.mypy"]
@@ -254,6 +254,19 @@ type = "forbidden"
 source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications"]
 forbidden_modules = ["inkstave.modules.projects.access", "inkstave.modules.projects.catalog", "inkstave.modules.projects.content", "inkstave.modules.projects.deps", "inkstave.modules.projects.models", "inkstave.modules.projects.routes", "inkstave.modules.projects.schemas", "inkstave.modules.projects.sharing", "inkstave.modules.projects.transfer", "inkstave.modules.projects.tree"]
 allow_indirect_imports = true
+
+[tool.docs-coverage]
+# Read by tools/docs_coverage.py (`make docs`). Every path is relative to the repository root.
+docs = "docs/system"
+roots = ["backend", "frontend", "collab", "infra", "scripts", "tools", "docs", "specs", ".github"]
+require = [
+    "backend/src/inkstave/modules/*/",
+    "backend/src/inkstave/infra/*",
+    "backend/src/inkstave/core/*",
+    "backend/src/inkstave/*.py",
+    "frontend/src/modules/*/",
+    "frontend/src/routes/*.tsx",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
