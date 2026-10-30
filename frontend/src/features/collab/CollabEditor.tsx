@@ -63,11 +63,7 @@ export function CollabEditor({
           <OnlineUsers users={users} />
         </div>
       </div>
-      <div
-        className="relative min-h-0 flex-1"
-        onKeyDownCapture={markActivity}
-        onMouseUp={markActivity}
-      >
+      <div className="relative min-h-0 flex-1" onKeyDownCapture={markActivity} onMouseUp={markActivity}>
         {!session.synced && <LoadingOverlay />}
         <CodeMirrorEditor
           doc=""

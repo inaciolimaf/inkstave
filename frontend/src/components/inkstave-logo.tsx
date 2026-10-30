@@ -22,26 +22,15 @@ export function InkstaveMark({ className }: { className?: string }) {
  * Mark + serif wordmark — the app-wide logo. The serif (Newsreader, via the
  * global `font-serif` utility) ties the app's brand to the landing page.
  */
-export function InkstaveLogo({
-  className,
-  markClassName,
-}: {
-  className?: string;
-  markClassName?: string;
-}) {
+export function InkstaveLogo({ className, markClassName }: { className?: string; markClassName?: string }) {
   // Both mark and wordmark are sized in `em`, so the whole logo scales with the
   // wrapper's font-size — override it via `className` (e.g. `text-2xl`).
   return (
     <span
-      className={cn(
-        "inline-flex select-none items-center gap-2 text-[1.2rem] text-foreground",
-        className,
-      )}
+      className={cn("inline-flex select-none items-center gap-2 text-[1.2rem] text-foreground", className)}
     >
       <InkstaveMark className={cn("h-[1.3em] w-[1.3em]", markClassName)} />
-      <span className="font-serif text-[1em] font-medium leading-none tracking-tight">
-        Inkstave
-      </span>
+      <span className="font-serif text-[1em] font-medium leading-none tracking-tight">Inkstave</span>
     </span>
   );
 }

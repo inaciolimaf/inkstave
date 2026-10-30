@@ -76,9 +76,7 @@ test("read-only viewer sees highlighting + line numbers and can resize the font 
   expect(await editor.content().innerText()).toBe(before);
 
   // Increase the font size via the in-editor settings popover → computed font-size grows.
-  const fontBefore = await editor
-    .editorRoot()
-    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  const fontBefore = await editor.editorRoot().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   await editor.openSettings();
   await editor.setFontSize(24);
   await expect

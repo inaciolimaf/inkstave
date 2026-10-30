@@ -39,12 +39,7 @@ interface RowActions {
   onDelete: (p: Project) => void;
 }
 
-export function RowActionsMenu({
-  project,
-  onOpen,
-  onRename,
-  onDelete,
-}: { project: Project } & RowActions) {
+export function RowActionsMenu({ project, onOpen, onRename, onDelete }: { project: Project } & RowActions) {
   const { t } = useTranslation("projects");
   const { download, downloadingId } = useDownloadProject();
   const isDownloading = downloadingId === project.id;
@@ -56,9 +51,7 @@ export function RowActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onOpen(project)}>
-          {t("actionsMenu.open")}
-        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onOpen(project)}>{t("actionsMenu.open")}</DropdownMenuItem>
         <DropdownMenuItem
           onSelect={(e) => {
             e.preventDefault(); // keep the menu open while the download is in flight

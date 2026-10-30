@@ -29,9 +29,7 @@ export function ApplyResultAlert({
         {results.map((res) => (
           <div key={res.path}>
             {res.path}: {t("applyResult.applied", { count: res.appliedHunks.length })}
-            {res.blockedHunks.length
-              ? t("applyResult.skipped", { count: res.blockedHunks.length })
-              : ""}
+            {res.blockedHunks.length ? t("applyResult.skipped", { count: res.blockedHunks.length }) : ""}
             {res.error ? t("applyResult.error", { error: res.error }) : ""}
           </div>
         ))}

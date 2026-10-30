@@ -59,10 +59,7 @@ export function usePdfViewport(numPages: number): PdfViewport {
     return () => clearTimeout(id);
   }, [scale]);
 
-  const clampPage = useCallback(
-    (p: number) => Math.min(Math.max(1, p), Math.max(1, numPages)),
-    [numPages],
-  );
+  const clampPage = useCallback((p: number) => Math.min(Math.max(1, p), Math.max(1, numPages)), [numPages]);
 
   const zoomIn = useCallback(() => {
     setFitMode("none");

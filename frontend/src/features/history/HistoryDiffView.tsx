@@ -28,17 +28,9 @@ function HunkView({ hunk }: { hunk: DiffHunk }) {
         const oldLabel = seg.type === "added" ? "" : String(oldNo++);
         const newLabel = seg.type === "removed" ? "" : String(newNo++);
         return (
-          <div
-            key={i}
-            className={cn("flex whitespace-pre-wrap", ROW_CLASS[seg.type])}
-            data-type={seg.type}
-          >
-            <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">
-              {oldLabel}
-            </span>
-            <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">
-              {newLabel}
-            </span>
+          <div key={i} className={cn("flex whitespace-pre-wrap", ROW_CLASS[seg.type])} data-type={seg.type}>
+            <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">{oldLabel}</span>
+            <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">{newLabel}</span>
             <span className="w-4 shrink-0 select-none text-center" aria-hidden="true">
               {MARKER[seg.type]}
             </span>

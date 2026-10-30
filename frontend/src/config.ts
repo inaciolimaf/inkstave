@@ -4,8 +4,7 @@ function defaultCollabWsUrl(apiBaseUrl: string): string {
   // otherwise (apiBaseUrl === "", the same-origin reverse-proxy deploy) derive it from
   // the current page origin at runtime so it works behind a proxy (e.g. Coolify/nginx).
   const origin =
-    apiBaseUrl ||
-    (typeof window !== "undefined" ? window.location.origin : "http://localhost:8000");
+    apiBaseUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8000");
   return `${origin.replace(/^http/, "ws")}/ws/collab`;
 }
 

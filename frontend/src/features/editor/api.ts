@@ -30,9 +30,7 @@ export class VersionConflictError extends Error {
 }
 
 export async function getDocument(projectId: string, docId: string): Promise<DocumentContent> {
-  const wire = await apiClient.get<DocumentWire>(
-    `/api/v1/projects/${projectId}/documents/${docId}`,
-  );
+  const wire = await apiClient.get<DocumentWire>(`/api/v1/projects/${projectId}/documents/${docId}`);
   return { id: wire.entity_id, name: wire.name, content: wire.content, version: wire.version };
 }
 
@@ -48,10 +46,10 @@ export async function saveDocument(
   baseVersion: number,
 ): Promise<{ version: number }> {
   try {
-    const wire = await apiClient.put<DocumentWire>(
-      `/api/v1/projects/${projectId}/documents/${docId}`,
-      { content, base_version: baseVersion },
-    );
+    const wire = await apiClient.put<DocumentWire>(`/api/v1/projects/${projectId}/documents/${docId}`, {
+      content,
+      base_version: baseVersion,
+    });
     return { version: wire.version };
   } catch (err) {
     if (err instanceof ApiError && err.status === 409) {

@@ -127,8 +127,7 @@ export function importProjectZip(
     xhr.upload.onprogress = (event) => {
       if (onProgress && event.lengthComputable) onProgress(event.loaded / event.total);
     };
-    xhr.onerror = () =>
-      reject(new ImportUploadError(0, "upload_failed", "Network error during upload"));
+    xhr.onerror = () => reject(new ImportUploadError(0, "upload_failed", "Network error during upload"));
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         onProgress?.(1);
@@ -153,9 +152,7 @@ export function importProjectZip(
 }
 
 export async function getImportStatus(projectId: string, importId: string): Promise<ProjectImport> {
-  return toImport(
-    await apiClient.get<ProjectImportWire>(`/api/v1/projects/${projectId}/import/${importId}`),
-  );
+  return toImport(await apiClient.get<ProjectImportWire>(`/api/v1/projects/${projectId}/import/${importId}`));
 }
 
 // --------------------------------------------------------------------------- //

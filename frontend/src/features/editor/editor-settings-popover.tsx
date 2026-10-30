@@ -3,13 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
 import type { EditorKeymap } from "@/types";
@@ -47,15 +41,8 @@ export function EditorSettingsPopover({
           <label htmlFor="editor-font-size" className="text-sm">
             {t("settings.fontSize")}
           </label>
-          <Select
-            value={String(settings.fontSize)}
-            onValueChange={(v) => onUpdate({ fontSize: Number(v) })}
-          >
-            <SelectTrigger
-              id="editor-font-size"
-              aria-label={t("settings.fontSize")}
-              className="w-24"
-            >
+          <Select value={String(settings.fontSize)} onValueChange={(v) => onUpdate({ fontSize: Number(v) })}>
+            <SelectTrigger id="editor-font-size" aria-label={t("settings.fontSize")} className="w-24">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -71,10 +58,7 @@ export function EditorSettingsPopover({
           <label htmlFor="editor-keymap" className="text-sm">
             {t("settings.keymap")}
           </label>
-          <Select
-            value={settings.keymap}
-            onValueChange={(v) => onUpdate({ keymap: v as EditorKeymap })}
-          >
+          <Select value={settings.keymap} onValueChange={(v) => onUpdate({ keymap: v as EditorKeymap })}>
             <SelectTrigger id="editor-keymap" aria-label={t("settings.keymap")} className="w-24">
               <SelectValue />
             </SelectTrigger>

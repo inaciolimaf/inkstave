@@ -159,9 +159,7 @@ export function CodeMirrorEditor({
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: compartments.current.wrap.reconfigure(
-        settings.lineWrapping ? EditorView.lineWrapping : [],
-      ),
+      effects: compartments.current.wrap.reconfigure(settings.lineWrapping ? EditorView.lineWrapping : []),
     });
   }, [settings.lineWrapping]);
 

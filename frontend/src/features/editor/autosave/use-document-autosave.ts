@@ -28,10 +28,7 @@ export interface DocumentAutosave {
   resolveKeepMine: () => void;
 }
 
-export function useDocumentAutosave(
-  projectId: string,
-  loaded: DocumentContent | null,
-): DocumentAutosave {
+export function useDocumentAutosave(projectId: string, loaded: DocumentContent | null): DocumentAutosave {
   const [state, setState] = useState<AutosaveState>(EMPTY);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -114,8 +111,7 @@ export function useDocumentAutosave(
     (text: string) => {
       const s = stateRef.current;
       if (text === s.localText) return;
-      const status =
-        s.status === "conflict" ? "conflict" : text === s.serverText ? "clean" : "dirty";
+      const status = s.status === "conflict" ? "conflict" : text === s.serverText ? "clean" : "dirty";
       patch({ localText: text, status });
       if (status === "dirty") scheduleDebounce();
     },

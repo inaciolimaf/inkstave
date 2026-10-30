@@ -1,13 +1,7 @@
 /** "Share" modal: invite by email, manage members & pending invites (spec 33). */
 import { useTranslation } from "react-i18next";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { ConfirmDialog } from "./ConfirmDialog";
 import { InviteForm } from "./InviteForm";

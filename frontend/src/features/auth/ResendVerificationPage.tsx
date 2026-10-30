@@ -8,10 +8,7 @@ import { resendVerification } from "./api";
 export function ResendVerificationPage() {
   const { t } = useTranslation("auth");
   return (
-    <AuthShell
-      title={t("resendVerification.title")}
-      description={t("resendVerification.description")}
-    >
+    <AuthShell title={t("resendVerification.title")} description={t("resendVerification.description")}>
       <EmailRequestForm
         submitLabel={t("resendVerification.submit")}
         successMessage={t("resendVerification.success")}

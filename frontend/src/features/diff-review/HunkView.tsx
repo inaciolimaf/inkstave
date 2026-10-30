@@ -41,8 +41,7 @@ export function HunkView({
           const oldLabel = line.type === "add" ? "" : String(oldNo++);
           const newLabel = line.type === "del" ? "" : String(newNo++);
           const marker = line.type === "add" ? "+" : line.type === "del" ? "-" : " ";
-          const sr =
-            line.type === "add" ? t("hunk.added") : line.type === "del" ? t("hunk.removed") : "";
+          const sr = line.type === "add" ? t("hunk.added") : line.type === "del" ? t("hunk.removed") : "";
           return (
             <div
               key={i}
@@ -52,12 +51,8 @@ export function HunkView({
                 line.type === "del" && "bg-red-500/15",
               )}
             >
-              <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">
-                {oldLabel}
-              </span>
-              <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">
-                {newLabel}
-              </span>
+              <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">{oldLabel}</span>
+              <span className="w-8 shrink-0 select-none text-right text-muted-foreground/60">{newLabel}</span>
               <span className="w-4 shrink-0 select-none text-center" aria-hidden="true">
                 {marker}
               </span>

@@ -1,8 +1,7 @@
 /** Strings for the diff-review surface (the `review` namespace, spec 47). */
 const dict = {
   title: "Review proposed changes",
-  description:
-    "Review the agent’s proposed changes and accept or reject each hunk before applying.",
+  description: "Review the agent’s proposed changes and accept or reject each hunk before applying.",
   accepted: "{{accepted}}/{{total}} accepted",
   apply: "Apply",
   loadError: "Couldn’t load the proposal.",

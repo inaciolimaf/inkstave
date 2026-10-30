@@ -2,13 +2,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import type { Confirm } from "./ConfirmDialog";
@@ -85,9 +79,7 @@ export function MembersList({
                 </SelectContent>
               </Select>
             ) : (
-              <span className="text-xs capitalize text-muted-foreground">
-                {t(`role.${m.role}`)}
-              </span>
+              <span className="text-xs capitalize text-muted-foreground">{t(`role.${m.role}`)}</span>
             )}
             {isOwner && m.role !== "owner" && (
               <>

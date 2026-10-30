@@ -192,8 +192,7 @@ export const landingPt: typeof landingEn = {
     previewTitle: "Pré-visualização do PDF",
     previewBody: "Seu documento renderizado ao lado do código-fonte, atualizado a cada compilação.",
     historyTitle: "Histórico de versões completo",
-    historyBody:
-      "Toda alteração é registrada. Volte no tempo pelo rascunho e restaure quando quiser.",
+    historyBody: "Toda alteração é registrada. Volte no tempo pelo rascunho e restaure quando quiser.",
     historyItem1: "Abstract revisado",
     historyItem2: "Adicionada a Seção 3",
     historyItem3: "Rascunho inicial",
@@ -254,8 +253,7 @@ export const landingPt: typeof landingEn = {
     ctaTitle: "Seu próximo artigo está esperando para ser escrito.",
     ctaBody:
       "Crie um projeto, convide seus co-autores e deixe o agente cuidar das partes tediosas. A caneta continua na sua mão.",
-    tagline:
-      "Um editor LaTeX colaborativo em tempo real, com um agente de escrita que sabe o seu lugar.",
+    tagline: "Um editor LaTeX colaborativo em tempo real, com um agente de escrita que sabe o seu lugar.",
     star: "Dar uma estrela no GitHub",
     colProduct: "Produto",
     colResources: "Recursos",

@@ -7,8 +7,7 @@
 import { test, expect } from "./support/fixtures";
 import { EditorPage, PreviewPanel } from "./support/pages";
 
-const ERROR_DOC =
-  "\\documentclass{article}\n\\begin{document}\n\\inkstaveforceerror\n\\end{document}\n";
+const ERROR_DOC = "\\documentclass{article}\n\\begin{document}\n\\inkstaveforceerror\n\\end{document}\n";
 
 test("compile renders a PDF preview and log output @smoke", async ({ page, seedProject }) => {
   const { projectId } = await seedProject();

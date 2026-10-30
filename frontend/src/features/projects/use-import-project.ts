@@ -82,8 +82,7 @@ export function useImportProject(onSuccess: (projectId: string) => void) {
         });
       } catch (err) {
         if (cancelled.current) return;
-        const errorType =
-          err instanceof ImportUploadError ? (err.errorType ?? "generic") : "generic";
+        const errorType = err instanceof ImportUploadError ? (err.errorType ?? "generic") : "generic";
         setState((s) => ({ ...s, phase: "failed", errorType }));
         return;
       }

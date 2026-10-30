@@ -21,13 +21,7 @@ import type { useHistoryMutations } from "./useHistory";
 
 type RestoreMutation = ReturnType<typeof useHistoryMutations>["restore"];
 
-export function RestoreVersionButton({
-  version,
-  restore,
-}: {
-  version: number;
-  restore: RestoreMutation;
-}) {
+export function RestoreVersionButton({ version, restore }: { version: number; restore: RestoreMutation }) {
   const { t } = useTranslation("history");
   const [open, setOpen] = useState(false);
   const [labelName, setLabelName] = useState("");
@@ -42,9 +36,7 @@ export function RestoreVersionButton({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("restore.confirmTitle", { version })}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("restore.confirmDescription", { version })}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t("restore.confirmDescription", { version })}</AlertDialogDescription>
         </AlertDialogHeader>
         <Input
           value={labelName}

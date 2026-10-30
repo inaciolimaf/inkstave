@@ -8,10 +8,7 @@ import { ApiError } from "@/lib/api-client";
 
 import { confirmEmailChange } from "./api";
 
-type State =
-  | { kind: "loading" }
-  | { kind: "done"; email: string }
-  | { kind: "error"; message: string };
+type State = { kind: "loading" } | { kind: "done"; email: string } | { kind: "error"; message: string };
 
 export function ConfirmEmailPage() {
   const { t } = useTranslation("auth");

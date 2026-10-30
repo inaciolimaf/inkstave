@@ -4,10 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 /** Render a component with a fresh QueryClient + MemoryRouter (no retries). */
-export function renderWithProviders(
-  ui: ReactElement,
-  { route = "/projects" }: { route?: string } = {},
-) {
+export function renderWithProviders(ui: ReactElement, { route = "/projects" }: { route?: string } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },

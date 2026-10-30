@@ -186,8 +186,7 @@ export function EditorPane({
     ) : (
       <LoadingState />
     );
-  else if (query.isError)
-    body = <ErrorState onRetry={() => void query.refetch()} notFound={notFound} />;
+  else if (query.isError) body = <ErrorState onRetry={() => void query.refetch()} notFound={notFound} />;
   else if (query.isLoading || !query.data) body = <LoadingState />;
   else
     body = (

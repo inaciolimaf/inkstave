@@ -1,13 +1,7 @@
 /** Pure, idempotent reducer over spec-44 events → AgentRunState (spec 46). */
 import i18n from "@/i18n/config";
 
-import type {
-  AgentEvent,
-  AgentRunState,
-  TranscriptItem,
-  WireDiffSummary,
-  WireMessage,
-} from "./types";
+import type { AgentEvent, AgentRunState, TranscriptItem, WireDiffSummary, WireMessage } from "./types";
 
 export function initialRunState(sessionId: string | null = null): AgentRunState {
   return { sessionId, runId: null, phase: "idle", items: [], seenSeqs: [] };
@@ -158,10 +152,7 @@ export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunSta
 }
 
 /** Convert a loaded transcript (stored messages + open diffs) into render items. */
-export function historyToItems(
-  messages: WireMessage[],
-  diffs: WireDiffSummary[],
-): TranscriptItem[] {
+export function historyToItems(messages: WireMessage[], diffs: WireDiffSummary[]): TranscriptItem[] {
   const toolResults = new Map<string, { ok: boolean; summary: unknown }>();
   for (const m of messages) {
     if (m.role === "tool" && m.tool_call_id) {

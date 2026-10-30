@@ -52,8 +52,7 @@ export function useRenameEntity(projectId: string) {
   const qc = useQueryClient();
   const key = treeKey(projectId);
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) =>
-      api.renameEntity(projectId, id, name),
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.renameEntity(projectId, id, name),
     onMutate: async ({ id, name }) => {
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<TreeNode>(key);

@@ -3,8 +3,7 @@ import type { Dict } from "../en/review";
 
 const dict: Dict = {
   title: "Revisar mudanças propostas",
-  description:
-    "Revise as mudanças propostas pelo agente e aceite ou rejeite cada hunk antes de aplicar.",
+  description: "Revise as mudanças propostas pelo agente e aceite ou rejeite cada hunk antes de aplicar.",
   accepted: "{{accepted}}/{{total}} aceitos",
   apply: "Aplicar",
   loadError: "Não foi possível carregar a proposta.",
@@ -22,8 +21,7 @@ const dict: Dict = {
   },
   confirmApply: {
     title: "Aplicar mudanças?",
-    description:
-      "Isto gravará {{applicable}} mudança aceita em {{fileCount}} arquivo no seu documento.",
+    description: "Isto gravará {{applicable}} mudança aceita em {{fileCount}} arquivo no seu documento.",
     description_fileMany:
       "Isto gravará {{applicable}} mudança aceita em {{fileCount}} arquivos nos seus documentos.",
     descriptionMany:

@@ -195,20 +195,14 @@ function Conversation({
       </div>
 
       {/* Tool chips */}
-      {state.chips >= 1 && (
-        <ToolChip icon={<Search className="size-3" />}>{t("demo.searched")}</ToolChip>
-      )}
-      {state.chips >= 2 && (
-        <ToolChip icon={<FileText className="size-3" />}>{t("demo.read")}</ToolChip>
-      )}
+      {state.chips >= 1 && <ToolChip icon={<Search className="size-3" />}>{t("demo.searched")}</ToolChip>}
+      {state.chips >= 2 && <ToolChip icon={<FileText className="size-3" />}>{t("demo.read")}</ToolChip>}
 
       {/* Agent reply */}
       {(state.phase === "reply" ||
         state.phase === "diff" ||
         state.phase === "applying" ||
-        state.phase === "applied") && (
-        <p className="rise-in max-w-[92%] text-ink-soft">{t("demo.reply")}</p>
-      )}
+        state.phase === "applied") && <p className="rise-in max-w-[92%] text-ink-soft">{t("demo.reply")}</p>}
 
       {/* Diff card */}
       {(state.phase === "diff" || state.phase === "applying") && (
@@ -235,9 +229,7 @@ function Conversation({
             <span
               className={cn(
                 "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[0.7rem] font-medium transition-all",
-                state.phase === "applying"
-                  ? "scale-95 bg-emerald-600 text-white"
-                  : "bg-ink text-paper",
+                state.phase === "applying" ? "scale-95 bg-emerald-600 text-white" : "bg-ink text-paper",
               )}
             >
               <Check className="size-3" /> {t("demo.accept")}
@@ -261,15 +253,7 @@ function Conversation({
   );
 }
 
-function CodeLine({
-  n,
-  children,
-  className,
-}: {
-  n: number;
-  children: ReactNode;
-  className?: string;
-}) {
+function CodeLine({ n, children, className }: { n: number; children: ReactNode; className?: string }) {
   return (
     <div className={cn("-mx-1 flex gap-3 rounded px-1", className)}>
       <span className="w-5 shrink-0 select-none text-right text-ink-faint/55">{n}</span>

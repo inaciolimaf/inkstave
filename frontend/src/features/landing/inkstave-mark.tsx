@@ -15,9 +15,7 @@ export function InkstaveWordmark({
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <InkstaveMark className={cn("h-[1.35em] w-[1.35em]", markClassName)} />
-      <span className="font-display text-[1.35rem] font-medium leading-none tracking-tight">
-        Inkstave
-      </span>
+      <span className="font-display text-[1.35rem] font-medium leading-none tracking-tight">Inkstave</span>
     </span>
   );
 }

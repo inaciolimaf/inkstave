@@ -3,8 +3,7 @@ import type { Dict } from "../en/history";
 const dict: Dict = {
   panel: {
     title: "Histórico de versões",
-    description:
-      "Navegue pelas versões, veja o que mudou e restaure — restaurar cria uma nova versão.",
+    description: "Navegue pelas versões, veja o que mudou e restaure — restaurar cria uma nova versão.",
   },
   timeline: {
     ariaLabel: "Histórico de versões",

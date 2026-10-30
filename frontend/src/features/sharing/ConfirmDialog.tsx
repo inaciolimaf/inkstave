@@ -19,13 +19,7 @@ export interface Confirm {
   run: () => void;
 }
 
-export function ConfirmDialog({
-  confirm,
-  onClose,
-}: {
-  confirm: Confirm | null;
-  onClose: () => void;
-}) {
+export function ConfirmDialog({ confirm, onClose }: { confirm: Confirm | null; onClose: () => void }) {
   const { t } = useTranslation("common");
   return (
     <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && onClose()}>

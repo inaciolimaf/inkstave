@@ -7,9 +7,7 @@ import { useSetupStatus } from "@/features/setup/useSetupStatus";
 
 function Centered({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-      {children}
-    </div>
+    <div className="flex min-h-screen items-center justify-center text-muted-foreground">{children}</div>
   );
 }
 

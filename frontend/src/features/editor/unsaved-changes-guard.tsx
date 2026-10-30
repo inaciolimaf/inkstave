@@ -17,8 +17,7 @@ import {
 export function UnsavedChangesGuard({ when }: { when: boolean }) {
   const { t } = useTranslation("editor");
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      when && currentLocation.pathname !== nextLocation.pathname,
+    ({ currentLocation, nextLocation }) => when && currentLocation.pathname !== nextLocation.pathname,
   );
 
   useEffect(() => {

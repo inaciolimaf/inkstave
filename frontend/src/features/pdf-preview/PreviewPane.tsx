@@ -108,9 +108,7 @@ export function PreviewPane({
   const logState = useCompileLog(projectId, compile.compileId);
   const [bottomTab, setBottomTab] = useState<"problems" | "log">("problems");
   const [outputCollapsed, setOutputCollapsed] = useState(false);
-  const [highlight, setHighlight] = useState<{ page: number; box: PdfHighlight["box"] } | null>(
-    null,
-  );
+  const [highlight, setHighlight] = useState<{ page: number; box: PdfHighlight["box"] } | null>(null);
 
   const errorOutcome = ERROR_OUTCOMES.has(compile.status as CompileJobStatus)
     ? (compile.status as "failure" | "timeout" | "error")
@@ -186,14 +184,7 @@ export function PreviewPane({
       </Centered>
     );
   } else if (pdfDoc.pdf) {
-    body = (
-      <PdfViewer
-        pdf={pdfDoc.pdf}
-        viewport={viewport}
-        onPageClick={onPdfClick}
-        highlight={highlight}
-      />
-    );
+    body = <PdfViewer pdf={pdfDoc.pdf} viewport={viewport} onPageClick={onPdfClick} highlight={highlight} />;
   } else {
     body = <PreviewEmptyState />;
   }
@@ -212,9 +203,7 @@ export function PreviewPane({
             <PdfToolbar
               viewport={viewport}
               onDownload={
-                compile.lastSuccessId
-                  ? () => void downloadPdf(projectId, compile.lastSuccessId!)
-                  : undefined
+                compile.lastSuccessId ? () => void downloadPdf(projectId, compile.lastSuccessId!) : undefined
               }
             />
           </div>
@@ -276,11 +265,7 @@ export function PreviewPane({
               aria-labelledby="compile-tab-problems"
               hidden={bottomTab !== "problems"}
             >
-              <ProblemsPanel
-                problems={problems ?? null}
-                reason={problemsReason}
-                onJump={onProblemJump}
-              />
+              <ProblemsPanel problems={problems ?? null} reason={problemsReason} onJump={onProblemJump} />
             </div>
             <div
               role="tabpanel"

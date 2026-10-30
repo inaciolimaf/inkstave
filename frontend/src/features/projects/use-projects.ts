@@ -30,9 +30,7 @@ export function useRenameProject() {
     onMutate: async ({ id, name }) => {
       await qc.cancelQueries({ queryKey: PROJECTS_KEY });
       const previous = qc.getQueryData<Project[]>(PROJECTS_KEY);
-      qc.setQueryData<Project[]>(PROJECTS_KEY, (old) =>
-        old?.map((p) => (p.id === id ? { ...p, name } : p)),
-      );
+      qc.setQueryData<Project[]>(PROJECTS_KEY, (old) => old?.map((p) => (p.id === id ? { ...p, name } : p)));
       return { previous };
     },
     onError: (_err, _vars, ctx) => {

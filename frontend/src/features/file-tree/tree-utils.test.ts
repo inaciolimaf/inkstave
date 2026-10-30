@@ -12,12 +12,7 @@ import {
 } from "./tree-utils";
 import type { TreeNode } from "./types";
 
-function node(
-  id: string,
-  type: TreeNode["type"],
-  name: string,
-  children: TreeNode[] = [],
-): TreeNode {
+function node(id: string, type: TreeNode["type"], name: string, children: TreeNode[] = []): TreeNode {
   return { id, name, type, parentId: null, isRoot: id === "root", path: name, children };
 }
 
@@ -62,9 +57,7 @@ describe("immutable mutations", () => {
   });
 
   it("updateNode patches a node", () => {
-    expect(findNode(updateNode(tree, "z-doc", { name: "renamed.tex" }), "z-doc")?.name).toBe(
-      "renamed.tex",
-    );
+    expect(findNode(updateNode(tree, "z-doc", { name: "renamed.tex" }), "z-doc")?.name).toBe("renamed.tex");
   });
 
   it("removeNode deletes a subtree", () => {

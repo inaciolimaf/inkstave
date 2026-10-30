@@ -31,12 +31,7 @@ export function CompileButton({
           <Loader2 className="animate-spin" aria-hidden="true" />
           {progressLabel ?? t("compile.compiling")}
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onCancel}
-          aria-label={t("compile.cancelCompilation")}
-        >
+        <Button size="sm" variant="outline" onClick={onCancel} aria-label={t("compile.cancelCompilation")}>
           <X aria-hidden="true" />
           {t("common:action.cancel")}
         </Button>

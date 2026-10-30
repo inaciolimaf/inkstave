@@ -77,9 +77,7 @@ describe("getDiff", () => {
   });
 
   it("maps a 413 'too large' response to tooLarge without throwing (AC2)", async () => {
-    setFetch(async () =>
-      mockResponse(413, { from: 2, to: 5, binary: false, too_large: true, hunks: [] }),
-    );
+    setFetch(async () => mockResponse(413, { from: 2, to: 5, binary: false, too_large: true, hunks: [] }));
     const result = await getDiff("p1", "d1", 2, 5);
     expect(result.tooLarge).toBe(true);
     expect(result.binary).toBe(false);

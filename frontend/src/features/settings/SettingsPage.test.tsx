@@ -58,9 +58,7 @@ describe("SettingsPage", () => {
     await userEvent.type(name, "Renamed");
     await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
-    await waitFor(() =>
-      expect(api.updateProfile).toHaveBeenCalledWith({ display_name: "Renamed" }),
-    );
+    await waitFor(() => expect(api.updateProfile).toHaveBeenCalledWith({ display_name: "Renamed" }));
     expect(auth.applyUser).toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalled();
   });

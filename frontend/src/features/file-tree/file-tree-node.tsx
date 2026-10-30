@@ -214,11 +214,7 @@ export function FileTreeNode({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
-                <NodeMenuItems
-                  node={node}
-                  Item={DropdownMenuItem}
-                  Separator={DropdownMenuSeparator}
-                />
+                <NodeMenuItems node={node} Item={DropdownMenuItem} Separator={DropdownMenuSeparator} />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

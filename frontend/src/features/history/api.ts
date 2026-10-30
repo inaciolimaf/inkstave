@@ -1,17 +1,9 @@
 /** History API calls (spec 38 → spec-37 endpoints). snake_case ↔ camelCase here only. */
 import { ApiError, apiClient } from "@/lib/api-client";
 
-import type {
-  DiffHunk,
-  DiffResult,
-  HistoryLabel,
-  RestoreResult,
-  Version,
-  VersionsPage,
-} from "./types";
+import type { DiffHunk, DiffResult, HistoryLabel, RestoreResult, Version, VersionsPage } from "./types";
 
-const base = (projectId: string, docId: string) =>
-  `/api/v1/projects/${projectId}/docs/${docId}/history`;
+const base = (projectId: string, docId: string) => `/api/v1/projects/${projectId}/docs/${docId}/history`;
 
 interface VersionWire {
   version: number;
@@ -141,16 +133,10 @@ export async function createLabel(
   version: number,
   name: string,
 ): Promise<HistoryLabel> {
-  return toLabel(
-    await apiClient.post<LabelWire>(`${base(projectId, docId)}/labels`, { version, name }),
-  );
+  return toLabel(await apiClient.post<LabelWire>(`${base(projectId, docId)}/labels`, { version, name }));
 }
 
-export async function deleteLabel(
-  projectId: string,
-  docId: string,
-  labelId: string,
-): Promise<void> {
+export async function deleteLabel(projectId: string, docId: string, labelId: string): Promise<void> {
   await apiClient.delete(`${base(projectId, docId)}/labels/${labelId}`);
 }
 

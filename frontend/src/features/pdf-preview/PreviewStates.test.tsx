@@ -33,14 +33,7 @@ describe("PreviewErrorState", () => {
   });
 
   it("shows a custom detail message when provided", () => {
-    render(
-      <PreviewErrorState
-        outcome="error"
-        detail="disk full"
-        onViewLog={vi.fn()}
-        onRetry={vi.fn()}
-      />,
-    );
+    render(<PreviewErrorState outcome="error" detail="disk full" onViewLog={vi.fn()} onRetry={vi.fn()} />);
     expect(screen.getByRole("alert")).toHaveTextContent("disk full");
   });
 });

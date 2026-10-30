@@ -121,9 +121,7 @@ describe("ShareDialog (owner)", () => {
   it("revokes a pending invite after confirmation", async () => {
     api.revokeInvite.mockResolvedValue(undefined);
     open();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Revoke invite for carol@x.com" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Revoke invite for carol@x.com" }));
     const dialog = await screen.findByRole("alertdialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Revoke" }));
     await waitFor(() => expect(api.revokeInvite).toHaveBeenCalledWith("p1", "inv-1"));

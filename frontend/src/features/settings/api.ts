@@ -25,19 +25,12 @@ export function changePassword(body: {
   return apiClient.post<MessageResponse>("/api/v1/users/me/change-password", body);
 }
 
-export function changeEmail(body: {
-  new_email: string;
-  current_password: string;
-}): Promise<MessageResponse> {
+export function changeEmail(body: { new_email: string; current_password: string }): Promise<MessageResponse> {
   return apiClient.post<MessageResponse>("/api/v1/users/me/change-email", body);
 }
 
 export function confirmEmailChange(token: string): Promise<UserPublic> {
-  return apiClient.post<UserPublic>(
-    "/api/v1/users/confirm-email-change",
-    { token },
-    { auth: false },
-  );
+  return apiClient.post<UserPublic>("/api/v1/users/confirm-email-change", { token }, { auth: false });
 }
 
 export function deleteAccount(password: string): Promise<void> {

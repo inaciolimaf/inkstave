@@ -98,8 +98,7 @@ describe("apiClient", () => {
   it("clears tokens and throws when refresh fails", async () => {
     tokenStore.setTokens({ access: "OLD", refresh: "RT" });
     setFetch(async (url) => {
-      if (url.endsWith("/auth/refresh"))
-        return mockResponse(401, { error: { message: "bad refresh" } });
+      if (url.endsWith("/auth/refresh")) return mockResponse(401, { error: { message: "bad refresh" } });
       return mockResponse(401, { error: { message: "expired" } });
     });
     await expect(apiClient.get("/api/v1/users/me")).rejects.toBeInstanceOf(ApiError);
@@ -113,15 +112,11 @@ describe("apiClient", () => {
         error: {
           type: "validation_error",
           message: "Request validation failed",
-          details: [
-            { loc: ["body", "email"], msg: "value is not a valid email", type: "value_error" },
-          ],
+          details: [{ loc: ["body", "email"], msg: "value is not a valid email", type: "value_error" }],
         },
       }),
     );
-    await expect(
-      apiClient.post("/api/v1/auth/register", {}, { auth: false }),
-    ).rejects.toMatchObject({
+    await expect(apiClient.post("/api/v1/auth/register", {}, { auth: false })).rejects.toMatchObject({
       status: 422,
       fieldErrors: { email: "value is not a valid email" },
     });
@@ -133,12 +128,8 @@ describe("apiClient", () => {
   });
 
   it("parses a generic error message into ApiError.detail", async () => {
-    setFetch(async () =>
-      mockResponse(409, { error: { type: "conflict", message: "Already exists." } }),
-    );
-    await expect(
-      apiClient.post("/api/v1/auth/register", {}, { auth: false }),
-    ).rejects.toMatchObject({
+    setFetch(async () => mockResponse(409, { error: { type: "conflict", message: "Already exists." } }));
+    await expect(apiClient.post("/api/v1/auth/register", {}, { auth: false })).rejects.toMatchObject({
       status: 409,
       detail: "Already exists.",
     });

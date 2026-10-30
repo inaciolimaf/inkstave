@@ -27,15 +27,13 @@ export function AcceptInvitePage() {
       toast.success(t("accept.joined"));
       navigate(`/projects/${result.projectId}`);
     },
-    onError: (e) =>
-      toast.error(e instanceof ApiError && e.message ? e.message : t("accept.acceptError")),
+    onError: (e) => toast.error(e instanceof ApiError && e.message ? e.message : t("accept.acceptError")),
   });
 
   const decline = useMutation({
     mutationFn: () => declineInvite(token),
     onSuccess: () => navigate("/projects"),
-    onError: (e) =>
-      toast.error(e instanceof ApiError && e.message ? e.message : t("accept.declineError")),
+    onError: (e) => toast.error(e instanceof ApiError && e.message ? e.message : t("accept.declineError")),
   });
 
   const gone = preview.error instanceof ApiError && preview.error.status === 410;
@@ -72,9 +70,7 @@ export function AcceptInvitePage() {
         {preview.data && (
           <>
             <CardHeader>
-              <CardTitle>
-                {t("accept.invitedTo", { projectName: preview.data.projectName })}
-              </CardTitle>
+              <CardTitle>{t("accept.invitedTo", { projectName: preview.data.projectName })}</CardTitle>
               <CardDescription>
                 {t("accept.invitedBy", { inviterName: preview.data.inviterName })}
                 <strong>{t(`role.${preview.data.role}`)}</strong>.
@@ -84,11 +80,7 @@ export function AcceptInvitePage() {
               <Button onClick={() => accept.mutate()} disabled={accept.isPending}>
                 {t("accept.accept")}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => decline.mutate()}
-                disabled={decline.isPending}
-              >
+              <Button variant="outline" onClick={() => decline.mutate()} disabled={decline.isPending}>
                 {t("accept.decline")}
               </Button>
             </CardContent>

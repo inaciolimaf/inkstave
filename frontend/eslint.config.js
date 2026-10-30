@@ -67,8 +67,7 @@ const REUSE_RULES = {
   ],
   keyboard: [
     {
-      selector:
-        "CallExpression[callee.property.name='addEventListener'][arguments.0.value='keydown']",
+      selector: "CallExpression[callee.property.name='addEventListener'][arguments.0.value='keydown']",
       message: "Use useShortcuts from src/lib/shortcuts.ts.",
     },
   ],
@@ -115,9 +114,7 @@ export default tseslint.config(
       "no-restricted-syntax": reuseRules(),
     },
   },
-  ...(PENDING_SIZE.length
-    ? [{ files: PENDING_SIZE, rules: { "max-lines-per-function": "off" } }]
-    : []),
+  ...(PENDING_SIZE.length ? [{ files: PENDING_SIZE, rules: { "max-lines-per-function": "off" } }] : []),
   // Hits that move to their helpers with the feat(frontend) commit that adds those helpers.
   {
     files: ["src/features/collab/colors.ts", "src/features/collab/usePresence.ts"],

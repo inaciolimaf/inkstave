@@ -28,9 +28,7 @@ describe("usePresence", () => {
   it("marks idle after the threshold and clears on activity (AC6)", async () => {
     vi.useFakeTimers();
     const session = fakeSession();
-    const { result } = renderHook(() =>
-      usePresence(session, { id: "u1", name: "A" }, { idleAfterMs: 100 }),
-    );
+    const { result } = renderHook(() => usePresence(session, { id: "u1", name: "A" }, { idleAfterMs: 100 }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(150);
     });
@@ -48,11 +46,7 @@ describe("usePresence", () => {
     const peer = new Awareness(new Y.Doc());
     peer.setLocalStateField("user", { id: "a", name: "Alice", color: "#ff0000" });
     act(() => {
-      applyAwarenessUpdate(
-        session.awareness,
-        encodeAwarenessUpdate(peer, [peer.clientID]),
-        "remote",
-      );
+      applyAwarenessUpdate(session.awareness, encodeAwarenessUpdate(peer, [peer.clientID]), "remote");
     });
 
     const ids = result.current.users.map((u) => u.id).sort();

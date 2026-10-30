@@ -34,14 +34,8 @@ describe("LandingPage", () => {
     renderLanding();
 
     const banner = await screen.findByRole("banner");
-    expect(within(banner).getByRole("link", { name: /get started/i })).toHaveAttribute(
-      "href",
-      "/register",
-    );
-    expect(within(banner).getByRole("link", { name: /sign in/i })).toHaveAttribute(
-      "href",
-      "/login",
-    );
+    expect(within(banner).getByRole("link", { name: /get started/i })).toHaveAttribute("href", "/register");
+    expect(within(banner).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
   });
 
   it("expands an FAQ entry when its question is clicked", async () => {

@@ -45,11 +45,11 @@ test("agent streams, shows tool activity, and applies a reviewed diff @smoke", a
   // (182b) At least one tool-activity row appears (the stub runs the full
   // search → read → propose_edit sequence, so several rows match — assert the
   // first to avoid a strict-mode multiple-match).
-  await expect(
-    transcript.getByText(/Searched the project|Read a file|Proposed an edit/).first(),
-  ).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(transcript.getByText(/Searched the project|Read a file|Proposed an edit/).first()).toBeVisible(
+    {
+      timeout: 20_000,
+    },
+  );
 
   // The diff proposal surfaces a Review changes button.
   await expect(agent.reviewButton()).toBeVisible({ timeout: 20_000 });
@@ -93,10 +93,7 @@ test("agent streams, shows tool activity, and applies a reviewed diff @smoke", a
   await expect(editor.content()).not.toContainText("original introduction paragraph");
 });
 
-test("Stop cancels an in-flight run and shows a cancelled marker", async ({
-  page,
-  seedProject,
-}) => {
+test("Stop cancels an in-flight run and shows a cancelled marker", async ({ page, seedProject }) => {
   const { projectId } = await seedProject();
   const editor = new EditorPage(page);
   const agent = new AgentPanel(page);

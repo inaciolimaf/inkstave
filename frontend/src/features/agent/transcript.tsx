@@ -25,10 +25,7 @@ function renderText(text: string): ReactNode {
     if (part.startsWith("```") && part.endsWith("```") && part.length >= 6) {
       const code = part.slice(3, -3).replace(/^[a-zA-Z0-9]*\n/, "");
       return (
-        <pre
-          key={i}
-          className="my-1 overflow-x-auto rounded bg-background/60 p-2 font-mono text-xs"
-        >
+        <pre key={i} className="my-1 overflow-x-auto rounded bg-background/60 p-2 font-mono text-xs">
           <code>{code}</code>
         </pre>
       );
@@ -123,9 +120,7 @@ function DiffProposalCard({
         ))}
       </ul>
       <Button size="sm" onClick={() => onReviewProposal(item.proposalId)}>
-        {hunks
-          ? t("transcript.reviewChangesCount", { count: hunks })
-          : t("transcript.reviewChanges")}
+        {hunks ? t("transcript.reviewChangesCount", { count: hunks }) : t("transcript.reviewChanges")}
       </Button>
     </Card>
   );
@@ -192,9 +187,7 @@ export function AgentTranscript({
           if (item.kind === "message") return <MessageBubble key={item.id} item={item} />;
           if (item.kind === "tool") return <ToolActivityRow key={item.id} item={item} />;
           if (item.kind === "diff-proposal") {
-            return (
-              <DiffProposalCard key={item.id} item={item} onReviewProposal={onReviewProposal} />
-            );
+            return <DiffProposalCard key={item.id} item={item} onReviewProposal={onReviewProposal} />;
           }
           return (
             <div key={item.id} className="text-xs text-destructive" role="alert">

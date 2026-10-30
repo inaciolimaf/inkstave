@@ -113,9 +113,7 @@ describe("EditorPane", () => {
     await waitFor(() => expect(cmText(container)).toContain("documentclass"));
     expect(screen.getByText("Saved")).toBeInTheDocument();
     // Editable now (spec 19): the content region is no longer read-only.
-    expect(container.querySelector(".cm-content")?.getAttribute("contenteditable")).not.toBe(
-      "false",
-    );
+    expect(container.querySelector(".cm-content")?.getAttribute("contenteditable")).not.toBe("false");
   });
 
   it("captures the document version (for autosave in spec 19)", async () => {
@@ -186,9 +184,7 @@ describe("EditorPane", () => {
     await userEvent.click(screen.getByRole("button", { name: "Editor settings" }));
     await userEvent.click(await screen.findByRole("switch", { name: "Line wrapping" }));
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem("inkstave:editor-settings")!).lineWrapping).toBe(
-        false,
-      ),
+      expect(JSON.parse(localStorage.getItem("inkstave:editor-settings")!).lineWrapping).toBe(false),
     );
   });
 

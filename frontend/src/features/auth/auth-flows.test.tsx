@@ -89,9 +89,7 @@ describe("MagicLinkPage callback", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) =>
-        url.endsWith("/auth/magic-link/callback")
-          ? mockResponse(200, PAIR)
-          : mockResponse(200, USER),
+        url.endsWith("/auth/magic-link/callback") ? mockResponse(200, PAIR) : mockResponse(200, USER),
       ),
     );
     renderAt("/magic-link?token=tok", <MagicLinkPage />);

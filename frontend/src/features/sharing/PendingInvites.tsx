@@ -26,9 +26,7 @@ export function PendingInvites({
           {invites.map((inv) => (
             <li key={inv.id} className="flex items-center gap-2 text-sm">
               <span className="mr-auto truncate">{inv.email}</span>
-              <span className="text-xs capitalize text-muted-foreground">
-                {t(`role.${inv.role}`)}
-              </span>
+              <span className="text-xs capitalize text-muted-foreground">{t(`role.${inv.role}`)}</span>
               <Button
                 size="sm"
                 variant="ghost"

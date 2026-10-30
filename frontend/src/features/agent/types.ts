@@ -47,14 +47,7 @@ export type TranscriptItem =
     }
   | { kind: "error"; id: string; code: string; message: string; retryable: boolean };
 
-export type RunPhase =
-  | "idle"
-  | "starting"
-  | "streaming"
-  | "stopping"
-  | "done"
-  | "error"
-  | "cancelled";
+export type RunPhase = "idle" | "starting" | "streaming" | "stopping" | "done" | "error" | "cancelled";
 
 export interface AgentRunState {
   sessionId: string | null;

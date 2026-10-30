@@ -36,11 +36,7 @@ export class ApiClient {
     return (ct.includes("application/json") ? await res.json() : await res.text()) as T;
   }
 
-  async register(
-    email: string,
-    displayName: string,
-    password = E2E_PASSWORD,
-  ): Promise<{ id: string }> {
+  async register(email: string, displayName: string, password = E2E_PASSWORD): Promise<{ id: string }> {
     return this.request("POST", "/api/v1/auth/register", {
       email,
       display_name: displayName,
@@ -92,11 +88,7 @@ export class ApiClient {
     return find(root);
   }
 
-  async createDoc(
-    projectId: string,
-    name: string,
-    parentId: string | null = null,
-  ): Promise<TreeNode> {
+  async createDoc(projectId: string, name: string, parentId: string | null = null): Promise<TreeNode> {
     return this.request("POST", `/api/v1/projects/${projectId}/tree/entities`, {
       type: "doc",
       name,
@@ -134,20 +126,13 @@ export class ApiClient {
   }
 
   /** Poll the history API until at least `min` versions exist (capture is async). */
-  async waitForVersions(
-    projectId: string,
-    docId: string,
-    min: number,
-    timeoutMs = 15_000,
-  ): Promise<number> {
+  async waitForVersions(projectId: string, docId: string, min: number, timeoutMs = 15_000): Promise<number> {
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       const { versions } = await this.listVersions(projectId, docId);
       if (versions.length >= min) return versions.length;
       if (Date.now() > deadline) {
-        throw new Error(
-          `only ${versions.length} history versions after ${timeoutMs}ms (wanted ${min})`,
-        );
+        throw new Error(`only ${versions.length} history versions after ${timeoutMs}ms (wanted ${min})`);
       }
       await new Promise((r) => setTimeout(r, 200));
     }
@@ -165,10 +150,7 @@ export class ApiClient {
   async waitForCompile(projectId: string, timeoutMs = 20_000): Promise<CompileStatus> {
     const deadline = Date.now() + timeoutMs;
     for (;;) {
-      const latest = await this.request<CompileStatus>(
-        "GET",
-        `/api/v1/projects/${projectId}/compile/latest`,
-      );
+      const latest = await this.request<CompileStatus>("GET", `/api/v1/projects/${projectId}/compile/latest`);
       if (["success", "failure", "error", "timeout"].includes(latest.status)) return latest;
       if (Date.now() > deadline) throw new Error(`compile not terminal after ${timeoutMs}ms`);
       await new Promise((r) => setTimeout(r, 200));
@@ -178,10 +160,9 @@ export class ApiClient {
   async getCompilePdfBytes(projectId: string, compileId: string): Promise<Uint8Array> {
     const headers: Record<string, string> = {};
     if (this.accessToken) headers.authorization = `Bearer ${this.accessToken}`;
-    const res = await fetch(
-      `${this.base}/api/v1/projects/${projectId}/compile/${compileId}/output.pdf`,
-      { headers },
-    );
+    const res = await fetch(`${this.base}/api/v1/projects/${projectId}/compile/${compileId}/output.pdf`, {
+      headers,
+    });
     if (!res.ok) throw new Error(`pdf fetch -> ${res.status}`);
     return new Uint8Array(await res.arrayBuffer());
   }
@@ -194,25 +175,13 @@ export class ApiClient {
     return this.request("POST", `/api/v1/projects/${projectId}/agent/sessions`, { title: null });
   }
 
-  async postAgentMessage(
-    projectId: string,
-    sessionId: string,
-    content: string,
-  ): Promise<{ run_id: string }> {
-    return this.request(
-      "POST",
-      `/api/v1/projects/${projectId}/agent/sessions/${sessionId}/messages`,
-      {
-        content,
-      },
-    );
+  async postAgentMessage(projectId: string, sessionId: string, content: string): Promise<{ run_id: string }> {
+    return this.request("POST", `/api/v1/projects/${projectId}/agent/sessions/${sessionId}/messages`, {
+      content,
+    });
   }
 
-  async waitForAgentDiff(
-    projectId: string,
-    sessionId: string,
-    timeoutMs = 20_000,
-  ): Promise<AgentDiff[]> {
+  async waitForAgentDiff(projectId: string, sessionId: string, timeoutMs = 20_000): Promise<AgentDiff[]> {
     const deadline = Date.now() + timeoutMs;
     for (;;) {
       const diffs = await this.request<AgentDiff[]>(
@@ -225,11 +194,7 @@ export class ApiClient {
     }
   }
 
-  async invite(
-    projectId: string,
-    email: string,
-    role: "editor" | "viewer",
-  ): Promise<{ token: string }> {
+  async invite(projectId: string, email: string, role: "editor" | "viewer"): Promise<{ token: string }> {
     return this.request("POST", `/api/v1/projects/${projectId}/invites`, { email, role });
   }
 

@@ -14,17 +14,10 @@ const components: Components = {
   ol: (p) => <ol className="my-1 list-decimal pl-5" {...p} />,
   li: (p) => <li className="my-0.5" {...p} />,
   a: (p) => (
-    <a
-      className="text-primary underline underline-offset-2"
-      target="_blank"
-      rel="noreferrer"
-      {...p}
-    />
+    <a className="text-primary underline underline-offset-2" target="_blank" rel="noreferrer" {...p} />
   ),
   strong: (p) => <strong className="font-semibold" {...p} />,
-  blockquote: (p) => (
-    <blockquote className="my-1 border-l-2 pl-3 text-muted-foreground italic" {...p} />
-  ),
+  blockquote: (p) => <blockquote className="my-1 border-l-2 pl-3 text-muted-foreground italic" {...p} />,
   hr: () => <hr className="my-2 border-border" />,
   table: (p) => (
     <div className="my-1 overflow-x-auto">
@@ -33,9 +26,7 @@ const components: Components = {
   ),
   th: (p) => <th className="border px-2 py-1 text-left font-semibold" {...p} />,
   td: (p) => <td className="border px-2 py-1 align-top" {...p} />,
-  pre: (p) => (
-    <pre className="my-1 overflow-x-auto rounded bg-background/60 p-2 font-mono text-xs" {...p} />
-  ),
+  pre: (p) => <pre className="my-1 overflow-x-auto rounded bg-background/60 p-2 font-mono text-xs" {...p} />,
   code({ className, children, ...rest }: ComponentPropsWithoutRef<"code">) {
     const isBlock = /language-/.test(className ?? "") || String(children ?? "").includes("\n");
     if (isBlock) {

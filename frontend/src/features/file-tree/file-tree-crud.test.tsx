@@ -49,9 +49,7 @@ describe("FileTreePanel CRUD", () => {
     const fetchMock = installFetch(BASE);
     renderPanel();
     await screen.findByText("main.tex");
-    await userEvent.click(
-      within(row("main.tex")).getByRole("button", { name: "Actions for main.tex" }),
-    );
+    await userEvent.click(within(row("main.tex")).getByRole("button", { name: "Actions for main.tex" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
     const input = await screen.findByLabelText("New name");
     await userEvent.clear(input);
@@ -59,9 +57,7 @@ describe("FileTreePanel CRUD", () => {
 
     expect(await screen.findByText("renamed.tex")).toBeInTheDocument();
     expect(
-      fetchMock.mock.calls.some(
-        ([url, init]) => String(url).includes("/rename") && init?.method === "PATCH",
-      ),
+      fetchMock.mock.calls.some(([url, init]) => String(url).includes("/rename") && init?.method === "PATCH"),
     ).toBe(true);
   });
 
@@ -69,13 +65,9 @@ describe("FileTreePanel CRUD", () => {
     const fetchMock = installFetch(BASE);
     renderPanel();
     await screen.findByText("Chapters");
-    await userEvent.click(
-      within(row("Chapters")).getByRole("button", { name: "Actions for Chapters" }),
-    );
+    await userEvent.click(within(row("Chapters")).getByRole("button", { name: "Actions for Chapters" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
-    expect(
-      screen.getByText(/everything inside it will be permanently deleted/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/everything inside it will be permanently deleted/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(screen.queryByText("Chapters")).not.toBeInTheDocument());
@@ -98,9 +90,7 @@ describe("FileTreePanel CRUD", () => {
     renderPanel();
     await screen.findByText("main.tex");
 
-    await userEvent.click(
-      within(row("main.tex")).getByRole("button", { name: "Actions for main.tex" }),
-    );
+    await userEvent.click(within(row("main.tex")).getByRole("button", { name: "Actions for main.tex" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
     await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
 

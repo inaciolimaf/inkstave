@@ -49,12 +49,10 @@ const dict = {
   },
   danger: {
     title: "Delete account",
-    description:
-      "Permanently deletes your account and the projects you own. This cannot be undone.",
+    description: "Permanently deletes your account and the projects you own. This cannot be undone.",
     trigger: "Delete my account",
     dialogTitle: "Delete your account?",
-    dialogDescription:
-      "Enter your password and type DELETE to confirm. Your owned projects will be removed.",
+    dialogDescription: "Enter your password and type DELETE to confirm. Your owned projects will be removed.",
     password: "Password",
     typeDelete: "Type DELETE",
     submit: "Delete account",

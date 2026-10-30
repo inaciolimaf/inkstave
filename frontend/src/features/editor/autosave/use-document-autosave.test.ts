@@ -112,9 +112,7 @@ describe("useDocumentAutosave", () => {
   });
 
   it("keep-mine re-saves the local text against the new server version", async () => {
-    save.mockRejectedValueOnce(
-      new VersionConflictError({ currentVersion: 9, currentContent: "srv" }),
-    );
+    save.mockRejectedValueOnce(new VersionConflictError({ currentVersion: 9, currentContent: "srv" }));
     save.mockResolvedValue({ version: 10 });
     const { result } = setup();
     act(() => result.current.onLocalChange("mine"));

@@ -145,9 +145,7 @@ describe("PreviewPane (integration)", () => {
     await waitFor(() => expect(sources).toHaveLength(1));
     await userEvent.click(screen.getByRole("button", { name: "Cancel compilation" }));
     expect(cancelC).toHaveBeenCalledWith("p1", "c1");
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Compile project" })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Compile project" })).toBeInTheDocument());
   });
 
   it("shows the error state and auto-expands the raw log on failure", async () => {
@@ -194,9 +192,7 @@ describe("PreviewPane (integration)", () => {
     await waitFor(() => expect(sources).toHaveLength(1));
     await emitStatus(snap("failure"));
 
-    await waitFor(() =>
-      expect(screen.getByRole("region", { name: "Compile log" })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole("region", { name: "Compile log" })).toBeInTheDocument());
   });
 
   it("shows a timeout-specific message and re-triggers via Try again", async () => {

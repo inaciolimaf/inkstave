@@ -29,14 +29,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("LogPanel", () => {
   it("renders nothing when collapsed", () => {
     const { container } = render(
-      <LogPanel
-        expanded={false}
-        log={null}
-        loading={false}
-        error={null}
-        onFetch={vi.fn()}
-        meta={null}
-      />,
+      <LogPanel expanded={false} log={null} loading={false} error={null} onFetch={vi.fn()} meta={null} />,
     );
     expect(screen.queryByRole("region", { name: "Compile log" })).toBeNull();
     expect(container).toBeEmptyDOMElement();
@@ -64,16 +57,7 @@ describe("LogPanel", () => {
   it("copies the log to the clipboard", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
-    render(
-      <LogPanel
-        expanded
-        log="log body"
-        loading={false}
-        error={null}
-        onFetch={vi.fn()}
-        meta={null}
-      />,
-    );
+    render(<LogPanel expanded log="log body" loading={false} error={null} onFetch={vi.fn()} meta={null} />);
     await userEvent.click(screen.getByRole("button", { name: "Copy log to clipboard" }));
     expect(writeText).toHaveBeenCalledWith("log body");
     expect(await screen.findByText("Copied")).toBeInTheDocument();

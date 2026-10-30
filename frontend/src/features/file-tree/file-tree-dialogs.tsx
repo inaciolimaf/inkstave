@@ -12,13 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +34,7 @@ export function CreateEntityDialog({
   const [name, setName] = useState("");
   useEffect(() => {
     if (open)
-      setName(
-        type === "folder" ? t("createDialog.defaultFolderName") : t("createDialog.defaultFileName"),
-      );
+      setName(type === "folder" ? t("createDialog.defaultFolderName") : t("createDialog.defaultFileName"));
   }, [open, type, t]);
 
   const error = name ? validateEntityName(name) : t("validate.required");
@@ -114,10 +106,7 @@ export function DeleteEntityDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t("common:action.cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            className={cn(buttonVariants({ variant: "destructive" }))}
-            onClick={onConfirm}
-          >
+          <AlertDialogAction className={cn(buttonVariants({ variant: "destructive" }))} onClick={onConfirm}>
             {t("common:action.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>

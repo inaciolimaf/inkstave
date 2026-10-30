@@ -10,17 +10,13 @@ describe("ConflictDialog", () => {
     expect(screen.getByText(/changed on the server/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reload server version" })).toBeInTheDocument();
     // "Reload" discards local edits, so it must NOT be the default focus.
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Keep my version" })).toHaveFocus(),
-    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Keep my version" })).toHaveFocus());
   });
 
   it("invokes the chosen resolution", async () => {
     const onReload = vi.fn();
     const onKeepMine = vi.fn();
-    render(
-      <ConflictDialog open onOpenChange={vi.fn()} onReload={onReload} onKeepMine={onKeepMine} />,
-    );
+    render(<ConflictDialog open onOpenChange={vi.fn()} onReload={onReload} onKeepMine={onKeepMine} />);
     await userEvent.click(screen.getByRole("button", { name: "Reload server version" }));
     expect(onReload).toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Keep my version" }));

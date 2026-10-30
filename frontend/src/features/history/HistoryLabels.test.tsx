@@ -24,28 +24,12 @@ const LABELS = [{ id: "l1", name: "submitted" }];
 
 describe("HistoryLabels", () => {
   it("renders label badges", () => {
-    render(
-      <HistoryLabels
-        version={3}
-        labels={LABELS}
-        canWrite={false}
-        onAdd={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+    render(<HistoryLabels version={3} labels={LABELS} canWrite={false} onAdd={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText("submitted")).toBeInTheDocument();
   });
 
   it("hides add/delete controls for viewers (AC6)", () => {
-    render(
-      <HistoryLabels
-        version={3}
-        labels={LABELS}
-        canWrite={false}
-        onAdd={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+    render(<HistoryLabels version={3} labels={LABELS} canWrite={false} onAdd={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.queryByLabelText("Add label to version 3")).toBeNull();
     expect(screen.queryByLabelText("Remove label submitted")).toBeNull();
   });
@@ -61,9 +45,7 @@ describe("HistoryLabels", () => {
 
   it("lets an editor delete a label (AC6)", async () => {
     const onDelete = vi.fn();
-    render(
-      <HistoryLabels version={3} labels={LABELS} canWrite onAdd={vi.fn()} onDelete={onDelete} />,
-    );
+    render(<HistoryLabels version={3} labels={LABELS} canWrite onAdd={vi.fn()} onDelete={onDelete} />);
     await userEvent.click(screen.getByLabelText("Remove label submitted"));
     expect(onDelete).toHaveBeenCalledWith("l1");
   });

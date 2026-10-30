@@ -17,23 +17,14 @@ function describe(user: PresenceUser, t: TFunction<"editor">): string {
   return user.idle ? t("presence.idle", { who }) : t("presence.online", { who });
 }
 
-function PresenceAvatar({
-  user,
-  withTooltip = true,
-}: {
-  user: PresenceUser;
-  withTooltip?: boolean;
-}) {
+function PresenceAvatar({ user, withTooltip = true }: { user: PresenceUser; withTooltip?: boolean }) {
   const { t } = useTranslation("editor");
   const avatar = (
     // `user.idle` comes from the same `state.idle` awareness field that the
     // remote-cursor fade reads (see remote-cursors.ts), so an idle peer's avatar
     // and caret dim together on other clients (spec 32 AC6).
     <Avatar
-      className={cn(
-        "size-7 border-2 bg-background ring-0 transition-opacity",
-        user.idle && "opacity-50",
-      )}
+      className={cn("size-7 border-2 bg-background ring-0 transition-opacity", user.idle && "opacity-50")}
       style={{ borderColor: user.color }}
       aria-label={describe(user, t)}
     >
@@ -61,11 +52,7 @@ export function OnlineUsers({ users, max = DEFAULT_MAX }: { users: PresenceUser[
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div
-        className="flex items-center -space-x-2"
-        role="list"
-        aria-label={t("presence.peopleOnline")}
-      >
+      <div className="flex items-center -space-x-2" role="list" aria-label={t("presence.peopleOnline")}>
         {visible.map((user) => (
           <div role="listitem" key={user.id}>
             <PresenceAvatar user={user} />

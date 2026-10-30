@@ -70,8 +70,7 @@ const dict = {
   import: {
     cta: "Import (.zip)",
     title: "Import a project",
-    description:
-      "Upload a .zip exported from another LaTeX platform. We’ll create a new project from it.",
+    description: "Upload a .zip exported from another LaTeX platform. We’ll create a new project from it.",
     fileLabel: "Project archive (.zip)",
     chooseFile: "Choose a .zip file",
     nameLabel: "Project name (optional)",

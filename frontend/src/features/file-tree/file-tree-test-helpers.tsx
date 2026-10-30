@@ -77,9 +77,7 @@ export function installFetch(initial: WE[]) {
     const mv = path.match(/\/tree\/entities\/([^/]+)\/move$/);
     if (mv && method === "PATCH") {
       const body = JSON.parse(init!.body as string) as { new_parent_id: string };
-      entities = entities.map((e) =>
-        e.id === mv[1] ? { ...e, parent_id: body.new_parent_id } : e,
-      );
+      entities = entities.map((e) => (e.id === mv[1] ? { ...e, parent_id: body.new_parent_id } : e));
       return json(
         entities.find((e) => e.id === mv[1]),
         200,
@@ -116,7 +114,6 @@ export function renderPanel(onSelect = vi.fn()) {
   return onSelect;
 }
 
-export const row = (name: string) =>
-  screen.getByText(name).closest('[role="treeitem"]') as HTMLElement;
+export const row = (name: string) => screen.getByText(name).closest('[role="treeitem"]') as HTMLElement;
 export const dragHandle = (name: string) =>
   screen.getByText(name).closest('[draggable="true"]') as HTMLElement;

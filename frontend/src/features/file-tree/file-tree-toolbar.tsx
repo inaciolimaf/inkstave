@@ -34,13 +34,7 @@ export function FileTreeToolbar({
           actions.map(({ icon: Icon, label, run }) => (
             <Tooltip key={label}>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={label}
-                  disabled={!hasRoot}
-                  onClick={run}
-                >
+                <Button variant="ghost" size="icon" aria-label={label} disabled={!hasRoot} onClick={run}>
                   <Icon className="size-4" />
                 </Button>
               </TooltipTrigger>

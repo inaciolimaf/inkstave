@@ -104,9 +104,7 @@ describe("RegisterPage", () => {
     renderRegister();
     await fillValid(user);
     await user.click(screen.getByRole("button", { name: /create account/i }));
-    expect(
-      await screen.findByText("An account with this email already exists."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("An account with this email already exists.")).toBeInTheDocument();
   });
 
   it("maps a backend 422 to an inline field error", async () => {
@@ -132,8 +130,6 @@ describe("RegisterPage", () => {
     renderRegister();
     await fillValid(user);
     await user.click(screen.getByRole("button", { name: /create account/i }));
-    expect(
-      await screen.findByText("Password must not contain your email address."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Password must not contain your email address.")).toBeInTheDocument();
   });
 });

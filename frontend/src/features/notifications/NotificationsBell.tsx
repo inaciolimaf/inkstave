@@ -59,10 +59,7 @@ function NotificationRow({
   const { t } = useTranslation("notifications");
   const unread = notification.readAt === null;
   return (
-    <div
-      role="listitem"
-      className={cn("flex gap-2 rounded-md p-2 text-sm", unread && "bg-primary/5")}
-    >
+    <div role="listitem" className={cn("flex gap-2 rounded-md p-2 text-sm", unread && "bg-primary/5")}>
       <button
         type="button"
         className="min-w-0 flex-1 text-left"
@@ -84,12 +81,7 @@ function NotificationRow({
           <X className="size-4" />
         </button>
         {notification.type === "project_invite" && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-1 h-7"
-            onClick={() => onAccept(notification)}
-          >
+          <Button size="sm" variant="outline" className="mt-1 h-7" onClick={() => onAccept(notification)}>
             {t("accept")}
           </Button>
         )}
@@ -144,12 +136,7 @@ export function NotificationsBell() {
         <div className="mb-1 flex items-center justify-between px-1">
           <span className="text-sm font-medium">{t("title")}</span>
           {count > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 text-xs"
-              onClick={() => readAll.mutate()}
-            >
+            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => readAll.mutate()}>
               {t("markAllRead")}
             </Button>
           )}
@@ -160,10 +147,7 @@ export function NotificationsBell() {
             <Skeleton className="h-12" />
           </div>
         ) : list.isError ? (
-          <div
-            className="flex items-center justify-between p-2 text-sm text-destructive"
-            role="alert"
-          >
+          <div className="flex items-center justify-between p-2 text-sm text-destructive" role="alert">
             {t("loadFailed")}
             <Button size="sm" variant="outline" onClick={() => void list.refetch()}>
               {t("common:action.retry")}

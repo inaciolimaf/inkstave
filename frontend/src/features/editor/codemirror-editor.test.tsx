@@ -22,21 +22,15 @@ describe("CodeMirrorEditor", () => {
   });
 
   it("renders highlighted LaTeX tokens", () => {
-    const { container } = render(
-      <CodeMirrorEditor doc={"\\section{Hi}"} settings={settings} dark={false} />,
-    );
+    const { container } = render(<CodeMirrorEditor doc={"\\section{Hi}"} settings={settings} dark={false} />);
     // A token span inside the line proves the language + highlighting are wired.
     expect(container.querySelector(".cm-line span")).toBeTruthy();
   });
 
   it("shows line-number gutter", () => {
-    const { container } = render(
-      <CodeMirrorEditor doc={"a\nb\nc"} settings={settings} dark={false} />,
-    );
+    const { container } = render(<CodeMirrorEditor doc={"a\nb\nc"} settings={settings} dark={false} />);
     expect(container.querySelector(".cm-gutters")).toBeTruthy();
-    expect(container.querySelectorAll(".cm-lineNumbers .cm-gutterElement").length).toBeGreaterThan(
-      0,
-    );
+    expect(container.querySelectorAll(".cm-lineNumbers .cm-gutterElement").length).toBeGreaterThan(0);
   });
 
   it("reconfigures via compartment without recreating the view", async () => {
@@ -45,11 +39,7 @@ describe("CodeMirrorEditor", () => {
       return (
         <>
           <button onClick={() => setSize(22)}>grow</button>
-          <CodeMirrorEditor
-            doc="hello world"
-            settings={{ ...settings, fontSize: size }}
-            dark={false}
-          />
+          <CodeMirrorEditor doc="hello world" settings={{ ...settings, fontSize: size }} dark={false} />
         </>
       );
     }

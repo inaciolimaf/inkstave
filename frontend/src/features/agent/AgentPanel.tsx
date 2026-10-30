@@ -11,13 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { DiffReviewDialog } from "@/features/diff-review/DiffReviewDialog";
@@ -193,9 +187,7 @@ export function AgentPanel({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void chat.newChat()}>
-                    {t("newChat")}
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
                   {chat.sessions.length > 0 && <DropdownMenuSeparator />}
                   {chat.sessions.map((s) => (
                     <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>

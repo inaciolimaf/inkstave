@@ -17,8 +17,7 @@ import { e2e } from "./e2e/support/env";
 // Backend env, injected into the bring-up command (nothing hard-coded per machine).
 const backendEnv: Record<string, string> = {
   DATABASE_URL:
-    process.env.E2E_DATABASE_URL ??
-    "postgresql+asyncpg://inkstave:inkstave@localhost:5433/inkstave_e2e",
+    process.env.E2E_DATABASE_URL ?? "postgresql+asyncpg://inkstave:inkstave@localhost:5433/inkstave_e2e",
   REDIS_URL: process.env.E2E_REDIS_URL ?? "redis://localhost:6380/0",
   JWT_SECRET: process.env.E2E_JWT_SECRET ?? "e2e-test-secret-0123456789abcdef0123456789",
   ENVIRONMENT: "test",

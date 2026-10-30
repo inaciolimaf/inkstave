@@ -116,10 +116,7 @@ export function LandingFooter() {
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.key}>
-                    <a
-                      href={l.href}
-                      className="text-sm text-ink-soft transition-colors hover:text-ink"
-                    >
+                    <a href={l.href} className="text-sm text-ink-soft transition-colors hover:text-ink">
                       {t(l.key)}
                     </a>
                   </li>

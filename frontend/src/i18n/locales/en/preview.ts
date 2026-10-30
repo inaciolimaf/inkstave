@@ -23,8 +23,7 @@ const dict = {
     failureTitle: "Compilation failed",
     failureMessage: "Your document didn’t compile. Check the log for the LaTeX errors.",
     timeoutTitle: "Compilation timed out",
-    timeoutMessage:
-      "The compile took too long and was stopped. Simplify the document or try again.",
+    timeoutMessage: "The compile took too long and was stopped. Simplify the document or try again.",
     errorTitle: "Something went wrong",
     errorMessage: "The compile couldn’t be completed due to a system error.",
     viewLog: "View log",

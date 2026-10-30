@@ -166,9 +166,7 @@ function AgentVisual() {
           <span className="mr-1 text-emerald-500">+</span>concisely
         </div>
         <div className="flex gap-1.5 pt-1.5">
-          <span className="rounded bg-ink px-1.5 py-0.5 text-[0.58rem] text-paper">
-            {t("demo.accept")}
-          </span>
+          <span className="rounded bg-ink px-1.5 py-0.5 text-[0.58rem] text-paper">{t("demo.accept")}</span>
           <span className="rounded border border-rule px-1.5 py-0.5 text-[0.58rem] text-ink-soft">
             {t("demo.reject")}
           </span>
@@ -212,11 +210,7 @@ function PreviewVisual() {
 
 function HistoryVisual() {
   const { t } = useTranslation("landing");
-  const items = [
-    t("features.historyItem1"),
-    t("features.historyItem2"),
-    t("features.historyItem3"),
-  ];
+  const items = [t("features.historyItem1"), t("features.historyItem2"), t("features.historyItem3")];
   return (
     <VisualFrame className="justify-center p-6">
       <ol className="relative ml-1 space-y-3 border-l border-rule pl-4 text-[0.66rem] text-ink-soft">

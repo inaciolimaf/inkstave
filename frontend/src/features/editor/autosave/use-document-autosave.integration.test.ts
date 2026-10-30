@@ -61,10 +61,7 @@ async function advance(ms: number) {
 }
 
 function lastRequest() {
-  const [url, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1] as [
-    string,
-    RequestInit,
-  ];
+  const [url, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1] as [string, RequestInit];
   return { url, init, body: JSON.parse(String(init.body)) as Record<string, unknown> };
 }
 

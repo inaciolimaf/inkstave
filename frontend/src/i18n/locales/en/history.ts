@@ -2,8 +2,7 @@
 const dict = {
   panel: {
     title: "Version history",
-    description:
-      "Browse versions, see what changed, and restore — restoring creates a new version.",
+    description: "Browse versions, see what changed, and restore — restoring creates a new version.",
   },
   timeline: {
     ariaLabel: "Version history",

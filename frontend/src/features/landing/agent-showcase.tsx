@@ -40,9 +40,7 @@ export function AgentShowcase() {
             {t("showcase.titlePre")} <em className="italic text-ink">{t("showcase.titleEm")}</em>{" "}
             {t("showcase.titlePost")}
           </h2>
-          <p className="mt-4 max-w-lg text-base leading-relaxed text-ink-soft">
-            {t("showcase.intro")}
-          </p>
+          <p className="mt-4 max-w-lg text-base leading-relaxed text-ink-soft">{t("showcase.intro")}</p>
 
           <ol className="mt-10 space-y-7">
             {steps.map((s, i) => (
@@ -54,9 +52,7 @@ export function AgentShowcase() {
                   </span>
                 </span>
                 <div>
-                  <h3 className="font-display text-lg font-medium tracking-tight text-ink">
-                    {s.title}
-                  </h3>
+                  <h3 className="font-display text-lg font-medium tracking-tight text-ink">{s.title}</h3>
                   <p className="mt-1 max-w-md text-sm leading-relaxed text-ink-soft">{s.body}</p>
                 </div>
               </li>
@@ -65,11 +61,7 @@ export function AgentShowcase() {
         </div>
 
         {/* Static multi-hunk review card. */}
-        <div
-          ref={right}
-          className="reveal min-w-0"
-          style={{ "--reveal-delay": "120ms" } as CSSProperties}
-        >
+        <div ref={right} className="reveal min-w-0" style={{ "--reveal-delay": "120ms" } as CSSProperties}>
           <ReviewCard />
         </div>
       </div>
@@ -131,15 +123,7 @@ function ReviewCard() {
   );
 }
 
-function DiffLine({
-  type,
-  n,
-  children,
-}: {
-  type: "ctx" | "add" | "del";
-  n: string;
-  children: ReactNode;
-}) {
+function DiffLine({ type, n, children }: { type: "ctx" | "add" | "del"; n: string; children: ReactNode }) {
   const tone =
     type === "add"
       ? "bg-emerald-500/10 text-emerald-800"

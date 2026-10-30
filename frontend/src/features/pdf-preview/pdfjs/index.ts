@@ -9,12 +9,7 @@
  * Worker setup uses Vite's `?url` import so the bundler emits the worker as a
  * separate asset and gives us its final URL (see `docs/adr/0024-pdf-preview.md`).
  */
-import {
-  GlobalWorkerOptions,
-  getDocument,
-  type PDFDocumentProxy,
-  type PDFPageProxy,
-} from "pdfjs-dist";
+import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy, type PDFPageProxy } from "pdfjs-dist";
 // Vite emits the worker as a separate asset and gives us its URL.
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 

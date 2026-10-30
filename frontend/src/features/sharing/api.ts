@@ -1,15 +1,7 @@
 /** Sharing API calls (spec 33). snake_case ↔ camelCase mapping lives here only. */
 import { apiClient } from "@/lib/api-client";
 
-import type {
-  AcceptResult,
-  Invite,
-  InviteCreated,
-  InvitePreview,
-  InviteRole,
-  Member,
-  Role,
-} from "./types";
+import type { AcceptResult, Invite, InviteCreated, InvitePreview, InviteRole, Member, Role } from "./types";
 
 interface MemberWire {
   user_id: string;
@@ -49,14 +41,8 @@ export async function listMembers(projectId: string): Promise<Member[]> {
   return (await apiClient.get<MemberWire[]>(`${base(projectId)}/members`)).map(toMember);
 }
 
-export async function changeMemberRole(
-  projectId: string,
-  userId: string,
-  role: InviteRole,
-): Promise<Member> {
-  return toMember(
-    await apiClient.patch<MemberWire>(`${base(projectId)}/members/${userId}`, { role }),
-  );
+export async function changeMemberRole(projectId: string, userId: string, role: InviteRole): Promise<Member> {
+  return toMember(await apiClient.patch<MemberWire>(`${base(projectId)}/members/${userId}`, { role }));
 }
 
 export async function removeMember(projectId: string, userId: string): Promise<void> {
@@ -109,9 +95,7 @@ export async function getInvitePreview(token: string): Promise<InvitePreview> {
 }
 
 export async function acceptInvite(token: string): Promise<AcceptResult> {
-  const w = await apiClient.post<{ project_id: string; role: Role }>(
-    `/api/v1/invites/${token}/accept`,
-  );
+  const w = await apiClient.post<{ project_id: string; role: Role }>(`/api/v1/invites/${token}/accept`);
   return { projectId: w.project_id, role: w.role };
 }
 

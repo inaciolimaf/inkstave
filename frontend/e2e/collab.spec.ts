@@ -77,11 +77,7 @@ test("editor collaborator: live edits propagate both ways @smoke", async ({
   await ctxB.close();
 });
 
-test("invite a collaborator through the Share modal UI @smoke", async ({
-  page,
-  runContext,
-  seedProject,
-}) => {
+test("invite a collaborator through the Share modal UI @smoke", async ({ page, runContext, seedProject }) => {
   // The default `page` is authenticated as the owner, User A.
   const { projectId } = await seedProject();
   const editor = new EditorPage(page);

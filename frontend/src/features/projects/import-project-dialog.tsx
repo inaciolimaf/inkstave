@@ -73,9 +73,7 @@ export function ImportProjectDialog({
     }
   };
 
-  const errorText = state.errorType
-    ? t([`import.errors.${state.errorType}`, "import.errors.generic"])
-    : null;
+  const errorText = state.errorType ? t([`import.errors.${state.errorType}`, "import.errors.generic"]) : null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => (busy ? undefined : onOpenChange(v))}>
@@ -131,12 +129,7 @@ export function ImportProjectDialog({
             <div className="space-y-2" role="alert">
               <p className="text-sm text-destructive">{errorText}</p>
               {state.projectId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void onDeleteEmpty()}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => void onDeleteEmpty()}>
                   {t("import.deleteEmpty")}
                 </Button>
               )}

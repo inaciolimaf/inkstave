@@ -8,13 +8,7 @@ import { toast } from "sonner";
 
 import i18n from "@/i18n/config";
 
-import {
-  type InverseResult,
-  type SyncReason,
-  type SyncTexBox,
-  codeToPdf,
-  pdfToCode,
-} from "../synctex";
+import { type InverseResult, type SyncReason, type SyncTexBox, codeToPdf, pdfToCode } from "../synctex";
 
 export interface PdfHighlight {
   page: number;

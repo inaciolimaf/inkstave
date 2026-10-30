@@ -3,13 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { hasCapability, usePermissions } from "@/features/sharing/usePermissions";
 
 import { HistoryDiffView } from "./HistoryDiffView";
@@ -53,16 +47,11 @@ export function HistoryPanel({
   // reuse the timeline's already-fetched versions cache rather than a second request.
   const versionsQuery = useVersions(projectId, docId, open);
   const selectedVersion =
-    versionsQuery.data?.pages.flatMap((page) => page.versions).find((v) => v.version === primary) ??
-    null;
+    versionsQuery.data?.pages.flatMap((page) => page.versions).find((v) => v.version === primary) ?? null;
 
   const from = compare !== null && primary !== null ? Math.min(primary, compare) : primary;
   const to: number | "current" | null =
-    compare !== null && primary !== null
-      ? Math.max(primary, compare)
-      : primary !== null
-        ? "current"
-        : null;
+    compare !== null && primary !== null ? Math.max(primary, compare) : primary !== null ? "current" : null;
 
   const onAddLabel = (version: number, name: string) =>
     addLabel.mutate({ version, name }, { onError: () => toast.error(t("toast.addLabelFailed")) });

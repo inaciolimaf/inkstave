@@ -64,11 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [bootstrap]);
 
   const login = async (email: string, password: string): Promise<void> => {
-    const pair = await apiClient.post<TokenPair>(
-      "/api/v1/auth/login",
-      { email, password },
-      { auth: false },
-    );
+    const pair = await apiClient.post<TokenPair>("/api/v1/auth/login", { email, password }, { auth: false });
     tokenStore.setTokens({ access: pair.access_token, refresh: pair.refresh_token });
     const me = await apiClient.get<UserPublic>("/api/v1/users/me");
     setUser(me);

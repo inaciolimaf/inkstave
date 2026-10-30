@@ -69,13 +69,7 @@ describe("PdfViewer SyncTeX", () => {
 
   it("does not render an overlay on a non-targeted page", () => {
     const box = { page: 2, h: 10, v: 20, width: 30, height: 5, depth: 2 };
-    render(
-      <PdfViewer
-        pdf={fakeDoc(1)}
-        viewport={viewport({ numPages: 1 })}
-        highlight={{ page: 2, box }}
-      />,
-    );
+    render(<PdfViewer pdf={fakeDoc(1)} viewport={viewport({ numPages: 1 })} highlight={{ page: 2, box }} />);
     expect(screen.queryByTestId("sync-highlight")).toBeNull();
   });
 });

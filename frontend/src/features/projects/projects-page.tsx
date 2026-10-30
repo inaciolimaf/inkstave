@@ -7,13 +7,7 @@ import { useAuth } from "@/auth/auth-context";
 import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 import { ImportProjectDialog } from "./import-project-dialog";

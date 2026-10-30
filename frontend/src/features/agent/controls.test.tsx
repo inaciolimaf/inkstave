@@ -48,10 +48,7 @@ describe("AgentErrorState", () => {
   it("shows Retry only when retryable (AC8)", async () => {
     const onRetry = vi.fn();
     const { rerender } = render(
-      <AgentErrorState
-        error={{ code: "internal", message: "boom", retryable: true }}
-        onRetry={onRetry}
-      />,
+      <AgentErrorState error={{ code: "internal", message: "boom", retryable: true }} onRetry={onRetry} />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();

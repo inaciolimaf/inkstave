@@ -3,13 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { config } from "@/config";
 
-import {
-  dismissNotification,
-  fetchUnreadCount,
-  listNotifications,
-  markAllRead,
-  markRead,
-} from "./api";
+import { dismissNotification, fetchUnreadCount, listNotifications, markAllRead, markRead } from "./api";
 import type { NotificationList } from "./types";
 
 const UNREAD_KEY = ["notifications", "unread-count"] as const;

@@ -42,13 +42,7 @@ function track(session: CollabDocSession): CollabDocSession {
 
 describe("CollabEditor", () => {
   it("shows a loading state and is not editable until synced (AC6)", () => {
-    render(
-      <CollabEditor
-        session={track(makeSession({ synced: false }))}
-        settings={SETTINGS}
-        dark={false}
-      />,
-    );
+    render(<CollabEditor session={track(makeSession({ synced: false }))} settings={SETTINGS} dark={false} />);
     expect(screen.getByLabelText("Loading document…")).toBeInTheDocument();
     const content = document.querySelector(".cm-content");
     expect(content?.getAttribute("contenteditable")).toBe("false");

@@ -30,9 +30,7 @@ export interface CompileProblems {
 
 export type ProblemsReason = "log_unavailable" | "error";
 
-export type ProblemsResult =
-  | { ok: true; value: CompileProblems }
-  | { ok: false; reason: ProblemsReason };
+export type ProblemsResult = { ok: true; value: CompileProblems } | { ok: false; reason: ProblemsReason };
 
 /** Fetch parsed problems for a compile id (or the literal `"latest"`). */
 export async function getProblems(projectId: string, compileId: string): Promise<ProblemsResult> {

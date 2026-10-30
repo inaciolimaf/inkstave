@@ -89,8 +89,7 @@ export function ProjectListView({
   if (isLoading) return <ProjectListSkeleton />;
   if (isError) return <ProjectListError onRetry={onRetry} />;
   if (total === 0) return <ProjectListEmpty onCreate={onCreate} />;
-  if (visible.length === 0)
-    return <ProjectListNoResults term={searchTerm} onClear={onClearSearch} />;
+  if (visible.length === 0) return <ProjectListNoResults term={searchTerm} onClear={onClearSearch} />;
 
   const actions = { onOpen, onRename, onDelete };
   return (

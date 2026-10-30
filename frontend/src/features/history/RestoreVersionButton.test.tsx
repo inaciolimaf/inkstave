@@ -34,9 +34,7 @@ describe("RestoreVersionButton", () => {
     await screen.findByText("Restore version 3?");
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     await waitFor(() =>
-      expect(
-        (restore as unknown as { mutate: ReturnType<typeof vi.fn> }).mutate,
-      ).toHaveBeenCalled(),
+      expect((restore as unknown as { mutate: ReturnType<typeof vi.fn> }).mutate).toHaveBeenCalled(),
     );
     expect(toast.success).toHaveBeenCalledWith("Restored to version 3; created version 9.");
   });

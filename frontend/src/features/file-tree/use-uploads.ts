@@ -44,20 +44,15 @@ export function useUploads(projectId: string) {
           parentId,
           // Re-issue with a replacement name on overwrite so the new upload wins.
           name: opts?.replace ? file.name : undefined,
-          onProgress: (pct) =>
-            setUploads((u) => u.map((it) => (it.key === key ? { ...it, pct } : it))),
+          onProgress: (pct) => setUploads((u) => u.map((it) => (it.key === key ? { ...it, pct } : it))),
         });
-        setUploads((u) =>
-          u.map((it) => (it.key === key ? { ...it, pct: 100, status: "done" } : it)),
-        );
+        setUploads((u) => u.map((it) => (it.key === key ? { ...it, pct: 100, status: "done" } : it)));
         toast.success(i18n.t("files:toast.uploaded", { name: file.name }));
         await qc.invalidateQueries({ queryKey: treeKey(projectId) });
         return "ok";
       } catch (err) {
         const code = err instanceof UploadError ? err.code : "upload_failed";
-        setUploads((u) =>
-          u.map((it) => (it.key === key ? { ...it, status: "error", error: code } : it)),
-        );
+        setUploads((u) => u.map((it) => (it.key === key ? { ...it, status: "error", error: code } : it)));
         toast.error(
           code === "name_conflict"
             ? i18n.t("files:toast.uploadConflict", { name: file.name })

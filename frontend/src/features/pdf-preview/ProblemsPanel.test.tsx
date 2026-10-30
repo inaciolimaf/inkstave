@@ -49,9 +49,7 @@ describe("ProblemsPanel", () => {
     const onJump = vi.fn();
     render(
       <ProblemsPanel
-        problems={compileProblems([
-          problem({ message: "Boom", file: "sections/intro.tex", line: 7 }),
-        ])}
+        problems={compileProblems([problem({ message: "Boom", file: "sections/intro.tex", line: 7 })])}
         onJump={onJump}
       />,
     );

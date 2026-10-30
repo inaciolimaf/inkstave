@@ -72,11 +72,7 @@ export interface RebaseResult {
  * Apply the accepted hunks to `content`, locating each against the *current* content
  * (rebase). Hunks that no longer match are blocked and excluded.
  */
-export function rebaseHunks(
-  content: string,
-  hunks: DiffHunk[],
-  accepted: Set<string>,
-): RebaseResult {
+export function rebaseHunks(content: string, hunks: DiffHunk[], accepted: Set<string>): RebaseResult {
   const { lines, trailingNewline } = toLines(content);
   const planned: { loc: number; oldCount: number; newLines: string[]; id: string }[] = [];
   const blocked: string[] = [];

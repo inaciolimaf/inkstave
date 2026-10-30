@@ -16,10 +16,7 @@ import { AgentPanel, DiffReview, EditorPage, PreviewPanel } from "./support/page
 
 const APPLIED_MARKER = "rewritten by the Inkstave AI agent";
 
-test("agent diff can be rejected without touching the document @full", async ({
-  page,
-  seedProject,
-}) => {
+test("agent diff can be rejected without touching the document @full", async ({ page, seedProject }) => {
   const { projectId } = await seedProject();
   const editor = new EditorPage(page);
   const agent = new AgentPanel(page);
@@ -44,10 +41,7 @@ test("agent diff can be rejected without touching the document @full", async ({
   await expect(editor.content()).not.toContainText(APPLIED_MARKER);
 });
 
-test("a real Tectonic compile produces a one-page PDF preview @full", async ({
-  page,
-  seedProject,
-}) => {
+test("a real Tectonic compile produces a one-page PDF preview @full", async ({ page, seedProject }) => {
   // Spec 54 §8 item 1: a real-Tectonic one-page compile. Only meaningful when the
   // e2e backend was brought up with COMPILE_MODE=real (the default e2e mode is
   // `mock`); skip otherwise so the opt-in tier stays runnable without Tectonic.

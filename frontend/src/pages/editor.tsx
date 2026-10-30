@@ -22,9 +22,7 @@ export function EditorPage() {
           <Link to="/projects" aria-label="Inkstave" className="shrink-0 hover:opacity-80">
             <InkstaveMark className="h-5 w-5 text-foreground" />
           </Link>
-          <span className="truncate font-semibold">
-            {query.data?.name ?? t("common:state.loading")}
-          </span>
+          <span className="truncate font-semibold">{query.data?.name ?? t("common:state.loading")}</span>
         </div>
         <Link to="/projects" className="shrink-0 text-sm text-primary hover:underline">
           {t("toolbar.backToProjects")}

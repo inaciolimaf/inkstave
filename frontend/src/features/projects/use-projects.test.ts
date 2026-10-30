@@ -31,11 +31,7 @@ describe("visibleProjects", () => {
   });
 
   it("sorts by name A–Z (case-insensitive locale order)", () => {
-    expect(visibleProjects(projects, "", "name").map((x) => x.name)).toEqual([
-      "alpha",
-      "Beta",
-      "Gamma",
-    ]);
+    expect(visibleProjects(projects, "", "name").map((x) => x.name)).toEqual(["alpha", "Beta", "Gamma"]);
   });
 
   it("sorts by last modified (newest first)", () => {

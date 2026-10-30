@@ -4,8 +4,7 @@ import type { EntityType } from "./types";
 
 export function EntityIcon({ type }: { type: EntityType }) {
   if (type === "folder") return <Folder className="size-4 shrink-0 text-sky-600" aria-hidden />;
-  if (type === "doc")
-    return <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />;
+  if (type === "doc") return <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />;
   return <File className="size-4 shrink-0 text-muted-foreground" aria-hidden />;
 }
 

@@ -76,10 +76,7 @@ describe("FileTreePanel upload", () => {
 
     expect(await screen.findByText("logo.png")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Done")).toBeInTheDocument());
-    expect(uploadFile).toHaveBeenCalledWith(
-      "p",
-      expect.objectContaining({ file, parentId: "root" }),
-    );
+    expect(uploadFile).toHaveBeenCalledWith("p", expect.objectContaining({ file, parentId: "root" }));
     expect(toast.success).toHaveBeenCalledWith("Uploaded logo.png");
   });
 

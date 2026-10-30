@@ -51,27 +51,17 @@ export async function createEntity(
   return toEntity(wire);
 }
 
-export async function renameEntity(
-  projectId: string,
-  id: string,
-  name: string,
-): Promise<TreeEntity> {
-  const wire = await apiClient.patch<WireEntity>(
-    `/api/v1/projects/${projectId}/tree/entities/${id}/rename`,
-    { name },
-  );
+export async function renameEntity(projectId: string, id: string, name: string): Promise<TreeEntity> {
+  const wire = await apiClient.patch<WireEntity>(`/api/v1/projects/${projectId}/tree/entities/${id}/rename`, {
+    name,
+  });
   return toEntity(wire);
 }
 
-export async function moveEntity(
-  projectId: string,
-  id: string,
-  newParentId: string,
-): Promise<TreeEntity> {
-  const wire = await apiClient.patch<WireEntity>(
-    `/api/v1/projects/${projectId}/tree/entities/${id}/move`,
-    { new_parent_id: newParentId },
-  );
+export async function moveEntity(projectId: string, id: string, newParentId: string): Promise<TreeEntity> {
+  const wire = await apiClient.patch<WireEntity>(`/api/v1/projects/${projectId}/tree/entities/${id}/move`, {
+    new_parent_id: newParentId,
+  });
   return toEntity(wire);
 }
 

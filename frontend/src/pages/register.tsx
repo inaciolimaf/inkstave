@@ -10,14 +10,7 @@ import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { type RegisterValues, makeRegisterSchema } from "@/lib/validation";
@@ -149,10 +142,7 @@ export function RegisterPage() {
           </Form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("register.haveAccount")}{" "}
-            <Link
-              to="/login"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
+            <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
               {t("common:action.signIn")}
             </Link>
           </p>

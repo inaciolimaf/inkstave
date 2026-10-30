@@ -31,9 +31,7 @@ class FakeEventSource {
     this.closed = true;
   }
   emit(event: Record<string, unknown>) {
-    (this.listeners[event.type as string] ?? []).forEach((fn) =>
-      fn({ data: JSON.stringify(event) }),
-    );
+    (this.listeners[event.type as string] ?? []).forEach((fn) => fn({ data: JSON.stringify(event) }));
   }
 }
 
@@ -66,9 +64,7 @@ describe("AgentPanel", () => {
   it("sends a message and streams the response (AC3, AC4, AC6)", async () => {
     const onReview = vi.fn();
     renderPanel(onReview);
-    await userEvent.click(
-      await screen.findByText("Find where the methodology section is defined."),
-    );
+    await userEvent.click(await screen.findByText("Find where the methodology section is defined."));
     await userEvent.click(screen.getByLabelText("Send message"));
 
     // The user message appears and a run is started.
@@ -118,9 +114,7 @@ describe("AgentPanel", () => {
     ]);
     api.getSession.mockResolvedValue({
       session: { id: "old", projectId: "p1", title: "Older chat", runState: "idle" },
-      messages: [
-        { id: "m", seq: 0, role: "user", content: "prior", tool_calls: null, tool_call_id: null },
-      ],
+      messages: [{ id: "m", seq: 0, role: "user", content: "prior", tool_calls: null, tool_call_id: null }],
       diffs: [],
     });
     renderPanel();

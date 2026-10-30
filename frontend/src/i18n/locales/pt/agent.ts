@@ -6,8 +6,7 @@ const dict: Dict = {
   newChat: "Nova conversa",
   sessions: "Sessões",
   untitledChat: "Conversa sem título",
-  description:
-    "Converse com o assistente de escrita por IA. Ele propõe mudanças para você revisar.",
+  description: "Converse com o assistente de escrita por IA. Ele propõe mudanças para você revisar.",
   resizeHandle: "Redimensionar painel do agente",
   loadingConversation: "Carregando conversa",
   empty: {

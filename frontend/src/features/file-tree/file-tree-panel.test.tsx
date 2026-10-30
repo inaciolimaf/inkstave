@@ -50,9 +50,7 @@ describe("FileTreePanel", () => {
     await screen.findByText("main.tex");
     const tree = screen.getByRole("tree");
     // Exactly one treeitem is tabbable.
-    const tabbable = screen
-      .getAllByRole("treeitem")
-      .filter((el) => el.getAttribute("tabindex") === "0");
+    const tabbable = screen.getAllByRole("treeitem").filter((el) => el.getAttribute("tabindex") === "0");
     expect(tabbable).toHaveLength(1);
 
     row("Chapters").focus();

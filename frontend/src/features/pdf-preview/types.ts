@@ -46,10 +46,7 @@ export const TERMINAL_STATUSES: ReadonlySet<CompileJobStatus> = new Set([
   "error",
 ]);
 
-export const ACTIVE_STATES: ReadonlySet<CompileState> = new Set<CompileState>([
-  "queued",
-  "running",
-]);
+export const ACTIVE_STATES: ReadonlySet<CompileState> = new Set<CompileState>(["queued", "running"]);
 
 export function isTerminal(status: CompileJobStatus): boolean {
   return TERMINAL_STATUSES.has(status);

@@ -10,14 +10,7 @@ import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { type LoginValues, makeLoginSchema } from "@/lib/validation";
@@ -126,10 +119,7 @@ export function LoginPage() {
             >
               {t("login.forgotPassword")}
             </Link>
-            <Link
-              to="/magic-link"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
+            <Link to="/magic-link" className="font-medium text-primary underline-offset-4 hover:underline">
               {t("login.magicLink")}
             </Link>
             <Link
@@ -141,10 +131,7 @@ export function LoginPage() {
           </div>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("login.noAccount")}{" "}
-            <Link
-              to="/register"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
+            <Link to="/register" className="font-medium text-primary underline-offset-4 hover:underline">
               {t("login.createOne")}
             </Link>
           </p>

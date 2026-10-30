@@ -20,9 +20,7 @@ describe("DiffReviewDialog (apply toasts)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
     const confirm = await screen.findByRole("alertdialog");
     await userEvent.click(within(confirm).getByRole("button", { name: "Apply" }));
-    await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith("Changes applied to your document."),
-    );
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Changes applied to your document."));
     expect(toast.error).not.toHaveBeenCalled();
   });
 
@@ -42,9 +40,7 @@ describe("DiffReviewDialog (apply toasts)", () => {
 
     expect(await screen.findByText("Some changes could not be applied")).toBeInTheDocument();
     expect(screen.getByText(/write blocked/)).toBeInTheDocument();
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Some changes couldn’t be applied."),
-    );
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Some changes couldn’t be applied."));
     expect(toast.success).not.toHaveBeenCalled();
   });
 });

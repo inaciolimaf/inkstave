@@ -27,9 +27,7 @@ export function problemsToDiagnostics(doc: Text, problems: Problem[]): Diagnosti
     if (problem.line == null) continue;
     const startLine = Math.max(1, Math.min(problem.line, doc.lines));
     const endLine =
-      problem.end_line != null
-        ? Math.max(startLine, Math.min(problem.end_line, doc.lines))
-        : startLine;
+      problem.end_line != null ? Math.max(startLine, Math.min(problem.end_line, doc.lines)) : startLine;
     out.push({
       from: doc.line(startLine).from,
       to: doc.line(endLine).to,

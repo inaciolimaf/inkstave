@@ -55,8 +55,7 @@ const dict: Dict = {
       "Exclui permanentemente sua conta e os projetos de sua propriedade. Isso não pode ser desfeito.",
     trigger: "Excluir minha conta",
     dialogTitle: "Excluir sua conta?",
-    dialogDescription:
-      "Digite sua senha e escreva DELETE para confirmar. Seus projetos serão removidos.",
+    dialogDescription: "Digite sua senha e escreva DELETE para confirmar. Seus projetos serão removidos.",
     password: "Senha",
     typeDelete: "Escreva DELETE",
     submit: "Excluir conta",

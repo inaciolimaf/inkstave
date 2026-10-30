@@ -115,11 +115,7 @@ async function parseBody<T>(res: Response): Promise<T> {
  * (ok-checked) {@link Response}. JSON callers go through {@link request}; binary
  * (`getBytes`) and text (`getText`) callers consume the body themselves.
  */
-async function requestRaw(
-  path: string,
-  options: RequestOptions,
-  isRetry = false,
-): Promise<Response> {
+async function requestRaw(path: string, options: RequestOptions, isRetry = false): Promise<Response> {
   const auth = options.auth ?? true;
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
@@ -151,8 +147,7 @@ async function request<T>(path: string, options: RequestOptions, isRetry = false
 type BodylessOptions = Omit<RequestOptions, "method" | "body">;
 
 export const apiClient = {
-  get: <T>(path: string, options: BodylessOptions = {}) =>
-    request<T>(path, { ...options, method: "GET" }),
+  get: <T>(path: string, options: BodylessOptions = {}) => request<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options: BodylessOptions = {}) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options: BodylessOptions = {}) =>

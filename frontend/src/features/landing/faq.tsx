@@ -17,19 +17,14 @@ export function Faq() {
   const items = ITEM_KEYS.map((k) => ({ q: t(`faq.q${k}`), a: t(`faq.a${k}`) }));
 
   return (
-    <section
-      id="faq"
-      className="relative scroll-mt-24 border-t border-rule bg-paper-deep/40 py-24 sm:py-32"
-    >
+    <section id="faq" className="relative scroll-mt-24 border-t border-rule bg-paper-deep/40 py-24 sm:py-32">
       <div className="mx-auto grid max-w-6xl gap-12 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
         <div ref={head} className="reveal lg:sticky lg:top-28 lg:self-start">
           <SectionEyebrow>{t("faq.eyebrow")}</SectionEyebrow>
           <h2 className="mt-4 font-display text-3xl font-normal leading-tight tracking-tight text-ink sm:text-[2.6rem]">
             {t("faq.title")}
           </h2>
-          <p className="mt-4 max-w-sm text-base leading-relaxed text-ink-soft">
-            {t("faq.subhead")}
-          </p>
+          <p className="mt-4 max-w-sm text-base leading-relaxed text-ink-soft">{t("faq.subhead")}</p>
         </div>
 
         <ul className="divide-y divide-rule border-y border-rule">

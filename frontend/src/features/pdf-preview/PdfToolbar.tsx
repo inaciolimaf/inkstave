@@ -1,12 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Maximize,
-  MoveHorizontal,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Maximize, MoveHorizontal, ZoomIn, ZoomOut } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,13 +8,7 @@ import { Input } from "@/components/ui/input";
 import type { PdfViewport } from "./hooks/usePdfViewport";
 
 /** Zoom, fit, and page-navigation controls (spec 24, §5.3.5). */
-export function PdfToolbar({
-  viewport,
-  onDownload,
-}: {
-  viewport: PdfViewport;
-  onDownload?: () => void;
-}) {
+export function PdfToolbar({ viewport, onDownload }: { viewport: PdfViewport; onDownload?: () => void }) {
   const { t } = useTranslation("preview");
   const { page, numPages, zoomPercent, fitMode } = viewport;
   const [draft, setDraft] = useState(String(page));
@@ -48,10 +34,7 @@ export function PdfToolbar({
       >
         <ZoomOut aria-hidden="true" />
       </Button>
-      <span
-        className="min-w-12 text-center text-xs tabular-nums"
-        aria-label={t("toolbar.zoomLevel")}
-      >
+      <span className="min-w-12 text-center text-xs tabular-nums" aria-label={t("toolbar.zoomLevel")}>
         {zoomPercent}%
       </span>
       <Button

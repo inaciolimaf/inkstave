@@ -114,9 +114,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
     if (!editorView) return;
     const path = openDoc?.path;
     const forFile =
-      problemsState.problems && path
-        ? problemsState.problems.problems.filter((p) => p.file === path)
-        : [];
+      problemsState.problems && path ? problemsState.problems.problems.filter((p) => p.file === path) : [];
     applyDiagnostics(editorView, forFile);
   }, [editorView, openDoc, problemsState.problems]);
 

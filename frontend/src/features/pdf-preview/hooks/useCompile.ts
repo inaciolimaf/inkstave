@@ -62,9 +62,7 @@ function reduce(state: State, action: Action): State {
         error:
           s.status === "error" || s.status === "failure" || s.status === "timeout"
             ? (failureDetail(s) ??
-              (s.status === "error"
-                ? i18n.t("preview:announce.error")
-                : i18n.t("preview:announce.failed")))
+              (s.status === "error" ? i18n.t("preview:announce.error") : i18n.t("preview:announce.failed")))
             : null,
       };
     }

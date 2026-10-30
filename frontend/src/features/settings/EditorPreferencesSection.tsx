@@ -4,13 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DEFAULT_EDITOR_PREFERENCES,
   type EditorKeymap,
@@ -59,10 +53,7 @@ export function EditorPreferencesSection() {
         </div>
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="pref-font">{t("editor.fontSize")}</Label>
-          <Select
-            value={String(prefs.font_size)}
-            onValueChange={(v) => set({ font_size: Number(v) })}
-          >
+          <Select value={String(prefs.font_size)} onValueChange={(v) => set({ font_size: Number(v) })}>
             <SelectTrigger id="pref-font" aria-label={t("editor.fontSize")} className="w-40">
               <SelectValue />
             </SelectTrigger>

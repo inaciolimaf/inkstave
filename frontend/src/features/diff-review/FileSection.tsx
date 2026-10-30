@@ -54,9 +54,7 @@ export function FileSection({
       {baseChanged && (
         <Alert variant="destructive" className="py-2">
           <AlertTitle className="text-sm">{t("file.baseChangedTitle")}</AlertTitle>
-          <AlertDescription className="text-xs">
-            {t("file.baseChangedDescription")}
-          </AlertDescription>
+          <AlertDescription className="text-xs">{t("file.baseChangedDescription")}</AlertDescription>
         </Alert>
       )}
       {showPreview ? (

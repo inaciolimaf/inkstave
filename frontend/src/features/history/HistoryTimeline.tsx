@@ -62,9 +62,7 @@ function VersionRow({
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground">
-                {relativeTime(version.timestamp)}
-              </span>
+              <span className="text-xs text-muted-foreground">{relativeTime(version.timestamp)}</span>
             </TooltipTrigger>
             <TooltipContent>{absoluteTime(version.timestamp)}</TooltipContent>
           </Tooltip>

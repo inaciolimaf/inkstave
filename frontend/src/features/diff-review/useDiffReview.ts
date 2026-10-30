@@ -111,9 +111,7 @@ export function useDiffReview(
     let blocked = 0;
     let fileCount = 0;
     for (const file of proposal?.files ?? []) {
-      const accepted = new Set(
-        file.hunks.filter((h) => decisions[file.path]?.[h.id]).map((h) => h.id),
-      );
+      const accepted = new Set(file.hunks.filter((h) => decisions[file.path]?.[h.id]).map((h) => h.id));
       const r = rebaseHunks(liveContent[file.path] ?? "", file.hunks, accepted);
       if (r.appliedHunkIds.length > 0) fileCount += 1;
       applicable += r.appliedHunkIds.length;
@@ -130,9 +128,7 @@ export function useDiffReview(
     setApplyPhase("applying");
     const out: ApplyFileResult[] = [];
     for (const file of proposal.files) {
-      const accepted = new Set(
-        file.hunks.filter((h) => decisions[file.path]?.[h.id]).map((h) => h.id),
-      );
+      const accepted = new Set(file.hunks.filter((h) => decisions[file.path]?.[h.id]).map((h) => h.id));
       try {
         const live = (await bridge.readContent(file.path)) ?? "";
         const r = rebaseHunks(live, file.hunks, accepted);
