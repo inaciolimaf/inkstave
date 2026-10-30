@@ -103,3 +103,29 @@ def test_crdt_burst_converges_within_bound() -> None:
     assert str(a_text) == "x" * n
     assert str(b_text) == str(a_text)  # collaborators converge
     assert elapsed < 3.0  # smoke bound — guards against an O(n^2) regression
+
+
+# --- CI timing builder (the budget job's input) ------------------------------ #
+
+
+def test_build_timing_sums_the_stages_and_ranks_junit_durations(tmp_path: Any, monkeypatch: Any) -> None:
+    path = Path(__file__).resolve().parents[2] / "scripts" / "build_test_timing.py"
+    spec = importlib.util.spec_from_file_location("build_test_timing", path)
+    assert spec is not None
+    assert spec.loader is not None
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    (tmp_path / "unit-junit.xml").write_text(
+        '<testsuite><testcase classname="a" name="fast" time="0.5"/>'
+        '<testcase classname="a" name="heavy" time="12"/></testsuite>'
+    )
+    (tmp_path / "broken.xml").write_text("<not-closed")
+    monkeypatch.setenv("UNIT_S", "20")
+    monkeypatch.setenv("INTEGRATION_S", "30")
+    monkeypatch.setenv("E2E_S", "75")
+
+    timing = builder.build_timing(tmp_path)
+
+    assert timing["total_s"] == 125
+    assert [case["name"] for case in timing["slowest"]] == ["a::heavy", "a::fast"]
+    assert not gate.evaluate(timing).ok  # over the budget, and `heavy` is over the per-test limit
