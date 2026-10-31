@@ -18,10 +18,12 @@ const SIGNED_OUT_ONLY = new Set(["/login", "/register", "/forgot-password"]);
 // Route path → axe rule ids, each entry with a comment giving its reason.
 const KNOWN_VIOLATIONS: Record<string, string[]> = {};
 
-async function audit(page: Page, url: string, path: string, theme: (typeof THEMES)[number]) {
+async function open(page: Page, url: string, theme: (typeof THEMES)[number]) {
   await page.emulateMedia({ colorScheme: theme });
   await page.goto(url);
+}
 
+async function audit(page: Page, path: string, theme: (typeof THEMES)[number]) {
   await expect(page.locator("main")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
@@ -40,7 +42,27 @@ for (const { path, url } of ROUTES) {
   for (const theme of THEMES) {
     const test = SIGNED_OUT_ONLY.has(path) ? signedOutTest : signedInTest;
     test(`route ${path} passes axe in the ${theme} theme @smoke`, async ({ page }) => {
-      await audit(page, url, path, theme);
+      await open(page, url, theme);
+      await audit(page, path, theme);
     });
   }
+}
+
+// A fake id only shows axe the error state, so the data-heavy screens also run with a real project.
+for (const theme of THEMES) {
+  signedInTest(
+    `a project with content passes axe in the ${theme} theme @smoke`,
+    async ({ page, seedProject }) => {
+      const { projectId, docName } = await seedProject(`Axe ${theme}`);
+
+      await open(page, "/projects", theme);
+      await expect(page.getByRole("link", { name: `Axe ${theme}` }).first()).toBeVisible();
+      await audit(page, "/projects", theme);
+
+      await open(page, `/projects/${projectId}`, theme);
+      await page.getByRole("treeitem", { name: docName }).click();
+      await expect(page.locator(".cm-content")).toContainText("Introduction");
+      await audit(page, "/projects/:projectId", theme);
+    },
+  );
 }

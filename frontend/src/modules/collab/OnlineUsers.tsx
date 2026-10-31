@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { inkOn } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
 
 import { initials } from "./colors";
@@ -31,7 +32,9 @@ function PresenceAvatar({ user, withTooltip = true }: { user: PresenceUser; with
       style={{ borderColor: user.color }}
       aria-label={describe(user, t)}
     >
-      <AvatarFallback style={{ color: user.color }}>{initials(user.name)}</AvatarFallback>
+      <AvatarFallback style={{ backgroundColor: user.color, color: inkOn(user.color) }}>
+        {initials(user.name)}
+      </AvatarFallback>
     </Avatar>
   );
   if (!withTooltip) return avatar;
