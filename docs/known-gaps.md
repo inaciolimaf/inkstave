@@ -94,6 +94,10 @@ modules' own API files.
 
 ### Tests and supply chain
 
+**`a viewer cannot edit or compile` fails in the `@full` tier.** `frontend/e2e/flows/full.spec.ts` expects no Compile
+button for a viewer, while `compile_for_viewers` defaults to `true` and offers one (`docs/system/sharing.md`). *Why:*
+choosing which side is right is a product decision; the tier is outside CI.
+
 **`_diff_summary` has no dedicated test.** The fix clears `hunks` when they are not requested
 (`backend/src/inkstave/modules/agent/routes.py`). No test asserts it or uses `?include=hunks`. *Why:* the fix
 landed with the API-contract work without one.
