@@ -7,35 +7,6 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-// Files in src/ with a function over the 100-line cap, waiting to be split into named hooks and
-// smaller components. The rule stays on for everything else; a new file is born compliant.
-// To check how a file will end up: `ESLINT_STRICT=1 pnpm exec eslint <file>`.
-const PENDING_SIZE =
-  process.env.ESLINT_STRICT === "1"
-    ? []
-    : [
-        "src/modules/agent/AgentPanel.tsx",
-        "src/modules/agent/reducer.ts",
-        "src/modules/agent/useAgentChat.ts",
-        "src/modules/auth/ResetPasswordPage.tsx",
-        "src/modules/diff-review/DiffReviewDialog.tsx",
-        "src/modules/diff-review/useDiffReview.ts",
-        "src/modules/editor/autosave/use-document-autosave.ts",
-        "src/modules/editor/codemirror-editor.tsx",
-        "src/modules/editor/editor-pane.tsx",
-        "src/modules/editor/editor-workspace.tsx",
-        "src/modules/file-tree/file-tree-node.tsx",
-        "src/modules/file-tree/file-tree-panel.tsx",
-        "src/modules/landing/agent-demo.tsx",
-        "src/modules/pdf-preview/PdfToolbar.tsx",
-        "src/modules/pdf-preview/PreviewPane.tsx",
-        "src/modules/pdf-preview/hooks/useCompile.ts",
-        "src/modules/projects/import-project-dialog.tsx",
-        "src/modules/sharing/MembersList.tsx",
-        "src/modules/auth/register.tsx",
-        "src/modules/auth/setup/setup-page.tsx",
-      ];
-
 // What already has a helper or a token is not rewritten by hand. Each group has one allowed file:
 // the one that implements the thing.
 const HEX_COLOR = "/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-zA-Z_-])/";
@@ -153,7 +124,6 @@ export default tseslint.config(
     ignores: ["src/**/*.test.{ts,tsx}"],
     rules: { "no-restricted-imports": ["error", NO_MODULES] },
   },
-  ...(PENDING_SIZE.length ? [{ files: PENDING_SIZE, rules: { "max-lines-per-function": "off" } }] : []),
   // The landing is a marketing page with its own display sizes (spec 106).
   {
     files: ["src/modules/landing/**/*.{ts,tsx}"],

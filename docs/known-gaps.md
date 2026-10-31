@@ -16,18 +16,13 @@ Those were not fixed, because the documentation pass changed no code.
 modules, and no domain-event mechanism exists yet. `backend/tests/unit/test_architecture.py` only lets the
 count go down.
 
-**20 entries in `PENDING_SIZE`.** `frontend/eslint.config.js` turns `max-lines-per-function` off for 20
-files with a function over 100 lines. *Why:* each needs splitting into named hooks and smaller components,
-which is behavior-sensitive work done file by file. `ESLINT_STRICT=1` shows the real state. The backend has
-no such list.
-
 ### Frontend standard
 
-**Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
+**`flushBeforeCompile` does nothing.** `EditorWorkspace` never assigns `flushRef`, so a compile or agent message
+does not wait for pending edits to reach the server. *Why:* found while splitting the editor; a fix changes
+the compile path and needs its own test.
 
-**The editor has two bars, not the one spec 106 asks for.** The route's bar and the `EditorWorkspace` toolbar
-are separate rows, and the agent sheet shows two solid buttons while a proposal is open. *Why:* folding them
-means lifting workspace state, a behavior-sensitive change.
+**Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
 
 **The landing animates paint.** `.ink-underline` transitions `background-size` and `transition-all`
 animates `box-shadow`. *Why:* not yet reviewed; its loops are an accepted exception (spec 106).
@@ -92,9 +87,6 @@ the Portuguese interface. *Why:* the language lives only in the browser. Deliver
 preference, and invites to non-users have no recipient record at all.
 
 ### Frontend
-
-**`QueryView` is partial.** 3 of 17 query call sites use it; 7 screens hand-roll loading and error states
-(list in `docs/system/frontend.md`). *Why:* adopted incrementally.
 
 **Type narrowing is still manual.** 10 casts cover API data, and `apiClient<T>` is an unchecked cast at 72
 call sites, with no type predicates. *Why:* OpenAPI types are generated, but not yet threaded through the

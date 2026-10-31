@@ -289,6 +289,3 @@ cannot find one. CI enforces a 120 s budget across unit, integration and e2e (`m
 - **`app.state.arq_pool` is never closed** by the lifespan.
 - **`docs/adr/0057-cicd-bootstrap.md` describes a CD workflow that does not exist.** It cites a
   `cd.yml`; `.github/workflows/ci.yml` is the only workflow. It also cites pre-move paths.
-- **Size debt is frontend only.** `PENDING_SIZE` in `frontend/eslint.config.js` holds 21 files over
-  the 100-line function cap. `scripts/lint_function_length.py` (30 lines per function, 300 per file)
-  has no exceptions.

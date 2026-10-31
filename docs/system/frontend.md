@@ -152,8 +152,9 @@ To change the contract, run `make web-types`, which regenerates `docs/api/openap
 
 ### Editor workspace
 
-`frontend/src/routes/editor.tsx` renders the header and `EditorWorkspace`. The workspace owns a toolbar (agent,
-history, download, share, notifications) and three resizable panels: file tree, `EditorPane` and `PreviewPane`.
+`frontend/src/routes/editor.tsx` reads the project id and renders `EditorWorkspace`, which renders the `Desk`.
+Its one bar, `EditorBar` in `frontend/src/modules/editor/editor-bar.tsx`, holds the mark, the `h1`, the link back
+to the projects and the tools (agent, history, download, share, notifications). Below it sit three resizable panels: file tree, `EditorPane` and `PreviewPane`.
 Panels stack vertically below 768 px, through `useMediaQuery`.
 
 - Opening a file: `FileTreePanel` calls `onSelectEntity`. A `doc` opens in the editor; a binary `file` shows
@@ -162,15 +163,15 @@ Panels stack vertically below 768 px, through `useMediaQuery`.
   `InkstaveWsProvider` per document, and tears them down on unmount. `CollabEditor` binds them to CodeMirror
   with `yCollab`. Editing stays off until the first sync, and stays off for a viewer (`isReadOnly`).
 - Provider: it reconnects with backoff from 500 ms to 15 s. Close codes 4401, 4403 and 4404 are terminal.
-- Before a compile or an agent message, `flushBeforeCompile` awaits the session's `flush`, so the server sees
-  pending edits.
+- Before a compile or an agent message, `flushBeforeCompile` should await the session's `flush`, but nothing
+  assigns its `flushRef`, so it does nothing today (`docs/known-gaps.md`).
 - SyncTeX and diagnostics: `useSyncTex` resolves both directions, and `jumpToSource` opens another document when
   needed. `useProblems` feeds the problems panel, and `applyDiagnostics` draws those of the open file.
 
 ### Compile preview
 
-`useCompile` in `frontend/src/modules/pdf-preview/hooks/useCompile.ts` flushes, requests the compile, and follows
-the `status` events of an `EventSource`. When SSE is missing or fails before a terminal status, it polls every
+`useCompile` in `frontend/src/modules/pdf-preview/hooks/useCompile.ts` flushes and requests the compile.
+`useCompileStream` in `frontend/src/modules/pdf-preview/hooks/useCompileStream.ts` follows the `status` events of an `EventSource`. When SSE is missing or fails before a terminal status, it polls every
 `compilePollIntervalMs`. A failed flush does not block the compile.
 
 ### Agent and diff review
@@ -304,11 +305,9 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
 
 ## Points of attention
 
-- **`QueryView` adoption is partial.** The code has 17 `useQuery` or `useInfiniteQuery` call sites. Three
-  components use `QueryView`: `HistoryTimeline`, `HistoryDiffView` and `NotificationsBell`. Seven screens still
-  branch by hand: `project-list-view.tsx`, `file-tree-body.tsx`, `editor-pane.tsx`, `AcceptInvitePage.tsx`,
-  `setup-page.tsx`, `MembersList.tsx` and `DiffReviewDialog.tsx`. The last two at least use the shared
-  `ErrorState`. `editor-pane.tsx` defines its own `ErrorState`. New screens should use `QueryView`.
+- **`QueryView` shows the error over stale data.** A failed refetch replaces cached data with the error, and a
+  settled query with no data, such as a paused one, counts as an error. `file-tree-body.tsx` keeps the tree on a
+  background failure by rendering its alert above it. The invite 410 and the setup skeleton stay early returns.
 - **API types are narrowed by hand.** The code has no user-defined type predicate. Responses reach modules
   through `apiClient.get<T>`, an unchecked cast with no runtime validation.
   - Ten casts cover API data: 4 role casts in `frontend/src/modules/sharing/api.ts`, 2 in
@@ -323,8 +322,7 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
   - Notification payloads are `Record<string, unknown>`, read through `String(...)` and one `typeof` check.
 - **Size and lint exceptions.** `frontend/eslint.config.js` caps functions at 100 lines and files at 300, without
   counting blanks and comments.
-  - `PENDING_SIZE` turns the function cap off for 21 files. The list is a backlog, and `ESLINT_STRICT=1` empties
-    it to show the real state. The file cap has no exception.
+  - Neither cap has an exception.
   - Tests are outside the caps and reuse rules. `frontend/src/api/types.ts` is not linted.
   - `react-refresh/only-export-components` is off for `frontend/src/components/ui`, test support and the router.
   - The boundary rule covers `frontend/src` only, so `frontend/tests/helpers/screen.tsx` imports
@@ -351,7 +349,7 @@ The `frontend-standard` skill applies, with the identity in `specs/106-visual-id
 - **Skeleton.** `Manuscript`, `TitlePage` and `Desk` (`frontend/src/components/manuscript.tsx`) are the root
   of a screen, each marked `data-manuscript`; `ManuscriptHeader` and `Rule` build it. The palette is in
   `frontend/src/index.css`. `AuthShell` (title pages) and `ErrataSlip` (error screens) sit on `TitlePage`;
-  `SettingsSection` is a ruled section of settings. `Card` is gone. On phones the editor toolbar shows icons
+  `SettingsSection` is a ruled section of settings. `Card` is gone. Below 1024 px the editor bar shows icons
   only, and `sheetTheme` paints CodeMirror with the page tokens in both themes.
 - **Shell.** `AppShell` (`frontend/src/components/app-shell.tsx`) is the root route's element. It renders a
   skip link, moves focus to the screen's `h1` (or `main`) when the pathname changes, and sets

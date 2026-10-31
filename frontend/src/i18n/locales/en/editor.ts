@@ -4,7 +4,6 @@ const dict = {
     loadingDocument: "Loading document",
     documentGone: "This document no longer exists.",
     loadFailed: "Couldn’t load this document.",
-    retry: "Retry",
     binaryFile: "This is a binary file and can’t be edited here.",
     noFileOpen: "No file open",
     syncToPdf: "Sync to PDF",
