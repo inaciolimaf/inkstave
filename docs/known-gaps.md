@@ -16,7 +16,7 @@ Those were not fixed, because the documentation pass changed no code.
 modules, and no domain-event mechanism exists yet. `backend/tests/unit/test_architecture.py` only lets the
 count go down.
 
-**21 entries in `PENDING_SIZE`.** `frontend/eslint.config.js` turns `max-lines-per-function` off for 21
+**20 entries in `PENDING_SIZE`.** `frontend/eslint.config.js` turns `max-lines-per-function` off for 20
 files with a function over 100 lines. *Why:* each needs splitting into named hooks and smaller components,
 which is behavior-sensitive work done file by file. `ESLINT_STRICT=1` shows the real state. The backend has
 no such list.

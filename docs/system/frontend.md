@@ -18,7 +18,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | `frontend/src/lib/token-store.ts` | `tokenStore` |
 | `frontend/src/api/types.ts` | Generated from `docs/api/openapi.json` by `openapi-typescript`; never edited |
 | `frontend/src/api/models.ts` | `Schemas`, the short name for `components["schemas"]` |
-| `frontend/src/lib` | Shared helpers: formatting, shortcuts, downloads, palettes, validation, media query |
+| `frontend/src/lib` | Shared helpers: formatting, shortcuts, downloads, palettes, validation, media query, `route-chunks.ts` (chunks loaded ahead of their route) |
 | `frontend/src/components` | Shared UI: `app-shell.tsx`, `states.tsx`, `route-error.tsx`, `error-boundary.tsx`, `inkstave-logo.tsx` |
 | `frontend/src/i18n/config.ts` | The global i18next instance and `NAMESPACES` |
 | `frontend/src/i18n/locales` | `en/`, `pt/` and `landing.ts` |
@@ -374,6 +374,10 @@ The `frontend-standard` skill applies, with the identity in `specs/106-visual-id
 | Initial JS at most 250,000 bytes gzip | `make web-budget` (`scripts/check-bundle.mjs`), in CI |
 | Only cheap properties animate | `frontend/tests/keyframes.test.ts` |
 | Text 4.5:1, focus and control borders 3:1, both themes | `frontend/tests/contrast.test.ts` |
+| Inputs, textareas, selects and switches draw their edge with `control-edge` | `frontend/tests/css-rules.test.ts` |
+| Text over a presence colour reaches 4.5:1 through `inkOn` | `frontend/src/lib/palettes.test.ts` |
+| Pointing at or focusing a project warms the editor chunk and the project query | `frontend/src/modules/projects/project-index.prefetch.test.tsx` |
+| `renderScreen` returns only once the lazy route has settled | `frontend/tests/helpers/screen.tsx` |
 | No `100vh`, `h-screen` or `min-h-screen` | `frontend/tests/css-rules.test.ts` |
 | No raw Tailwind hue, no size outside the type tokens | `palette` and `type` groups in `frontend/eslint.config.js` |
-| Axe over every route, both themes; one `main`, one `h1` | `frontend/e2e/a11y.spec.ts` |
+| Axe over every route, both themes, and over the project list and editor with a real project; one `main`, one `h1` | `frontend/e2e/a11y.spec.ts` |

@@ -239,6 +239,7 @@ Each one is deliberate. Remove the line when the deviation ends.
 | Alpine base images | `python:3.12-slim` | The tech stack above mandates Alpine |
 | `C901` max 6 and the `PLR09xx` family | `PLR0913` only | Stricter on purpose: ADR 0106 |
 | stdlib `logging` with `python-json-logger` as a dependency | structlog | Logging runs on stdlib `logging` with the project's own formatter, correlation and redaction in `backend/src/inkstave/core/observability/`; a swap changes no behavior. `python-json-logger` serves only the older `backend/src/inkstave/core/logging.py` path |
+| No `<Card>` component | `<Card>` in the shared set | Removed for spec 106: a screen is one `Manuscript` sheet, and `frontend-standard`, which wins on the frontend, leaves the components to the identity |
 | API errors as a JSON `error` envelope | problem+json | Clients and tests depend on the envelope; it is a contract change |
 | `B008` kept on, FastAPI markers listed in `extend-immutable-calls` | `Annotated` dependencies | About 276 `x = Depends(...)` sites; churning every route was not worth it in the alignment pass |
 
