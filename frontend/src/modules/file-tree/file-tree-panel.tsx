@@ -1,80 +1,80 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-
-import i18n from "@/i18n/config";
+import { useCallback, useMemo, useState } from "react";
 
 import { FileTreeBody } from "./file-tree-body";
-import { type FileTreeContextValue, type MenuAction } from "./file-tree-context";
+import type { FileTreeContextValue } from "./file-tree-context";
 import { CreateEntityDialog, DeleteEntityDialog } from "./file-tree-dialogs";
 import { FileTreeToolbar } from "./file-tree-toolbar";
 import { UploadConflictDialog, UploadList } from "./file-tree-uploads-ui";
-import { findNode, flattenVisible, isSelfOrDescendant } from "./tree-utils";
-import type { TreeEntity, TreeNode } from "./types";
+import { flattenVisible } from "./tree-utils";
+import type { TreeEntity } from "./types";
 import { resolveParentFolder, useExpandedIds } from "./use-expanded-ids";
-import {
-  useCreateEntity,
-  useDeleteEntity,
-  useMoveEntity,
-  useProjectTree,
-  useRenameEntity,
-} from "./use-file-tree";
+import { useProjectTree } from "./use-file-tree";
+import { useRovingRows } from "./use-roving-rows";
+import { useTreeActions } from "./use-tree-actions";
+import { useTreeDrag } from "./use-tree-drag";
 import { useTreeKeyboard } from "./use-tree-keyboard";
+import { useTreeSelection } from "./use-tree-selection";
 import { useUploads } from "./use-uploads";
 
-type DialogState =
-  | { kind: "create"; createType: "folder" | "doc"; parentId: string }
-  | { kind: "delete"; node: TreeNode }
-  | null;
+interface FileTreePanelProps {
+  projectId: string;
+  selectedId: string | null;
+  onSelectEntity: (entity: TreeEntity) => void;
+  /** Viewers / read-only collaborators see no file-tree mutation actions (spec 34 §5.3). */
+  readOnly?: boolean;
+}
+
+function PanelDialogs({
+  actions,
+  uploads,
+}: {
+  actions: ReturnType<typeof useTreeActions>;
+  uploads: ReturnType<typeof useUploads>;
+}) {
+  const { dialog } = actions;
+  return (
+    <>
+      <CreateEntityDialog
+        open={dialog?.kind === "create"}
+        type={dialog?.kind === "create" ? dialog.createType : "doc"}
+        onOpenChange={(v) => !v && actions.closeDialog()}
+        onCreate={actions.confirmCreate}
+      />
+      <DeleteEntityDialog
+        open={dialog?.kind === "delete"}
+        node={dialog?.kind === "delete" ? dialog.node : null}
+        onOpenChange={(v) => !v && actions.closeDialog()}
+        onConfirm={actions.confirmDelete}
+      />
+      <UploadConflictDialog
+        conflict={uploads.conflict}
+        onCancel={() => uploads.setConflict(null)}
+        onReplace={() => void uploads.onReplaceConflict()}
+      />
+    </>
+  );
+}
 
 export function FileTreePanel({
   projectId,
   selectedId: selectedIdProp,
   onSelectEntity,
   readOnly = false,
-}: {
-  projectId: string;
-  selectedId: string | null;
-  onSelectEntity: (entity: TreeEntity) => void;
-  /** Viewers / read-only collaborators see no file-tree mutation actions (spec 34 §5.3). */
-  readOnly?: boolean;
-}) {
+}: FileTreePanelProps) {
   const treeQuery = useProjectTree(projectId);
   const root = treeQuery.data ?? null;
 
-  const createMut = useCreateEntity(projectId);
-  const renameMut = useRenameEntity(projectId);
-  const moveMut = useMoveEntity(projectId);
-  const deleteMut = useDeleteEntity(projectId);
-
   const { expanded, toggle, expand, collapse } = useExpandedIds(projectId);
-  const [selectedId, setSelectedId] = useState<string | null>(selectedIdProp);
-  useEffect(() => setSelectedId(selectedIdProp), [selectedIdProp]);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const { selectedId, setSelectedId, select, activate } = useTreeSelection(
+    selectedIdProp,
+    onSelectEntity,
+    toggle,
+  );
   const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<DialogState>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-
   const uploads = useUploads(projectId);
 
-  const rowRefs = useRef(new Map<string, HTMLElement>());
-
   const flat = useMemo(() => (root ? flattenVisible(root, expanded) : []), [root, expanded]);
-
-  // Seed roving focus on the first visible node once the tree loads.
-  useEffect(() => {
-    if (!focusedId && flat.length > 0) setFocusedId(flat[0].node.id);
-  }, [flat, focusedId]);
-
-  const focusRow = useCallback((id: string) => {
-    setFocusedId(id);
-    rowRefs.current.get(id)?.focus();
-  }, []);
-
-  const registerRow = useCallback((id: string, el: HTMLElement | null) => {
-    if (el) rowRefs.current.set(id, el);
-    else rowRefs.current.delete(id);
-  }, []);
+  const { focusedId, focusRow, registerRow } = useRovingRows(flat);
 
   const startRename = useCallback((id: string) => {
     // Defer so an open menu finishes closing (releasing focus) before the
@@ -82,100 +82,17 @@ export function FileTreePanel({
     setTimeout(() => setRenamingId(id), 0);
   }, []);
 
-  const select = useCallback(
-    (node: TreeNode) => {
-      setSelectedId(node.id);
-      if (node.type !== "folder") {
-        onSelectEntity({
-          id: node.id,
-          name: node.name,
-          type: node.type,
-          parentId: node.parentId,
-          isRoot: node.isRoot,
-          path: node.path,
-        });
-      }
-    },
-    [onSelectEntity],
-  );
-
-  const activate = useCallback(
-    (node: TreeNode) => {
-      if (node.type === "folder") toggle(node.id);
-      else select(node);
-    },
-    [toggle, select],
-  );
-
-  const openCreate = useCallback(
-    (createType: "folder" | "doc", parentId: string) => {
-      expand(parentId);
-      setDialog({ kind: "create", createType, parentId });
-    },
-    [expand],
-  );
-
-  const doMove = useCallback(
-    (id: string, newParentId: string) => {
-      if (readOnly) return; // no move/drag for viewers (spec 34 §5.3)
-      if (!root || id === newParentId) return;
-      if (isSelfOrDescendant(root, id, newParentId)) {
-        toast.error(i18n.t("files:toast.moveIntoSelf"));
-        return;
-      }
-      const dragged = findNode(root, id);
-      if (dragged && dragged.parentId === newParentId) return; // already there
-      expand(newParentId);
-      moveMut.mutate({ id, newParentId });
-    },
-    [readOnly, root, moveMut, expand],
-  );
-
-  const requestDelete = useCallback((node: TreeNode) => setDialog({ kind: "delete", node }), []);
-
-  const onMenuAction = useCallback(
-    (action: MenuAction, node: TreeNode) => {
-      if (readOnly) return; // viewers get no mutation actions (spec 34 §5.3)
-      switch (action) {
-        case "rename":
-          startRename(node.id);
-          break;
-        case "delete":
-          requestDelete(node);
-          break;
-        case "new-doc":
-          openCreate("doc", node.id);
-          break;
-        case "new-folder":
-          openCreate("folder", node.id);
-          break;
-        case "move-root":
-          if (root) doMove(node.id, root.id);
-          break;
-        case "upload":
-          uploads.triggerUpload(node.id);
-          break;
-      }
-    },
-    [readOnly, startRename, requestDelete, openCreate, doMove, root, uploads],
-  );
-
-  const onCreateConfirm = useCallback(
-    (name: string) => {
-      if (dialog?.kind !== "create") return;
-      createMut.mutate({ type: dialog.createType, name, parentId: dialog.parentId });
-      setDialog(null);
-    },
-    [dialog, createMut],
-  );
-
-  const onDeleteConfirm = useCallback(() => {
-    if (dialog?.kind !== "delete") return;
-    const { node } = dialog;
-    deleteMut.mutate(node.id);
-    if (selectedId === node.id) setSelectedId(null);
-    setDialog(null);
-  }, [dialog, deleteMut, selectedId]);
+  const actions = useTreeActions({
+    projectId,
+    root,
+    readOnly,
+    selectedId,
+    setSelectedId,
+    expand,
+    startRename,
+    triggerUpload: uploads.triggerUpload,
+  });
+  const drag = useTreeDrag(root?.id ?? null, readOnly, actions.move);
 
   const onKeyDown = useTreeKeyboard({
     flat,
@@ -189,7 +106,7 @@ export function FileTreePanel({
     collapse,
     activate,
     startRename,
-    requestDelete,
+    requestDelete: actions.requestDelete,
   });
 
   const ctx: FileTreeContextValue | null = root
@@ -198,8 +115,6 @@ export function FileTreePanel({
         focusedId,
         expandedIds: expanded,
         renamingId,
-        draggingId,
-        dropTargetId,
         rootId: root.id,
         registerRow,
         onToggle: toggle,
@@ -207,23 +122,11 @@ export function FileTreePanel({
         onActivate: activate,
         onCommitRename: (id, name) => {
           setRenamingId(null);
-          if (readOnly) return;
-          const node = findNode(root, id);
-          if (node && node.name !== name) renameMut.mutate({ id, name });
+          actions.commitRename(id, name);
         },
         onCancelRename: () => setRenamingId(null),
-        onMenuAction,
-        onDragStart: (id) => !readOnly && setDraggingId(id),
-        onDragEnterNode: (node) => setDropTargetId(node.id),
-        onDropOnNode: (node) => {
-          setDropTargetId(null);
-          if (draggingId) doMove(draggingId, node.id);
-          setDraggingId(null);
-        },
-        onDragEnd: () => {
-          setDraggingId(null);
-          setDropTargetId(null);
-        },
+        onMenuAction: actions.onMenuAction,
+        ...drag.row,
       }
     : null;
 
@@ -232,8 +135,8 @@ export function FileTreePanel({
       <FileTreeToolbar
         readOnly={readOnly}
         hasRoot={!!root}
-        onNewDoc={() => root && openCreate("doc", resolveParentFolder(root, selectedId))}
-        onNewFolder={() => root && openCreate("folder", resolveParentFolder(root, selectedId))}
+        onNewDoc={() => root && actions.openCreate("doc", resolveParentFolder(root, selectedId))}
+        onNewFolder={() => root && actions.openCreate("folder", resolveParentFolder(root, selectedId))}
         onUpload={() => root && uploads.triggerUpload(resolveParentFolder(root, selectedId))}
       />
 
@@ -247,46 +150,19 @@ export function FileTreePanel({
       />
 
       <FileTreeBody
-        isLoading={treeQuery.isLoading}
-        isError={treeQuery.isError}
-        onRetry={() => void treeQuery.refetch()}
+        query={treeQuery}
         ctx={ctx}
-        root={root}
         readOnly={readOnly}
         onKeyDown={onKeyDown}
-        onRootDragOver={(e) => {
-          e.preventDefault();
-          if (root) setDropTargetId(root.id);
-        }}
-        onRootDrop={(e) => {
-          e.preventDefault();
-          setDropTargetId(null);
-          if (root && draggingId) doMove(draggingId, root.id);
-          setDraggingId(null);
-        }}
-        onNewDoc={() => root && openCreate("doc", root.id)}
+        onRootDragOver={drag.onRootDragOver}
+        onRootDrop={drag.onRootDrop}
+        onNewDoc={() => root && actions.openCreate("doc", root.id)}
         onUpload={() => root && uploads.triggerUpload(root.id)}
       />
 
       <UploadList uploads={uploads.uploads} onDismiss={uploads.dismissUpload} />
 
-      <CreateEntityDialog
-        open={dialog?.kind === "create"}
-        type={dialog?.kind === "create" ? dialog.createType : "doc"}
-        onOpenChange={(v) => !v && setDialog(null)}
-        onCreate={onCreateConfirm}
-      />
-      <DeleteEntityDialog
-        open={dialog?.kind === "delete"}
-        node={dialog?.kind === "delete" ? dialog.node : null}
-        onOpenChange={(v) => !v && setDialog(null)}
-        onConfirm={onDeleteConfirm}
-      />
-      <UploadConflictDialog
-        conflict={uploads.conflict}
-        onCancel={() => uploads.setConflict(null)}
-        onReplace={() => void uploads.onReplaceConflict()}
-      />
+      <PanelDialogs actions={actions} uploads={uploads} />
     </div>
   );
 }
