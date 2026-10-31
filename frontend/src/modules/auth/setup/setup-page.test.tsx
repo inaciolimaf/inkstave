@@ -48,6 +48,16 @@ describe("SetupPage", () => {
     expect(screen.queryByText("Set up Inkstave")).not.toBeInTheDocument();
   });
 
+  it("keeps the page's title on a status error, and retries into the form", async () => {
+    api.getSetupStatus.mockRejectedValueOnce(new Error("offline"));
+    api.getSetupStatus.mockResolvedValue({ needsSetup: true });
+    renderSetup();
+    expect(await screen.findByRole("alert")).toHaveTextContent("check setup status");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Set up Inkstave");
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByLabelText("Display name")).toBeInTheDocument();
+  });
+
   it("posts the admin and routes to /login on success (AC7)", async () => {
     api.getSetupStatus.mockResolvedValue({ needsSetup: true });
     api.createFirstAdmin.mockResolvedValue(undefined);

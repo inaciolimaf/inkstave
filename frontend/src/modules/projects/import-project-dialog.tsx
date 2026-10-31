@@ -19,20 +19,13 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
 import { deleteProject } from "./api";
-import { useImportProject } from "./use-import-project";
+import { type ImportState, useImportProject } from "./use-import-project";
 import { PROJECTS_KEY } from "./use-projects";
 
-export function ImportProjectDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
+function useImportDialog(open: boolean, onOpenChange: (v: boolean) => void) {
   const { t } = useTranslation("projects");
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const fileInput = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -73,7 +66,61 @@ export function ImportProjectDialog({
     }
   };
 
+  return { file, setFile, name, setName, state, busy, onSubmit, onDeleteEmpty };
+}
+
+/** Upload progress, the processing note, or the failure with its way out. */
+function ImportStatus({ state, onDeleteEmpty }: { state: ImportState; onDeleteEmpty: () => Promise<void> }) {
+  const { t } = useTranslation("projects");
   const errorText = state.errorType ? t([`import.errors.${state.errorType}`, "import.errors.generic"]) : null;
+
+  return (
+    <>
+      {state.phase === "uploading" && (
+        <div className="space-y-1">
+          <Progress
+            aria-label={t("import.uploading")}
+            aria-valuenow={Math.round(state.progress * 100)}
+            value={state.progress * 100}
+          />
+          <p className="text-body text-muted-foreground">{t("import.uploading")}</p>
+        </div>
+      )}
+
+      {state.phase === "processing" && (
+        <p className="flex items-center gap-2 text-body text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          {t("import.processing")}
+        </p>
+      )}
+
+      {state.phase === "failed" && errorText && (
+        <div className="space-y-2" role="alert">
+          <p className="text-body text-error-text">{errorText}</p>
+          {state.projectId && (
+            <Button type="button" variant="outline" size="sm" onClick={() => void onDeleteEmpty()}>
+              {t("import.deleteEmpty")}
+            </Button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function ImportProjectDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { t } = useTranslation("projects");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const { file, setFile, name, setName, state, busy, onSubmit, onDeleteEmpty } = useImportDialog(
+    open,
+    onOpenChange,
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => (busy ? undefined : onOpenChange(v))}>
@@ -107,34 +154,7 @@ export function ImportProjectDialog({
             />
           </div>
 
-          {state.phase === "uploading" && (
-            <div className="space-y-1">
-              <Progress
-                aria-label={t("import.uploading")}
-                aria-valuenow={Math.round(state.progress * 100)}
-                value={state.progress * 100}
-              />
-              <p className="text-body text-muted-foreground">{t("import.uploading")}</p>
-            </div>
-          )}
-
-          {state.phase === "processing" && (
-            <p className="flex items-center gap-2 text-body text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              {t("import.processing")}
-            </p>
-          )}
-
-          {state.phase === "failed" && errorText && (
-            <div className="space-y-2" role="alert">
-              <p className="text-body text-error-text">{errorText}</p>
-              {state.projectId && (
-                <Button type="button" variant="outline" size="sm" onClick={() => void onDeleteEmpty()}>
-                  {t("import.deleteEmpty")}
-                </Button>
-              )}
-            </div>
-          )}
+          <ImportStatus state={state} onDeleteEmpty={onDeleteEmpty} />
 
           <DialogFooter>
             <Button type="submit" disabled={!file || busy}>

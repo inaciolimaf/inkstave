@@ -70,4 +70,13 @@ describe("AcceptInvitePage", () => {
     renderWithProviders(<AcceptInvitePage />, { route: "/invite/tok-123" });
     expect(await screen.findByText("Invitation unavailable")).toBeInTheDocument();
   });
+
+  it("offers a retry when the invite cannot be loaded, and recovers", async () => {
+    api.getInvitePreview.mockRejectedValueOnce(new Error("offline"));
+    api.getInvitePreview.mockResolvedValue(PREVIEW);
+    renderWithProviders(<AcceptInvitePage />, { route: "/invite/tok-123" });
+    expect(await screen.findByRole("alert")).toHaveTextContent("This invitation could not be found.");
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("You’re invited to Paper")).toBeInTheDocument();
+  });
 });

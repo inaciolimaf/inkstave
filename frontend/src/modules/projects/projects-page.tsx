@@ -136,10 +136,7 @@ export function ProjectsPage() {
       />
 
       <ProjectListView
-        isLoading={projectsQuery.isLoading}
-        isError={projectsQuery.isError}
-        onRetry={() => void projectsQuery.refetch()}
-        total={projects.length}
+        query={projectsQuery}
         searchTerm={debouncedSearch}
         visible={visible}
         onCreate={() => setDialog({ type: "create" })}
