@@ -36,9 +36,14 @@ describe("AgentComposer", () => {
 });
 
 describe("RunControls", () => {
+  it("disables Stop until the run has an id to cancel", () => {
+    render(<RunControls canStop={false} onStop={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Stop the run" })).toBeDisabled();
+  });
+
   it("calls onStop when Stop is clicked (AC7)", async () => {
     const onStop = vi.fn();
-    render(<RunControls onStop={onStop} />);
+    render(<RunControls canStop onStop={onStop} />);
     await userEvent.click(screen.getByRole("button", { name: "Stop the run" }));
     expect(onStop).toHaveBeenCalled();
   });

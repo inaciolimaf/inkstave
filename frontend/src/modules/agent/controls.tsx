@@ -63,7 +63,7 @@ export function AgentComposer({
   );
 }
 
-export function RunControls({ onStop }: { onStop: () => void }) {
+export function RunControls({ canStop, onStop }: { canStop: boolean; onStop: () => void }) {
   const { t } = useTranslation("agent");
   return (
     <div className="flex justify-center px-2 pt-2">
@@ -74,6 +74,7 @@ export function RunControls({ onStop }: { onStop: () => void }) {
               type="button"
               size="sm"
               variant="outline"
+              disabled={!canStop}
               onClick={onStop}
               aria-label={t("run.stopLabel")}
             >

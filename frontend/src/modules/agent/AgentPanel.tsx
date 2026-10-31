@@ -243,7 +243,7 @@ export function AgentPanel({
         {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
 
         <div className="border-t">
-          {active && <RunControls onStop={() => void chat.stop()} />}
+          {active && <RunControls canStop={Boolean(chat.run.runId)} onStop={() => void chat.stop()} />}
           <AgentComposer
             value={composerText}
             onChange={setComposerText}
