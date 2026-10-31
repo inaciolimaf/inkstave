@@ -4,14 +4,11 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Rule } from "@/components/manuscript";
-import { ErrorState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 
-import { ApplyResultAlert } from "./ApplyResultAlert";
 import { ApplyConfirmDialog, DiscardConfirmDialog } from "./ConfirmDialogs";
-import { FileSection } from "./FileSection";
+import { ReviewBody } from "./ReviewBody";
 import type { DocumentBridge } from "./types";
 import { useDiffReview } from "./useDiffReview";
 
@@ -108,40 +105,7 @@ export function DiffReviewDialog({
         </DialogHeader>
         <Rule />
 
-        <div className="min-h-0 flex-1 divide-y divide-border-strong overflow-auto pr-1">
-          {r.loading ? (
-            <div className="space-y-2" aria-busy="true">
-              <Skeleton className="h-6" />
-              <Skeleton className="h-32" />
-            </div>
-          ) : r.isError ? (
-            <ErrorState message={t("loadError")} onRetry={() => void r.refetch()} />
-          ) : !r.proposal || r.proposal.files.length === 0 ? (
-            <p className="text-body text-muted-foreground">{t("noChanges")}</p>
-          ) : r.applyPhase === "error" ? (
-            <ApplyResultAlert
-              title={t("applyResult.errorTitle")}
-              results={r.results ?? []}
-              variant="destructive"
-              role="alert"
-            />
-          ) : r.applyPhase === "applied" ? (
-            <ApplyResultAlert title={t("applyResult.successTitle")} results={r.results ?? []} />
-          ) : (
-            r.proposal.files.map((file) => (
-              <FileSection
-                key={file.path}
-                file={file}
-                decisions={r.decisions[file.path] ?? {}}
-                blockedIds={r.files[file.path]?.blockedHunkIds ?? []}
-                baseChanged={r.files[file.path]?.baseChanged ?? false}
-                onToggle={(hunkId) => r.toggleHunk(file.path, hunkId)}
-                onSetAll={(accepted) => r.setAll(file.path, accepted)}
-                previewText={r.preview(file.path)}
-              />
-            ))
-          )}
-        </div>
+        <ReviewBody review={r} />
       </DialogContent>
 
       <ApplyConfirmDialog

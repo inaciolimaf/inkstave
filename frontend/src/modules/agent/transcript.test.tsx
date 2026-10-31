@@ -76,7 +76,10 @@ describe("AgentTranscript rendering", () => {
       onReview,
     );
     expect(screen.getByText(/main\.tex · 2 hunks/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Review changes/ }));
+    const review = screen.getByRole("button", { name: /Review changes/ });
+    // The composer's send button is the sheet's one solid action (spec 106).
+    expect(review).not.toHaveClass("bg-primary");
+    await userEvent.click(review);
     expect(onReview).toHaveBeenCalledWith("prop-123");
   });
 

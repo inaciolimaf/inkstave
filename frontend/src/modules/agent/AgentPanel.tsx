@@ -112,6 +112,79 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   );
 }
 
+function PanelHeader({ title, chat }: { title: string; chat: ReturnType<typeof useAgentChat> }) {
+  const { t } = useTranslation("agent");
+  return (
+    <SheetHeader className="space-y-0 border-b p-3">
+      <div className="flex items-center justify-between gap-2 pr-6">
+        <SheetTitle className="truncate font-serif text-heading font-medium">{title}</SheetTitle>
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7"
+            aria-label={t("newChat")}
+            onClick={() => void chat.newChat()}
+          >
+            <MessageSquarePlus className="size-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7">
+                {t("sessions")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
+              {chat.sessions.length > 0 && <DropdownMenuSeparator />}
+              {chat.sessions.map((s) => (
+                <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
+                  {s.title ?? t("untitledChat")}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <SheetDescription className="sr-only">{t("description")}</SheetDescription>
+    </SheetHeader>
+  );
+}
+
+function Conversation({
+  chat,
+  onPickExample,
+  onReviewProposal,
+}: {
+  chat: ReturnType<typeof useAgentChat>;
+  onPickExample: (text: string) => void;
+  onReviewProposal: (proposalId: string) => void;
+}) {
+  const { t } = useTranslation("agent");
+  if (chat.run.items.length > 0) {
+    return (
+      <AgentTranscript
+        items={chat.run.items}
+        loading={chat.transcriptLoading}
+        onReviewProposal={onReviewProposal}
+      />
+    );
+  }
+  if (!chat.transcriptLoading) return <EmptyState onPick={onPickExample} />;
+  return (
+    <div
+      className="flex-1 space-y-2 p-4"
+      role="status"
+      aria-busy="true"
+      aria-label={t("loadingConversation")}
+    >
+      <Skeleton className="h-4 w-2/3" />
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-4 w-3/4" />
+    </div>
+  );
+}
+
 export function AgentPanel({
   projectId,
   open,
@@ -142,9 +215,6 @@ export function AgentPanel({
   const active = ACTIVE_PHASES.includes(chat.run.phase);
   const activeSession = chat.sessions.find((s) => s.id === chat.activeSessionId);
   const title = activeSession?.title ?? t("newChat");
-  const noItems = chat.run.items.length === 0;
-  const showLoading = chat.transcriptLoading && noItems;
-  const isEmpty = noItems && !chat.transcriptLoading;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -167,60 +237,8 @@ export function AgentPanel({
           onKeyDown={onKeyDown}
           className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize bg-transparent hover:bg-border focus-visible:bg-border"
         />
-        <SheetHeader className="space-y-0 border-b p-3">
-          <div className="flex items-center justify-between gap-2 pr-6">
-            <SheetTitle className="truncate font-serif text-heading font-medium">{title}</SheetTitle>
-            <div className="flex items-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-7"
-                aria-label={t("newChat")}
-                onClick={() => void chat.newChat()}
-              >
-                <MessageSquarePlus className="size-4" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="ghost" className="h-7">
-                    {t("sessions")}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
-                  {chat.sessions.length > 0 && <DropdownMenuSeparator />}
-                  {chat.sessions.map((s) => (
-                    <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
-                      {s.title ?? t("untitledChat")}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          <SheetDescription className="sr-only">{t("description")}</SheetDescription>
-        </SheetHeader>
-
-        {showLoading ? (
-          <div
-            className="flex-1 space-y-2 p-4"
-            role="status"
-            aria-busy="true"
-            aria-label={t("loadingConversation")}
-          >
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ) : isEmpty ? (
-          <EmptyState onPick={setComposerText} />
-        ) : (
-          <AgentTranscript
-            items={chat.run.items}
-            loading={chat.transcriptLoading}
-            onReviewProposal={handleReview}
-          />
-        )}
+        <PanelHeader title={title} chat={chat} />
+        <Conversation chat={chat} onPickExample={setComposerText} onReviewProposal={handleReview} />
 
         {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
 

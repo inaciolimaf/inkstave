@@ -43,109 +43,132 @@ function openAssistant(items: TranscriptItem[]): number {
   return -1;
 }
 
+function applyToken(base: AgentRunState, event: AgentEvent): AgentRunState {
+  const { items } = base;
+  const idx = openAssistant(items);
+  if (idx === -1) {
+    items.push({
+      kind: "message",
+      id: `a-${event.seq ?? items.length}`,
+      role: "assistant",
+      text: event.text ?? "",
+      status: "streaming",
+    });
+  } else {
+    const cur = items[idx];
+    if (cur.kind === "message") {
+      items[idx] = { ...cur, text: cur.text + (event.text ?? "") };
+    }
+  }
+  return { ...base, phase: "streaming" };
+}
+
+function applyToolCall(base: AgentRunState, event: AgentEvent): AgentRunState {
+  base.items.push({
+    kind: "tool",
+    id: event.tool_call_id ?? `tc-${event.seq}`,
+    name: event.name ?? "tool",
+    args: event.arguments,
+    status: "running",
+  });
+  return { ...base, phase: "streaming" };
+}
+
+function applyToolResult(base: AgentRunState, event: AgentEvent): AgentRunState {
+  const { items } = base;
+  const idx = items.findIndex((it) => it.kind === "tool" && it.id === event.tool_call_id);
+  if (idx !== -1) {
+    const cur = items[idx];
+    if (cur.kind === "tool") {
+      items[idx] = {
+        ...cur,
+        result: event.summary,
+        status: event.ok ? "ok" : "error",
+        errorText: event.ok ? undefined : event.summary,
+      };
+    }
+  }
+  return base;
+}
+
+function applyDiffProposed(base: AgentRunState, event: AgentEvent): AgentRunState {
+  base.items.push({
+    kind: "diff-proposal",
+    id: event.diff_id ?? `d-${event.seq}`,
+    proposalId: event.diff_id ?? "",
+    files: [{ path: event.path ?? "", hunkCount: event.stats?.hunk_count ?? 0 }],
+  });
+  return base;
+}
+
+function applyDone(base: AgentRunState, event: AgentEvent): AgentRunState {
+  const { items } = base;
+  const idx = openAssistant(items);
+  if (idx !== -1) {
+    const cur = items[idx];
+    if (cur.kind === "message") items[idx] = { ...cur, status: "complete" };
+  } else if (event.final_text) {
+    items.push({
+      kind: "message",
+      id: `a-${event.seq}`,
+      role: "assistant",
+      text: event.final_text,
+      status: "complete",
+    });
+  }
+  return { ...base, phase: "done", error: undefined };
+}
+
+function applyCancelled(base: AgentRunState, event: AgentEvent): AgentRunState {
+  const { items } = base;
+  const idx = openAssistant(items);
+  if (idx !== -1) {
+    const cur = items[idx];
+    if (cur.kind === "message") items[idx] = { ...cur, status: "cancelled" };
+  } else {
+    // Cancelled before any assistant message opened (e.g. during the tool
+    // phase): still surface a cancelled marker so the user sees the run
+    // stopped, not a silent transcript (spec 46 §8c).
+    items.push({
+      kind: "message",
+      id: `a-${event.seq ?? items.length}`,
+      role: "assistant",
+      text: "",
+      status: "cancelled",
+    });
+  }
+  return { ...base, phase: "cancelled", error: undefined };
+}
+
+function applyError(base: AgentRunState, event: AgentEvent): AgentRunState {
+  const code = event.code ?? "internal";
+  if (code === "cancelled") return applyCancelled(base, event);
+  const message = friendlyError(code, event.message ?? "");
+  const retryable = RETRYABLE.has(code);
+  base.items.push({ kind: "error", id: `e-${event.seq}`, code, message, retryable });
+  return { ...base, phase: "error", error: { code, message, retryable } };
+}
+
 export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunState {
   if (typeof event.seq === "number" && state.seenSeqs.includes(event.seq)) {
     return state; // idempotent: a re-delivered event changes nothing
   }
   const seenSeqs = typeof event.seq === "number" ? [...state.seenSeqs, event.seq] : state.seenSeqs;
-  const items = state.items.slice();
-  const base: AgentRunState = { ...state, items, seenSeqs };
+  const base: AgentRunState = { ...state, items: state.items.slice(), seenSeqs };
 
   switch (event.type) {
-    case "token": {
-      const idx = openAssistant(items);
-      if (idx === -1) {
-        items.push({
-          kind: "message",
-          id: `a-${event.seq ?? items.length}`,
-          role: "assistant",
-          text: event.text ?? "",
-          status: "streaming",
-        });
-      } else {
-        const cur = items[idx];
-        if (cur.kind === "message") {
-          items[idx] = { ...cur, text: cur.text + (event.text ?? "") };
-        }
-      }
-      return { ...base, phase: "streaming" };
-    }
-    case "tool_call": {
-      items.push({
-        kind: "tool",
-        id: event.tool_call_id ?? `tc-${event.seq}`,
-        name: event.name ?? "tool",
-        args: event.arguments,
-        status: "running",
-      });
-      return { ...base, phase: "streaming" };
-    }
-    case "tool_result": {
-      const idx = items.findIndex((it) => it.kind === "tool" && it.id === event.tool_call_id);
-      if (idx !== -1) {
-        const cur = items[idx];
-        if (cur.kind === "tool") {
-          items[idx] = {
-            ...cur,
-            result: event.summary,
-            status: event.ok ? "ok" : "error",
-            errorText: event.ok ? undefined : event.summary,
-          };
-        }
-      }
-      return base;
-    }
-    case "diff_proposed": {
-      items.push({
-        kind: "diff-proposal",
-        id: event.diff_id ?? `d-${event.seq}`,
-        proposalId: event.diff_id ?? "",
-        files: [{ path: event.path ?? "", hunkCount: event.stats?.hunk_count ?? 0 }],
-      });
-      return base;
-    }
-    case "done": {
-      const idx = openAssistant(items);
-      if (idx !== -1) {
-        const cur = items[idx];
-        if (cur.kind === "message") items[idx] = { ...cur, status: "complete" };
-      } else if (event.final_text) {
-        items.push({
-          kind: "message",
-          id: `a-${event.seq}`,
-          role: "assistant",
-          text: event.final_text,
-          status: "complete",
-        });
-      }
-      return { ...base, phase: "done", error: undefined };
-    }
-    case "error": {
-      const code = event.code ?? "internal";
-      if (code === "cancelled") {
-        const idx = openAssistant(items);
-        if (idx !== -1) {
-          const cur = items[idx];
-          if (cur.kind === "message") items[idx] = { ...cur, status: "cancelled" };
-        } else {
-          // Cancelled before any assistant message opened (e.g. during the tool
-          // phase): still surface a cancelled marker so the user sees the run
-          // stopped, not a silent transcript (spec 46 §8c).
-          items.push({
-            kind: "message",
-            id: `a-${event.seq ?? items.length}`,
-            role: "assistant",
-            text: "",
-            status: "cancelled",
-          });
-        }
-        return { ...base, phase: "cancelled", error: undefined };
-      }
-      const message = friendlyError(code, event.message ?? "");
-      const retryable = RETRYABLE.has(code);
-      items.push({ kind: "error", id: `e-${event.seq}`, code, message, retryable });
-      return { ...base, phase: "error", error: { code, message, retryable } };
-    }
+    case "token":
+      return applyToken(base, event);
+    case "tool_call":
+      return applyToolCall(base, event);
+    case "tool_result":
+      return applyToolResult(base, event);
+    case "diff_proposed":
+      return applyDiffProposed(base, event);
+    case "done":
+      return applyDone(base, event);
+    case "error":
+      return applyError(base, event);
     default:
       return base; // unknown event types are ignored (forward-compatible)
   }

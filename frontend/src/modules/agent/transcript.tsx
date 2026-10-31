@@ -123,7 +123,7 @@ function DiffProposalCard({
           <li key={f.path}>{t("transcript.hunkLine", { path: f.path, count: f.hunkCount })}</li>
         ))}
       </ul>
-      <Button size="sm" onClick={() => onReviewProposal(item.proposalId)}>
+      <Button size="sm" variant="outline" onClick={() => onReviewProposal(item.proposalId)}>
         {hunks ? t("transcript.reviewChangesCount", { count: hunks }) : t("transcript.reviewChanges")}
       </Button>
     </div>

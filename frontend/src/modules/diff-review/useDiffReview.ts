@@ -3,8 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchProposal } from "./api";
-import { blockedAgainst, rebaseHunks } from "./hunks";
+import { rebaseHunks } from "./hunks";
+import { applyProposal, countHunks, loadReview, planApply, type Decisions } from "./review-state";
 import type { ApplyFileResult, ApplyPhase, DocumentBridge, FileReviewState } from "./types";
+
+export type DiffReview = ReturnType<typeof useDiffReview>;
 
 export function useDiffReview(
   projectId: string,
@@ -20,7 +23,7 @@ export function useDiffReview(
   });
   const proposal = query.data ?? null;
 
-  const [decisions, setDecisions] = useState<Record<string, Record<string, boolean>>>({});
+  const [decisions, setDecisions] = useState<Decisions>({});
   const [files, setFiles] = useState<Record<string, FileReviewState>>({});
   const [liveContent, setLiveContent] = useState<Record<string, string>>({});
   const [applyPhase, setApplyPhase] = useState<ApplyPhase>("idle");
@@ -30,45 +33,18 @@ export function useDiffReview(
   useEffect(() => {
     if (!proposal) return;
     let cancelled = false;
-    void (async () => {
-      const nextDecisions: Record<string, Record<string, boolean>> = {};
-      const nextFiles: Record<string, FileReviewState> = {};
-      const nextLive: Record<string, string> = {};
-      for (const file of proposal.files) {
-        nextDecisions[file.path] = Object.fromEntries(file.hunks.map((h) => [h.id, true]));
-        const live = (await bridge.readContent(file.path)) ?? "";
-        const blocked = blockedAgainst(live, file.hunks);
-        nextLive[file.path] = live;
-        nextFiles[file.path] = {
-          path: file.path,
-          baseVersion: file.baseVersion,
-          decisions: nextDecisions[file.path],
-          baseChanged: blocked.length > 0,
-          blockedHunkIds: blocked,
-        };
-      }
-      if (!cancelled) {
-        setDecisions(nextDecisions);
-        setFiles(nextFiles);
-        setLiveContent(nextLive);
-        setApplyPhase("idle");
-        setResults(null);
-      }
-    })();
+    void loadReview(proposal, bridge).then((loaded) => {
+      if (cancelled) return;
+      setDecisions(loaded.decisions);
+      setFiles(loaded.files);
+      setLiveContent(loaded.liveContent);
+      setApplyPhase("idle");
+      setResults(null);
+    });
     return () => {
       cancelled = true;
     };
   }, [proposal, bridge]);
-
-  const acceptedSet = useCallback(
-    (path: string) =>
-      new Set(
-        Object.entries(decisions[path] ?? {})
-          .filter(([, v]) => v)
-          .map(([k]) => k),
-      ),
-    [decisions],
-  );
 
   const toggleHunk = useCallback((path: string, hunkId: string) => {
     setDecisions((d) => ({ ...d, [path]: { ...d[path], [hunkId]: !d[path]?.[hunkId] } }));
@@ -90,69 +66,32 @@ export function useDiffReview(
     (path: string): string => {
       const file = proposal?.files.find((f) => f.path === path);
       if (!file) return "";
-      return rebaseHunks(liveContent[path] ?? "", file.hunks, acceptedSet(path)).target;
+      const accepted = new Set(
+        Object.entries(decisions[path] ?? {})
+          .filter(([, v]) => v)
+          .map(([k]) => k),
+      );
+      return rebaseHunks(liveContent[path] ?? "", file.hunks, accepted).target;
     },
-    [proposal, liveContent, acceptedSet],
+    [proposal, liveContent, decisions],
   );
 
-  const counts = useMemo(() => {
-    let accepted = 0;
-    let total = 0;
-    for (const file of proposal?.files ?? []) {
-      total += file.hunks.length;
-      accepted += file.hunks.filter((h) => decisions[file.path]?.[h.id]).length;
-    }
-    return { accepted, total };
-  }, [proposal, decisions]);
+  const counts = useMemo(() => countHunks(proposal, decisions), [proposal, decisions]);
+  const plan = useMemo(() => planApply(proposal, decisions, liveContent), [proposal, decisions, liveContent]);
 
-  // What a confirmed apply would do (applicable accepted hunks vs blocked).
-  const plan = useMemo(() => {
-    let applicable = 0;
-    let blocked = 0;
-    let fileCount = 0;
-    for (const file of proposal?.files ?? []) {
-      const accepted = new Set(file.hunks.filter((h) => decisions[file.path]?.[h.id]).map((h) => h.id));
-      const r = rebaseHunks(liveContent[file.path] ?? "", file.hunks, accepted);
-      if (r.appliedHunkIds.length > 0) fileCount += 1;
-      applicable += r.appliedHunkIds.length;
-      blocked += r.blockedHunkIds.length;
-    }
-    return { fileCount, applicable, blocked };
-  }, [proposal, decisions, liveContent]);
-
-  const apply = useCallback(async (): Promise<{
-    phase: ApplyPhase;
-    results: ApplyFileResult[];
-  }> => {
+  const apply = useCallback(async (): Promise<{ phase: ApplyPhase; results: ApplyFileResult[] }> => {
     if (!proposal) return { phase: "idle", results: [] };
     setApplyPhase("applying");
-    const out: ApplyFileResult[] = [];
-    for (const file of proposal.files) {
-      const accepted = new Set(file.hunks.filter((h) => decisions[file.path]?.[h.id]).map((h) => h.id));
-      try {
-        const live = (await bridge.readContent(file.path)) ?? "";
-        const r = rebaseHunks(live, file.hunks, accepted);
-        if (r.appliedHunkIds.length > 0) await bridge.applyContent(file.path, r.target);
-        out.push({
-          path: file.path,
-          appliedHunks: r.appliedHunkIds,
-          blockedHunks: r.blockedHunkIds,
-        });
-      } catch (err) {
-        out.push({ path: file.path, appliedHunks: [], blockedHunks: [], error: String(err) });
-      }
-    }
-    const phase: ApplyPhase = out.some((r) => r.error) ? "error" : "applied";
-    setResults(out);
-    setApplyPhase(phase);
-    return { phase, results: out };
+    const outcome = await applyProposal(proposal, decisions, bridge);
+    setResults(outcome.results);
+    setApplyPhase(outcome.phase);
+    return outcome;
   }, [proposal, decisions, bridge]);
 
   return {
     proposal,
-    loading: query.isLoading,
-    isError: query.isError,
-    refetch: query.refetch,
+    // `data` is null, never undefined: a query that has not run shows "no changes", not an error.
+    query: { data: proposal, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch },
     files,
     decisions,
     counts,
