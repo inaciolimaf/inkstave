@@ -1,71 +1,11 @@
-import { history } from "@codemirror/commands";
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { Compartment, EditorState, type Extension } from "@codemirror/state";
-import { oneDark } from "@codemirror/theme-one-dark";
-import {
-  EditorView,
-  drawSelection,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  highlightSpecialChars,
-  lineNumbers,
-} from "@codemirror/view";
+import { EditorState, type Extension } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { latex } from "./latex-language";
-import { lintGutterExtension } from "./diagnostics";
-import { keymapExtension } from "./keymap-extension";
-import { syncHighlightExtension } from "./sync-decoration";
+import { createCompartments, editorExtensions, type ViewCallbacks } from "./codemirror-extensions";
 import type { EditorSettings } from "./types";
-
-const SHEET = "hsl(var(--background))";
-const TINT = "hsl(var(--foreground) / 0.05)";
-const SELECTION = "hsl(var(--foreground) / 0.16)";
-const SELECTION_SELECTORS =
-  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection";
-
-/**
- * The sheet (spec 106): paper in light and carbon in dark, from the page's own tokens, which follow the
- * same preference as `dark`. One Dark's syntax colours are a separate highlight style and stay.
- */
-const sheetTheme = EditorView.theme({
-  "&": { backgroundColor: SHEET, color: "hsl(var(--foreground))" },
-  ".cm-gutters": {
-    backgroundColor: SHEET,
-    color: "hsl(var(--muted-foreground))",
-    borderRight: "1px solid hsl(var(--border))",
-  },
-  ".cm-activeLine": { backgroundColor: TINT },
-  ".cm-activeLineGutter": { backgroundColor: TINT },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
-  [SELECTION_SELECTORS]: { backgroundColor: SELECTION },
-});
-
-/** Listed first: an earlier extension's theme wins, so the sheet overrides One Dark's surfaces. */
-function colourTheme(dark: boolean): Extension {
-  return dark ? [sheetTheme, oneDark] : sheetTheme;
-}
-
-function fontTheme(size: number): Extension {
-  return EditorView.theme({
-    "&": { fontSize: `${size}px` },
-    ".cm-content": {
-      fontFamily: '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace',
-    },
-  });
-}
-
-function editableExtension(editable: boolean, label: string): Extension {
-  if (editable) {
-    return EditorView.contentAttributes.of({ "aria-label": label });
-  }
-  return [
-    EditorState.readOnly.of(true),
-    EditorView.editable.of(false),
-    EditorView.contentAttributes.of({ "aria-label": label, "aria-readonly": "true" }),
-  ];
-}
+import { useLiveExtensions } from "./use-live-extensions";
 
 export function CodeMirrorEditor({
   doc,
@@ -96,52 +36,26 @@ export function CodeMirrorEditor({
   const editorLabel = t("cm.label");
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const callbacks = useRef({ onChange, onBlur, onView });
+  const callbacks = useRef<ViewCallbacks>({ onChange, onBlur, onView });
   callbacks.current = { onChange, onBlur, onView };
   const labelRef = useRef(editorLabel);
   labelRef.current = editorLabel;
-  const compartments = useRef({
-    theme: new Compartment(),
-    font: new Compartment(),
-    wrap: new Compartment(),
-    keys: new Compartment(),
-    editable: new Compartment(),
-  });
+  const compartments = useRef(createCompartments());
 
   // Create the view exactly once; later changes go through compartments/dispatch.
   useEffect(() => {
-    const c = compartments.current;
     const state = EditorState.create({
       // In collab mode the CRDT seeds the content; start empty.
       doc: collabExtension ? "" : doc,
-      extensions: [
-        lineNumbers(),
-        highlightActiveLineGutter(),
-        highlightSpecialChars(),
-        history(),
-        drawSelection(),
-        bracketMatching(),
-        highlightActiveLine(),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        latex(),
-        syncHighlightExtension,
-        lintGutterExtension,
-        ...(collabExtension ? [collabExtension] : []),
-        EditorView.updateListener.of((u) => {
-          if (u.docChanged) callbacks.current.onChange?.(u.state.doc.toString());
-        }),
-        EditorView.domEventHandlers({
-          blur: () => {
-            callbacks.current.onBlur?.();
-            return false;
-          },
-        }),
-        c.editable.of(editableExtension(editable, labelRef.current)),
-        c.keys.of(keymapExtension(settings.keymap)),
-        c.font.of(fontTheme(settings.fontSize)),
-        c.wrap.of(settings.lineWrapping ? EditorView.lineWrapping : []),
-        c.theme.of(colourTheme(dark)),
-      ],
+      extensions: editorExtensions({
+        compartments: compartments.current,
+        callbacks,
+        collabExtension,
+        settings,
+        dark,
+        editable,
+        label: labelRef.current,
+      }),
     });
     const view = new EditorView({ state, parent: hostRef.current! });
     viewRef.current = view;
@@ -169,35 +83,7 @@ export function CodeMirrorEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc]);
 
-  useEffect(() => {
-    viewRef.current?.dispatch({
-      effects: compartments.current.editable.reconfigure(editableExtension(editable, editorLabel)),
-    });
-  }, [editable, editorLabel]);
-
-  useEffect(() => {
-    viewRef.current?.dispatch({
-      effects: compartments.current.font.reconfigure(fontTheme(settings.fontSize)),
-    });
-  }, [settings.fontSize]);
-
-  useEffect(() => {
-    viewRef.current?.dispatch({
-      effects: compartments.current.keys.reconfigure(keymapExtension(settings.keymap)),
-    });
-  }, [settings.keymap]);
-
-  useEffect(() => {
-    viewRef.current?.dispatch({
-      effects: compartments.current.wrap.reconfigure(settings.lineWrapping ? EditorView.lineWrapping : []),
-    });
-  }, [settings.lineWrapping]);
-
-  useEffect(() => {
-    viewRef.current?.dispatch({
-      effects: compartments.current.theme.reconfigure(colourTheme(dark)),
-    });
-  }, [dark]);
+  useLiveExtensions(viewRef, compartments.current, { settings, dark, editable, label: editorLabel });
 
   return <div ref={hostRef} className="h-full overflow-auto text-body" data-testid="cm-host" />;
 }

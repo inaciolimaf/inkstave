@@ -160,7 +160,7 @@ describe("EditorPane", () => {
       vi.fn(async () => json({ error: { type: "boom" } }, 500)),
     );
     renderPane(entity({ id: "d1" }));
-    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load this document.");
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 
