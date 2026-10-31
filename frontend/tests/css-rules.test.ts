@@ -18,3 +18,11 @@ it("sizes screens with dvh, never 100vh, h-screen or min-h-screen", () => {
     .map((path) => `src/${path}`);
   expect(sources.flatMap(offendingLines)).toEqual([]);
 });
+
+it("draws the edge of every form control with the control-edge token", () => {
+  const controls = ["input", "textarea", "select", "switch"];
+  const missing = controls.filter(
+    (name) => !readFileSync(`src/components/ui/${name}.tsx`, "utf-8").includes("-control-edge"),
+  );
+  expect(missing).toEqual([]);
+});

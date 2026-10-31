@@ -40,7 +40,8 @@
     --destructive: 0 84.2% 48%;
     --destructive-foreground: 210 40% 98%;
     --border: 36 22% 84%;
-    --input: 36 22% 74%;
+    /* The edge that alone identifies a control: 3:1 on every surface, unlike the paler --border. */
+    --control-edge: 36 12% 50%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
 
@@ -82,7 +83,7 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 30 6% 21%;
-    --input: 30 6% 30%;
+    --control-edge: 36 8% 52%;
     --ring: 212.7 26.8% 83.9%;
 
     --success: 142 60% 32%;

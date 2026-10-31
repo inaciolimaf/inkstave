@@ -29,6 +29,11 @@ const CONTROL_PAIRS = [
   ["focus", "card"],
   ["focus", "muted"],
   ["border-strong", "background"],
+  ["control-edge", "background"],
+  ["control-edge", "card"],
+  ["control-edge", "popover"],
+  ["control-edge", "muted"],
+  ["control-edge", "accent"],
 ] as const;
 
 type Theme = Map<string, string>;

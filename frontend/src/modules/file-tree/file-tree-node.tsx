@@ -41,7 +41,7 @@ function InlineRenameInput({ node }: { node: TreeNode }) {
         autoFocus
         aria-label={t("newNameLabel")}
         aria-invalid={error ? true : undefined}
-        className="h-6 w-full rounded border border-input bg-background px-1 text-body"
+        className="h-6 w-full rounded border border-control-edge bg-background px-1 text-body"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onFocus={(e) => e.target.select()}
