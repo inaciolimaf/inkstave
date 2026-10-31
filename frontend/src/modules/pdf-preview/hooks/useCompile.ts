@@ -2,16 +2,15 @@
  * Compile trigger + live-status state machine (spec 24, §5.3.3).
  *
  * idle → (Compile) → queued → running → success | failure | timeout |
- * cancelled | error. Live status comes from the spec-22 SSE stream, with a
- * polling fallback when `EventSource` is unavailable or errors.
+ * cancelled | error. Live status comes from `useCompileStream`.
  */
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useReducer, useRef } from "react";
 
-import { config } from "@/config";
 import i18n from "@/i18n/config";
 
-import { cancelCompile, compileEventsUrl, getCompile, requestCompile } from "../api";
+import { cancelCompile, requestCompile } from "../api";
 import { type CompileState, type CompileStatus, isActive, isTerminal } from "../types";
+import { useCompileStream } from "./useCompileStream";
 
 interface State {
   status: CompileState;
@@ -103,74 +102,10 @@ export function useCompile(
   const flushRef = useRef(flush);
   flushRef.current = flush;
 
-  const esRef = useRef<EventSource | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeRef = useRef(false); // a compile is in flight (guards re-entry)
 
-  const stopWatching = useCallback(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
-    if (pollRef.current !== null) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
-
-  const handleSnapshot = useCallback(
-    (snapshot: CompileStatus) => {
-      dispatch({ type: "snapshot", snapshot });
-      if (isTerminal(snapshot.status)) {
-        activeRef.current = false;
-        stopWatching();
-      }
-    },
-    [stopWatching],
-  );
-
-  const startPolling = useCallback(
-    (compileId: string) => {
-      if (pollRef.current !== null) return;
-      pollRef.current = setInterval(() => {
-        getCompile(projectId, compileId)
-          .then(handleSnapshot)
-          .catch(() => {});
-      }, config.compilePollIntervalMs);
-    },
-    [projectId, handleSnapshot],
-  );
-
-  const subscribe = useCallback(
-    (compileId: string) => {
-      if (typeof EventSource === "undefined") {
-        startPolling(compileId);
-        return;
-      }
-      let es: EventSource;
-      try {
-        es = new EventSource(compileEventsUrl(projectId, compileId));
-      } catch {
-        startPolling(compileId);
-        return;
-      }
-      esRef.current = es;
-      es.addEventListener("status", (event) => {
-        try {
-          handleSnapshot(JSON.parse((event as MessageEvent).data) as CompileStatus);
-        } catch {
-          /* ignore malformed frames */
-        }
-      });
-      es.onerror = () => {
-        // SSE failed or closed before a terminal status: fall back to polling.
-        es.close();
-        if (esRef.current === es) esRef.current = null;
-        if (activeRef.current) startPolling(compileId);
-      };
-    },
-    [projectId, handleSnapshot, startPolling],
-  );
+  const onSnapshot = useCallback((snapshot: CompileStatus) => dispatch({ type: "snapshot", snapshot }), []);
+  const { handleSnapshot, subscribe } = useCompileStream(projectId, activeRef, onSnapshot);
 
   const compile = useCallback(() => {
     if (activeRef.current) return; // client-side debounce (§5.3.3)
@@ -202,9 +137,6 @@ export function useCompile(
       .then(handleSnapshot)
       .catch(() => {});
   }, [projectId, state.compileId, handleSnapshot]);
-
-  // Clean up any open stream/poll on unmount.
-  useEffect(() => stopWatching, [stopWatching]);
 
   return {
     status: state.status,

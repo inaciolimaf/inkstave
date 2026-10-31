@@ -3,30 +3,26 @@
  * zoom + page navigation, and a collapsible raw-log panel, with empty / loading
  * / error states for every compile outcome.
  */
-import { ChevronRight, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n/config";
-import { cn } from "@/lib/utils";
 
 import { getCompilePdf } from "./api";
 import { CompileButton } from "./CompileButton";
-import { LogPanel } from "./LogPanel";
+import { CompileOutputDock } from "./CompileOutputDock";
 import { PdfToolbar } from "./PdfToolbar";
-import { PdfViewer, type PageClickHandler } from "./PdfViewer";
-import { PreviewEmptyState } from "./PreviewEmptyState";
-import { PreviewErrorState } from "./PreviewErrorState";
-import { ProblemsPanel, ProblemsSummary } from "./ProblemsPanel";
+import type { PageClickHandler } from "./PdfViewer";
+import { type ErrorOutcome, PreviewBody } from "./PreviewBody";
 import type { CompileProblems, ProblemsReason } from "./problems";
 import type { PdfHighlight } from "./hooks/useSyncTex";
 import { useCompile } from "./hooks/useCompile";
 import { useCompileLog } from "./hooks/useCompileLog";
+import { useOutputDock } from "./hooks/useOutputDock";
 import { usePdfDocument } from "./hooks/usePdfDocument";
 import { usePdfViewport } from "./hooks/usePdfViewport";
+import { useSyncHighlight } from "./hooks/useSyncHighlight";
 import { type CompileJobStatus, isActive, isTerminal } from "./types";
-
-const SYNC_HIGHLIGHT_MS = 1200;
 
 const ERROR_OUTCOMES = new Set<CompileJobStatus>(["failure", "timeout", "error"]);
 
@@ -48,17 +44,6 @@ function announce(status: string, progressLabel: string | null): string {
   }
 }
 
-function Centered({ children, label }: { children: React.ReactNode; label?: string }) {
-  return (
-    <div
-      className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-body text-muted-foreground"
-      aria-label={label}
-    >
-      {children}
-    </div>
-  );
-}
-
 async function downloadPdf(projectId: string, compileId: string): Promise<void> {
   const bytes = await getCompilePdf(projectId, compileId);
   const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
@@ -71,18 +56,7 @@ async function downloadPdf(projectId: string, compileId: string): Promise<void> 
   URL.revokeObjectURL(url);
 }
 
-export function PreviewPane({
-  projectId,
-  flush,
-  onActiveCompileChange,
-  onPdfClick,
-  syncTarget,
-  onCompileResult,
-  problems,
-  problemsLoading,
-  problemsReason,
-  onProblemJump,
-}: {
+interface PreviewPaneProps {
   projectId: string;
   /** Flush pending local CRDT edits before compiling (spec 31 §5.4); no-op when no session. */
   flush?: () => Promise<void>;
@@ -100,36 +74,31 @@ export function PreviewPane({
   problemsReason?: ProblemsReason | null;
   /** Click a problem row → jump to its source line. */
   onProblemJump?: (file: string, line: number) => void;
-}) {
+}
+
+export function PreviewPane({
+  projectId,
+  flush,
+  onActiveCompileChange,
+  onPdfClick,
+  syncTarget,
+  onCompileResult,
+  problems,
+  problemsLoading,
+  problemsReason,
+  onProblemJump,
+}: PreviewPaneProps) {
   const { t } = useTranslation("preview");
   const compile = useCompile(projectId, flush);
   const pdfDoc = usePdfDocument(projectId, compile.lastSuccessId);
   const viewport = usePdfViewport(pdfDoc.numPages);
   const logState = useCompileLog(projectId, compile.compileId);
-  const [bottomTab, setBottomTab] = useState<"problems" | "log">("problems");
-  const [outputCollapsed, setOutputCollapsed] = useState(false);
-  const [highlight, setHighlight] = useState<{ page: number; box: PdfHighlight["box"] } | null>(null);
 
   const errorOutcome = ERROR_OUTCOMES.has(compile.status as CompileJobStatus)
-    ? (compile.status as "failure" | "timeout" | "error")
+    ? (compile.status as ErrorOutcome)
     : null;
   const active = isActive(compile.status);
-
-  // Reveal the Log tab on a failed/timed-out/errored compile (§5.3.6); expand
-  // the output dock too in case the user had collapsed it.
-  useEffect(() => {
-    if (errorOutcome) {
-      setBottomTab("log");
-      setOutputCollapsed(false);
-    }
-  }, [errorOutcome]);
-
-  // Reveal a tab from elsewhere (e.g. the error state's "View log"): select it
-  // and make sure the dock is expanded.
-  const showOutputTab = (tab: "problems" | "log") => {
-    setBottomTab(tab);
-    setOutputCollapsed(false);
-  };
+  const dock = useOutputDock(errorOutcome);
 
   // Report which compile the shown PDF belongs to (drives sync availability).
   useEffect(() => {
@@ -141,53 +110,9 @@ export function PreviewPane({
     if (isTerminal(compile.status as CompileJobStatus)) onCompileResult?.(compile.compileId);
   }, [compile.status, compile.compileId, onCompileResult]);
 
-  // Forward sync: jump to the target page and flash the box transiently.
-  const setPage = viewport.setPage;
-  useEffect(() => {
-    if (!syncTarget) return;
-    setPage(syncTarget.page);
-    setHighlight({ page: syncTarget.page, box: syncTarget.box });
-    const timer = window.setTimeout(() => setHighlight(null), SYNC_HIGHLIGHT_MS);
-    return () => window.clearTimeout(timer);
-  }, [syncTarget, setPage]);
+  const highlight = useSyncHighlight(syncTarget, viewport.setPage);
 
   const showViewer = !errorOutcome && !active && !pdfDoc.loading && pdfDoc.pdf !== null;
-
-  let body: React.ReactNode;
-  if (errorOutcome) {
-    body = (
-      <PreviewErrorState
-        outcome={errorOutcome}
-        detail={compile.error}
-        onViewLog={() => showOutputTab("log")}
-        onRetry={compile.compile}
-      />
-    );
-  } else if (active) {
-    body = (
-      <Centered label={t("compile.progressLabel")}>
-        <Loader2 className="size-6 animate-spin" aria-hidden="true" />
-        <p>{compile.progressLabel ?? t("compile.compiling")}</p>
-      </Centered>
-    );
-  } else if (pdfDoc.loading) {
-    body = (
-      <Centered label={t("loading.loadingPdfLabel")}>
-        <Loader2 className="size-6 animate-spin" aria-hidden="true" />
-        <p>{t("loading.loadingPreview")}</p>
-      </Centered>
-    );
-  } else if (pdfDoc.error) {
-    body = (
-      <Centered label={t("loading.pdfErrorLabel")}>
-        <p className="text-error-text">{pdfDoc.error}</p>
-      </Centered>
-    );
-  } else if (pdfDoc.pdf) {
-    body = <PdfViewer pdf={pdfDoc.pdf} viewport={viewport} onPageClick={onPdfClick} highlight={highlight} />;
-  } else {
-    body = <PreviewEmptyState />;
-  }
 
   return (
     <div className="flex h-full flex-col" aria-label={t("pane.label")}>
@@ -210,81 +135,32 @@ export function PreviewPane({
         )}
       </div>
 
-      <div className="min-h-0 flex-1">{body}</div>
+      <div className="min-h-0 flex-1">
+        <PreviewBody
+          errorOutcome={errorOutcome}
+          compile={compile}
+          pdfDoc={pdfDoc}
+          viewport={viewport}
+          highlight={highlight}
+          onViewLog={() => dock.showTab("log")}
+          onPdfClick={onPdfClick}
+        />
+      </div>
 
       <p className="sr-only" role="status" aria-live="polite">
         {announce(compile.status, compile.progressLabel)}
       </p>
 
-      {/* Problems and the raw log share one collapsible tabbed dock (spec 27 §5.3). */}
-      <div className="flex flex-col border-t">
-        <div className="flex items-center gap-1 px-2">
-          <button
-            type="button"
-            onClick={() => setOutputCollapsed((c) => !c)}
-            aria-expanded={!outputCollapsed}
-            aria-controls="compile-output-panels"
-            aria-label={outputCollapsed ? t("pane.expandOutput") : t("pane.collapseOutput")}
-            className="rounded p-1 text-muted-foreground hover:text-foreground/80"
-          >
-            <ChevronRight
-              className={cn("size-4 transition-transform duration-fast", !outputCollapsed && "rotate-90")}
-              aria-hidden="true"
-            />
-          </button>
-          <div role="tablist" aria-label={t("pane.compileOutput")} className="flex items-center">
-            {(["problems", "log"] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                id={`compile-tab-${tab}`}
-                aria-selected={!outputCollapsed && bottomTab === tab}
-                aria-controls={`compile-panel-${tab}`}
-                onClick={() => showOutputTab(tab)}
-                className={
-                  !outputCollapsed && bottomTab === tab
-                    ? "border-b-2 border-primary px-2 py-1.5 text-body font-medium"
-                    : "border-b-2 border-transparent px-2 py-1.5 text-body text-muted-foreground hover:text-foreground/80"
-                }
-              >
-                {tab === "problems" ? t("problems.title") : t("log.title")}
-              </button>
-            ))}
-          </div>
-          {/* Severity counts stay visible even when the dock is collapsed. */}
-          <div className="ml-auto flex items-center gap-2 pr-1">
-            <ProblemsSummary problems={problems ?? null} loading={problemsLoading} stale={active} />
-          </div>
-        </div>
-        {!outputCollapsed && (
-          <div id="compile-output-panels">
-            <div
-              role="tabpanel"
-              id="compile-panel-problems"
-              aria-labelledby="compile-tab-problems"
-              hidden={bottomTab !== "problems"}
-            >
-              <ProblemsPanel problems={problems ?? null} reason={problemsReason} onJump={onProblemJump} />
-            </div>
-            <div
-              role="tabpanel"
-              id="compile-panel-log"
-              aria-labelledby="compile-tab-log"
-              hidden={bottomTab !== "log"}
-            >
-              <LogPanel
-                expanded={bottomTab === "log"}
-                log={logState.log}
-                loading={logState.loading}
-                error={logState.error}
-                onFetch={logState.fetchLog}
-                meta={compile.meta}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      <CompileOutputDock
+        dock={dock}
+        problems={problems ?? null}
+        problemsLoading={problemsLoading}
+        problemsReason={problemsReason}
+        onProblemJump={onProblemJump}
+        stale={active}
+        logState={logState}
+        meta={compile.meta}
+      />
     </div>
   );
 }

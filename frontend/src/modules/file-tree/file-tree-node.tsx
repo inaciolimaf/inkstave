@@ -99,6 +99,80 @@ function NodeMenuItems({
   );
 }
 
+function FolderToggle({ node, expanded }: { node: TreeNode; expanded: boolean }) {
+  const { t } = useTranslation("files");
+  const ctx = useFileTreeContext();
+  return (
+    <button
+      type="button"
+      aria-label={expanded ? t("collapseFolder") : t("expandFolder")}
+      className="flex size-4 items-center justify-center"
+      onClick={(e) => {
+        e.stopPropagation();
+        ctx.onToggle(node.id);
+      }}
+    >
+      <DisclosureChevron expanded={expanded} />
+    </button>
+  );
+}
+
+function NodeLabel({ node }: { node: TreeNode }) {
+  const ctx = useFileTreeContext();
+  return (
+    <span
+      className="flex-1 truncate"
+      // Slow double-click on the label starts inline rename (spec
+      // §5.3.5). Scoped to the label and stop-propagated so the
+      // row-level double-click still activates (folder toggle / open).
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        ctx.onMenuAction("rename", node);
+      }}
+    >
+      {node.name}
+    </span>
+  );
+}
+
+function NodeActionsMenu({ node }: { node: TreeNode }) {
+  const { t } = useTranslation("files");
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t("actionsFor", { name: node.name })}
+          className="size-6 opacity-0 focus:opacity-100 group-hover:opacity-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <NodeMenuItems node={node} Item={DropdownMenuItem} Separator={DropdownMenuSeparator} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function NodeChildren({ node, depth }: { node: TreeNode; depth: number }) {
+  return (
+    <ul role="group">
+      {sortNodes(node.children).map((child, i, siblings) => (
+        <FileTreeNode
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          index={i}
+          siblingCount={siblings.length}
+        />
+      ))}
+    </ul>
+  );
+}
+
 export function FileTreeNode({
   node,
   depth,
@@ -112,7 +186,6 @@ export function FileTreeNode({
   index?: number;
   siblingCount?: number;
 }) {
-  const { t } = useTranslation("files");
   const ctx = useFileTreeContext();
   const isFolder = node.type === "folder";
   const expanded = ctx.expandedIds.has(node.id);
@@ -171,53 +244,13 @@ export function FileTreeNode({
             )}
           >
             {isFolder ? (
-              <button
-                type="button"
-                aria-label={expanded ? t("collapseFolder") : t("expandFolder")}
-                className="flex size-4 items-center justify-center"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onToggle(node.id);
-                }}
-              >
-                <DisclosureChevron expanded={expanded} />
-              </button>
+              <FolderToggle node={node} expanded={expanded} />
             ) : (
               <span className="size-4" aria-hidden />
             )}
             <EntityIcon type={node.type} />
-            {renaming ? (
-              <InlineRenameInput node={node} />
-            ) : (
-              <span
-                className="flex-1 truncate"
-                // Slow double-click on the label starts inline rename (spec
-                // §5.3.5). Scoped to the label and stop-propagated so the
-                // row-level double-click still activates (folder toggle / open).
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  ctx.onMenuAction("rename", node);
-                }}
-              >
-                {node.name}
-              </span>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("actionsFor", { name: node.name })}
-                  className="size-6 opacity-0 focus:opacity-100 group-hover:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
-                <NodeMenuItems node={node} Item={DropdownMenuItem} Separator={DropdownMenuSeparator} />
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {renaming ? <InlineRenameInput node={node} /> : <NodeLabel node={node} />}
+            <NodeActionsMenu node={node} />
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -225,19 +258,7 @@ export function FileTreeNode({
         </ContextMenuContent>
       </ContextMenu>
 
-      {isFolder && expanded && node.children.length > 0 && (
-        <ul role="group">
-          {sortNodes(node.children).map((child, i, siblings) => (
-            <FileTreeNode
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              index={i}
-              siblingCount={siblings.length}
-            />
-          ))}
-        </ul>
-      )}
+      {isFolder && expanded && node.children.length > 0 && <NodeChildren node={node} depth={depth} />}
     </li>
   );
 }
