@@ -142,8 +142,21 @@ export class EditorPage {
 
   /** Click a file in the tree by name to open it. */
   async openFile(name: string): Promise<void> {
-    await this.page.getByText(name, { exact: true }).first().click();
+    await this.openFiles();
+    await this.fileDrawer().getByText(name, { exact: true }).first().click();
+    await expect(this.fileDrawer()).toBeHidden();
     await expect(this.content()).toBeVisible();
+  }
+
+  /** The file list over the text (spec 107). */
+  fileDrawer(): Locator {
+    return this.page.getByRole("complementary", { name: "Files", includeHidden: true });
+  }
+
+  async openFiles(): Promise<void> {
+    if (await this.fileDrawer().isVisible()) return;
+    await this.page.getByRole("button", { name: /^Switch file/ }).click();
+    await expect(this.fileDrawer()).toBeVisible();
   }
 
   async type(text: string): Promise<void> {
@@ -172,6 +185,7 @@ export class EditorPage {
 
   /** A New file button in the tree toolbar (aria-label "New file"). */
   async createFile(name: string): Promise<void> {
+    await this.openFiles();
     await this.page.getByRole("button", { name: "New file" }).first().click();
     const dialog = this.page.getByRole("dialog");
     await dialog.getByLabel("Name").fill(name);
@@ -193,12 +207,20 @@ export class PreviewPanel {
 
   /** Compile output is a tabbed region (spec 27): select the "Log" tab. */
   async openLog(): Promise<void> {
+    await this.showOutput();
     await this.page.getByRole("tab", { name: /log/i }).click();
   }
 
   /** Select the "Problems" tab of the compile-output region. */
   async openProblems(): Promise<void> {
+    await this.showOutput();
     await this.page.getByRole("tab", { name: /problems/i }).click();
+  }
+
+  /** The output dock starts folded in the status line. */
+  private async showOutput(): Promise<void> {
+    const expand = this.page.getByRole("button", { name: "Expand compile output" });
+    if (await expand.isVisible()) await expand.click();
   }
 
   logRegion(): Locator {
@@ -259,7 +281,8 @@ export class HistoryPanel {
   constructor(private readonly page: Page) {}
 
   async open(): Promise<void> {
-    await this.page.getByRole("button", { name: "History" }).click();
+    await this.page.getByRole("button", { name: "More actions" }).click();
+    await this.page.getByRole("menuitem", { name: "History" }).click();
     await expect(this.page.getByText("Version history")).toBeVisible();
   }
 }

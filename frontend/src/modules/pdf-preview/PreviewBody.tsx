@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -44,6 +44,25 @@ export function PreviewBody({
 }) {
   const { t } = useTranslation("preview");
 
+  if (errorOutcome && pdfDoc.pdf && !isActive(compile.status)) {
+    return (
+      <div className="flex h-full flex-col">
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-2 bg-warning-soft px-3 py-1.5 text-small text-warning-text"
+        >
+          <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+          {t("errors.lastGoodPdf")}
+          <button type="button" className="font-medium underline underline-offset-2" onClick={onViewLog}>
+            {t("errors.viewDetails")}
+          </button>
+        </p>
+        <div className="min-h-0 flex-1">
+          <PdfViewer pdf={pdfDoc.pdf} viewport={viewport} onPageClick={onPdfClick} highlight={highlight} />
+        </div>
+      </div>
+    );
+  }
   if (errorOutcome) {
     return (
       <PreviewErrorState

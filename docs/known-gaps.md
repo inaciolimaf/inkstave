@@ -22,6 +22,10 @@ count go down.
 does not wait for pending edits to reach the server. *Why:* found while splitting the editor; a fix changes
 the compile path and needs its own test.
 
+**The agent's changes are reviewed in a dialog, not in the text.** The approved demo showed hunks in the editor,
+decided one by one. `DiffReviewDialog` is still the only review surface. *Why:* it needs a CodeMirror decoration
+layer and per-hunk apply, a change of its own after spec 107.
+
 **Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
 
 **The landing animates paint.** `.ink-underline` transitions `background-size` and `transition-all`

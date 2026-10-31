@@ -24,6 +24,7 @@ test("create folder, add+rename a doc, move it to root, upload a binary, delete 
   const editor = new EditorPage(page);
   await editor.open(projectId);
 
+  await editor.openFiles();
   const tree = page.getByRole("tree", { name: "Project files" });
   await expect(tree).toBeVisible();
 

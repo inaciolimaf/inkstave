@@ -1,6 +1,6 @@
 /** Composer, run controls, and error state (spec 46). */
 import { Loader2, Send, Square } from "lucide-react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, Ref } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function AgentComposer({
+  ref,
   value,
   onChange,
   onSend,
   disabled,
 }: {
+  ref?: Ref<HTMLTextAreaElement>;
   value: string;
   onChange: (v: string) => void;
   onSend: (text: string) => void;
@@ -33,6 +35,7 @@ export function AgentComposer({
   return (
     <div className="flex items-end gap-2 p-2">
       <Textarea
+        ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}

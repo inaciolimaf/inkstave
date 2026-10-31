@@ -5,6 +5,7 @@
  * local user's presence (identity + cursor + idle) through Yjs awareness.
  */
 import type { EditorView } from "@codemirror/view";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { CodeMirrorEditor } from "./codemirror-editor";
@@ -32,6 +33,7 @@ export function CollabEditor({
   dark,
   onView,
   currentUser = null,
+  statusSlot,
 }: {
   session: CollabDocSession;
   settings: EditorSettings;
@@ -39,25 +41,35 @@ export function CollabEditor({
   onView?: (view: EditorView | null) => void;
   /** Local user identity published into awareness (presence); null hides own presence. */
   currentUser?: { id: string; name: string } | null;
+  /** The status line these indicators live in (spec 107); `undefined` keeps them in a row of their own. */
+  statusSlot?: HTMLElement | null;
 }) {
   const { t } = useTranslation("editor");
   const editable = session.synced && !session.readOnly;
   const { users, markActivity } = usePresence(session, currentUser);
 
+  const indicators = (
+    <>
+      <ConnectionStatusBadge status={session.status} />
+      {!session.synced && <span className="text-muted-foreground">{t("collab.syncing")}</span>}
+      {session.readOnly && (
+        <span className="font-medium text-warning-text" aria-live="polite">
+          {t("collab.viewOnly")}
+        </span>
+      )}
+      <div className={statusSlot === undefined ? "ml-auto" : undefined}>
+        <OnlineUsers users={users} />
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-1 text-small">
-        <ConnectionStatusBadge status={session.status} />
-        {!session.synced && <span className="text-muted-foreground">{t("collab.syncing")}</span>}
-        {session.readOnly && (
-          <span className="font-medium text-warning-text" aria-live="polite">
-            {t("collab.viewOnly")}
-          </span>
-        )}
-        <div className="ml-auto">
-          <OnlineUsers users={users} />
-        </div>
-      </div>
+      {statusSlot === undefined ? (
+        <div className="flex items-center gap-2 border-b px-3 py-1 text-small">{indicators}</div>
+      ) : (
+        statusSlot && createPortal(indicators, statusSlot)
+      )}
       <div className="relative min-h-0 flex-1" onKeyDownCapture={markActivity} onMouseUp={markActivity}>
         {!session.synced && <LoadingOverlay />}
         <CodeMirrorEditor

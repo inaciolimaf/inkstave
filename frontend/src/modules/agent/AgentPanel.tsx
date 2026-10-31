@@ -1,6 +1,6 @@
-/** The dockable AI agent chat panel (spec 46). */
-import { MessageSquarePlus } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+/** The agent: a floating window that blocks nothing behind it, or a sheet on a phone (specs 46, 107). */
+import { ChevronDown, Loader2, MessageSquarePlus, Sparkles, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -11,84 +11,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 import { DiffReviewDialog } from "@/modules/diff-review";
 import type { DocumentBridge } from "@/modules/diff-review";
 
 import { AgentComposer, AgentErrorState, RunControls } from "./controls";
 import { AgentTranscript } from "./transcript";
+import { withQuote, type AgentQuote, type AgentRequest } from "./quote";
 import { useAgentChat } from "./useAgentChat";
 
 const ACTIVE_PHASES = ["starting", "streaming", "stopping"];
-
-// Spec 46 §5.4: the panel is user-resizable; the chosen width persists across
-// sessions (alongside the open/closed state the parent already persists).
-const WIDTH_STORAGE_KEY = "inkstave:agent-panel-width";
-const MIN_WIDTH = 320;
-const MAX_WIDTH = 800;
-const DEFAULT_WIDTH = 448; // matches the previous fixed sm:max-w-md (28rem)
-
-function clampWidth(px: number): number {
-  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, px));
-}
-
-/** Persisted panel width with a drag handle on the panel's left edge. */
-function usePanelWidth() {
-  const [width, setWidth] = useState<number>(() => {
-    try {
-      const raw = localStorage.getItem(WIDTH_STORAGE_KEY);
-      const parsed = raw ? Number.parseInt(raw, 10) : NaN;
-      return Number.isFinite(parsed) ? clampWidth(parsed) : DEFAULT_WIDTH;
-    } catch {
-      return DEFAULT_WIDTH;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
-    } catch {
-      /* ignore */
-    }
-  }, [width]);
-
-  const dragging = useRef(false);
-
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      // The panel is docked right; dragging the left edge leftwards widens it.
-      e.preventDefault();
-      dragging.current = true;
-      const move = (ev: PointerEvent) => {
-        if (!dragging.current) return;
-        setWidth(clampWidth(window.innerWidth - ev.clientX));
-      };
-      const up = () => {
-        dragging.current = false;
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", up);
-      };
-      window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", up);
-    },
-    [setWidth],
-  );
-
-  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Keyboard-accessible resize (spec §5.4): arrows nudge the width.
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      setWidth((w) => clampWidth(w + 16));
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      setWidth((w) => clampWidth(w - 16));
-    }
-  }, []);
-
-  return { width, onPointerDown, onKeyDown };
-}
 
 function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   const { t } = useTranslation("agent");
@@ -112,42 +46,93 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   );
 }
 
-function PanelHeader({ title, chat }: { title: string; chat: ReturnType<typeof useAgentChat> }) {
+function PanelHeader({
+  titleId,
+  title,
+  chat,
+  onMinimize,
+}: {
+  titleId: string;
+  title: string;
+  chat: ReturnType<typeof useAgentChat>;
+  onMinimize: () => void;
+}) {
   const { t } = useTranslation("agent");
   return (
-    <SheetHeader className="space-y-0 border-b p-3">
-      <div className="flex items-center justify-between gap-2 pr-6">
-        <SheetTitle className="truncate font-serif text-heading font-medium">{title}</SheetTitle>
-        <div className="flex items-center gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="size-7"
-            aria-label={t("newChat")}
-            onClick={() => void chat.newChat()}
-          >
-            <MessageSquarePlus className="size-4" />
+    <div className="flex items-center gap-1 border-b py-1.5 pl-3 pr-1.5">
+      <h2 id={titleId} className="min-w-0 flex-1 truncate font-serif text-heading font-medium">
+        {title}
+      </h2>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-7"
+        aria-label={t("newChat")}
+        onClick={() => void chat.newChat()}
+      >
+        <MessageSquarePlus className="size-4" />
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="ghost" className="h-7">
+            {t("sessions")}
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-7">
-                {t("sessions")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
-              {chat.sessions.length > 0 && <DropdownMenuSeparator />}
-              {chat.sessions.map((s) => (
-                <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
-                  {s.title ?? t("untitledChat")}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      <SheetDescription className="sr-only">{t("description")}</SheetDescription>
-    </SheetHeader>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
+          {chat.sessions.length > 0 && <DropdownMenuSeparator />}
+          {chat.sessions.map((s) => (
+            <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
+              {s.title ?? t("untitledChat")}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button size="icon" variant="ghost" className="size-7" aria-label={t("minimize")} onClick={onMinimize}>
+        <ChevronDown className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
+function QuoteChip({ quote, onClear }: { quote: AgentQuote; onClear: () => void }) {
+  const { t } = useTranslation("agent");
+  return (
+    <div className="px-2 pt-2">
+      <span className="inline-flex max-w-full items-center gap-1 rounded bg-accent py-0.5 pl-2 pr-1 font-mono text-small">
+        <span className="truncate">
+          {t("quote.label", { path: quote.path, from: quote.fromLine, to: quote.toLine })}
+        </span>
+        <button
+          type="button"
+          aria-label={t("quote.remove")}
+          onClick={onClear}
+          className="shrink-0 rounded p-0.5 hover:bg-border"
+        >
+          <X aria-hidden="true" className="size-3.5" />
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/** The way back to a folded window. On a phone the tabs under the text do this job. */
+function Launcher({ busy, onOpen }: { busy: boolean; onOpen: () => void }) {
+  const { t } = useTranslation("agent");
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="fixed bottom-4 right-4 z-40 hidden items-center gap-2 rounded-full border border-control-edge bg-background px-4 py-2 text-body font-semibold shadow-lg hover:bg-accent md:inline-flex"
+    >
+      {busy ? (
+        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+      ) : (
+        <Sparkles aria-hidden="true" className="size-4" />
+      )}
+      {t("launcher")}
+      {busy && <span className="sr-only">{t("working")}</span>}
+    </button>
   );
 }
 
@@ -192,6 +177,7 @@ export function AgentPanel({
   onReviewProposal,
   documentBridge,
   onBeforeSend,
+  request = null,
 }: {
   projectId: string;
   open: boolean;
@@ -200,61 +186,79 @@ export function AgentPanel({
   documentBridge?: DocumentBridge;
   /** Flush open collab docs before a run so the agent reads current text (spec 28/42). */
   onBeforeSend?: () => Promise<void>;
+  /** Something the editor asked for: a selection to discuss, or a problem to fix. */
+  request?: AgentRequest | null;
 }) {
   const { t } = useTranslation("agent");
   const chat = useAgentChat(projectId, onBeforeSend);
   const [composerText, setComposerText] = useState("");
+  const [quote, setQuote] = useState<AgentQuote | null>(null);
   const [reviewId, setReviewId] = useState<string | null>(null);
-  const { width, onPointerDown, onKeyDown } = usePanelWidth();
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const active = ACTIVE_PHASES.includes(chat.run.phase);
+
+  useEffect(() => {
+    if (open) composerRef.current?.focus();
+  }, [open, request]);
+
+  // Each request is a new object, so the same selection can be asked about twice, and handled once.
+  const { send } = chat;
+  const handled = useRef<AgentRequest | null>(null);
+  useEffect(() => {
+    if (!request || handled.current === request) return;
+    handled.current = request;
+    if (request.quote) setQuote(request.quote);
+    if (request.send) void send(request.send);
+  }, [request, send]);
 
   const handleReview = (proposalId: string) => {
     onReviewProposal(proposalId);
     if (documentBridge) setReviewId(proposalId);
   };
 
-  const active = ACTIVE_PHASES.includes(chat.run.phase);
   const activeSession = chat.sessions.find((s) => s.id === chat.activeSessionId);
   const title = activeSession?.title ?? t("newChat");
+  const titleId = `agent-title-${projectId}`;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        aria-label={t("ariaLabel")}
-        // Width is user-driven (drag handle below) and persisted; cap it on small
-        // screens so it never overflows the viewport. The inline width overrides
-        // the Sheet's default fixed width, making the panel resizable (spec §5.4).
-        className="flex w-full max-w-[100vw] flex-col gap-0 p-0"
-        style={{ width }}
+    <>
+      {!open && <Launcher busy={active} onOpen={() => onOpenChange(true)} />}
+      <section
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby={titleId}
+        aria-description={t("description")}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && e.currentTarget.contains(e.target as Node)) onOpenChange(false);
+        }}
+        className={cn(
+          "fixed inset-x-0 bottom-12 top-12 z-40 flex-col border-t bg-background",
+          "md:bottom-4 md:left-auto md:right-4 md:top-auto md:h-[min(34rem,calc(100dvh-6rem))] md:w-[26rem]",
+          "md:overflow-hidden md:rounded-lg md:border md:border-control-edge md:shadow-xl",
+          open ? "flex" : "hidden",
+        )}
       >
-        {/* Drag-to-resize handle on the panel's left edge (spec §5.4). */}
-        <div
-          role="separator"
-          aria-label={t("resizeHandle")}
-          aria-orientation="vertical"
-          tabIndex={0}
-          onPointerDown={onPointerDown}
-          onKeyDown={onKeyDown}
-          className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize bg-transparent hover:bg-border focus-visible:bg-border"
-        />
-        <PanelHeader title={title} chat={chat} />
+        <PanelHeader titleId={titleId} title={title} chat={chat} onMinimize={() => onOpenChange(false)} />
         <Conversation chat={chat} onPickExample={setComposerText} onReviewProposal={handleReview} />
 
         {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
 
         <div className="border-t">
           {active && <RunControls canStop={Boolean(chat.run.runId)} onStop={() => void chat.stop()} />}
+          {quote && <QuoteChip quote={quote} onClear={() => setQuote(null)} />}
           <AgentComposer
+            ref={composerRef}
             value={composerText}
             onChange={setComposerText}
             disabled={active}
             onSend={(text) => {
-              void chat.send(text);
+              void chat.send(withQuote(text, quote));
               setComposerText("");
+              setQuote(null);
             }}
           />
         </div>
-      </SheetContent>
+      </section>
 
       {documentBridge && chat.activeSessionId && (
         <DiffReviewDialog
@@ -266,6 +270,6 @@ export function AgentPanel({
           onOpenChange={(o) => !o && setReviewId(null)}
         />
       )}
-    </Sheet>
+    </>
   );
 }

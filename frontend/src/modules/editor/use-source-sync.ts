@@ -94,6 +94,7 @@ export function useSourceSync(
 
   return {
     openDoc,
+    editorView,
     syncCompileId,
     setSyncCompileId,
     pdfTarget,

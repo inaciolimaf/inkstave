@@ -1,95 +1,127 @@
-import { ArrowLeft, Download, History, Share2, Sparkles } from "lucide-react";
+import { ChevronDown, Download, History, MoreHorizontal, Share2, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { InkstaveMark } from "@/components/inkstave-logo";
 import { Button } from "@/components/ui/button";
-import { config } from "@/config";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { NotificationsBell } from "@/modules/notifications";
 import { useDownloadProject } from "@/modules/projects";
 
-/** Tighter below `lg`, where five tools share the bar with the title. */
-const TOOL_CLASS = "px-2 lg:px-3";
-
-/** Icons only below `lg`, or the words squeeze out the title. The word stays as the control's name. */
-function BarLabel({ children }: { children: string }) {
-  return <span className="sr-only lg:not-sr-only">{children}</span>;
-}
-
-/** The editor's one bar (spec 106): what is open, the way back, and the workspace tools. */
-export function EditorBar({
+/** The tools a person reaches for now and then wait in one menu, so the bar stays one quiet row. */
+function MoreMenu({
   projectId,
   projectName,
-  agentOpen,
-  onToggleAgent,
   historyDisabled,
   onOpenHistory,
   onOpenShare,
 }: {
   projectId: string;
   projectName: string | undefined;
-  agentOpen: boolean;
-  onToggleAgent: () => void;
+  historyDisabled: boolean;
+  onOpenHistory: () => void;
+  onOpenShare: () => void;
+}) {
+  const { t } = useTranslation("editor");
+  const { download, downloadingId } = useDownloadProject();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="icon" variant="ghost" className="size-8" aria-label={t("toolbar.more")}>
+          <MoreHorizontal aria-hidden="true" className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem disabled={historyDisabled} onSelect={onOpenHistory}>
+          <History aria-hidden="true" className="size-4" />
+          {t("toolbar.history")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={downloadingId === projectId}
+          onSelect={() => void download(projectId, projectName ?? "project")}
+        >
+          <Download aria-hidden="true" className="size-4" />
+          {t("toolbar.download")}
+        </DropdownMenuItem>
+        <DropdownMenuItem className="md:hidden" onSelect={onOpenShare}>
+          <Share2 aria-hidden="true" className="size-4" />
+          {t("toolbar.share")}
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/projects">
+            <Undo2 aria-hidden="true" className="size-4" />
+            {t("toolbar.backToProjects")}
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * The editor's one bar (specs 106, 107): where you are, the one main action and little else. The
+ * Compile button arrives through `compileSlotRef`: it belongs to the preview, which owns the compile.
+ */
+export function EditorBar({
+  projectId,
+  projectName,
+  fileName,
+  onOpenFiles,
+  compileSlotRef,
+  historyDisabled,
+  onOpenHistory,
+  onOpenShare,
+}: {
+  projectId: string;
+  projectName: string | undefined;
+  fileName: string | undefined;
+  onOpenFiles: () => void;
+  compileSlotRef: (element: HTMLDivElement | null) => void;
   historyDisabled: boolean;
   onOpenHistory: () => void;
   onOpenShare: () => void;
 }) {
   const { t } = useTranslation(["editor", "common"]);
-  const { download, downloadingId } = useDownloadProject();
-
   return (
-    <header className="flex items-center gap-1 border-b px-3 py-1.5 lg:gap-2">
+    <header className="flex items-center gap-2 border-b px-3 py-1.5">
       <Link to="/projects" aria-label="Inkstave" className="shrink-0 hover:opacity-80">
         <InkstaveMark className="h-5 w-5 text-foreground" />
       </Link>
-      <h1 className="min-w-0 flex-1 truncate font-serif text-heading font-medium">
+      <h1 className="sr-only min-w-0 truncate font-serif text-heading font-medium md:not-sr-only">
         {projectName ?? t("common:state.loading")}
       </h1>
-      <Link
-        to="/projects"
-        className="inline-flex size-8 shrink-0 items-center justify-center text-body text-muted-foreground hover:text-foreground lg:size-auto"
+      <span aria-hidden="true" className="hidden text-muted-foreground md:inline">
+        /
+      </span>
+      <button
+        type="button"
+        onClick={onOpenFiles}
+        aria-label={t("toolbar.switchFile", { name: fileName ?? t("toolbar.noFile") })}
+        className="flex min-h-8 min-w-0 items-center gap-1 rounded px-1.5 font-mono text-small hover:bg-accent"
       >
-        <ArrowLeft aria-hidden="true" className="size-4 lg:hidden" />
-        <BarLabel>{t("toolbar.backToProjects")}</BarLabel>
-      </Link>
-      {config.agentEnabled && (
-        <Button
-          size="sm"
-          variant={agentOpen ? "secondary" : "ghost"}
-          className={TOOL_CLASS}
-          aria-pressed={agentOpen}
-          onClick={onToggleAgent}
-        >
-          <Sparkles aria-hidden="true" className="size-4" />
-          <BarLabel>{t("toolbar.agent")}</BarLabel>
+        <span className="truncate">{fileName ?? t("toolbar.files")}</span>
+        <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
+      </button>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <Button size="sm" variant="ghost" className="hidden md:inline-flex" onClick={onOpenShare}>
+          <Share2 aria-hidden="true" className="size-4" />
+          {t("toolbar.share")}
         </Button>
-      )}
-      <Button
-        size="sm"
-        variant="ghost"
-        className={TOOL_CLASS}
-        disabled={historyDisabled}
-        onClick={onOpenHistory}
-      >
-        <History aria-hidden="true" className="size-4" />
-        <BarLabel>{t("toolbar.history")}</BarLabel>
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className={TOOL_CLASS}
-        disabled={downloadingId === projectId}
-        aria-busy={downloadingId === projectId}
-        onClick={() => void download(projectId, projectName ?? "project")}
-      >
-        <Download aria-hidden="true" className="size-4" />
-        <BarLabel>{t("toolbar.download")}</BarLabel>
-      </Button>
-      <Button size="sm" variant="ghost" className={TOOL_CLASS} onClick={onOpenShare}>
-        <Share2 aria-hidden="true" className="size-4" />
-        <BarLabel>{t("toolbar.share")}</BarLabel>
-      </Button>
-      <NotificationsBell />
+        <NotificationsBell />
+        <MoreMenu
+          projectId={projectId}
+          projectName={projectName}
+          historyDisabled={historyDisabled}
+          onOpenHistory={onOpenHistory}
+          onOpenShare={onOpenShare}
+        />
+        <div ref={compileSlotRef} className="contents" />
+      </div>
     </header>
   );
 }

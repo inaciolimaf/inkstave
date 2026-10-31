@@ -1,102 +1,184 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 
 import { Desk } from "@/components/manuscript";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { AgentPanel } from "@/modules/agent";
 import { useAuth } from "@/modules/auth";
-import { createEditorBridge } from "@/modules/diff-review";
 import { FileTreePanel, useProjectTree } from "@/modules/file-tree";
-import type { TreeEntity, TreeNode } from "@/modules/file-tree";
-import { HistoryPanel } from "@/modules/history";
+import type { TreeEntity } from "@/modules/file-tree";
 import { PreviewPane } from "@/modules/pdf-preview";
+import type { Problem } from "@/modules/pdf-preview";
 import { getProject, projectKey } from "@/modules/projects";
 import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
 
+import { AskAgentButton } from "./ask-agent-button";
+import { ContentPane } from "./content-pane";
 import { EditorBar } from "./editor-bar";
-import { EditorPane } from "./editor-pane";
-import { findNodeByPath } from "./sync-decoration";
+import { MobileTabs, type MobileView } from "./mobile-tabs";
+import { useStartDocument } from "./start-document";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useAgentOpen } from "./use-agent-open";
+import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
+import { useDocumentBridge } from "./use-document-bridge";
+import { useAgentAsks, useFlushBeforeCompile, useSourceJumps } from "./workspace-hooks";
+import { Panes } from "./workspace-panes";
+import { WorkspaceDrawers } from "./workspace-drawers";
 import { useSourceSync } from "./use-source-sync";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
 
-function useDocumentBridge(projectId: string, treeRoot: TreeNode | undefined) {
-  const documentBridge = useMemo(
-    () =>
-      config.agentEnabled && config.collabWsUrl
-        ? createEditorBridge(projectId, (path) =>
-            treeRoot ? (findNodeByPath(treeRoot, path)?.id ?? null) : null,
-          )
-        : undefined,
-    [projectId, treeRoot],
-  );
-  useEffect(() => () => documentBridge?.destroy?.(), [documentBridge]);
-  return documentBridge;
+/** The hosts in the bar and the status line that the panes render their controls into. */
+function useSlots() {
+  const [compile, setCompile] = useState<HTMLElement | null>(null);
+  const [output, setOutput] = useState<HTMLElement | null>(null);
+  const [status, setStatus] = useState<HTMLElement | null>(null);
+  return { compile, setCompile, output, setOutput, status, setStatus };
 }
 
-/** The panels that slide over the workspace. */
-function WorkspaceDrawers({
+function SelectionAsk({
+  selection,
+  clear,
+  wide,
+  asks,
+}: {
+  selection: EditorSelection | null;
+  clear: () => void;
+  wide: boolean;
+  asks: ReturnType<typeof useAgentAsks>;
+}) {
+  if (!config.agentEnabled || !selection) return null;
+  return (
+    <AskAgentButton
+      selection={selection}
+      floating={wide}
+      onAsk={() => {
+        asks.aboutSelection(selection);
+        clear();
+      }}
+    />
+  );
+}
+
+/** The PDF pane, wired to the bar and the status line, where its controls live. */
+function WorkspacePreview({
   projectId,
-  openDoc,
-  agentOpen,
-  onAgentOpenChange,
-  documentBridge,
-  onBeforeSend,
-  historyOpen,
-  onHistoryOpenChange,
+  flush,
+  sync,
+  jumps,
+  onProblemAsk,
+  compileSlot,
+  outputSlot,
 }: {
   projectId: string;
-  openDoc: TreeEntity | null;
-  agentOpen: boolean;
-  onAgentOpenChange: (open: boolean) => void;
-  documentBridge: ReturnType<typeof useDocumentBridge>;
-  onBeforeSend: () => Promise<void>;
-  historyOpen: boolean;
-  onHistoryOpenChange: (open: boolean) => void;
+  flush: () => Promise<void>;
+  sync: ReturnType<typeof useSourceSync>;
+  jumps: ReturnType<typeof useSourceJumps>;
+  onProblemAsk: (problem: Problem) => void;
+  compileSlot: HTMLElement | null;
+  outputSlot: HTMLElement | null;
 }) {
   return (
-    <>
-      {config.agentEnabled && (
-        <AgentPanel
-          projectId={projectId}
-          open={agentOpen}
-          onOpenChange={onAgentOpenChange}
-          documentBridge={documentBridge}
-          onBeforeSend={onBeforeSend}
-          onReviewProposal={() => {
-            // The diff-review surface (spec 47) opens inside the panel via documentBridge.
-          }}
-        />
-      )}
-      {openDoc?.type === "doc" && (
-        <HistoryPanel
-          projectId={projectId}
-          docId={openDoc.id}
-          open={historyOpen}
-          onOpenChange={onHistoryOpenChange}
-        />
-      )}
-    </>
+    <PreviewPane
+      projectId={projectId}
+      flush={flush}
+      onActiveCompileChange={sync.setSyncCompileId}
+      onPdfClick={jumps.onPdfClick}
+      syncTarget={sync.pdfTarget}
+      onCompileResult={sync.handleCompileResult}
+      onCompileSucceeded={jumps.showPreview}
+      problems={sync.problemsState.problems}
+      problemsLoading={sync.problemsState.loading}
+      problemsReason={sync.problemsState.reason}
+      onProblemJump={jumps.onProblemJump}
+      onProblemAsk={config.agentEnabled ? onProblemAsk : undefined}
+      compileSlot={compileSlot}
+      outputSlot={outputSlot}
+    />
   );
 }
 
-/** The whole editor screen: the one bar, the side panels and the three resizable panes. */
+/** The text pane, wired to the open project. */
+function WorkspaceContent({
+  projectId,
+  selected,
+  onSelect,
+  onDirtyChange,
+  sync,
+  onSyncToPdf,
+  readOnly,
+  filesOpen,
+  setFilesOpen,
+  statusSlot,
+  statusSlotRef,
+  outputSlotRef,
+}: {
+  projectId: string;
+  selected: TreeEntity | null;
+  onSelect: (entity: TreeEntity | null) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  sync: ReturnType<typeof useSourceSync>;
+  onSyncToPdf: () => void;
+  readOnly: boolean;
+  filesOpen: boolean;
+  setFilesOpen: (open: boolean) => void;
+  statusSlot: HTMLElement | null;
+  statusSlotRef: (element: HTMLDivElement | null) => void;
+  outputSlotRef: (element: HTMLDivElement | null) => void;
+}) {
+  const { user } = useAuth();
+  const pickFile = (entity: TreeEntity) => {
+    onSelect(entity);
+    if (entity.type !== "folder") setFilesOpen(false);
+  };
+  return (
+    <ContentPane
+      editor={{
+        projectId,
+        selected,
+        onClearSelection: () => onSelect(null),
+        onDirtyChange,
+        onEditorView: sync.handleEditorView,
+        onSyncToPdf,
+        onDocumentLoaded: sync.handleDocumentLoaded,
+        syncEnabled: sync.syncCompileId !== null,
+        collabEnabled: COLLAB_ENABLED,
+        getToken: getCollabToken,
+        currentUser: user ? { id: user.id, name: user.display_name } : null,
+        readOnly,
+        statusSlot,
+      }}
+      filesOpen={filesOpen}
+      onOpenFiles={() => setFilesOpen(true)}
+      onCloseFiles={() => setFilesOpen(false)}
+      fileTree={
+        <FileTreePanel
+          projectId={projectId}
+          selectedId={selected?.id ?? null}
+          onSelectEntity={pickFile}
+          readOnly={readOnly}
+        />
+      }
+      statusSlotRef={statusSlotRef}
+      outputSlotRef={outputSlotRef}
+    />
+  );
+}
+
+/** The whole editor screen (spec 107): one bar, the text and the PDF, and the rest on demand. */
 export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<TreeEntity | null>(null);
   const [dirty, setDirty] = useState(false);
   const wide = useMediaQuery("(min-width: 768px)");
+  const [view, setView] = useState<MobileView>("content");
+  const [filesOpen, setFilesOpen] = useState(false);
+  const slots = useSlots();
 
   const tree = useProjectTree(projectId);
   const treeRoot = tree.data;
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
-  const { user } = useAuth();
-  const currentUser = user ? { id: user.id, name: user.display_name } : null;
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
   const projectQuery = useQuery({
@@ -107,14 +189,29 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
   const documentBridge = useDocumentBridge(projectId, treeRoot);
+  const { selection, clearSelection } = useEditorSelection(sync.editorView);
+  const asks = useAgentAsks(sync.openDoc, setAgentOpen);
+  const jumps = useSourceJumps(sync, setView);
+  useStartDocument(treeRoot, projectQuery.data?.rootDocId, selected, setSelected);
 
-  // Flush pending local CRDT edits to the server before a compile materializes the
-  // content column (spec 31 §5.4 / AC8). The open document's collab session registers
-  // its real `flush()` here; when no session is active this resolves immediately.
-  const flushRef = useRef<(() => Promise<void>) | null>(null);
-  const flushBeforeCompile = useCallback(async () => {
-    await flushRef.current?.();
-  }, []);
+  const flushBeforeCompile = useFlushBeforeCompile();
+
+  const content = (
+    <WorkspaceContent
+      projectId={projectId}
+      selected={selected}
+      onSelect={setSelected}
+      onDirtyChange={setDirty}
+      sync={sync}
+      onSyncToPdf={jumps.onSyncToPdf}
+      readOnly={readOnly}
+      filesOpen={filesOpen}
+      setFilesOpen={setFilesOpen}
+      statusSlot={slots.status}
+      statusSlotRef={slots.setStatus}
+      outputSlotRef={slots.setOutput}
+    />
+  );
 
   return (
     <Desk
@@ -122,8 +219,9 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         <EditorBar
           projectId={projectId}
           projectName={projectQuery.data?.name}
-          agentOpen={agentOpen}
-          onToggleAgent={() => setAgentOpen((v) => !v)}
+          fileName={sync.openDoc?.name}
+          onOpenFiles={() => setFilesOpen((v) => !v)}
+          compileSlotRef={slots.setCompile}
           historyDisabled={sync.openDoc?.type !== "doc"}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenShare={() => setShareOpen(true)}
@@ -136,57 +234,38 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         openDoc={sync.openDoc}
         agentOpen={agentOpen}
         onAgentOpenChange={setAgentOpen}
+        agentRequest={asks.request}
         documentBridge={documentBridge}
         onBeforeSend={flushBeforeCompile}
         historyOpen={historyOpen}
         onHistoryOpenChange={setHistoryOpen}
       />
-      <ResizablePanelGroup
-        direction={wide ? "horizontal" : "vertical"}
-        autoSaveId={`inkstave:panes:${projectId}`}
-        className="min-h-0 flex-1"
-      >
-        <ResizablePanel defaultSize={22} minSize={12} className="min-h-0">
-          <FileTreePanel
-            projectId={projectId}
-            selectedId={selected?.id ?? null}
-            onSelectEntity={setSelected}
-            readOnly={readOnly}
-          />
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={48} minSize={20} className="min-h-0">
-          <EditorPane
-            projectId={projectId}
-            selected={selected}
-            onClearSelection={() => setSelected(null)}
-            onDirtyChange={setDirty}
-            onEditorView={sync.handleEditorView}
-            onSyncToPdf={sync.handleSyncToPdf}
-            onDocumentLoaded={sync.handleDocumentLoaded}
-            syncEnabled={sync.syncCompileId !== null}
-            collabEnabled={COLLAB_ENABLED}
-            getToken={getCollabToken}
-            currentUser={currentUser}
-            readOnly={readOnly}
-          />
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={30} minSize={0} className="min-h-0">
-          <PreviewPane
+      <Panes
+        projectId={projectId}
+        wide={wide}
+        view={view}
+        content={content}
+        preview={
+          <WorkspacePreview
             projectId={projectId}
             flush={flushBeforeCompile}
-            onActiveCompileChange={sync.setSyncCompileId}
-            onPdfClick={sync.handlePdfClick}
-            syncTarget={sync.pdfTarget}
-            onCompileResult={sync.handleCompileResult}
-            problems={sync.problemsState.problems}
-            problemsLoading={sync.problemsState.loading}
-            problemsReason={sync.problemsState.reason}
-            onProblemJump={sync.jumpToSource}
+            sync={sync}
+            jumps={jumps}
+            onProblemAsk={asks.aboutProblem}
+            compileSlot={slots.compile}
+            outputSlot={slots.output}
           />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        }
+      />
+      {!wide && (
+        <MobileTabs
+          view={view}
+          onView={setView}
+          agentOpen={agentOpen}
+          onToggleAgent={() => setAgentOpen((v) => !v)}
+        />
+      )}
+      {!agentOpen && <SelectionAsk selection={selection} clear={clearSelection} wide={wide} asks={asks} />}
       <UnsavedChangesGuard when={dirty} />
     </Desk>
   );

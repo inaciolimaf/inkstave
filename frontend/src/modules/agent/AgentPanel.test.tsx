@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithProviders } from "@/test/utils";
@@ -52,6 +53,59 @@ function renderPanel(onReview = vi.fn()) {
 }
 
 describe("AgentPanel", () => {
+  it("is a window that leaves the editor reachable, and folds into a button (spec 107)", async () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = renderWithProviders(
+      <AgentPanel projectId="p1" open onOpenChange={onOpenChange} onReviewProposal={vi.fn()} />,
+    );
+    const panel = await screen.findByRole("dialog");
+    expect(panel).toHaveAttribute("aria-modal", "false");
+    expect(screen.getByLabelText("Message the agent")).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Minimize the agent" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    rerender(
+      <AgentPanel projectId="p1" open={false} onOpenChange={onOpenChange} onReviewProposal={vi.fn()} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Agent" }));
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+  });
+
+  it("attaches a selection from the editor and sends it with the next message", async () => {
+    const quote = { path: "main.tex", fromLine: 2, toLine: 3, text: "Selected words" };
+    renderWithProviders(
+      <AgentPanel
+        projectId="p1"
+        open
+        onOpenChange={vi.fn()}
+        onReviewProposal={vi.fn()}
+        request={{ quote }}
+      />,
+    );
+    expect(await screen.findByText("main.tex, lines 2-3")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Message the agent"), "Shorten{Enter}");
+    await waitFor(() => expect(api.startRun).toHaveBeenCalled());
+    expect(JSON.stringify(api.startRun.mock.calls[0])).toContain("Selected words");
+    expect(screen.queryByText("main.tex, lines 2-3")).toBeNull();
+  });
+
+  it("sends a request from the editor once, even when effects run twice", async () => {
+    api.startRun.mockClear();
+    renderWithProviders(
+      <StrictMode>
+        <AgentPanel
+          projectId="p1"
+          open
+          onOpenChange={vi.fn()}
+          onReviewProposal={vi.fn()}
+          request={{ send: "Fix this compile error" }}
+        />
+      </StrictMode>,
+    );
+    await waitFor(() => expect(api.startRun).toHaveBeenCalled());
+    expect(api.startRun).toHaveBeenCalledTimes(1);
+  });
+
   it("prefills the composer from an example chip (AC2)", async () => {
     renderPanel();
     const chip = await screen.findByText("Rewrite the introduction to be more concise.");

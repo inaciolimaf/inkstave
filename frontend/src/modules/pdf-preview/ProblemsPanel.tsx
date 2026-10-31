@@ -6,6 +6,7 @@
  * the collapse control live in the shared compile-output dock (see PreviewPane).
  */
 import { AlertCircle, AlertTriangle, Info } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
@@ -27,15 +28,17 @@ const SEVERITY_META: Record<
 function ProblemRow({
   problem,
   onJump,
+  onAsk,
 }: {
   problem: Problem;
   onJump?: (file: string, line: number) => void;
+  onAsk?: (problem: Problem) => void;
 }) {
   const { t } = useTranslation("preview");
   const meta = SEVERITY_META[problem.severity];
   const locatable = problem.file != null && problem.line != null;
   const location = locatable ? `${problem.file}:${problem.line}` : null;
-  return (
+  const row = (
     <button
       type="button"
       disabled={!locatable || !onJump}
@@ -51,6 +54,31 @@ function ProblemRow({
       <span className="min-w-0 flex-1 truncate">{problem.message}</span>
       {location && <span className="shrink-0 font-mono text-muted-foreground">{location}</span>}
     </button>
+  );
+  if (!onAsk || problem.severity !== "error") return row;
+  return (
+    <div className="flex items-start">
+      <div className="min-w-0 flex-1">{row}</div>
+      <button
+        type="button"
+        onClick={() => onAsk(problem)}
+        className="m-0.5 shrink-0 rounded border border-control-edge px-2 py-0.5 text-small font-medium hover:bg-accent"
+      >
+        {t("problems.askAgent")}
+      </button>
+    </div>
+  );
+}
+
+/** Warnings can run to dozens of repeats: folded, they stop burying the one error. */
+function QuietGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details>
+      <summary className="cursor-pointer px-3 pb-0.5 pt-1.5 text-small font-medium text-muted-foreground">
+        {title}
+      </summary>
+      {children}
+    </details>
   );
 }
 
@@ -106,10 +134,15 @@ export function ProblemsPanel({
   problems,
   reason,
   onJump,
+  onAsk,
+  foldQuiet = false,
 }: {
   problems: CompileProblems | null;
   reason?: ProblemsReason | null;
   onJump?: (file: string, line: number) => void;
+  onAsk?: (problem: Problem) => void;
+  /** Fold everything below an error, for the dock that floats over the text. */
+  foldQuiet?: boolean;
 }) {
   const { t } = useTranslation("preview");
   const total = problems?.problems.length ?? 0;
@@ -124,14 +157,21 @@ export function ProblemsPanel({
       const group = problems!.problems.filter((p) => p.severity === severity);
       if (group.length === 0) return null;
       const meta = SEVERITY_META[severity];
+      const title = t("problems.group", { label: t(meta.labelKey), count: group.length });
+      const rows = group.map((problem, i) => (
+        <ProblemRow key={i} problem={problem} onJump={onJump} onAsk={onAsk} />
+      ));
+      if (foldQuiet && severity !== "error") {
+        return (
+          <QuietGroup key={severity} title={title}>
+            {rows}
+          </QuietGroup>
+        );
+      }
       return (
         <div key={severity}>
-          <p className="px-3 pt-1.5 pb-0.5 text-small font-medium text-muted-foreground">
-            {t("problems.group", { label: t(meta.labelKey), count: group.length })}
-          </p>
-          {group.map((problem, i) => (
-            <ProblemRow key={i} problem={problem} onJump={onJump} />
-          ))}
+          <p className="px-3 pt-1.5 pb-0.5 text-small font-medium text-muted-foreground">{title}</p>
+          {rows}
         </div>
       );
     });
@@ -142,7 +182,7 @@ export function ProblemsPanel({
       id="problems-region"
       role="region"
       aria-label={t("problems.region")}
-      className="max-h-48 overflow-auto"
+      className={foldQuiet ? "max-h-[50dvh] overflow-auto py-1" : "max-h-48 overflow-auto"}
     >
       {body}
     </div>

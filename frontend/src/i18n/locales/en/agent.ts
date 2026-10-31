@@ -1,11 +1,17 @@
 /** Strings for the AI agent chat panel (the `agent` namespace, spec 46). */
 const dict = {
   ariaLabel: "AI agent",
+  minimize: "Minimize the agent",
+  launcher: "Agent",
+  working: "working",
+  quote: {
+    label: "{{path}}, lines {{from}}-{{to}}",
+    remove: "Remove the selection",
+  },
   newChat: "New chat",
   sessions: "Sessions",
   untitledChat: "Untitled chat",
   description: "Chat with the AI writing assistant. It proposes changes for you to review.",
-  resizeHandle: "Resize agent panel",
   loadingConversation: "Loading conversation",
   empty: {
     intro:
@@ -57,6 +63,8 @@ const dict = {
     conversation: "Conversation",
     jumpToLatest: "Jump to latest",
     runCancelled: "Run cancelled",
+    steps_one: "{{count}} step",
+    steps_other: "{{count}} steps",
     tools: {
       search_project: "Searched the project",
       read_file: "Read a file",

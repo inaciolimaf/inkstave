@@ -56,6 +56,7 @@ const dict: Dict = {
     noLogOutput: "Sem saída de registro.",
   },
   problems: {
+    askAgent: "Corrigir com o agente",
     title: "Problemas",
     region: "Problemas da compilação",
     noLogYet: "Nenhum registro ainda — execute uma compilação.",
@@ -85,6 +86,8 @@ const dict: Dict = {
     page: "Página {{pageNumber}}",
   },
   errors: {
+    lastGoodPdf: "Esta é a última versão que compilou. A mais recente falhou.",
+    viewDetails: "Ver o erro",
     startCompile: "Não foi possível iniciar a compilação.",
     loadLog: "Não foi possível carregar o registro.",
     loadPdf: "Não foi possível carregar o PDF.",

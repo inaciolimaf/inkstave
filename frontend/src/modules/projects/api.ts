@@ -16,6 +16,7 @@ function toProject(wire: ProjectWire): Project {
     id: wire.id,
     name: wire.name,
     ownerId: wire.owner_id,
+    rootDocId: wire.root_doc_id,
     createdAt: wire.created_at,
     updatedAt: wire.updated_at,
   };

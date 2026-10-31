@@ -16,6 +16,22 @@ const dict = {
     download: "Download",
     openToJump: "Open {{file}} to jump there",
     backToProjects: "Back to projects",
+    more: "More actions",
+    files: "Files",
+    switchFile: "Switch file ({{name}})",
+    noFile: "No file open",
+  },
+  problemPrompt: "Fix this compile error: {{message}}{{where}}",
+  mobile: {
+    views: "Screen",
+    content: "Content",
+    preview: "Preview",
+  },
+  drawer: {
+    shade: "Close the file list to go back to the text",
+  },
+  selection: {
+    ask: "Ask the agent",
   },
   conflict: {
     title: "This document changed on the server",

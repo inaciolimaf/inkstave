@@ -18,6 +18,22 @@ const dict: Dict = {
     download: "Baixar",
     openToJump: "Abra {{file}} para ir até lá",
     backToProjects: "Voltar para projetos",
+    more: "Mais ações",
+    files: "Arquivos",
+    switchFile: "Trocar de arquivo ({{name}})",
+    noFile: "Nenhum arquivo aberto",
+  },
+  problemPrompt: "Corrija este erro de compilação: {{message}}{{where}}",
+  mobile: {
+    views: "Tela",
+    content: "Conteúdo",
+    preview: "Prévia",
+  },
+  drawer: {
+    shade: "Feche a lista de arquivos para voltar ao texto",
+  },
+  selection: {
+    ask: "Pedir ao agente",
   },
   conflict: {
     title: "Este documento mudou no servidor",

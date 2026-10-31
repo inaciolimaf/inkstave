@@ -3,6 +3,7 @@ export interface Project {
   id: string;
   name: string;
   ownerId: string;
+  rootDocId: string | null;
   createdAt: string;
   updatedAt: string;
 }

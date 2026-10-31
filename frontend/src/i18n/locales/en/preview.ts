@@ -53,6 +53,7 @@ const dict = {
     noLogOutput: "No log output.",
   },
   problems: {
+    askAgent: "Fix with the agent",
     title: "Problems",
     region: "Compile problems",
     noLogYet: "No log yet — run a compile.",
@@ -82,6 +83,8 @@ const dict = {
     page: "Page {{pageNumber}}",
   },
   errors: {
+    lastGoodPdf: "This is the last version that compiled. The latest one failed.",
+    viewDetails: "See the error",
     startCompile: "Could not start the compile.",
     loadLog: "Could not load the log.",
     loadPdf: "Could not load the PDF.",

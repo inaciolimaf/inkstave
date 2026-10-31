@@ -142,6 +142,8 @@ are English-only today ([known gaps](known-gaps.md)).
 | Proposed changes | `ProposedDiff` | "Mudanças propostas" |
 | Stage an edit | `StagedEdit`, `propose_edit` | "Propôs uma edição" |
 | Review | `DiffReviewDialog` | "Revisar mudanças" |
+| Selection sent to the agent | `AgentQuote`, `withQuote` | "Pedir ao agente" |
+| File drawer | `FileDrawer` | "Arquivos" |
 | Hunk | `hunks`, `hunk_count` | "hunk" |
 | Budget | `agent_budget_exceeded` | "Orçamento atingido" |
 | Rate limit | `agent_rate_limited` | "Limite de uso atingido" |

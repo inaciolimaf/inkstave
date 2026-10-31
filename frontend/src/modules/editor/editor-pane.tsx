@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { EditorView } from "@codemirror/view";
 import { FileText, LocateFixed } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { QueryView } from "@/components/states";
@@ -74,6 +75,8 @@ interface EditorPaneProps {
   currentUser?: { id: string; name: string } | null;
   /** Viewer role → mount the collab editor read-only (spec 34). */
   readOnly?: boolean;
+  /** The status line these tools live in (spec 107); `undefined` keeps them in a row of their own. */
+  statusSlot?: HTMLElement | null;
 }
 
 /** The open entity, its REST content and its collab session. */
@@ -131,6 +134,7 @@ function PaneBody({
   dark,
   onEditorView,
   currentUser,
+  statusSlot,
 }: {
   document: ReturnType<typeof useOpenDocument>;
   autosave: DocumentAutosave;
@@ -138,6 +142,7 @@ function PaneBody({
   dark: boolean;
   onEditorView: EditorPaneProps["onEditorView"];
   currentUser: { id: string; name: string } | null;
+  statusSlot: HTMLElement | null | undefined;
 }) {
   const { t } = useTranslation("editor");
   if (!openEntity) return <EmptyState />;
@@ -152,6 +157,7 @@ function PaneBody({
         dark={dark}
         onView={onEditorView}
         currentUser={currentUser}
+        statusSlot={statusSlot}
       />
     );
   }
@@ -190,6 +196,7 @@ export function EditorPane({
   getToken,
   currentUser = null,
   readOnly = false,
+  statusSlot,
 }: EditorPaneProps) {
   const { t } = useTranslation("editor");
   const { settings, dark, update } = useEditorPreferences();
@@ -219,30 +226,40 @@ export function EditorPane({
   // Ctrl/Cmd+S forces an immediate flush and suppresses the browser save dialog.
   useShortcuts({ "mod+s": () => saveNow() }, isDoc);
 
+  const tools = (
+    <>
+      {isDoc && !collabActive && (
+        <SaveStatusIndicator status={status} onRetry={saveNow} lastSavedAt={lastSavedAt} />
+      )}
+      {isDoc && onSyncToPdf && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label={t("pane.syncToPdf")}
+          title={t("pane.syncToPdfTitle")}
+          disabled={!syncEnabled}
+          onClick={onSyncToPdf}
+        >
+          <LocateFixed aria-hidden="true" />
+        </Button>
+      )}
+      <EditorSettingsPopover settings={settings} onUpdate={update} />
+    </>
+  );
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-1.5">
-        <span className="mr-auto truncate font-serif text-heading">
-          {openEntity?.name ?? t("pane.noFileOpen")}
-        </span>
-        {isDoc && !collabActive && (
-          <SaveStatusIndicator status={status} onRetry={saveNow} lastSavedAt={lastSavedAt} />
-        )}
-        {isDoc && onSyncToPdf && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            aria-label={t("pane.syncToPdf")}
-            title={t("pane.syncToPdfTitle")}
-            disabled={!syncEnabled}
-            onClick={onSyncToPdf}
-          >
-            <LocateFixed aria-hidden="true" />
-          </Button>
-        )}
-        <EditorSettingsPopover settings={settings} onUpdate={update} />
-      </div>
+      {statusSlot === undefined ? (
+        <div className="flex items-center gap-2 border-b px-3 py-1.5">
+          <span className="mr-auto truncate font-serif text-heading">
+            {openEntity?.name ?? t("pane.noFileOpen")}
+          </span>
+          {tools}
+        </div>
+      ) : (
+        statusSlot && createPortal(tools, statusSlot)
+      )}
       <div className="min-h-0 flex-1">
         <PaneBody
           document={openDocument}
@@ -251,6 +268,7 @@ export function EditorPane({
           dark={dark}
           onEditorView={onEditorView}
           currentUser={currentUser}
+          statusSlot={statusSlot}
         />
       </div>
       <ConflictDialog

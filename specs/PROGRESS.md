@@ -9,6 +9,7 @@ _All planned specs are implemented._
 
 ## Done
 
+- [x] 107-editor-focus-layout
 - [x] 105-sandboxed-compiles
 - [x] 104-email-auth-flows
 Specs 01–103 (core system, runtime safety, validated fix-packs, audit fix-packs,

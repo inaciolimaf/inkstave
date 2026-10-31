@@ -69,38 +69,75 @@ function MessageBubble({ item }: { item: Extract<TranscriptItem, { kind: "messag
   );
 }
 
-function ToolActivityRow({ item }: { item: Extract<TranscriptItem, { kind: "tool" }> }) {
+type ToolItem = Extract<TranscriptItem, { kind: "tool" }>;
+
+function StatusIcon({ status }: { status: ToolItem["status"] }) {
+  if (status === "running") {
+    return <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />;
+  }
+  if (status === "ok") return <Check className="size-3.5 text-success-text" aria-hidden="true" />;
+  return <X className="size-3.5 text-error-text" aria-hidden="true" />;
+}
+
+/** What a step touched, for a person: the file or the search, never the raw call. */
+function toolTarget(args: unknown): string | null {
+  if (typeof args !== "object" || args === null) return null;
+  const { path, query, name } = args as { path?: unknown; query?: unknown; name?: unknown };
+  const target = path ?? query ?? name;
+  return typeof target === "string" ? target : null;
+}
+
+/** A run's tool calls fold into one line (spec 107): the agent's steps are not the conversation. */
+function ToolActivity({ items }: { items: ToolItem[] }) {
   const { t } = useTranslation("agent");
   const [open, setOpen] = useState(false);
-  const labelKey = TOOL_LABEL_KEYS[item.name];
-  const label = labelKey ? t(labelKey) : item.name;
-  const icon =
-    item.status === "running" ? (
-      <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
-    ) : item.status === "ok" ? (
-      <Check className="size-3.5 text-success-text" aria-hidden="true" />
-    ) : (
-      <X className="size-3.5 text-error-text" aria-hidden="true" />
-    );
+  const label = (item: ToolItem) => {
+    const key = TOOL_LABEL_KEYS[item.name];
+    return key ? t(key) : item.name;
+  };
+  const running = items.find((item) => item.status === "running");
+  const failed = items.some((item) => item.status === "error");
+  const summary = running ? label(running) : t("transcript.steps", { count: items.length });
+  const status = running ? "running" : failed ? "error" : "ok";
   return (
-    <div className={cn(HAND, "text-small text-muted-foreground")} data-status={item.status}>
+    <div className={cn(HAND, "text-small text-muted-foreground")} data-status={status}>
       <button
         type="button"
         aria-expanded={open}
         className="flex w-full items-center gap-2 py-0.5 text-left hover:text-foreground"
         onClick={() => setOpen((o) => !o)}
       >
-        {icon}
-        <span className="flex-1 truncate">{label}</span>
+        <StatusIcon status={status} />
+        <span className="flex-1 truncate">{summary}</span>
         {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
       </button>
       {open && (
-        <pre className="overflow-x-auto border-t py-1.5 font-mono text-small">
-          {JSON.stringify({ args: item.args, result: item.result }, null, 2)}
-        </pre>
+        <ul className="space-y-0.5 pb-1 pl-5">
+          {items.map((item) => (
+            <li key={item.id} className="flex min-w-0 items-center gap-2">
+              <StatusIcon status={item.status} />
+              <span className="min-w-0 truncate">
+                {label(item)}
+                {toolTarget(item.args) && <span className="font-mono"> {toolTarget(item.args)}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
+}
+
+/** Groups neighbouring tool calls, so a long run reads as a few lines. */
+function foldTools(items: TranscriptItem[]): (Exclude<TranscriptItem, ToolItem> | ToolItem[])[] {
+  const folded: (Exclude<TranscriptItem, ToolItem> | ToolItem[])[] = [];
+  for (const item of items) {
+    const last = folded[folded.length - 1];
+    if (item.kind !== "tool") folded.push(item);
+    else if (Array.isArray(last)) last.push(item);
+    else folded.push([item]);
+  }
+  return folded;
 }
 
 function DiffProposalCard({
@@ -187,9 +224,9 @@ export function AgentTranscript({
         aria-label={t("transcript.conversation")}
         className="flex h-full flex-col gap-3 overflow-auto p-3"
       >
-        {items.map((item) => {
+        {foldTools(items).map((item) => {
+          if (Array.isArray(item)) return <ToolActivity key={item[0]!.id} items={item} />;
           if (item.kind === "message") return <MessageBubble key={item.id} item={item} />;
-          if (item.kind === "tool") return <ToolActivityRow key={item.id} item={item} />;
           if (item.kind === "diff-proposal") {
             return <DiffProposalCard key={item.id} item={item} onReviewProposal={onReviewProposal} />;
           }

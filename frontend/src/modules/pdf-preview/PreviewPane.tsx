@@ -3,7 +3,8 @@
  * zoom + page navigation, and a collapsible raw-log panel, with empty / loading
  * / error states for every compile outcome.
  */
-import { useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n/config";
@@ -14,7 +15,7 @@ import { CompileOutputDock } from "./CompileOutputDock";
 import { PdfToolbar } from "./PdfToolbar";
 import type { PageClickHandler } from "./PdfViewer";
 import { type ErrorOutcome, PreviewBody } from "./PreviewBody";
-import type { CompileProblems, ProblemsReason } from "./problems";
+import type { CompileProblems, Problem, ProblemsReason } from "./problems";
 import type { PdfHighlight } from "./hooks/useSyncTex";
 import { useCompile } from "./hooks/useCompile";
 import { useCompileLog } from "./hooks/useCompileLog";
@@ -74,6 +75,22 @@ interface PreviewPaneProps {
   problemsReason?: ProblemsReason | null;
   /** Click a problem row → jump to its source line. */
   onProblemJump?: (file: string, line: number) => void;
+  /** Ask the agent about a problem; shown on its row when given. */
+  onProblemAsk?: (problem: Problem) => void;
+  /** A compile just succeeded: the phone moves to the PDF. */
+  onCompileSucceeded?: () => void;
+  /**
+   * Where the Compile button and the output dock live (spec 107). `undefined` keeps them in the pane;
+   * `null` means the host element is not mounted yet, so they wait for it.
+   */
+  compileSlot?: HTMLElement | null;
+  outputSlot?: HTMLElement | null;
+}
+
+/** Renders in place, or into the host the workspace gave, or nowhere until that host exists. */
+function Slotted({ slot, children }: { slot: HTMLElement | null | undefined; children: ReactNode }) {
+  if (slot === undefined) return children;
+  return slot ? createPortal(children, slot) : null;
 }
 
 export function PreviewPane({
@@ -87,6 +104,10 @@ export function PreviewPane({
   problemsLoading,
   problemsReason,
   onProblemJump,
+  onProblemAsk,
+  onCompileSucceeded,
+  compileSlot,
+  outputSlot,
 }: PreviewPaneProps) {
   const { t } = useTranslation("preview");
   const compile = useCompile(projectId, flush);
@@ -98,7 +119,8 @@ export function PreviewPane({
     ? (compile.status as ErrorOutcome)
     : null;
   const active = isActive(compile.status);
-  const dock = useOutputDock(errorOutcome);
+  const floating = outputSlot !== undefined;
+  const dock = useOutputDock(errorOutcome, floating);
 
   // Report which compile the shown PDF belongs to (drives sync availability).
   useEffect(() => {
@@ -110,30 +132,38 @@ export function PreviewPane({
     if (isTerminal(compile.status as CompileJobStatus)) onCompileResult?.(compile.compileId);
   }, [compile.status, compile.compileId, onCompileResult]);
 
+  // Only a compile seen running here counts: reopening a project must not switch the phone's view.
+  const wasActive = useRef(false);
+  useEffect(() => {
+    if (wasActive.current && compile.status === "success") onCompileSucceeded?.();
+    wasActive.current = active;
+  }, [active, compile.status, onCompileSucceeded]);
+
   const highlight = useSyncHighlight(syncTarget, viewport.setPage);
 
-  const showViewer = !errorOutcome && !active && !pdfDoc.loading && pdfDoc.pdf !== null;
+  const showViewer = !active && !pdfDoc.loading && pdfDoc.pdf !== null;
+  const compileButton = (
+    <CompileButton
+      state={compile.status}
+      progressLabel={compile.progressLabel}
+      onCompile={compile.compile}
+      onCancel={compile.cancel}
+    />
+  );
 
   return (
     <div className="flex h-full flex-col" aria-label={t("pane.label")}>
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
-        <CompileButton
-          state={compile.status}
-          progressLabel={compile.progressLabel}
-          onCompile={compile.compile}
-          onCancel={compile.cancel}
-        />
-        {showViewer && (
-          <div className="ml-auto">
-            <PdfToolbar
-              viewport={viewport}
-              onDownload={
-                compile.lastSuccessId ? () => void downloadPdf(projectId, compile.lastSuccessId!) : undefined
-              }
-            />
-          </div>
-        )}
-      </div>
+      <Slotted slot={compileSlot}>{compileButton}</Slotted>
+      {showViewer && (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-b px-3 py-1">
+          <PdfToolbar
+            viewport={viewport}
+            onDownload={
+              compile.lastSuccessId ? () => void downloadPdf(projectId, compile.lastSuccessId!) : undefined
+            }
+          />
+        </div>
+      )}
 
       <div className="min-h-0 flex-1">
         <PreviewBody
@@ -151,16 +181,20 @@ export function PreviewPane({
         {announce(compile.status, compile.progressLabel)}
       </p>
 
-      <CompileOutputDock
-        dock={dock}
-        problems={problems ?? null}
-        problemsLoading={problemsLoading}
-        problemsReason={problemsReason}
-        onProblemJump={onProblemJump}
-        stale={active}
-        logState={logState}
-        meta={compile.meta}
-      />
+      <Slotted slot={outputSlot}>
+        <CompileOutputDock
+          dock={dock}
+          floating={floating}
+          problems={problems ?? null}
+          problemsLoading={problemsLoading}
+          problemsReason={problemsReason}
+          onProblemJump={onProblemJump}
+          onProblemAsk={onProblemAsk}
+          stale={active}
+          logState={logState}
+          meta={compile.meta}
+        />
+      </Slotted>
     </div>
   );
 }

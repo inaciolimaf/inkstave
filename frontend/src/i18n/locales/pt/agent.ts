@@ -3,11 +3,17 @@ import type { Dict } from "../en/agent";
 
 const dict: Dict = {
   ariaLabel: "Agente de IA",
+  minimize: "Minimizar o agente",
+  launcher: "Agente",
+  working: "trabalhando",
+  quote: {
+    label: "{{path}}, linhas {{from}}-{{to}}",
+    remove: "Remover a seleção",
+  },
   newChat: "Nova conversa",
   sessions: "Sessões",
   untitledChat: "Conversa sem título",
   description: "Converse com o assistente de escrita por IA. Ele propõe mudanças para você revisar.",
-  resizeHandle: "Redimensionar painel do agente",
   loadingConversation: "Carregando conversa",
   empty: {
     intro:
@@ -59,6 +65,8 @@ const dict: Dict = {
     conversation: "Conversa",
     jumpToLatest: "Ir para o final",
     runCancelled: "Execução cancelada",
+    steps_one: "{{count}} etapa",
+    steps_other: "{{count}} etapas",
     tools: {
       search_project: "Pesquisou o projeto",
       read_file: "Leu um arquivo",

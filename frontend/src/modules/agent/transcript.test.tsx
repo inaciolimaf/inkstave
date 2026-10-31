@@ -83,22 +83,26 @@ describe("AgentTranscript rendering", () => {
     expect(onReview).toHaveBeenCalledWith("prop-123");
   });
 
-  it("ToolActivityRow expands to show args/result (AC5)", async () => {
+  it("folds neighbouring tool calls into one line that opens in plain words (spec 107)", async () => {
     renderItems([
-      {
-        kind: "tool",
-        id: "c1",
-        name: "read_file",
-        args: { doc_id: "x" },
-        result: "ok",
-        status: "ok",
-      },
+      { kind: "tool", id: "c1", name: "read_file", args: { path: "main.tex" }, result: "ok", status: "ok" },
+      { kind: "tool", id: "c2", name: "search_project", args: { query: "cite" }, result: "ok", status: "ok" },
     ]);
-    const row = screen.getByRole("button", { name: /Read a file/ });
+    const row = screen.getByRole("button", { name: /2 steps/ });
     expect(row).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(row);
     expect(row).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(/"doc_id": "x"/)).toBeInTheDocument();
+    expect(screen.getByText("main.tex")).toBeInTheDocument();
+    expect(screen.getByText("cite")).toBeInTheDocument();
+    expect(screen.queryByText(/"path"/)).toBeNull();
+  });
+
+  it("names the running step while the agent works", () => {
+    renderItems([
+      { kind: "tool", id: "c1", name: "read_file", args: {}, result: "ok", status: "ok" },
+      { kind: "tool", id: "c2", name: "search_project", args: {}, status: "running" },
+    ]);
+    expect(screen.getByRole("button", { name: /Searched the project/ })).toBeInTheDocument();
   });
 
   it("stays pinned to the bottom as new items arrive, hiding 'Jump to latest' (AC autoscroll)", () => {

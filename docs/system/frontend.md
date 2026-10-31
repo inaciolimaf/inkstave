@@ -77,8 +77,7 @@ The frontend has no database. Server state lives in the React Query cache. Local
 |---|---|---|
 | `inkstave.refresh_token` | `localStorage` | The refresh token |
 | `inkstave.agent.open.<projectId>` | `localStorage` | Agent panel open flag |
-| `inkstave:panes:<projectId>` | `localStorage`, via `autoSaveId` of `react-resizable-panels` | Editor pane sizes |
-| `inkstave:agent-panel-width` | `localStorage` | Agent panel width |
+| `inkstave:split:<projectId>` | `localStorage`, via `autoSaveId` of `react-resizable-panels` | Size of the text and PDF panes |
 | `inkstave:editor-settings` | `localStorage` | Line wrapping; the other fields are ignored |
 | `inkstave:tree-expanded:<projectId>` | `sessionStorage` | Expanded folders |
 
@@ -152,10 +151,22 @@ To change the contract, run `make web-types`, which regenerates `docs/api/openap
 
 ### Editor workspace
 
-`frontend/src/routes/editor.tsx` reads the project id and renders `EditorWorkspace`, which renders the `Desk`.
-Its one bar, `EditorBar` in `frontend/src/modules/editor/editor-bar.tsx`, holds the mark, the `h1`, the link back
-to the projects and the tools (agent, history, download, share, notifications). Below it sit three resizable panels: file tree, `EditorPane` and `PreviewPane`.
-Panels stack vertically below 768 px, through `useMediaQuery`.
+`frontend/src/routes/editor.tsx` reads the project id and renders `EditorWorkspace`, which renders the `Desk`
+(spec 107). `EditorBar` in `frontend/src/modules/editor/editor-bar.tsx` is the one bar: the mark, the `h1`, the
+open file, which opens the file list, share, notifications, a menu with history, download and the way back, and
+Compile. Two resizable panels stay on screen, `EditorPane` and `PreviewPane`. `ContentPane` adds the status line
+under the text and `FileDrawer`, the file list over the text, with the text `inert` while it is open.
+`pickStartDocument` opens the root document, `main.tex` or the first `.tex` on arrival.
+
+Below 768 px, through `useMediaQuery`, `Panes` shows one pane at a time and `MobileTabs` switches between Content,
+Preview and Agent. Both panes stay mounted. A successful compile shows the PDF; a problem or a PDF click shows
+the text.
+
+`PreviewPane` owns the compile, so it renders the Compile button and the output dock through portals, into
+`compileSlot` and `outputSlot`. `EditorPane` and `CollabEditor` do the same with `statusSlot`. Without those props
+each stays in its own row, which is what the pane tests render. In the status line the dock starts folded, opens
+on Problems after a failure and folds warnings under errors (`foldQuiet`). After a failure the last good PDF stays
+on screen with a notice.
 
 - Opening a file: `FileTreePanel` calls `onSelectEntity`. A `doc` opens in the editor; a binary `file` shows
   `BinaryNotice`; a folder changes nothing.
@@ -176,7 +187,10 @@ Panels stack vertically below 768 px, through `useMediaQuery`.
 
 ### Agent and diff review
 
-1. `AgentPanel` uses `useAgentChat`, which lists sessions and calls `onBeforeSend` before a run starts.
+1. `AgentPanel` is a non-modal window in the lower right corner, a sheet on a phone. It stays mounted while folded,
+   so a run goes on. It uses `useAgentChat`, which lists sessions and calls `onBeforeSend` before a run starts.
+   The editor reaches it through `request`: a selection from `AskAgentButton` becomes a chip whose text `withQuote`
+   adds to the next message, and "Fix with the agent" on an error sends a message at once.
 2. `startRun` posts the message. `openStream` opens an `EventSource` for `token`, `tool_call`, `tool_result`,
    `diff_proposed`, `done` and `error`, and passes each event to `applyEvent`.
 3. `applyEvent` in `frontend/src/modules/agent/reducer.ts` drops repeated `seq` values and unknown event types.

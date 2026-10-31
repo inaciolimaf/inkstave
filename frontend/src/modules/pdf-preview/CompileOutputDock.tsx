@@ -7,7 +7,7 @@ import { LogPanel } from "./LogPanel";
 import { ProblemsPanel, ProblemsSummary } from "./ProblemsPanel";
 import type { CompileLogState } from "./hooks/useCompileLog";
 import type { OutputDock } from "./hooks/useOutputDock";
-import type { CompileProblems, ProblemsReason } from "./problems";
+import type { CompileProblems, Problem, ProblemsReason } from "./problems";
 import type { CompileStatus } from "./types";
 
 function CollapseButton({ dock }: { dock: OutputDock }) {
@@ -58,15 +58,20 @@ function OutputTabs({ dock }: { dock: OutputDock }) {
 /** Problems and the raw log share one collapsible tabbed dock (spec 27 §5.3). */
 export function CompileOutputDock({
   dock,
+  floating = false,
   problems,
   problemsLoading,
   problemsReason,
   onProblemJump,
+  onProblemAsk,
   stale,
   logState,
   meta,
 }: {
   dock: OutputDock;
+  /** Lives in the status line (spec 107): the panels open as a layer above it. */
+  floating?: boolean;
+  onProblemAsk?: (problem: Problem) => void;
   problems: CompileProblems | null;
   problemsLoading?: boolean;
   problemsReason?: ProblemsReason | null;
@@ -77,7 +82,7 @@ export function CompileOutputDock({
   meta: CompileStatus | null;
 }) {
   return (
-    <div className="flex flex-col border-t">
+    <div className={floating ? "relative flex shrink-0 flex-col" : "flex flex-col border-t"}>
       <div className="flex items-center gap-1 px-2">
         <CollapseButton dock={dock} />
         <OutputTabs dock={dock} />
@@ -87,14 +92,27 @@ export function CompileOutputDock({
         </div>
       </div>
       {!dock.collapsed && (
-        <div id="compile-output-panels">
+        <div
+          id="compile-output-panels"
+          className={
+            floating
+              ? "absolute bottom-full right-1 z-30 mb-1 w-[min(32rem,calc(100vw-0.5rem))] rounded-md border border-control-edge bg-popover shadow-lg"
+              : undefined
+          }
+        >
           <div
             role="tabpanel"
             id="compile-panel-problems"
             aria-labelledby="compile-tab-problems"
             hidden={dock.tab !== "problems"}
           >
-            <ProblemsPanel problems={problems} reason={problemsReason} onJump={onProblemJump} />
+            <ProblemsPanel
+              problems={problems}
+              reason={problemsReason}
+              onJump={onProblemJump}
+              onAsk={onProblemAsk}
+              foldQuiet={floating}
+            />
           </div>
           <div
             role="tabpanel"
