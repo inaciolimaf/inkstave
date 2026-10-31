@@ -5,13 +5,13 @@ import { Link, useParams } from "react-router-dom";
 import { InkstaveMark } from "@/components/inkstave-logo";
 import { Desk } from "@/components/manuscript";
 import { EditorWorkspace } from "@/modules/editor";
-import { getProject } from "@/modules/projects";
+import { getProject, projectKey } from "@/modules/projects";
 
 export function EditorRoute() {
   const { t } = useTranslation(["editor", "common"]);
   const { projectId } = useParams<{ projectId: string }>();
   const query = useQuery({
-    queryKey: ["project", projectId],
+    queryKey: projectKey(projectId),
     queryFn: () => getProject(projectId!),
     enabled: Boolean(projectId),
   });

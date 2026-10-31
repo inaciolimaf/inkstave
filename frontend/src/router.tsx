@@ -3,6 +3,7 @@ import { Navigate, type RouteObject, createBrowserRouter, createMemoryRouter } f
 import { AppShell } from "@/components/app-shell";
 import { RouteError } from "@/components/route-error";
 import { Loading } from "@/components/states";
+import { loadEditorRoute } from "@/lib/route-chunks";
 import { RequireAuth } from "@/modules/auth";
 
 // `handle.title` is the `common` key of the screen's document title; the landing has none and keeps
@@ -72,7 +73,7 @@ const ROUTES: RouteObject[] = [
       {
         path: "/projects/:projectId",
         handle: { title: "title.editor" },
-        lazy: () => import("@/routes/editor").then((m) => ({ Component: m.EditorRoute })),
+        lazy: () => loadEditorRoute().then((m) => ({ Component: m.EditorRoute })),
       },
       {
         path: "/settings",

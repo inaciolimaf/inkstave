@@ -18,7 +18,7 @@ import { useMediaQuery } from "@/lib/use-media-query";
 
 import { useAuth } from "@/modules/auth";
 import { NotificationsBell } from "@/modules/notifications";
-import { getProject, useDownloadProject } from "@/modules/projects";
+import { getProject, projectKey, useDownloadProject } from "@/modules/projects";
 import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
 
@@ -53,7 +53,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
   const projectQuery = useQuery({
-    queryKey: ["project", projectId],
+    queryKey: projectKey(projectId),
     queryFn: () => getProject(projectId),
     staleTime: 60_000,
   });

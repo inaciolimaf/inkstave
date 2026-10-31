@@ -1,6 +1,6 @@
 /** Whole-screen test harness: the app's real router and providers over a fake API. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider } from "react-router-dom";
 import { expect, vi } from "vitest";
@@ -77,6 +77,10 @@ export async function renderScreen(url: string, { signedIn = false }: { signedIn
         <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>,
+  );
+  // Routes are lazy: returning before the chunk settles makes screen tests fail at random.
+  await waitFor(() =>
+    expect(router.state.initialized && router.state.navigation.state === "idle").toBe(true),
   );
   return { ...view, router, queryClient, user: userEvent.setup() };
 }

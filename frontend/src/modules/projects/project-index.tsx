@@ -14,6 +14,7 @@ import {
 import { formatDate } from "@/lib/formatting";
 
 import { useDownloadProject } from "./use-download-project";
+import { usePrefetchProject } from "./use-prefetch-project";
 import type { Project } from "./types";
 
 interface RowActions {
@@ -66,6 +67,7 @@ export function RowActionsMenu({ project, onOpen, onRename, onDelete }: { projec
 /** The index of works: each project a line of a table of contents, title, leader and date. */
 export function ProjectIndex({ projects, ...actions }: { projects: Project[] } & RowActions) {
   const { t } = useTranslation("projects");
+  const prefetchProject = usePrefetchProject();
   return (
     <ol aria-label={t("table.caption")}>
       {projects.map((project) => (
@@ -74,6 +76,8 @@ export function ProjectIndex({ projects, ...actions }: { projects: Project[] } &
             <Link
               to={`/projects/${project.id}`}
               title={project.name}
+              onPointerEnter={() => prefetchProject(project.id)}
+              onFocus={() => prefetchProject(project.id)}
               className="truncate font-serif text-heading underline-offset-4 hover:underline"
             >
               {project.name}

@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+
+import { renderWithProviders } from "@/test/utils";
 
 import { ProjectListView } from "./project-list-view";
 import type { Project } from "./types";
@@ -30,11 +31,7 @@ function renderView(props: Partial<React.ComponentProps<typeof ProjectListView>>
     onRename: vi.fn(),
     onDelete: vi.fn(),
   };
-  return render(
-    <MemoryRouter>
-      <ProjectListView {...base} {...props} />
-    </MemoryRouter>,
-  );
+  return renderWithProviders(<ProjectListView {...base} {...props} />);
 }
 
 describe("ProjectListView", () => {

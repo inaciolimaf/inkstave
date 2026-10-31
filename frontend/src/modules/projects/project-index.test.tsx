@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+
+import { renderWithProviders } from "@/test/utils";
 
 import { ProjectIndex } from "./project-index";
 import type { Project } from "./types";
@@ -18,11 +19,7 @@ const projects: Project[] = [
 
 function setup() {
   const handlers = { onOpen: vi.fn(), onRename: vi.fn(), onDelete: vi.fn() };
-  render(
-    <MemoryRouter>
-      <ProjectIndex projects={projects} {...handlers} />
-    </MemoryRouter>,
-  );
+  renderWithProviders(<ProjectIndex projects={projects} {...handlers} />);
   return handlers;
 }
 
