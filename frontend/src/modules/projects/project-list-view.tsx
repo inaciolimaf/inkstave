@@ -1,6 +1,8 @@
+import type { UseQueryResult } from "@tanstack/react-query";
 import { FolderPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { QueryView } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -44,23 +46,8 @@ function ProjectListNoResults({ term, onClear }: { term: string; onClear: () => 
   );
 }
 
-function ProjectListError({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation("projects");
-  return (
-    <div role="alert" className="flex flex-col items-start gap-3 py-12">
-      <p className="text-body text-error-text">{t("list.loadError")}</p>
-      <Button variant="outline" onClick={onRetry}>
-        {t("common:action.retry")}
-      </Button>
-    </div>
-  );
-}
-
 interface ProjectListViewProps {
-  isLoading: boolean;
-  isError: boolean;
-  onRetry: () => void;
-  total: number;
+  query: Pick<UseQueryResult<Project[]>, "data" | "isLoading" | "isError" | "refetch">;
   searchTerm: string;
   visible: Project[];
   onCreate: () => void;
@@ -71,10 +58,7 @@ interface ProjectListViewProps {
 }
 
 export function ProjectListView({
-  isLoading,
-  isError,
-  onRetry,
-  total,
+  query,
   searchTerm,
   visible,
   onCreate,
@@ -83,10 +67,19 @@ export function ProjectListView({
   onRename,
   onDelete,
 }: ProjectListViewProps) {
-  if (isLoading) return <ProjectListSkeleton />;
-  if (isError) return <ProjectListError onRetry={onRetry} />;
-  if (total === 0) return <ProjectListEmpty onCreate={onCreate} />;
-  if (visible.length === 0) return <ProjectListNoResults term={searchTerm} onClear={onClearSearch} />;
-
-  return <ProjectIndex projects={visible} onOpen={onOpen} onRename={onRename} onDelete={onDelete} />;
+  const { t } = useTranslation("projects");
+  return (
+    <QueryView
+      query={query}
+      loading={<ProjectListSkeleton />}
+      errorMessage={t("list.loadError")}
+      errorClassName="flex-col items-start gap-3 py-12"
+    >
+      {(projects) => {
+        if (projects.length === 0) return <ProjectListEmpty onCreate={onCreate} />;
+        if (visible.length === 0) return <ProjectListNoResults term={searchTerm} onClear={onClearSearch} />;
+        return <ProjectIndex projects={visible} onOpen={onOpen} onRename={onRename} onDelete={onDelete} />;
+      }}
+    </QueryView>
+  );
 }

@@ -17,12 +17,15 @@ const sample: Project[] = [
   },
 ];
 
-function renderView(props: Partial<React.ComponentProps<typeof ProjectListView>> = {}) {
-  const base: React.ComponentProps<typeof ProjectListView> = {
-    isLoading: false,
-    isError: false,
-    onRetry: vi.fn(),
-    total: sample.length,
+type Props = React.ComponentProps<typeof ProjectListView>;
+
+function queryWith(overrides: Partial<Props["query"]> = {}): Props["query"] {
+  return { data: sample, isLoading: false, isError: false, refetch: vi.fn(), ...overrides };
+}
+
+function renderView(props: Partial<Props> = {}) {
+  const base: Props = {
+    query: queryWith(),
     searchTerm: "",
     visible: sample,
     onCreate: vi.fn(),
@@ -36,29 +39,29 @@ function renderView(props: Partial<React.ComponentProps<typeof ProjectListView>>
 
 describe("ProjectListView", () => {
   it("shows a skeleton while loading", () => {
-    renderView({ isLoading: true });
+    renderView({ query: queryWith({ data: undefined, isLoading: true }) });
     expect(screen.getByLabelText("Loading projects")).toBeInTheDocument();
   });
 
   it("shows the empty state when there are no projects", async () => {
     const onCreate = vi.fn();
-    renderView({ total: 0, visible: [], onCreate });
+    renderView({ query: queryWith({ data: [] }), visible: [], onCreate });
     expect(screen.getByText("No projects yet")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /create your first project/i }));
     expect(onCreate).toHaveBeenCalled();
   });
 
   it("shows the error state with a working Retry", async () => {
-    const onRetry = vi.fn();
-    renderView({ isError: true, onRetry });
+    const refetch = vi.fn();
+    renderView({ query: queryWith({ data: undefined, isError: true, refetch }) });
     expect(screen.getByRole("alert")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(onRetry).toHaveBeenCalled();
+    expect(refetch).toHaveBeenCalled();
   });
 
   it("shows the no-results state when a filter excludes everything", async () => {
     const onClearSearch = vi.fn();
-    renderView({ total: 1, visible: [], searchTerm: "zzz", onClearSearch });
+    renderView({ visible: [], searchTerm: "zzz", onClearSearch });
     expect(screen.getByText(/No projects match/)).toHaveTextContent("zzz");
     await userEvent.click(screen.getByRole("button", { name: "Clear search" }));
     expect(onClearSearch).toHaveBeenCalled();

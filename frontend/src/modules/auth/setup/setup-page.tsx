@@ -7,11 +7,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { TitlePage } from "@/components/manuscript";
+import { QueryView } from "@/components/states";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AuthField } from "../AuthField";
 import { AuthShell } from "../AuthShell";
 import { createFirstAdmin } from "./api";
 import { useSetupStatus } from "./useSetupStatus";
@@ -27,10 +28,8 @@ const makeSetupSchema = (t: (key: string) => string) =>
 
 type SetupValues = z.infer<ReturnType<typeof makeSetupSchema>>;
 
-/** First-run admin creation (spec 63). Public route; only useful when no admin exists. */
-export function SetupPage() {
+function useSetupForm() {
   const { t } = useTranslation(["auth", "common"]);
-  const status = useSetupStatus();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const setupSchema = useMemo(() => makeSetupSchema((k) => t(k)), [t]);
@@ -39,32 +38,6 @@ export function SetupPage() {
     resolver: zodResolver(setupSchema),
     defaultValues: { display_name: "", email: "", password: "" },
   });
-
-  if (status.isLoading) {
-    return (
-      <TitlePage>
-        <div className="space-y-3" aria-busy="true">
-          <Skeleton className="h-8" />
-          <Skeleton className="h-24" />
-        </div>
-      </TitlePage>
-    );
-  }
-
-  if (status.isError) {
-    return (
-      <AuthShell title={t("setup.title")}>
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>{t("setup.statusError")}</AlertDescription>
-        </Alert>
-      </AuthShell>
-    );
-  }
-
-  // Setup already done — nothing to do here.
-  if (status.data && !status.data.needsSetup) {
-    return <Navigate to="/login" replace />;
-  }
 
   const onSubmit = async (values: SetupValues) => {
     setFormError(null);
@@ -96,10 +69,16 @@ export function SetupPage() {
     }
   };
 
+  return { form, formError, onSubmit };
+}
+
+function SetupForm() {
+  const { t } = useTranslation(["auth", "common"]);
+  const { form, formError, onSubmit } = useSetupForm();
   const pending = form.formState.isSubmitting;
 
   return (
-    <AuthShell title={t("setup.title")} description={t("setup.description")}>
+    <>
       {formError && (
         <Alert variant="destructive" className="mb-4" aria-live="assertive">
           <AlertDescription>{formError}</AlertDescription>
@@ -107,49 +86,26 @@ export function SetupPage() {
       )}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <FormField
+          <AuthField
             control={form.control}
             name="display_name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("fields.displayName")}</FormLabel>
-                <FormControl>
-                  <Input autoComplete="name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label={t("fields.displayName")}
+            autoComplete="name"
           />
-          <FormField
+          <AuthField
             control={form.control}
             name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("fields.email")}</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    autoComplete="email"
-                    placeholder={t("fields.adminEmailPlaceholder")}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label={t("fields.email")}
+            type="email"
+            autoComplete="email"
+            placeholder={t("fields.adminEmailPlaceholder")}
           />
-          <FormField
+          <AuthField
             control={form.control}
             name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("fields.password")}</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label={t("fields.password")}
+            type="password"
+            autoComplete="new-password"
           />
           <Button type="submit" className="w-full" disabled={pending}>
             {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -157,6 +113,43 @@ export function SetupPage() {
           </Button>
         </form>
       </Form>
+    </>
+  );
+}
+
+function SetupSkeleton() {
+  return (
+    <TitlePage>
+      <div className="space-y-3" aria-busy="true">
+        <Skeleton className="h-8" />
+        <Skeleton className="h-24" />
+      </div>
+    </TitlePage>
+  );
+}
+
+/** First-run admin creation (spec 63). Public route; only useful when no admin exists. */
+export function SetupPage() {
+  const { t } = useTranslation(["auth", "common"]);
+  const status = useSetupStatus();
+
+  // The skeleton is a title page of its own, so it cannot sit inside the shell below.
+  if (status.isLoading) return <SetupSkeleton />;
+
+  // Setup already done — nothing to do here.
+  if (status.data && !status.data.needsSetup) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <AuthShell title={t("setup.title")} description={status.data && t("setup.description")}>
+      <QueryView
+        query={status}
+        errorMessage={t("setup.statusError")}
+        errorClassName="flex-col items-start gap-3"
+      >
+        {() => <SetupForm />}
+      </QueryView>
     </AuthShell>
   );
 }

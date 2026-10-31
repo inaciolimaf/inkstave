@@ -7,17 +7,18 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { ApiError } from "@/lib/api-client";
 import { type ResetPasswordValues, makeResetPasswordSchema } from "@/lib/validation";
 
+import { AuthField } from "./AuthField";
 import { AuthShell } from "./AuthShell";
 import { resetPassword } from "./api";
 
 type State = { kind: "form" } | { kind: "success" } | { kind: "expired" } | { kind: "invalid" };
 
-export function ResetPasswordPage() {
+/** The reset form, its submission, and which of the page's states the link is in. */
+function useResetPassword() {
   const { t } = useTranslation(["auth", "common"]);
   const [params] = useSearchParams();
   const token = params.get("token");
@@ -62,64 +63,64 @@ export function ResetPasswordPage() {
     }
   };
 
-  if (state.kind === "success") {
-    return (
-      <AuthShell title={t("resetPassword.title")}>
-        <Alert role="alert">
-          <AlertDescription>{t("resetPassword.success")}</AlertDescription>
-        </Alert>
-        <Button asChild className="mt-4 w-full">
-          <Link to="/login">{t("resetPassword.goToLogin")}</Link>
-        </Button>
-      </AuthShell>
-    );
-  }
+  return { state, form, onSubmit };
+}
 
-  if (state.kind === "expired" || state.kind === "invalid") {
-    return (
-      <AuthShell title={t("resetPassword.title")}>
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>
-            {state.kind === "expired" ? t("resetPassword.expired") : t("resetPassword.invalid")}
-          </AlertDescription>
-        </Alert>
-        <Button asChild className="mt-4 w-full">
-          <Link to="/forgot-password">{t("resetPassword.requestNew")}</Link>
-        </Button>
-      </AuthShell>
-    );
-  }
+function ResetSucceeded() {
+  const { t } = useTranslation(["auth", "common"]);
+  return (
+    <AuthShell title={t("resetPassword.title")}>
+      <Alert role="alert">
+        <AlertDescription>{t("resetPassword.success")}</AlertDescription>
+      </Alert>
+      <Button asChild className="mt-4 w-full">
+        <Link to="/login">{t("resetPassword.goToLogin")}</Link>
+      </Button>
+    </AuthShell>
+  );
+}
+
+function ResetLinkDead({ kind }: { kind: "expired" | "invalid" }) {
+  const { t } = useTranslation(["auth", "common"]);
+  return (
+    <AuthShell title={t("resetPassword.title")}>
+      <Alert variant="destructive" role="alert">
+        <AlertDescription>
+          {kind === "expired" ? t("resetPassword.expired") : t("resetPassword.invalid")}
+        </AlertDescription>
+      </Alert>
+      <Button asChild className="mt-4 w-full">
+        <Link to="/forgot-password">{t("resetPassword.requestNew")}</Link>
+      </Button>
+    </AuthShell>
+  );
+}
+
+export function ResetPasswordPage() {
+  const { t } = useTranslation(["auth", "common"]);
+  const { state, form, onSubmit } = useResetPassword();
+
+  if (state.kind === "success") return <ResetSucceeded />;
+  if (state.kind === "expired" || state.kind === "invalid") return <ResetLinkDead kind={state.kind} />;
 
   const pending = form.formState.isSubmitting;
   return (
     <AuthShell title={t("resetPassword.title")} description={t("resetPassword.description")}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <FormField
+          <AuthField
             control={form.control}
             name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("fields.newPassword")}</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label={t("fields.newPassword")}
+            type="password"
+            autoComplete="new-password"
           />
-          <FormField
+          <AuthField
             control={form.control}
             name="confirm_password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("fields.confirmNewPassword")}</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label={t("fields.confirmNewPassword")}
+            type="password"
+            autoComplete="new-password"
           />
           <Button type="submit" className="w-full" disabled={pending}>
             {pending && <Loader2 className="animate-spin" />}
