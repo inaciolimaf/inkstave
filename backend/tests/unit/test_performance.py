@@ -114,6 +114,6 @@ def test_build_timing_sums_the_stages_and_ranks_junit_durations(tmp_path: Any, m
 
     timing = builder.build_timing(tmp_path)
 
-    assert timing["total_s"] == 125
+    assert timing["total_s"] == 75  # the stages run in parallel, so the slowest counts
     assert [case["name"] for case in timing["slowest"]] == ["a::heavy", "a::fast"]
-    assert not gate.evaluate(timing).ok  # over the budget, and `heavy` is over the per-test limit
+    assert not gate.evaluate(timing).ok  # `heavy` is over the per-test limit

@@ -63,8 +63,8 @@ applies in both places: here and in the skill.
    but every line you write must be your own independent implementation. Do not
    copy, paste, or mechanically translate Overleaf source. If a spec points you
    at an Overleaf file, treat it as a textbook, not a clipboard.
-3. **Keep the full test suite under 2 minutes.** Unit + integration + e2e
-   combined. If something is slow (LaTeX compile, real LLM call), it belongs in
+3. **Keep the full test suite under 2 minutes.** Unit, integration and e2e run in
+   parallel, so the slowest of the three is what counts. If something is slow (LaTeX compile, real LLM call), it belongs in
    an async ARQ job and must be stubbed/mocked in tests. Measure before merging.
 4. **A spec is done only when its Definition of Done and Acceptance criteria
    pass, including the tests it requires.** "It runs" is not "it's done".

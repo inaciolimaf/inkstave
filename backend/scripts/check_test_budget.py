@@ -66,7 +66,7 @@ def _slow_messages(slowest: list[dict[str, Any]]) -> tuple[bool, list[str]]:
 def evaluate(timing: dict[str, Any]) -> GateResult:
     total = float(timing.get("total_s", 0))
     header = (
-        f"Suite total: {total:.1f}s "
+        f"Suite time: {total:.1f}s "
         f"(backend {timing.get('backend_s', 0)}s, frontend {timing.get('frontend_s', 0)}s, "
         f"e2e {timing.get('e2e_s', 0)}s)"
     )

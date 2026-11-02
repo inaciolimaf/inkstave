@@ -1,8 +1,8 @@
 """Write the ``test-timing.json`` that ``check_test_budget.py`` gates on (spec 53).
 
-Takes each CI stage's wall clock from ``UNIT_S``, ``INTEGRATION_S`` and ``E2E_S`` and the
-per-test durations from the JUnit files in a directory. Stdlib only on purpose: the gate must
-run with a bare ``python3``.
+Takes each CI stage's wall clock from ``UNIT_S``, ``INTEGRATION_S`` and ``E2E_S``, keeps the
+slowest as the suite's time, and takes the per-test durations from the JUnit files in a
+directory. Stdlib only on purpose: the gate must run with a bare ``python3``.
 
 Usage:
     python scripts/build_test_timing.py <junit-dir> <output.json>
@@ -48,7 +48,8 @@ def build_timing(junit_dir: Path) -> dict[str, Any]:
     cases = [case for path in sorted(junit_dir.glob("*.xml")) for case in _cases(path)]
     cases.sort(key=lambda case: case["duration_s"], reverse=True)
     return {
-        "total_s": unit + integration + e2e,
+        # The stages run in parallel, so the slowest one is the time people wait.
+        "total_s": max(unit, integration, e2e),
         "backend_s": integration,
         "frontend_s": unit,
         "e2e_s": e2e,

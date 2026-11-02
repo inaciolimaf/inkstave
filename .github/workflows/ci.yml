@@ -6,7 +6,7 @@ name: CI
 # test stages — `unit`, `integration`, `e2e` — each depend only on `typecheck`, so they
 # fan out and run concurrently; each provisions whatever it needs (integration: a
 # Postgres service; e2e: docker-compose.test.yml). The `budget` job depends on all
-# three: it fails the build if their combined wall-clock exceeds the 120 s budget,
+# three: it fails the build if the slowest stage exceeds the 120 s budget,
 # parsing the stages' JUnit XML so the slow-test detector runs on real durations, and
 # applies the backend coverage floor to unit + integration together.
 on:
