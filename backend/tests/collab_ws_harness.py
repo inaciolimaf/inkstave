@@ -15,20 +15,28 @@ from inkstave.modules.collab.ws.components import build_collab_components
 
 
 class SessionCtx:
-    """Yield the shared transactional test session (no commit/close on exit)."""
+    """Yield the shared transactional test session (no commit/close on exit).
 
-    def __init__(self, session: AsyncSession) -> None:
+    Production gives each block its own session. Here one session serves the server's
+    background tasks and the test, so the lock keeps them from using it at the same time.
+    """
+
+    def __init__(self, session: AsyncSession, lock: asyncio.Lock) -> None:
         self._session = session
+        self._lock = lock
 
     async def __aenter__(self) -> AsyncSession:
+        await self._lock.acquire()
         return self._session
 
     async def __aexit__(self, *_exc: object) -> bool:
+        self._lock.release()
         return False
 
 
 def session_factory(db_session: AsyncSession) -> Any:
-    return lambda: SessionCtx(db_session)
+    lock = asyncio.Lock()
+    return lambda: SessionCtx(db_session, lock)
 
 
 def install_collab(app: Any, db_session: AsyncSession, redis: Any, **overrides: Any) -> Any:

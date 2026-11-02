@@ -174,6 +174,8 @@ Tests for one area: `cd backend && uv run pytest tests/unit/test_x.py`,
 
 - `TEST_DATABASE_URL` must point at a disposable database: the harness drops and recreates
   it, with a suffix per xdist worker. Tests that need Postgres skip when it is unreachable.
+- `backend/.python-version` pins uv to Python 3.12, as the Dockerfile does: uv does not read the root file
+  from `backend/`, and on 3.13+ the HTTP status phrases change `docs/api/openapi.json`.
 - No test reads the machine's `.env`: `backend/tests/fixtures/env.py` isolates the
   environment before collection.
 - Never run the real LLM or real Tectonic from the fast tiers. `LLM_STUB=true` and
