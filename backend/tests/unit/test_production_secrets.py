@@ -62,6 +62,6 @@ def test_other_email_backends_do_not_need_a_resend_key() -> None:
     assert _prod(email_backend="smtp").resend_api_key == ""
 
 
-def test_missing_openrouter_key_does_not_stop_the_boot() -> None:
+def test_missing_llm_key_does_not_stop_the_boot() -> None:
     # No setting turns the agent off, so a deploy without it must still start.
     assert _prod().environment == "prod"

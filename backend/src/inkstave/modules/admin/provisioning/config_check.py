@@ -89,10 +89,13 @@ def _agent_problems(settings: Settings) -> list[str]:
     from inkstave.core.config.agent import get_agent_settings
 
     get_agent_settings.cache_clear()
-    if get_agent_settings().openrouter_api_key:
+    agent = get_agent_settings()
+    uses_openrouter = agent.agent_llm_provider == "openrouter"
+    if agent.openrouter_api_key if uses_openrouter else agent.anthropic_api_key:
         return []
+    name = "OPENROUTER_API_KEY" if uses_openrouter else "ANTHROPIC_API_KEY"
     return [
-        "OPENROUTER_API_KEY: required in production for the AI agent "
+        f"{name}: required in production for the AI agent "
         "(set LLM_STUB=true only for tests, never production)"
     ]
 

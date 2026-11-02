@@ -46,8 +46,8 @@ test-e2e:
 # Run every test tier (backend + frontend + e2e).
 test-all: test test-fe test-e2e
 
-# Manual-only live LLM smoke (spec 67): one real OpenRouter completion. Requires a
-# real OPENROUTER_API_KEY; skips (exit 0) without one. NEVER run in CI / `just test`.
+# Manual-only live LLM smoke (spec 67): one real completion. Requires the configured
+# provider's real API key; skips (exit 0) without one. NEVER run in CI / `just test`.
 agent-live:
     uv run --project backend python backend/scripts/agent_live_smoke.py
 

@@ -142,7 +142,8 @@ async def test_converged_text_visible_to_bridge(app: Any, db_session: AsyncSessi
         await mgr.release(doc_id)
 
     # AC6 — what a compile job / REST reader consumes equals the converged text.
-    content = await read_content_for_collab(db_session, doc_id)
+    async with components.session_factory() as session:
+        content = await read_content_for_collab(session, doc_id)
     assert content == server_text
     assert "alpha " in content and "beta" in content
 

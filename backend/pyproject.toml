@@ -28,6 +28,7 @@ dependencies = [
     "openai>=2.41.0",
     "prometheus-client>=0.25.0",
     "psycopg2-binary>=2.9.12",
+    "anthropic>=2.4.0",
 ]
 
 [project.scripts]

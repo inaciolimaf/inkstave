@@ -68,7 +68,7 @@ flowchart LR
     API -->|enqueue run| Worker[ARQ worker]
     Worker --> Graph[LangGraph: plan/act/observe/respond]
     Graph -->|tools| Tools[search_project / read_file / locate_section / propose_edit]
-    Graph -->|LLM via DI| LLM[OpenRouter client]
+    Graph -->|LLM via DI| LLM[LLM client]
     Graph -->|tokens + tool calls + diffs| Sink[Redis event sink]
     Sink -->|SSE stream| Chat
     Chat -->|user reviews + applies hunks| CRDT[CRDT apply]

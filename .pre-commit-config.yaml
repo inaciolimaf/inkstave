@@ -39,8 +39,8 @@ repos:
         name: block-secret-tokens
         description: Reject staged content containing API-key-shaped secrets.
         language: pygrep
-        # OpenRouter (sk-or-v1-…) and generic OpenAI-style (sk-…) keys.
-        entry: '(sk-or-v1-[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})'
+        # Anthropic (sk-ant-…), OpenRouter (sk-or-v1-…) and generic OpenAI-style (sk-…) keys.
+        entry: '(sk-ant-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})'
         types: [text]
         # specs/ documents the very patterns this hook matches; the config file
         # carries the regex literally. Both are intentional, not leaked secrets.

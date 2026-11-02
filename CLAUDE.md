@@ -76,9 +76,10 @@ applies in both places: here and in the skill.
 
 - **Backend:** Python ≥ 3.12, FastAPI, SQLAlchemy 2.x (async), Alembic,
   PostgreSQL, Redis, ARQ for jobs, Pydantic v2 for schemas/settings.
-- **LLM access:** OpenAI Python SDK pointed at OpenRouter's base URL. The client
-  must be provided through dependency injection so the provider can be swapped
-  (OpenRouter ↔ OpenAI ↔ local) without touching business logic.
+- **LLM access:** the Anthropic Python SDK against the Claude API, `claude-haiku-5-5`
+  by default (ADR 0109). The client is provided through dependency injection so the
+  provider can be swapped without touching business logic: `AGENT_LLM_PROVIDER=openrouter`
+  uses the OpenAI SDK at OpenRouter's base URL.
 - **AI agent:** LangChain + LangGraph, running server-side. Streams to the
   browser. Produces per-file unified diffs; the user accepts/rejects — the agent
   never writes to documents directly.
@@ -173,6 +174,8 @@ Tests for one area: `cd backend && uv run pytest tests/unit/test_x.py`,
 
 - `TEST_DATABASE_URL` must point at a disposable database: the harness drops and recreates
   it, with a suffix per xdist worker. Tests that need Postgres skip when it is unreachable.
+- `backend/.python-version` pins uv to Python 3.12, as the Dockerfile does: uv does not read the root file
+  from `backend/`, and on 3.13+ the HTTP status phrases change `docs/api/openapi.json`.
 - No test reads the machine's `.env`: `backend/tests/fixtures/env.py` isolates the
   environment before collection.
 - Never run the real LLM or real Tectonic from the fast tiers. `LLM_STUB=true` and

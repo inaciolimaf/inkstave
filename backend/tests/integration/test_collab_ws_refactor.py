@@ -61,13 +61,14 @@ async def _setup(db_session: AsyncSession) -> tuple[User, Project, TreeEntity, s
     return user, project, entity, token
 
 
-async def _update_count(db_session: AsyncSession, document_id: UUID) -> int:
-    return int(
-        await db_session.scalar(
-            select(func.count()).select_from(CrdtUpdate).where(CrdtUpdate.document_id == document_id)
+async def _update_count(components: Any, document_id: UUID) -> int:
+    async with components.session_factory() as session:
+        return int(
+            await session.scalar(
+                select(func.count()).select_from(CrdtUpdate).where(CrdtUpdate.document_id == document_id)
+            )
+            or 0
         )
-        or 0
-    )
 
 
 def _path(project_id: Any, document_id: Any) -> str:
@@ -75,7 +76,7 @@ def _path(project_id: Any, document_id: Any) -> str:
 
 
 async def test_reconnect_resyncs_and_converges(app: Any, db_session: AsyncSession, redis: Any) -> None:
-    install_collab(app, db_session, redis)
+    components = install_collab(app, db_session, redis)
     _user, project, entity, token = await _setup(db_session)
     path = _path(project.id, entity.id)
 
@@ -85,7 +86,7 @@ async def test_reconnect_resyncs_and_converges(app: Any, db_session: AsyncSessio
         await a.receive_bytes()  # server step 1
         await a.send_bytes(make_update("persisted"))
         # Wait deterministically until the update is persisted (not a fixed sleep).
-        await _poll_async(lambda: _update_count(db_session, entity.id))
+        await _poll_async(lambda: _update_count(components, entity.id))
 
     # Reconnect: run the sync handshake from a fresh state vector; the server's
     # step 2 must carry the prior update (no lost edit, no duplication).
