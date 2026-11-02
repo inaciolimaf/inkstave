@@ -11,6 +11,7 @@ from fastapi import APIRouter
 
 from inkstave.modules.admin.routes import admin
 from inkstave.modules.agent import routes as agent_routes
+from inkstave.modules.agent.file_ops import routes as agent_file_op_routes
 from inkstave.modules.auth.routes import auth, users
 from inkstave.modules.compile.routes import compile as compile_routes
 from inkstave.modules.compile.routes import logparse, synctex
@@ -35,3 +36,4 @@ api_v1.include_router(logparse.router)
 api_v1.include_router(history.router)
 api_v1.include_router(notifications.router)
 api_v1.include_router(agent_routes.router)
+api_v1.include_router(agent_file_op_routes.router)

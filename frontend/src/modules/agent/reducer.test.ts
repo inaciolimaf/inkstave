@@ -139,3 +139,46 @@ describe("historyToItems", () => {
     expect(items[1]).toMatchObject({ kind: "tool", status: "ok" });
   });
 });
+
+describe("file operations", () => {
+  it("adds a proposal from the stream, once", () => {
+    const event = {
+      type: "file_op_proposed",
+      seq: 9,
+      file_op_id: "op1",
+      kind: "move" as const,
+      entity_type: "doc",
+      path: "a.tex",
+      new_path: "b.tex",
+      affected_paths: [],
+    };
+    const state = applyEvent(applyEvent(initialRunState("s1"), event), event);
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({
+      kind: "file-op",
+      opId: "op1",
+      newPath: "b.tex",
+      status: "proposed",
+    });
+  });
+
+  it("restores a decided proposal from history", () => {
+    const op = {
+      id: "op1",
+      kind: "delete" as const,
+      entity_type: "folder",
+      path: "old",
+      new_path: null,
+      content: null,
+      affected_paths: ["old"],
+      status: "applied" as const,
+      rationale: null,
+      created_at: "2026-11-02T00:00:00Z",
+    };
+    expect(historyToItems([], [], [op])[0]).toMatchObject({
+      kind: "file-op",
+      opKind: "delete",
+      status: "applied",
+    });
+  });
+});

@@ -41,6 +41,7 @@ class AgentSettings(BaseSettings):
     agent_tool_search_max_results: int = 50
     agent_tool_tree_max_nodes: int = 500
     agent_tool_edit_max_chars: int = 200000
+    agent_tool_image_max_bytes: int = 3750000
 
     # Diff generation (spec 43).
     agent_diff_context_lines: int = 3

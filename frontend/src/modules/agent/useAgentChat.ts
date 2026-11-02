@@ -47,7 +47,7 @@ export function useAgentChat(projectId: string, onBeforeSend?: () => Promise<voi
           sessionId,
           runId: null,
           phase: "idle",
-          items: historyToItems(detail.messages, detail.diffs),
+          items: historyToItems(detail.messages, detail.diffs, detail.file_ops),
           seenSeqs: [],
         });
       } finally {

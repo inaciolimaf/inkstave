@@ -33,7 +33,7 @@ _FORBIDDEN_TOP_LEVEL = {
 
 def _tool_module_files() -> list[Path]:
     pkg_dir = Path(tools_pkg.__file__).parent
-    return sorted(p for p in pkg_dir.glob("*.py") if p.name != "__pycache__")
+    return sorted(p for p in pkg_dir.rglob("*.py") if p.name != "__pycache__")
 
 
 def _imported_modules(source: str) -> set[str]:
@@ -48,7 +48,7 @@ def _imported_modules(source: str) -> set[str]:
     return found
 
 
-def test_registry_contains_only_the_five_known_tools() -> None:
+def test_registry_contains_only_the_known_tools() -> None:
     # If a new tool appears, this test (and the scan below) must be revisited.
     names = {spec.name for spec in default_registry().specs()}
     assert names == {
@@ -57,6 +57,10 @@ def test_registry_contains_only_the_five_known_tools() -> None:
         "list_tree",
         "locate_section",
         "propose_edit",
+        "view_image",
+        "propose_create",
+        "propose_delete",
+        "propose_move",
     }
 
 

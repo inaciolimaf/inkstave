@@ -47,9 +47,25 @@ def _assistant_content(message: LLMMessage) -> list[dict[str, Any]]:
     return blocks
 
 
+def _tool_result_content(message: LLMMessage) -> str | list[dict[str, Any]]:
+    """Plain text, or text plus image blocks when the tool returned images."""
+    text = message.content or ""
+    if not message.images:
+        return text
+    images = [
+        {"type": "image", "source": {"type": "base64", "media_type": i.media_type, "data": i.data}}
+        for i in message.images
+    ]
+    return [{"type": "text", "text": text}, *images]
+
+
 def _append_tool_result(out: list[dict[str, Any]], message: LLMMessage) -> None:
     """Add a tool result; results of one assistant turn share a single user message."""
-    block = {"type": "tool_result", "tool_use_id": message.tool_call_id, "content": message.content or ""}
+    block = {
+        "type": "tool_result",
+        "tool_use_id": message.tool_call_id,
+        "content": _tool_result_content(message),
+    }
     if out and out[-1]["role"] == "user" and isinstance(out[-1]["content"], list):
         out[-1]["content"].append(block)
     else:

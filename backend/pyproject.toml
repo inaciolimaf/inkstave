@@ -211,7 +211,7 @@ allow_indirect_imports = true
 name = "agent: other modules only use its public interface"
 type = "forbidden"
 source_modules = ["inkstave.modules.admin", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
-forbidden_modules = ["inkstave.modules.agent.context", "inkstave.modules.agent.deps", "inkstave.modules.agent.diffs", "inkstave.modules.agent.graph", "inkstave.modules.agent.llm", "inkstave.modules.agent.models", "inkstave.modules.agent.routes", "inkstave.modules.agent.runs", "inkstave.modules.agent.safety", "inkstave.modules.agent.schemas", "inkstave.modules.agent.tools"]
+forbidden_modules = ["inkstave.modules.agent.access", "inkstave.modules.agent.context", "inkstave.modules.agent.deps", "inkstave.modules.agent.diffs", "inkstave.modules.agent.file_ops", "inkstave.modules.agent.graph", "inkstave.modules.agent.llm", "inkstave.modules.agent.models", "inkstave.modules.agent.routes", "inkstave.modules.agent.runs", "inkstave.modules.agent.safety", "inkstave.modules.agent.schemas", "inkstave.modules.agent.tools"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

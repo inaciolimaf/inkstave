@@ -9,15 +9,17 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse
 
 from inkstave.core.config.agent import get_agent_settings
-from inkstave.core.db.ownership import get_owned
 from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import AppError, ConflictError, ErrorEnvelope
+from inkstave.modules.agent.access import owned_session, require_member
 from inkstave.modules.agent.deps import get_agent_enqueuer
 from inkstave.modules.agent.diffs import repository as diff_repo
 from inkstave.modules.agent.diffs.models import ProposedDiffStatus
+from inkstave.modules.agent.file_ops import repo as file_op_repo
+from inkstave.modules.agent.file_ops.schemas import ProposedFileOpOut
 from inkstave.modules.agent.graph import repository as agent_repo
-from inkstave.modules.agent.models import AgentRunState, AgentSession
+from inkstave.modules.agent.models import AgentRunState
 from inkstave.modules.agent.runs.events import request_cancel
 from inkstave.modules.agent.runs.stream import sse_stream
 from inkstave.modules.agent.schemas import (
@@ -35,7 +37,6 @@ from inkstave.modules.auth import (
     sse_user,
 )
 from inkstave.modules.collab import flush_open_project_docs
-from inkstave.modules.projects import ProjectNotFoundError, role_for
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -52,14 +53,6 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_403_FORBIDDEN: {"model": ErrorEnvelope},
     status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
 }
-
-
-class NotProjectMemberError(AppError):
-    status_code = status.HTTP_403_FORBIDDEN
-    error_type = "not_project_member"
-
-    def __init__(self) -> None:
-        super().__init__("You are not a member of this project.")
 
 
 class RunActiveError(ConflictError):
@@ -89,22 +82,6 @@ class MessageTooLongError(AppError):
         super().__init__("Message exceeds the maximum length.", details=[{"max_chars": max_chars}])
 
 
-async def _require_member(session: AsyncSession, project_id: UUID, user_id: UUID) -> None:
-    """404 for an unknown/deleted project, 403 for a non-member (spec 44)."""
-    if not await agent_repo.project_is_live(session, project_id):
-        raise ProjectNotFoundError()
-    if await role_for(session, user_id, project_id) is None:
-        raise NotProjectMemberError()
-
-
-async def _owned_session(
-    session: AsyncSession, project_id: UUID, session_id: UUID, user_id: UUID
-) -> AgentSession:
-    return await get_owned(
-        session, AgentSession, session_id, user_id, not_found=ProjectNotFoundError(), project_id=project_id
-    )
-
-
 def _diff_summary(diff: ProposedDiff, *, include_hunks: bool) -> ProposedDiffSummary:
     out = ProposedDiffSummary.model_validate(diff)
     if not include_hunks:
@@ -124,7 +101,7 @@ async def create_session(
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> AgentSessionOut:
-    await _require_member(session, project_id, user.id)
+    await require_member(session, project_id, user.id)
     row = await agent_repo.create_session(
         session,
         project_id=project_id,
@@ -142,7 +119,7 @@ async def list_sessions(
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> list[AgentSessionOut]:
-    await _require_member(session, project_id, user.id)
+    await require_member(session, project_id, user.id)
     rows = await agent_repo.list_sessions(session, project_id=project_id, user_id=user.id)
     return [AgentSessionOut.model_validate(r) for r in rows[:limit]]
 
@@ -154,8 +131,8 @@ async def get_session_detail(
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> SessionDetailOut:
-    await _require_member(session, project_id, user.id)
-    row = await _owned_session(session, project_id, session_id, user.id)
+    await require_member(session, project_id, user.id)
+    row = await owned_session(session, project_id, session_id, user.id)
     messages = await agent_repo.list_messages(session, session_id)
     diffs = await diff_repo.list_for_session(session, session_id)
     return SessionDetailOut(
@@ -165,6 +142,10 @@ async def get_session_detail(
             _diff_summary(d, include_hunks=False)
             for d in diffs
             if d.status == ProposedDiffStatus.proposed.value
+        ],
+        file_ops=[
+            ProposedFileOpOut.model_validate(op).model_copy(update={"content": None})
+            for op in await file_op_repo.list_for_session(session, session_id)
         ],
     )
 
@@ -185,8 +166,8 @@ async def post_message(
     session: AsyncSession = UNIT_OF_WORK,
     enqueuer: AgentEnqueuer = Depends(get_agent_enqueuer),
 ) -> PostMessageOut:
-    await _require_member(session, project_id, user.id)
-    row = await _owned_session(session, project_id, session_id, user.id)
+    await require_member(session, project_id, user.id)
+    row = await owned_session(session, project_id, session_id, user.id)
     max_chars = get_agent_settings().agent_max_message_chars
     if len(body.content) > max_chars:
         raise MessageTooLongError(max_chars)
@@ -219,8 +200,8 @@ async def cancel_run(
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> dict[str, str]:
-    await _require_member(session, project_id, user.id)
-    row = await _owned_session(session, project_id, session_id, user.id)
+    await require_member(session, project_id, user.id)
+    row = await owned_session(session, project_id, session_id, user.id)
     await request_cancel(redis, run_id, get_agent_settings().agent_run_ttl_s)
     if row.active_run_id == run_id and row.run_state in (
         AgentRunState.queued.value,
@@ -240,8 +221,8 @@ async def run_events(
     session: AsyncSession = UNIT_OF_WORK,
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
-    await _require_member(session, project_id, user.id)
-    await _owned_session(session, project_id, session_id, user.id)
+    await require_member(session, project_id, user.id)
+    await owned_session(session, project_id, session_id, user.id)
     return StreamingResponse(
         sse_stream(redis, run_id, get_agent_settings().agent_stream_heartbeat_s),
         media_type="text/event-stream",
@@ -259,8 +240,8 @@ async def list_diffs(
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> list[ProposedDiffSummary]:
-    await _require_member(session, project_id, user.id)
-    await _owned_session(session, project_id, session_id, user.id)
+    await require_member(session, project_id, user.id)
+    await owned_session(session, project_id, session_id, user.id)
     rows = await diff_repo.list_for_session(session, session_id)
     if status_filter is not None:
         rows = [r for r in rows if r.status == status_filter]

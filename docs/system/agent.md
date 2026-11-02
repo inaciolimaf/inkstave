@@ -1,10 +1,12 @@
 # Agent
 
 The AI writing agent. A project member chats with it in the editor; it reads and searches the project,
-then proposes per-file diffs that the user reviews hunk by hunk. The turn runs server-side as a LangGraph
-graph inside an ARQ job and streams to the browser over SSE. The agent never writes to a document: the
-backend has no code path that does, and the only write happens in the browser, after the user confirms,
-through the normal collaboration channel. Specs 41–50 and 67.
+looks at images, then proposes per-file diffs that the user reviews hunk by hunk, and file operations
+(create, delete, rename, move) that the user applies or rejects. The turn runs server-side as a LangGraph
+graph inside an ARQ job and streams to the browser over SSE. The agent never changes a project by itself:
+a document edit is written in the browser after the user confirms, through the normal collaboration
+channel, and a file operation runs in the backend only from the user's own apply request. Specs 41–50, 67
+and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 
 ## Where it is
 
@@ -12,6 +14,7 @@ through the normal collaboration channel. Specs 41–50 and 67.
 |---|---|
 | `backend/src/inkstave/modules/agent` | Module root |
 | `backend/src/inkstave/modules/agent/routes.py`, `backend/src/inkstave/modules/agent/schemas.py` | HTTP routes and their models |
+| `backend/src/inkstave/modules/agent/access.py` | `require_member`, `owned_session`, shared by the route modules |
 | `backend/src/inkstave/modules/agent/models.py` | `AgentSession`, `AgentMessage`, `AgentRunState` |
 | `backend/src/inkstave/modules/agent/deps.py` | FastAPI dependencies; only `get_agent_enqueuer` is in use |
 | `backend/src/inkstave/modules/agent/graph/builder.py` | `build_graph`: plan, act, observe, respond |
@@ -27,6 +30,10 @@ through the normal collaboration channel. Specs 41–50 and 67.
 | `backend/src/inkstave/modules/agent/tools/base.py` | `Tool`, `ToolContext`, `ToolResult`, `ToolRegistry`, `authorize` |
 | `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages, never applies |
 | `backend/src/inkstave/modules/agent/tools/search_project.py`, `backend/src/inkstave/modules/agent/tools/read_file.py`, `backend/src/inkstave/modules/agent/tools/list_tree.py`, `backend/src/inkstave/modules/agent/tools/locate_section.py` | The read tools |
+| `backend/src/inkstave/modules/agent/tools/files/view_image.py` | `view_image`: hands an image to the model |
+| `backend/src/inkstave/modules/agent/tools/files/propose.py` | `propose_create`, `propose_delete`, `propose_move`: stage, never apply |
+| `backend/src/inkstave/modules/agent/file_ops/__init__.py`, `backend/src/inkstave/modules/agent/file_ops/models.py`, `backend/src/inkstave/modules/agent/file_ops/repository.py` | `materialize_file_ops`, `ProposedFileOp`, queries |
+| `backend/src/inkstave/modules/agent/file_ops/apply.py`, `backend/src/inkstave/modules/agent/file_ops/routes.py`, `backend/src/inkstave/modules/agent/file_ops/schemas.py`, `backend/src/inkstave/modules/agent/file_ops/paths.py` | Carrying out a proposal, its routes and models, pure path helpers |
 | `backend/src/inkstave/modules/agent/tools/_latex.py` | Regex heading scan, used only for `search_project` ranking |
 | `backend/src/inkstave/modules/agent/context/parser.py`, `backend/src/inkstave/modules/agent/context/project_map.py` | `parse_latex_structure`, `build_project_map` |
 | `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`; `select_context`, not wired to the turn |
@@ -40,6 +47,7 @@ through the normal collaboration channel. Specs 41–50 and 67.
 | `backend/src/inkstave/core/config/agent.py` | `AgentSettings` |
 | `backend/src/inkstave/worker.py` | Registers the job and the cron, picks the stub LLM |
 | `frontend/src/modules/agent/useAgentChat.ts`, `frontend/src/modules/agent/reducer.ts` | Sessions, runs, `EventSource`, transcript |
+| `frontend/src/modules/agent/file-op-card.tsx` | The card that applies or rejects a file operation |
 | `frontend/src/modules/diff-review/useDiffReview.ts`, `frontend/src/modules/diff-review/hunks.ts` | Hunk decisions, drift, `rebaseHunks` |
 | `frontend/src/modules/diff-review/editor-bridge.ts`, `frontend/src/modules/diff-review/crdt-apply.ts` | Writes through a short-lived collab provider |
 | `backend/tests/agent_evals/test_agent_evals.py` | Deterministic eval suite, `FakeLLM` only |
@@ -53,6 +61,7 @@ through the normal collaboration channel. Specs 41–50 and 67.
 | `agent_messages` | same | Transcript. `seq` is unique per session. System prompt is never stored |
 | `agent_sessions.run_state`, `active_run_id` | `backend/migrations/versions/20260610_2100_c9d2e6f58b71_agent_session_run_state.py` | `idle`, `queued`, `running`, `cancelling`, `done`, `error` |
 | `proposed_diffs` | `backend/migrations/versions/20260610_1900_b8c1d5f47a69_create_proposed_diffs.py` | One proposal per document: `base_version`, `base_hash`, `diff_text`, `hunks`, `stats`, `status`, `rationale` |
+| `proposed_file_ops` | `backend/migrations/versions/20261102_2000_c5e9a1b37d42_create_proposed_file_ops.py` | One proposal: `kind`, `entity_type`, `entity_id`, `path`, `new_path`, `content`, `affected_paths`, `status`, `rationale` |
 | `agent_audit_log` | `backend/migrations/versions/20260610_2300_d1e3f7a69c82_create_agent_audit_log.py` | Action rows with tokens and cost, no document bodies |
 
 `stats` is `{additions, deletions, hunk_count}`. `session_id` and `run_id` in `agent_audit_log` are plain
@@ -82,12 +91,16 @@ project, is a 404.
 | `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202 | `not_project_member` |
 | `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=` | 401 when no valid token, `not_project_member` |
 | `GET /sessions/{session_id}/diffs` | All the session's diffs. `?status=` filters, `?include=hunks` adds hunks | 422 on an unknown status |
+| `GET /sessions/{session_id}/file-ops` | The session's file operations with `content`, without superseded ones | `not_project_member` |
+| `POST /sessions/{session_id}/file-ops/{op_id}/apply` | Carry out one proposal and audit `apply_recorded`. Needs `DOC_WRITE` now | 403 `file_op_forbidden`, 404 `file_op_not_found`, 409 `file_op_closed`, `file_op_stale`, and the tree's own errors |
+| `POST /sessions/{session_id}/file-ops/{op_id}/reject` | Record the refusal | same as apply, without the tree's |
 
 There is no route to apply, accept or reject a diff.
 
 SSE events are named after their `type` and carry `run_id`, `seq`, `ts`: `token` (`text`), `tool_call`
 (`tool_call_id`, `name`, `arguments`), `tool_result` (`tool_call_id`, `name`, `ok`, `summary`),
-`diff_proposed` (`diff_id`, `doc_id`, `path`, `stats`), `done` (`usage`, `iterations`, `final_text`),
+`diff_proposed` (`diff_id`, `doc_id`, `path`, `stats`), `file_op_proposed` (`file_op_id`, `kind`,
+`entity_type`, `path`, `new_path`, `affected_paths`, `rationale`), `done` (`usage`, `iterations`, `final_text`),
 `error` (`code`, `message`, and `retry_after` when rate limited). `done` and `error` are terminal. Error
 codes are `agent_rate_limited`, `agent_budget_exceeded`, `cancelled`, `internal`, `timeout`, `not_found`.
 Keep-alives are `: ping` comments.
@@ -163,7 +176,7 @@ and a `refusal` raises `LLMError`.
 
 ### Tools
 
-`default_registry` holds exactly five. Each calls `authorize`, which re-reads the role on every call, and is
+`default_registry` holds exactly nine. Each calls `authorize`, which re-reads the role on every call, and is
 scoped to `ToolContext.project_id`.
 
 | Tool | Does | Limit |
@@ -173,9 +186,38 @@ scoped to `ToolContext.project_id`.
 | `list_tree` | Tree under a path, depth 1–10 | `AGENT_TOOL_TREE_MAX_NODES` |
 | `locate_section` | Resolves a human section name through the structure parser | Name up to 120 chars |
 | `propose_edit` | Stages a `StagedEdit`. `require_write=True`, so viewers get `forbidden` | `AGENT_TOOL_EDIT_MAX_CHARS` |
+| `view_image` | Hands a PNG, JPEG, GIF or WebP to the model. The type comes from the bytes | `AGENT_TOOL_IMAGE_MAX_BYTES` |
+| `propose_create` | Stages a new document with its whole text, or a folder. Missing folders on the path are created on apply. `require_write=True` | `AGENT_TOOL_EDIT_MAX_CHARS` |
+| `propose_delete` | Stages a delete and records what it removes in `affected_paths`. `require_write=True` | — |
+| `propose_move` | Stages a rename, a move or both. `require_write=True` | — |
 
 A foreign or malformed id is `not_found`, a binary file is `unsupported`. `mode` is `full` or `range`
-(0-based, end exclusive).
+(0-based, end exclusive). The tools added by spec 108 accept a path with a leading `/` or `./`; the older
+read tools still want it exactly as the tree spells it.
+
+### Images
+
+`ToolResult.images` and `LLMMessage.images` carry `LLMImage` beside the JSON result, and both fields are
+excluded from every dump, so an image reaches neither `agent_messages`, the audit log nor the stream. It is
+sent again on each model call of that turn and is gone in the next one. `AnthropicLLMClient` puts it inside
+the `tool_result` block. OpenAI tool messages hold only text, so `OpenRouterLLMClient` sends it as a user
+message after the turn's last tool result, and needs an `AGENT_MODEL` with vision.
+
+### File operations
+
+1. A tool validates the path against the current tree and appends a `StagedFileOp` to
+   `ToolContext.staged_file_ops`. Two proposals on one path in a turn are refused. Nothing changes.
+2. At the end of the turn `materialize_file_ops` stores one `proposed_file_ops` row each, moving an open row
+   for the same session and path to `superseded`. Like diffs, this happens on a cancelled or capped turn.
+3. `file_op_proposed` tells the panel, and `GET /sessions/{session_id}` brings them back on reload, without
+   `content`, which the card loads on demand.
+4. The user applies or rejects on `FileOpCard`. A delete asks for confirmation.
+5. `apply_file_op` runs in the request's transaction, so a failure leaves nothing. A delete or move is
+   refused as `file_op_stale` if the target is no longer at `path`, and a delete also if its subtree no longer
+   matches `affected_paths`: the user approved that list. A refused proposal stays open.
+6. The card refreshes the tree, and `useSelectionFollowsTree` in
+   `frontend/src/modules/editor/selection-follows-tree.ts` keeps the open file right: it clears a removed
+   file and follows a renamed or moved one.
 
 ### Context and section parsing
 
@@ -232,6 +274,11 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | No tool module imports a network client | `backend/tests/unit/test_agent_egress_lock.py::test_no_agent_tool_module_imports_a_network_client` |
 | A tool outside the registry never runs and is flagged | `backend/tests/agent_evals/test_agent_evals.py::test_eval_disallowed_tool_is_flagged` |
 | Injection-shaped document text is flagged and the document kept | `backend/tests/agent_evals/test_agent_evals.py::test_eval_injection_does_not_change_behaviour` |
+| A proposal changes nothing until the user applies it | `backend/tests/integration/test_agent_file_ops.py::test_a_proposal_changes_nothing_until_the_user_applies` |
+| Applying needs write access at that moment | `backend/tests/integration/test_agent_file_ops.py::test_a_viewer_cannot_apply` |
+| A folder that changed since the proposal is not deleted | `backend/tests/integration/test_agent_file_ops.py::test_delete_is_refused_when_the_folder_gained_a_file` |
+| A decided proposal cannot run twice | `backend/tests/integration/test_agent_file_ops.py::test_delete_and_move_apply_and_cannot_apply_twice` |
+| The model gets an image and the transcript does not keep it | `backend/tests/integration/test_agent_view_image.py::test_the_model_gets_the_image_and_the_transcript_does_not` |
 | A second message during a run is refused, one after a terminal state is accepted | `backend/tests/integration/test_agent_api.py::test_post_message_enqueues_and_conflicts`, `backend/tests/integration/test_agent_api.py::test_post_message_after_terminal_state_starts_new_run` |
 | Rate-limited run is refused before the LLM | `backend/tests/integration/test_agent_safety_api.py::test_rate_limited_run_is_refused` |
 | Exhausted day budget refuses the run | `backend/tests/integration/test_agent_safety_api.py::test_day_budget_preflight_refusal` |
@@ -253,22 +300,13 @@ integration marker. It calls no real model, so it pins invariants, not model qua
 
 ## Settings
 
-Defaults are from `backend/src/inkstave/core/config/agent.py`. `.env.example` matches them except for these
-three, and a deployment copying it gets its values. For the first two the code default is the deliberate one.
-
-| Variable | Code default | `.env.example` | Meaning |
-|---|---|---|---|
-| `AGENT_MAX_TOKENS_PER_CALL` | 32000 | **1024** | Output cap. Too small truncates a `propose_edit`, so 1024 breaks whole-document edits |
-| `AGENT_REQUEST_TIMEOUT_S` | 120 | **60** | Per-call timeout of the SDK client |
-| `AGENT_JOB_TIMEOUT_S` | 600 | **absent** | ARQ timeout for the whole turn |
-
-The rest, code default first:
+Defaults are from `backend/src/inkstave/core/config/agent.py`, and `.env.example` matches them.
 
 | Group | Variables |
 |---|---|
 | Provider | `AGENT_LLM_PROVIDER` `anthropic`; `ANTHROPIC_API_KEY` empty, needed when the real client is built; `AGENT_MODEL` `claude-haiku-5-5`; `OPENROUTER_API_KEY` empty, needed with `openrouter`; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_TEMPERATURE` 0.2, OpenRouter only; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
-| Turn | `AGENT_MAX_ITERATIONS` 15; `AGENT_MAX_TOTAL_TOKENS` 60000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
-| Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000 |
+| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 15; `AGENT_MAX_TOTAL_TOKENS` 60000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
+| Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000; `AGENT_TOOL_IMAGE_MAX_BYTES` 3750000 |
 | Diffs | `AGENT_DIFF_CONTEXT_LINES` 3; `AGENT_DIFF_MAX_DOC_CHARS` 400000 |
 | Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_STREAM_TRANSPORT` `sse`, unused |
 | Context | `AGENT_CONTEXT_CACHE` `memory`, and `redis` behaves like `off`; `AGENT_SECTION_EXTRA_COMMANDS` empty; `AGENT_CONTEXT_TOKEN_BUDGET` 8000 and `AGENT_CONTEXT_SURROUNDING_LINES` 40, both unused |
@@ -281,7 +319,7 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 
 ## Points of attention
 
-**The agent has no write path, and the backend does not know what was applied.** `set_status` is never called, so `applied`, `partially_applied` and `stale` are never set, and `apply_recorded` is never written. An applied proposal stays `proposed` until a later proposal for the same session and document supersedes it, so `GET /sessions/{session_id}` keeps returning it after a reload. `rejected` comes only from overlapping ranges. `is_stale` is used only by its test.
+**The backend does not know which diffs were applied.** Only file operations record an outcome. `set_status` is never called, so `applied`, `partially_applied` and `stale` are never set, and `apply_recorded` is never written. An applied proposal stays `proposed` until a later proposal for the same session and document supersedes it, so `GET /sessions/{session_id}` keeps returning it after a reload. `rejected` comes only from overlapping ranges. `is_stale` is used only by its test.
 
 **Timeouts.** `AGENT_REQUEST_TIMEOUT_S` bounds one LLM request. `AGENT_JOB_TIMEOUT_S` is the ARQ `timeout` for the whole turn, and `run_turn` passes the same value to `allow_idle`, because the transaction stays open across model calls. Fifteen plan steps at 120 s exceed 600 s, and the SDK's default two retries are not disabled, so one call can take three times the request timeout. The job timeout is the real ceiling and a slow multi-step turn can hit it.
 
@@ -305,4 +343,4 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 
 **Unused code.** `select_context`, `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES`: the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
 
-**Injection guard limits.** `flag_injection` only audits, it blocks nothing. `wrap_untrusted` frames tool messages sent to the model and the transcript stays raw. Protection against acting on injected text rests on the absence of a write tool and on review by the user.
+**Injection guard limits.** `flag_injection` only audits, it blocks nothing. `wrap_untrusted` frames tool messages sent to the model and the transcript stays raw. Protection against acting on injected text rests on every tool only proposing and on review by the user. Text inside an image is not scanned at all.

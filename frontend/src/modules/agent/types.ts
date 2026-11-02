@@ -46,7 +46,20 @@ export type TranscriptItem =
       proposalId: string;
       files: { path: string; hunkCount: number }[];
     }
+  | ({ kind: "file-op"; id: string } & FileOp)
   | { kind: "error"; id: string; code: string; message: string; retryable: boolean };
+
+/** A create, delete or move the agent proposed; it happens only when the user applies it. */
+export interface FileOp {
+  opId: string;
+  opKind: Schemas["ProposedFileOpOut"]["kind"];
+  entityType: string;
+  path: string;
+  newPath: string | null;
+  affectedPaths: string[];
+  status: Schemas["ProposedFileOpOut"]["status"];
+  rationale: string | null;
+}
 
 export type RunPhase = "idle" | "starting" | "streaming" | "stopping" | "done" | "error" | "cancelled";
 
@@ -73,6 +86,12 @@ export interface AgentEvent {
   ok?: boolean;
   summary?: string;
   diff_id?: string;
+  file_op_id?: string;
+  kind?: FileOp["opKind"];
+  entity_type?: string;
+  new_path?: string | null;
+  affected_paths?: string[];
+  rationale?: string | null;
   doc_id?: string;
   path?: string;
   stats?: { hunk_count?: number; additions?: number; deletions?: number };

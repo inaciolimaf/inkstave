@@ -1,6 +1,7 @@
 /** Pure, idempotent reducer over spec-44 events → AgentRunState (spec 46). */
 import i18n from "@/i18n/config";
 
+import { toFileOp, type WireFileOp } from "./api";
 import type { AgentEvent, AgentRunState, TranscriptItem, WireDiffSummary, WireMessage } from "./types";
 
 export function initialRunState(sessionId: string | null = null): AgentRunState {
@@ -101,6 +102,23 @@ function applyDiffProposed(base: AgentRunState, event: AgentEvent): AgentRunStat
   return base;
 }
 
+function applyFileOpProposed(base: AgentRunState, event: AgentEvent): AgentRunState {
+  const opId = event.file_op_id ?? "";
+  base.items.push({
+    kind: "file-op",
+    id: opId || `op-${event.seq}`,
+    opId,
+    opKind: event.kind ?? "create",
+    entityType: event.entity_type ?? "doc",
+    path: event.path ?? "",
+    newPath: event.new_path ?? null,
+    affectedPaths: event.affected_paths ?? [],
+    status: "proposed",
+    rationale: event.rationale ?? null,
+  });
+  return base;
+}
+
 function applyDone(base: AgentRunState, event: AgentEvent): AgentRunState {
   const { items } = base;
   const idx = openAssistant(items);
@@ -165,6 +183,8 @@ export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunSta
       return applyToolResult(base, event);
     case "diff_proposed":
       return applyDiffProposed(base, event);
+    case "file_op_proposed":
+      return applyFileOpProposed(base, event);
     case "done":
       return applyDone(base, event);
     case "error":
@@ -175,7 +195,11 @@ export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunSta
 }
 
 /** Convert a loaded transcript (stored messages + open diffs) into render items. */
-export function historyToItems(messages: WireMessage[], diffs: WireDiffSummary[]): TranscriptItem[] {
+export function historyToItems(
+  messages: WireMessage[],
+  diffs: WireDiffSummary[],
+  fileOps: WireFileOp[] = [],
+): TranscriptItem[] {
   const toolResults = new Map<string, { ok: boolean; summary: unknown }>();
   for (const m of messages) {
     if (m.role === "tool" && m.tool_call_id) {
@@ -232,5 +256,6 @@ export function historyToItems(messages: WireMessage[], diffs: WireDiffSummary[]
       files: [{ path: d.path, hunkCount: d.stats.hunk_count ?? 0 }],
     });
   }
+  for (const op of fileOps) items.push({ kind: "file-op", id: op.id, ...toFileOp(op) });
   return items;
 }

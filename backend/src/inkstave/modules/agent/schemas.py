@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from inkstave.core.schemas import StrictModel
 from inkstave.modules.agent.diffs.schemas import Hunk
+from inkstave.modules.agent.file_ops.schemas import ProposedFileOpOut
 from inkstave.modules.agent.llm.base import ToolCall
 from inkstave.modules.agent.models import AgentMessageRole
 
@@ -57,6 +58,7 @@ class SessionDetailOut(BaseModel):
     session: AgentSessionOut
     messages: list[AgentMessageOut]
     diffs: list[ProposedDiffSummary]
+    file_ops: list[ProposedFileOpOut]  # without `content`; the file-ops route carries it
 
 
 class PostMessageIn(StrictModel):

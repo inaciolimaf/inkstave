@@ -3,7 +3,7 @@
  * margin of the text, while the writer's own messages open a ruled entry.
  */
 import { Check, ChevronDown, ChevronRight, FileDiff, Loader2, X } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,10 @@ const TOOL_LABEL_KEYS: Record<string, string> = {
   list_tree: "transcript.tools.list_tree",
   locate_section: "transcript.tools.locate_section",
   propose_edit: "transcript.tools.propose_edit",
+  view_image: "transcript.tools.view_image",
+  propose_create: "transcript.tools.propose_create",
+  propose_delete: "transcript.tools.propose_delete",
+  propose_move: "transcript.tools.propose_move",
 };
 
 /** Render text as plain, escaped React children (no HTML execution), with ``` code blocks. */
@@ -171,10 +175,12 @@ export function AgentTranscript({
   items,
   loading,
   onReviewProposal,
+  renderFileOp,
 }: {
   items: TranscriptItem[];
   loading: boolean;
   onReviewProposal: (proposalId: string) => void;
+  renderFileOp?: (item: Extract<TranscriptItem, { kind: "file-op" }>) => ReactNode;
 }) {
   const { t } = useTranslation("agent");
   const ref = useRef<HTMLDivElement>(null);
@@ -230,6 +236,7 @@ export function AgentTranscript({
           if (item.kind === "diff-proposal") {
             return <DiffProposalCard key={item.id} item={item} onReviewProposal={onReviewProposal} />;
           }
+          if (item.kind === "file-op") return <Fragment key={item.id}>{renderFileOp?.(item)}</Fragment>;
           return (
             <div key={item.id} className="text-small text-error-text" role="alert">
               {item.message}

@@ -7,7 +7,15 @@ import { runEventsUrl } from "./api";
 import { applyEvent } from "./reducer";
 import type { AgentEvent, AgentRunState } from "./types";
 
-const STREAM_EVENT_TYPES = ["token", "tool_call", "tool_result", "diff_proposed", "done", "error"];
+const STREAM_EVENT_TYPES = [
+  "token",
+  "tool_call",
+  "tool_result",
+  "diff_proposed",
+  "file_op_proposed",
+  "done",
+  "error",
+];
 
 export function useRunStream(projectId: string, setRun: Dispatch<SetStateAction<AgentRunState>>) {
   const esRef = useRef<EventSource | null>(null);

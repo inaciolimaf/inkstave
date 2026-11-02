@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from inkstave.modules.agent.llm.base import (
     LLMError,
+    LLMImage,
     LLMMessage,
     LLMResponse,
     LLMStreamChunk,
@@ -48,6 +49,32 @@ def _overrides(temperature: float | None, max_tokens: int | None) -> dict[str, A
     return over
 
 
+def _to_openai_entry(m: LLMMessage) -> dict[str, Any]:
+    entry: dict[str, Any] = {"role": m.role, "content": m.content or ""}
+    if m.tool_calls:
+        entry["tool_calls"] = [
+            {
+                "id": tc.id,
+                "type": "function",
+                "function": {"name": tc.name, "arguments": json.dumps(tc.arguments)},
+            }
+            for tc in m.tool_calls
+        ]
+    if m.tool_call_id is not None:
+        entry["tool_call_id"] = m.tool_call_id
+    if m.name is not None:
+        entry["name"] = m.name
+    return entry
+
+
+def _images_message(images: list[LLMImage]) -> dict[str, Any]:
+    parts: list[dict[str, Any]] = [{"type": "text", "text": "The image the tool returned."}]
+    parts.extend(
+        {"type": "image_url", "image_url": {"url": f"data:{i.media_type};base64,{i.data}"}} for i in images
+    )
+    return {"role": "user", "content": parts}
+
+
 class OpenRouterLLMClient:
     def __init__(self, settings: AgentSettings) -> None:
         if not settings.openrouter_api_key:
@@ -73,23 +100,21 @@ class OpenRouterLLMClient:
 
     @staticmethod
     def _to_openai_messages(messages: list[LLMMessage]) -> list[dict[str, Any]]:
+        """OpenAI tool messages hold only text, so a result's images follow as a user message.
+
+        That message waits for the last result of the turn: nothing may split the results
+        from the assistant message that asked for them.
+        """
         out: list[dict[str, Any]] = []
+        images: list[LLMImage] = []
         for m in messages:
-            entry: dict[str, Any] = {"role": m.role, "content": m.content or ""}
-            if m.tool_calls:
-                entry["tool_calls"] = [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {"name": tc.name, "arguments": json.dumps(tc.arguments)},
-                    }
-                    for tc in m.tool_calls
-                ]
-            if m.tool_call_id is not None:
-                entry["tool_call_id"] = m.tool_call_id
-            if m.name is not None:
-                entry["name"] = m.name
-            out.append(entry)
+            if m.role != "tool" and images:
+                out.append(_images_message(images))
+                images = []
+            out.append(_to_openai_entry(m))
+            images.extend(m.images or [])
+        if images:
+            out.append(_images_message(images))
         return out
 
     @staticmethod

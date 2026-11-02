@@ -241,7 +241,8 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_TOOL_READ_MAX_CHARS` | No | `40000` | char cap for read_file output (spec 42) | backend, worker |
 | `AGENT_TOOL_SEARCH_MAX_RESULTS` | No | `50` | upper bound for search_project.max_results | backend, worker |
 | `AGENT_TOOL_TREE_MAX_NODES` | No | `500` | node cap for list_tree | backend, worker |
-| `AGENT_TOOL_EDIT_MAX_CHARS` | No | `200000` | char cap for propose_edit.new_text | backend, worker |
+| `AGENT_TOOL_EDIT_MAX_CHARS` | No | `200000` | char cap for propose_edit.new_text and propose_create.content | backend, worker |
+| `AGENT_TOOL_IMAGE_MAX_BYTES` | No | `3750000` | byte cap for view_image (the Claude API takes 5 MB of base64) | backend, worker |
 | `AGENT_DIFF_CONTEXT_LINES` | No | `3` | unified-diff context lines per hunk (spec 43) | backend, worker |
 | `AGENT_DIFF_MAX_DOC_CHARS` | No | `400000` | refuse to diff documents larger than this | backend, worker |
 | `AGENT_STREAM_TRANSPORT` | No | `sse` | sse \| ws (spec 44) | backend |
@@ -271,7 +272,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `SMTP_PASSWORD` | No | `—` | SMTP password (Resend: your RESEND_API_KEY) | backend, worker |
 | `SMTP_USE_TLS` | No | `true` | STARTTLS/TLS (Mailpit: false; Resend: true) | backend, worker |
 | `RESEND_API_KEY` | No | `—` | Resend API key (re_...); required when `EMAIL_BACKEND=resend` | backend, worker |
-| `APP_BASE_URL` | No | `http://localhost` | base for accept_url / reset_url / verify_url in emails | backend, worker |
+| `APP_BASE_URL` | No | `http://localhost` | placeholder links in send-test-email only; real links use FRONTEND_URL | backend, worker |
 | `PASSWORD_RESET_TOKEN_TTL` | No | `3600` | password-reset link lifetime (seconds) | backend |
 | `EMAIL_VERIFICATION_TOKEN_TTL` | No | `86400` | account email-verification link lifetime (seconds) | backend |
 | `MAGIC_LOGIN_TOKEN_TTL` | No | `600` | passwordless sign-in link lifetime (seconds) | backend |

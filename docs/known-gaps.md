@@ -164,7 +164,6 @@ run; the rest were read, not run.
 - The effective document size limit is `MAX_REQUEST_BODY_BYTES` (1 MiB), not `MAX_DOCUMENT_BYTES` (2 MB).
 - `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 60000 soft cap stops
   first.
-- `AGENT_MAX_TOKENS_PER_CALL=1024` in `.env.example` breaks whole-document edits; the code default is 32000.
 - `gzip.decompress` on SyncTeX data has no output bound.
 
 ### Settings with no effect

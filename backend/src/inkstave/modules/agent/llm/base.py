@@ -30,6 +30,13 @@ class ToolSpec(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)  # JSON schema
 
 
+class LLMImage(BaseModel):
+    """An image a tool returned, for the model to see."""
+
+    media_type: str
+    data: str  # base64
+
+
 class LLMMessage(BaseModel):
     role: Role
     content: str | None = None
@@ -39,6 +46,8 @@ class LLMMessage(BaseModel):
     # The assistant turn as the provider returned it, opaque to the graph. Claude needs its
     # thinking blocks back unchanged with the tool results; never persisted.
     provider_blocks: list[dict[str, Any]] | None = None
+    # Lives only for the turn that loaded it: never stored, and left out of any dump.
+    images: list[LLMImage] | None = Field(default=None, exclude=True)
 
 
 class LLMUsage(BaseModel):

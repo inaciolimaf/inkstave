@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast
 
 from inkstave.core.db.session import allow_idle
 from inkstave.modules.agent.diffs import materialize_diffs
+from inkstave.modules.agent.file_ops import materialize_file_ops
 from inkstave.modules.agent.graph import repository as repo
 from inkstave.modules.agent.graph.builder import build_graph
 from inkstave.modules.agent.graph.prompts import PromptContext, build_system_prompt
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.modules.agent.diffs.models import ProposedDiff
+    from inkstave.modules.agent.file_ops import ProposedFileOp
     from inkstave.modules.agent.graph.agent_deps import AgentDeps
     from inkstave.modules.agent.graph.edits import StagedEdit
     from inkstave.modules.agent.models import AgentSession
@@ -35,6 +37,7 @@ class AgentTurnResult:
     error: str | None
     staged_edits: list[StagedEdit] = field(default_factory=list)
     proposed_diffs: list[ProposedDiff] = field(default_factory=list)
+    proposed_file_ops: list[ProposedFileOp] = field(default_factory=list)
     audit_events: list[dict[str, object]] = field(default_factory=list)
 
 
@@ -71,6 +74,7 @@ def _initial_state(session: AgentSession, transcript: list[LLMMessage]) -> Agent
         "total_tokens": 0,
         "usage": LLMUsage(),
         "staged_edits": [],
+        "staged_file_ops": [],
         "final_response": None,
         "error": None,
     }
@@ -114,6 +118,7 @@ def _tool_context(db: AsyncSession, session: AgentSession, deps: AgentDeps) -> T
         user_id=str(session.user_id),
         settings=deps.settings,
         injection_guard=deps.injection_guard,
+        object_store=deps.object_store,
     )
 
 
@@ -123,6 +128,17 @@ async def _touch_session(db: AsyncSession, session: AgentSession, user_message: 
         session.title = user_message[:80]
     session.updated_at = datetime.now(UTC)
     await db.flush()
+
+
+async def _store_proposals(
+    state: AgentState, deps: AgentDeps, db: AsyncSession, session: AgentSession, message_id: UUID | None
+) -> tuple[list[ProposedDiff], list[ProposedFileOp]]:
+    """Turn the turn's staged work into rows the user reviews, attributed to its last message."""
+    diffs = await materialize_diffs(
+        state=state, settings=deps.settings, db=db, session=session, message_id=message_id
+    )
+    file_ops = await materialize_file_ops(state=state, db=db, session=session, message_id=message_id)
+    return diffs, file_ops
 
 
 async def run_turn(
@@ -153,19 +169,8 @@ async def run_turn(
     usage = result.get("usage", LLMUsage())
     last_assistant_id = await _persist_produced(db, session, produced, first_seq=seq + 1, usage=usage)
 
-    # 6. Turn the turn's staged edits into reviewable proposed diffs (spec 43). No
-    #    document is mutated; the diffs are attributed to the final assistant message.
-    # NOTE: `materialize_diffs` is forward-wired for spec 43 — spec 41 §4 lists diff
-    #    generation as a non-goal, but specs 42/43 legitimately build on this same
-    #    runner, so the call is introduced here ahead of the strict spec-41 boundary
-    #    (with no staged edits it simply returns an empty list). Do not remove.
-    proposed_diffs = await materialize_diffs(
-        state=result,
-        settings=deps.settings,
-        db=db,
-        session=session,
-        message_id=last_assistant_id,
-    )
+    # 6. Store what the turn proposed. Nothing in the project changes.
+    proposed_diffs, proposed_file_ops = await _store_proposals(result, deps, db, session, last_assistant_id)
 
     await _touch_session(db, session, user_message)
     return AgentTurnResult(
@@ -176,5 +181,6 @@ async def run_turn(
         error=result.get("error"),
         staged_edits=list(result.get("staged_edits", [])),
         proposed_diffs=proposed_diffs,
+        proposed_file_ops=proposed_file_ops,
         audit_events=list(tool_ctx.audit_events),
     )

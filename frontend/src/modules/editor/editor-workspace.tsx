@@ -24,6 +24,7 @@ import { useEditorSelection, type EditorSelection } from "./use-editor-selection
 import { useDocumentBridge } from "./use-document-bridge";
 import { useAgentAsks, useFlushBeforeCompile, useSourceJumps } from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
+import { useSelectionFollowsTree } from "./selection-follows-tree";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useSourceSync } from "./use-source-sync";
 
@@ -193,6 +194,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
   const jumps = useSourceJumps(sync, setView);
   useStartDocument(treeRoot, projectQuery.data?.rootDocId, selected, setSelected);
+  useSelectionFollowsTree(treeRoot, selected, setSelected);
 
   const flushBeforeCompile = useFlushBeforeCompile();
 

@@ -142,6 +142,7 @@ are English-only today ([known gaps](known-gaps.md)).
 | Proposed changes | `ProposedDiff` | "Mudanças propostas" |
 | Stage an edit | `StagedEdit`, `propose_edit` | "Propôs uma edição" |
 | Review | `DiffReviewDialog` | "Revisar mudanças" |
+| File operation | `ProposedFileOp`, `StagedFileOp`, `FileOpCard` | "Criar arquivo", "Excluir", "Renomear ou mover" |
 | Selection sent to the agent | `AgentQuote`, `withQuote` | "Pedir ao agente" |
 | File drawer | `FileDrawer` | "Arquivos" |
 | Hunk | `hunks`, `hunk_count` | "hunk" |

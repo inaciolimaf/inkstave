@@ -169,6 +169,10 @@ def test_registry_specs_are_valid_json_schema() -> None:
         "list_tree",
         "locate_section",
         "propose_edit",
+        "view_image",
+        "propose_create",
+        "propose_delete",
+        "propose_move",
     }
     for spec in specs:
         assert spec.description

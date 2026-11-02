@@ -6,6 +6,7 @@ populated — Alembic autogenerate relies on this to see all tables.
 
 from inkstave.modules.admin.models import Ping
 from inkstave.modules.agent.diffs.models import ProposedDiff, ProposedDiffStatus
+from inkstave.modules.agent.file_ops.models import ProposedFileOp, ProposedFileOpStatus
 from inkstave.modules.agent.models import (
     AgentMessage,
     AgentMessageRole,
@@ -64,6 +65,8 @@ __all__ = [
     "ProjectMembership",
     "ProposedDiff",
     "ProposedDiffStatus",
+    "ProposedFileOp",
+    "ProposedFileOpStatus",
     "RevokedSession",
     "TreeEntity",
     "TreeEntityType",

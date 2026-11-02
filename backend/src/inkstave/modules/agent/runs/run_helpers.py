@@ -53,6 +53,7 @@ class RunScope:
     session_id: UUID
     run_id: UUID
     now: float
+    object_store: Any = None
 
     async def audit(self, action: AgentAuditAction, **fields: Any) -> None:
         """Write one audit row, already scoped to this run."""
@@ -147,6 +148,25 @@ async def _announce_diffs(scope: RunScope, diffs: list[Any]) -> None:
         )
 
 
+async def _announce_file_ops(scope: RunScope, ops: list[Any]) -> None:
+    """Stream + audit every file operation the run proposed."""
+    for op in ops:
+        await scope.sink.emit(
+            "file_op_proposed",
+            file_op_id=str(op.id),
+            kind=op.kind,
+            entity_type=op.entity_type,
+            path=op.path,
+            new_path=op.new_path,
+            affected_paths=op.affected_paths,
+            rationale=op.rationale,
+        )
+        await scope.audit(
+            AgentAuditAction.proposal_created,
+            detail={"file_op_id": str(op.id), "kind": op.kind, "path": op.path},
+        )
+
+
 async def persist_results(scope: RunScope, *, result: Any, model: str) -> Decimal:
     """Persist audit events + proposed diffs, record usage, emit token metrics.
 
@@ -154,6 +174,7 @@ async def persist_results(scope: RunScope, *, result: Any, model: str) -> Decima
     """
     await _audit_tool_events(scope, result.audit_events)
     await _announce_diffs(scope, result.proposed_diffs)
+    await _announce_file_ops(scope, result.proposed_file_ops)
 
     cost = cost_for(scope.settings, model, result.usage.prompt, result.usage.completion)
     await record_usage(

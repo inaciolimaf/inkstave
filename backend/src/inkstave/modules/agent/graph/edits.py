@@ -8,6 +8,7 @@ them by ``doc_id`` and computes per-file unified diffs against current content.
 from __future__ import annotations
 
 import enum
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -27,3 +28,22 @@ class StagedEdit(BaseModel):
     start_line: int | None = None  # required for mode="range", 0-based inclusive
     end_line: int | None = None  # required for mode="range", 0-based exclusive
     rationale: str | None = Field(default=None)
+
+
+class FileOpKind(enum.StrEnum):
+    create = "create"
+    delete = "delete"
+    move = "move"
+
+
+class StagedFileOp(BaseModel):
+    """A change to the tree the agent proposes; stored at the end of the turn, never applied."""
+
+    kind: FileOpKind
+    entity_type: str  # the tree entity's type: "doc", "folder" or "file"
+    path: str  # where the entity is, or for a create where it will be
+    entity_id: UUID | None = None  # the target of a delete or move
+    new_path: str | None = None  # a move's destination
+    content: str | None = None  # a new document's text
+    affected_paths: list[str] = Field(default_factory=list)  # what a delete removes
+    rationale: str | None = None

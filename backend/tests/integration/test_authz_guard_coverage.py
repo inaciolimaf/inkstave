@@ -22,7 +22,7 @@ pytestmark = pytest.mark.integration
 #   - sharing routes call the sharing service's require_member/require_owner;
 #   - /permissions and the SSE /events route call authz.role_for directly
 #     (custom auth: SSE uses a query-param token, /permissions returns role+caps);
-#   - the agent routes (spec 44) call `_require_member` in-handler, which is 404 for
+#   - the agent routes (spec 44) call `require_member` in-handler, which is 404 for
 #     an unknown project and 403 for a non-member (a deliberately different contract
 #     from require_capability's 404-for-non-member), and SSE uses a query-param token.
 _AGENT = "/api/v1/projects/{project_id}/agent"
@@ -43,6 +43,9 @@ _HANDLER_GUARDED: frozenset[str] = frozenset(
         f"{_AGENT}/sessions/{{session_id}}/runs/{{run_id}}/events",
         f"{_AGENT}/sessions/{{session_id}}/runs/{{run_id}}/cancel",
         f"{_AGENT}/sessions/{{session_id}}/diffs",
+        f"{_AGENT}/sessions/{{session_id}}/file-ops",
+        f"{_AGENT}/sessions/{{session_id}}/file-ops/{{op_id}}/apply",
+        f"{_AGENT}/sessions/{{session_id}}/file-ops/{{op_id}}/reject",
     }
 )
 

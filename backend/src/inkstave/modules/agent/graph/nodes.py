@@ -297,7 +297,13 @@ async def _dispatch_call(
         ok=result.ok,
         summary=_result_summary(result),
     )
-    return LLMMessage(role="tool", tool_call_id=call.id, name=call.name, content=content)
+    return LLMMessage(
+        role="tool",
+        tool_call_id=call.id,
+        name=call.name,
+        content=content,
+        images=result.images or None,
+    )
 
 
 def make_act(deps: AgentDeps) -> Any:
@@ -308,14 +314,16 @@ def make_act(deps: AgentDeps) -> Any:
         if await _cancelled(deps):
             return _terminal(CANCELLED)
 
-        before = len(ctx.staged_edits) if ctx is not None else 0
+        edits_before = len(ctx.staged_edits) if ctx is not None else 0
+        ops_before = len(ctx.staged_file_ops) if ctx is not None else 0
         results = [
             await _dispatch_call(deps, registry, ctx, call) for call in state.get("pending_tool_calls", [])
         ]
 
         update: dict[str, Any] = {"messages": results, "pending_tool_calls": []}
-        if ctx is not None and len(ctx.staged_edits) > before:
-            update["staged_edits"] = ctx.staged_edits[before:]
+        if ctx is not None:
+            update["staged_edits"] = ctx.staged_edits[edits_before:]
+            update["staged_file_ops"] = ctx.staged_file_ops[ops_before:]
         return update
 
     return act

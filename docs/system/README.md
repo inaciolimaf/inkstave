@@ -20,7 +20,7 @@ Domain names come from [`docs/glossary.md`](../glossary.md). What is knowingly u
 | [sharing.md](sharing.md) | Collaborators, invites, roles, authorization | 33–35 |
 | [history.md](history.md) | Version capture, compaction, diffs, labels, restore | 36–38, 40 |
 | [notifications.md](notifications.md) | Inbox, e-mail rendering and delivery | 39, 103 |
-| [agent.md](agent.md) | AI agent: graph, tools, diffs, streaming, safety | 41–50, 67 |
+| [agent.md](agent.md) | AI agent: graph, tools, diffs, streaming, safety | 41–50, 67, 108 |
 | [observability.md](observability.md) | Logs, metrics, tracing, health and readiness | 51 |
 | [security.md](security.md) | Threat model, headers, limits, secrets, proxy trust | 52, 55, 91 |
 | [frontend.md](frontend.md) | Stack, routes, API client, modules, i18n, tests | 09, 16–18, 24, 31, 32, 38, 46, 47, 61, 64 |

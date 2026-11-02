@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Any, TypedDict
 
-from inkstave.modules.agent.graph.edits import StagedEdit
+from inkstave.modules.agent.graph.edits import StagedEdit, StagedFileOp
 from inkstave.modules.agent.llm.base import LLMMessage, LLMUsage, ToolCall
 
 
@@ -36,6 +36,8 @@ class AgentState(TypedDict, total=False):
     # can build on the same `AgentState` without re-shaping it; spec 41 itself
     # leaves it empty. Do not remove — later specs depend on it.
     staged_edits: Annotated[list[StagedEdit], operator.add]
+    # Tree changes staged by the propose_create/delete/move tools. Reducer appends.
+    staged_file_ops: Annotated[list[StagedFileOp], operator.add]
     final_response: str | None
     error: str | None
 

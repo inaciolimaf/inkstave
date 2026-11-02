@@ -11,6 +11,7 @@ from inkstave.modules.agent.llm.base import LLMClient
 from inkstave.modules.agent.tools.base import ToolContext, ToolRegistry
 
 if TYPE_CHECKING:
+    from inkstave.infra.storage.base import ObjectStore
     from inkstave.modules.agent.runs.events import EventSink
 
 
@@ -31,6 +32,7 @@ class AgentDeps:
     tool_context: ToolContext | None = None
     events: EventSink | None = None
     should_cancel: Callable[[], Awaitable[bool]] | None = None
+    object_store: ObjectStore | None = None  # lets view_image read project files
     # Safety (spec 49): per-run budget caps + injection framing. 0 / False disables.
     injection_guard: bool = True
     run_token_budget: int = 0

@@ -12,16 +12,17 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from inkstave.modules.agent.graph.edits import StagedEdit
-from inkstave.modules.agent.llm.base import ToolSpec
+from inkstave.modules.agent.graph.edits import StagedEdit, StagedFileOp
+from inkstave.modules.agent.llm.base import LLMImage, ToolSpec
 from inkstave.modules.projects import Capability, capabilities_for, role_for
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.core.config.agent import AgentSettings
+    from inkstave.infra.storage.base import ObjectStore
 
 ErrorCode = Literal["not_found", "forbidden", "invalid_args", "too_large", "unsupported", "internal"]
 
@@ -48,6 +49,8 @@ class ToolContext:
     user_id: str
     settings: AgentSettings
     staged_edits: list[StagedEdit] = field(default_factory=list)
+    staged_file_ops: list[StagedFileOp] = field(default_factory=list)
+    object_store: ObjectStore | None = None
     # Safety (spec 49): audit events collected during a turn + injection flagging toggle.
     audit_events: list[dict[str, Any]] = field(default_factory=list)
     injection_guard: bool = True
@@ -70,6 +73,8 @@ class ToolResult(BaseModel):
     ok: bool
     data: dict[str, Any] | None = None
     error: ToolError | None = None
+    # Sent to the model beside the JSON result; never part of it, so never stored.
+    images: list[LLMImage] = Field(default_factory=list, exclude=True)
 
     @classmethod
     def success(cls, **data: Any) -> ToolResult:

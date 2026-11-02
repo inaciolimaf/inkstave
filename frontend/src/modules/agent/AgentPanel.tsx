@@ -18,6 +18,7 @@ import { DiffReviewDialog } from "@/modules/diff-review";
 import type { DocumentBridge } from "@/modules/diff-review";
 
 import { AgentComposer, AgentErrorState, RunControls } from "./controls";
+import { FileOpCard } from "./file-op-card";
 import { AgentTranscript } from "./transcript";
 import { withQuote, type AgentQuote, type AgentRequest } from "./quote";
 import { useAgentChat } from "./useAgentChat";
@@ -140,18 +141,24 @@ function Conversation({
   chat,
   onPickExample,
   onReviewProposal,
+  projectId,
 }: {
   chat: ReturnType<typeof useAgentChat>;
+  projectId: string;
   onPickExample: (text: string) => void;
   onReviewProposal: (proposalId: string) => void;
 }) {
   const { t } = useTranslation("agent");
+  const sessionId = chat.activeSessionId;
   if (chat.run.items.length > 0) {
     return (
       <AgentTranscript
         items={chat.run.items}
         loading={chat.transcriptLoading}
         onReviewProposal={onReviewProposal}
+        renderFileOp={(item) =>
+          sessionId && <FileOpCard projectId={projectId} sessionId={sessionId} op={item} />
+        }
       />
     );
   }
@@ -168,6 +175,21 @@ function Conversation({
       <Skeleton className="h-4 w-3/4" />
     </div>
   );
+}
+
+/** Each request is a new object, so the same selection can be asked about twice, and handled once. */
+function useEditorRequest(
+  request: AgentRequest | null,
+  send: (text: string) => Promise<boolean>,
+  setQuote: (quote: AgentQuote) => void,
+) {
+  const handled = useRef<AgentRequest | null>(null);
+  useEffect(() => {
+    if (!request || handled.current === request) return;
+    handled.current = request;
+    if (request.quote) setQuote(request.quote);
+    if (request.send) void send(request.send);
+  }, [request, send, setQuote]);
 }
 
 export function AgentPanel({
@@ -201,15 +223,7 @@ export function AgentPanel({
     if (open) composerRef.current?.focus();
   }, [open, request]);
 
-  // Each request is a new object, so the same selection can be asked about twice, and handled once.
-  const { send } = chat;
-  const handled = useRef<AgentRequest | null>(null);
-  useEffect(() => {
-    if (!request || handled.current === request) return;
-    handled.current = request;
-    if (request.quote) setQuote(request.quote);
-    if (request.send) void send(request.send);
-  }, [request, send]);
+  useEditorRequest(request, chat.send, setQuote);
 
   const handleReview = (proposalId: string) => {
     onReviewProposal(proposalId);
@@ -239,7 +253,12 @@ export function AgentPanel({
         )}
       >
         <PanelHeader titleId={titleId} title={title} chat={chat} onMinimize={() => onOpenChange(false)} />
-        <Conversation chat={chat} onPickExample={setComposerText} onReviewProposal={handleReview} />
+        <Conversation
+          chat={chat}
+          projectId={projectId}
+          onPickExample={setComposerText}
+          onReviewProposal={handleReview}
+        />
 
         {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
 

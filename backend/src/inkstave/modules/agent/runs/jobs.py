@@ -93,6 +93,7 @@ def _build_deps(scope: RunScope, llm: Any, run_id: str) -> AgentDeps:
         tools=default_registry(),
         events=scope.sink,
         should_cancel=should_cancel,
+        object_store=scope.object_store,
         injection_guard=settings.agent_injection_guard == "on",
         run_token_budget=settings.agent_max_tokens_per_run,
         run_cost_budget_usd=settings.agent_max_cost_per_run_usd,
@@ -222,6 +223,7 @@ async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, 
             session_id=sid,
             run_id=UUID(run_id),
             now=ctx.get("clock", time.time)(),
+            object_store=ctx.get("object_store"),
         )
         logger.info(
             "agent run %s start: session=%s project=%s msg_chars=%d",
