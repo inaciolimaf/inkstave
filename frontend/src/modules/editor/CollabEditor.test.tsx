@@ -48,6 +48,18 @@ describe("CollabEditor", () => {
     expect(content?.getAttribute("contenteditable")).toBe("false");
   });
 
+  it("shows the new document when the session changes", () => {
+    const first = track(makeSession({ synced: true }));
+    const second = track(makeSession({ synced: true }));
+    first.text.insert(0, "first document");
+    second.text.insert(0, "second document");
+    const { rerender } = render(<CollabEditor session={first} settings={SETTINGS} dark={false} />);
+    expect(document.querySelector(".cm-content")).toHaveTextContent("first document");
+
+    rerender(<CollabEditor session={second} settings={SETTINGS} dark={false} />);
+    expect(document.querySelector(".cm-content")).toHaveTextContent("second document");
+  });
+
   it("becomes editable and shows the Live badge after sync (AC1)", () => {
     render(
       <CollabEditor
