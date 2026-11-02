@@ -24,10 +24,10 @@ Overleaf code.
 
 from __future__ import annotations
 
-import posixpath
 import re
 
 from inkstave.modules.compile.logparse.models import Problem, ProblemSeverity
+from inkstave.modules.compile.synctex.parser import normalise_path
 
 _FILE_PATH_RE = re.compile(r"\(([^()\s{}]*\.[A-Za-z0-9]+)")
 _ERROR_RE = re.compile(r"^! (.*?)\.?$")
@@ -45,13 +45,6 @@ _UNDEF_CITE_RE = re.compile(r"Citation\b.*\bundefined", re.IGNORECASE)
 
 _ERROR_BLOCK_LIMIT = 25  # lines to scan after "! " for the l.<n> marker
 _PKG_CONT_LIMIT = 8  # continuation lines to fold into a package/font warning
-
-
-def _normalise(path: str) -> str:
-    p = path.strip().replace("\\", "/")
-    while p.startswith("./"):
-        p = p[2:]
-    return posixpath.normpath(p)
 
 
 def _dewrap(text: str, wrap_width: int) -> list[str]:
@@ -87,7 +80,7 @@ def _update_stack(stack: list[str | None], line: str) -> None:
         if ch == "(":
             match = _FILE_PATH_RE.match(line, i)
             if match:
-                stack.append(_normalise(match.group(1)))
+                stack.append(normalise_path(match.group(1)))
                 i = match.end()
                 continue
             stack.append(None)  # balancing sentinel for a non-file '('
@@ -231,7 +224,7 @@ def _file_line_error(line: str) -> Problem | None:
     return Problem(
         severity=ProblemSeverity.error,
         message=match.group(3).strip(),
-        file=_normalise(match.group(1)),
+        file=normalise_path(match.group(1)),
         line=int(match.group(2)),
         end_line=None,
         raw=line,
@@ -265,7 +258,7 @@ def parse_latex_log(text: str, *, root_file: str | None = None, wrap_width: int 
         raise ValueError("parse_latex_log expects a string")
 
     lines = _dewrap(text, wrap_width)
-    root = _normalise(root_file) if root_file else None
+    root = normalise_path(root_file) if root_file else None
     stack: list[str | None] = []
     problems: list[Problem] = []
 

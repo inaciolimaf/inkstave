@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { PdfViewer } from "./PdfViewer";
 import type { PdfViewport } from "./hooks/usePdfViewport";
 
+vi.mock("./pdfjs", () => ({ renderPageText: vi.fn(() => vi.fn()) }));
+
 function fakePage(render = vi.fn(() => ({ promise: Promise.resolve(), cancel: () => {} }))) {
   return {
     getViewport: ({ scale }: { scale: number }) => ({ width: 120 * scale, height: 160 * scale }),

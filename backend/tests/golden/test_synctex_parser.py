@@ -10,6 +10,39 @@ from tests.golden.synctex_fixtures import MULTI_FILE, SINGLE_FILE, gz
 TOL = 1.0  # ±1 pt tolerance (spec criterion 1)
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("/tmp/inkstave-compiles/7efb79bd-e19b-4351-9576-4f8be2608f82/input/artigo.tex", "artigo.tex"),
+        ("/var/x/7efb79bd-e19b-4351-9576-4f8be2608f82/input/./a/input/b.tex", "a/input/b.tex"),
+        ("/work/sections/a.tex", "sections/a.tex"),
+        ("./sections/a.tex", "sections/a.tex"),
+        ("/usr/share/texmf/article.cls", "/usr/share/texmf/article.cls"),
+    ],
+)
+def test_paths_become_project_relative(raw: str, expected: str) -> None:
+    assert normalise_path(raw) == expected
+
+
+def test_both_directions_work_on_a_compile_with_absolute_paths() -> None:
+    root = "/tmp/inkstave-compiles/7efb79bd-e19b-4351-9576-4f8be2608f82/input"
+    text = (
+        "SyncTeX Version:1\n"
+        f"Input:1:{root}/artigo.tex\n"
+        "Input:2:/usr/share/texmf/article.cls\n"
+        "Unit:1\nX Offset:0\nY Offset:0\nMagnification:1000\n"
+        "Content:\n{1\n"
+        "x2,1:0,0\n"
+        "x1,7:6553600,6553600\n"
+        "}1\nPostamble:\n"
+    )
+    index = SyncTexIndex.from_gz_bytes(gz(text))
+    assert list(index.inputs.values()) == ["artigo.tex"]  # the class file is not a project file
+    assert index.forward("artigo.tex", 7).boxes
+    result = index.inverse(1, 0, 0)
+    assert result is not None and result.file == "artigo.tex" and result.line == 7
+
+
 def _single() -> SyncTexIndex:
     return SyncTexIndex.from_gz_bytes(gz(SINGLE_FILE))
 

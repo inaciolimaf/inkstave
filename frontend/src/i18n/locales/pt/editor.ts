@@ -16,7 +16,7 @@ const dict: Dict = {
     history: "Histórico",
     share: "Compartilhar",
     download: "Baixar",
-    openToJump: "Abra {{file}} para ir até lá",
+    notInProject: "Este trecho não vem de um arquivo do projeto",
     backToProjects: "Voltar para projetos",
     more: "Mais ações",
     files: "Arquivos",

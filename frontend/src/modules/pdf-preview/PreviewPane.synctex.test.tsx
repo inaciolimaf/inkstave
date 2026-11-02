@@ -18,7 +18,7 @@ vi.mock("./api", () => ({
   getCompilePdf: vi.fn(),
   compileEventsUrl: vi.fn(() => "http://x/events"),
 }));
-vi.mock("./pdfjs", () => ({ loadPdfDocument: vi.fn() }));
+vi.mock("./pdfjs", () => ({ loadPdfDocument: vi.fn(), renderPageText: vi.fn(() => vi.fn()) }));
 vi.mock("./synctex", () => ({ pdfToCode: vi.fn() }));
 
 const reqCompile = requestCompile as Mock;

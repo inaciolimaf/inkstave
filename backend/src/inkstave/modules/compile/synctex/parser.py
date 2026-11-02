@@ -57,9 +57,14 @@ class SyncTexParseError(ValueError):
     """Raised only when the SyncTeX preamble itself cannot be read."""
 
 
+# Tectonic can record absolute paths, and the compile's folder means nothing to the project.
+# `/work` is the sandbox's mount. Only the first match counts: a project may have an `input` folder.
+_WORKDIR_INPUT = re.compile(r"^(?:/work/|/.*?/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/input/)")
+
+
 def normalise_path(path: str) -> str:
-    """Project-relative normalisation: strip leading ``./`` and collapse ``..``."""
-    p = path.strip().replace("\\", "/")
+    """Project-relative: drop the compile's folder and a leading ``./``, collapse ``..``."""
+    p = _WORKDIR_INPUT.sub("", path.strip().replace("\\", "/"), count=1)
     while p.startswith("./"):
         p = p[2:]
     return posixpath.normpath(p)
@@ -139,9 +144,10 @@ class _Header:
     def _read_input(self, line: str) -> None:
         """Record one ``Input:<tag>:<path>`` mapping; a malformed tag is dropped."""
         tag_s, sep, path = line[len("Input:") :].partition(":")
-        if sep:
+        file = normalise_path(path)
+        if sep and not file.startswith("/"):  # an absolute path left is a file outside the project
             with contextlib.suppress(ValueError):
-                self.inputs[int(tag_s)] = normalise_path(path)
+                self.inputs[int(tag_s)] = file
 
 
 def _parse_preamble(lines: list[str]) -> _Preamble:
@@ -320,7 +326,8 @@ class SyncTexIndex:
         """pdf -> code. The smallest box on ``page`` containing ``(h, v)``; else
         the nearest box by Euclidean distance of its reference point. ``None`` if
         the page has no records."""
-        leaves = self.leaves_by_page.get(page)
+        # A box from outside the project, such as a class file, has nowhere to open.
+        leaves = [leaf for leaf in self.leaves_by_page.get(page, []) if leaf.tag in self.inputs]
         if not leaves:
             return None
         containing = [leaf for leaf in leaves if leaf.contains(h, v)]

@@ -14,7 +14,7 @@ const dict = {
     history: "History",
     share: "Share",
     download: "Download",
-    openToJump: "Open {{file}} to jump there",
+    notInProject: "This part does not come from a file in the project",
     backToProjects: "Back to projects",
     more: "More actions",
     files: "Files",

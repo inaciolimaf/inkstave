@@ -57,7 +57,7 @@ export function useSourceSync(
         pendingReveal.current = { path: file, line };
         onSelect(node);
       } else {
-        toast.message(t("toolbar.openToJump", { file }));
+        toast.message(t("toolbar.notInProject"));
       }
     },
     [openDoc, treeRoot, onSelect, t],

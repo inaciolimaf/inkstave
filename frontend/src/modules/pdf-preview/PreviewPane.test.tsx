@@ -15,7 +15,7 @@ vi.mock("./api", () => ({
   getCompilePdf: vi.fn(),
   compileEventsUrl: vi.fn(() => "http://x/events?access_token=t"),
 }));
-vi.mock("./pdfjs", () => ({ loadPdfDocument: vi.fn() }));
+vi.mock("./pdfjs", () => ({ loadPdfDocument: vi.fn(), renderPageText: vi.fn(() => vi.fn()) }));
 
 const reqCompile = requestCompile as Mock;
 const cancelC = cancelCompile as Mock;

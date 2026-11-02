@@ -26,7 +26,7 @@ PDF and back) and parses the LaTeX log into problems. Specs 21 (service), 22 (qu
 | `backend/src/inkstave/worker.py` | ARQ `WorkerSettings`, `_build_runner`, `_register_compile` |
 | `backend/src/inkstave/compile/worker.py` | Compatibility entrypoint named by every compose file; re-exports the one above |
 | `infra/tectonic/Dockerfile`, `infra/tectonic/packages.toml` | The offline `inkstave-tectonic` image; package configuration |
-| `frontend/src/modules/pdf-preview/` | Compile button, log, problems, PDF viewer; see the frontend file |
+| `frontend/src/modules/pdf-preview/` | Compile button, log, problems, PDF viewer; see the frontend file. `frontend/src/modules/pdf-preview/PdfPageText.tsx` lays the page's text over its canvas, which is what makes it selectable |
 | `backend/tests/golden/`, `backend/tests/smoke/test_real_compile.py` | Parser fixtures; the one opt-in real compile |
 
 ## Data
@@ -156,7 +156,9 @@ does not cascade.
 `CompileStatusResponse`, plus a `: keep-alive` comment every `compile_sse_keepalive_s`. It closes on a terminal
 status.
 
-**SyncTeX.** `SyncTexIndex` parses the gzip text directly, without the `synctex` binary. Coordinates are PDF
+**SyncTeX.** `SyncTexIndex` parses the gzip text directly, without the `synctex` binary. `normalise_path` turns
+each `Input:` into a project path, dropping the compile folder or the sandbox's `/work`; an absolute path left
+is outside the project, so it is not indexed, and `inverse` ignores its boxes. Log paths use the same function. Coordinates are PDF
 points, origin top-left, y downward. `forward` returns the boxes of the first indexed line at or after the
 requested one, else the last line of the file; `column` is ignored. `inverse` returns the smallest box
 containing the point, else the nearest. `compile_id` defaults to the latest successful compile.

@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PdfPageText } from "./PdfPageText";
 import type { PdfDocument, PdfPage } from "./pdfjs";
 import type { PdfViewport } from "./hooks/usePdfViewport";
 import type { SyncTexBox } from "./synctex";
@@ -80,6 +81,7 @@ function PdfPageView({
       aria-label={t("viewer.page", { pageNumber })}
     >
       <canvas ref={canvasRef} className="block" />
+      <PdfPageText pdf={pdf} pageNumber={pageNumber} scale={scale} />
       {overlay && (
         <div
           data-testid="sync-highlight"

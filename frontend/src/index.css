@@ -63,6 +63,7 @@
     --backdrop: 222 47% 6%;
     /* A rendered PDF page is white in both themes. */
     --page: 0 0% 100%;
+    --pdf-selection: 215 90% 50%;
   }
 
   .dark {
@@ -101,6 +102,7 @@
     --border-strong: 36 8% 55%;
     --backdrop: 222 47% 3%;
     --page: 0 0% 100%;
+    --pdf-selection: 215 90% 50%;
   }
 }
 
@@ -130,5 +132,51 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* PDF.js positions and sizes these spans; the rules only keep them invisible over the canvas. */
+@layer components {
+  .pdf-text-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    line-height: 1;
+    text-align: initial;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+  }
+
+  .pdf-text-layer :is(span, br) {
+    position: absolute;
+    z-index: 1;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0 0;
+  }
+
+  .pdf-text-layer .markedContent {
+    position: static;
+    display: contents;
+  }
+
+  .pdf-text-layer ::selection {
+    /* The page stays white in both themes, so one colour serves both. */
+    background: hsl(var(--pdf-selection) / 0.3);
+    color: transparent;
+  }
+
+  .pdf-text-layer .endOfContent {
+    position: absolute;
+    inset: 100% 0 0;
+    display: block;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
+
+  .pdf-text-layer.selecting .endOfContent {
+    top: 0;
   }
 }
