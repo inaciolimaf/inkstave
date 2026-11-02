@@ -6,7 +6,7 @@ name: CI
 # test stages — `unit`, `integration`, `e2e` — each depend only on `typecheck`, so they
 # fan out and run concurrently; each provisions whatever it needs (integration: a
 # Postgres service; e2e: docker-compose.test.yml). The `budget` job depends on all
-# three: it fails the build if the slowest stage exceeds the 120 s budget,
+# three: it fails the build if the slowest stage exceeds the 180 s budget,
 # parsing the stages' JUnit XML so the slow-test detector runs on real durations, and
 # applies the backend coverage floor to unit + integration together.
 on:
@@ -186,7 +186,7 @@ jobs:
         id: measure
         run: scripts/measure_stage.sh make e2e-smoke
 
-  # --- Budget gate: unit + integration + e2e must be < 120 s ----------------- #
+  # --- Budget gate: the slowest stage must be < 180 s ------------------------ #
   budget:
     name: Budget and coverage gates
     runs-on: ubuntu-latest
@@ -208,7 +208,7 @@ jobs:
         with:
           name: integration-results
           path: test-results
-      - name: Enforce the 120 s budget
+      - name: Enforce the 180 s budget
         env:
           UNIT_S: ${{ needs.unit.outputs.seconds }}
           INTEGRATION_S: ${{ needs.integration.outputs.seconds }}

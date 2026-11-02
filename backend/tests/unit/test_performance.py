@@ -27,13 +27,13 @@ def test_gate_passes_under_budget() -> None:
 
 
 def test_gate_fails_over_budget() -> None:
-    result = gate.evaluate({"total_s": 130, "slowest": []})
+    result = gate.evaluate({"total_s": 190, "slowest": []})
     assert not result.ok
     assert any("exceeds" in m for m in result.messages)
 
 
 def test_gate_warns_in_headroom_band_but_passes() -> None:
-    result = gate.evaluate({"total_s": 95, "slowest": []})
+    result = gate.evaluate({"total_s": 160, "slowest": []})
     assert result.ok
     assert any("WARN" in m for m in result.messages)
 
@@ -54,7 +54,7 @@ def test_gate_fails_a_slow_non_marked_test_but_excludes_slow_marked() -> None:  
 
 def test_gate_main_exits_nonzero_over_budget(tmp_path: Any) -> None:
     timing = tmp_path / "test-timing.json"
-    timing.write_text(json.dumps({"total_s": 130, "slowest": []}))
+    timing.write_text(json.dumps({"total_s": 190, "slowest": []}))
     assert gate.main(["check_test_budget.py", str(timing)]) == 1
 
 

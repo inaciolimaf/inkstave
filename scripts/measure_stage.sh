@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Run a test stage and publish its wall clock as the `seconds` step output, which the
-# budget job adds up (`make budget`). Outside GitHub Actions it only prints the time.
+# Run a test stage and publish its wall clock as the `seconds` step output, and the
+# budget job gates the slowest stage (`make budget`). Outside GitHub Actions it only prints the time.
 #
 #   scripts/measure_stage.sh make test-unit web-coverage
 set -euo pipefail

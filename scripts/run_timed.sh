@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the default test suite, measure wall-clock per tier, write test-timing.json,
 # and enforce the budget gate (spec 53 §5.4). The gate fails the build if the total
-# exceeds SUITE_BUDGET_SECONDS (120) and warns above SUITE_WARN_SECONDS (90).
+# exceeds SUITE_BUDGET_SECONDS (180) and warns above SUITE_WARN_SECONDS (150).
 #
 #   just test-timed   (or:  scripts/run_timed.sh)
 #

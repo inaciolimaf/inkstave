@@ -228,7 +228,7 @@ a test under `backend/tests/unit` that reaches the `_template_db` fixture fails 
 dependent test skips and the run stays green. Each xdist worker uses its own database, migrated once
 and rolled back per test. `backend/tests/fixtures/env.py` strips the machine's settings before
 collection and points `DATABASE_URL` at a refused port, so a test that did not ask for the database
-cannot find one. CI runs unit, integration and e2e in parallel and enforces a 120 s budget on the slowest (`make budget`) and an
+cannot find one. CI runs unit, integration and e2e in parallel and enforces a 180 s budget on the slowest (`make budget`) and an
 80% coverage floor on unit plus integration (`make coverage-combine`).
 
 ## Rules and guarantees

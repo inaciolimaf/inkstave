@@ -6,10 +6,10 @@ it. See the [Admin Guide](admin-guide.md) for production operations detail.
 
 ## 1. Quality gates (local or CI)
 
-- [ ] **Tests green & under 2 minutes.** Unit + integration + e2e.
+- [ ] **Tests green & each stage under 3 minutes.** Unit, integration, e2e.
       `cd backend && uv run pytest -n auto` (836 passed, 1 skipped, ~18 s);
       `cd frontend && pnpm test` (326 passed); e2e
-      `pnpm exec playwright test --project=smoke` (~23 s). Combined ≈ 55 s < 120 s —
+      `pnpm exec playwright test --project=smoke` (~23 s). Combined ≈ 55 s < 180 s —
       the CI `budget` job enforces this automatically.
 - [ ] **Lint/format clean.** `cd backend && uv run ruff check . && uv run ruff format --check .`;
       `cd frontend && pnpm lint && pnpm format:check`.

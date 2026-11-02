@@ -4,7 +4,7 @@ Inkstave's end-to-end suite is a **Playwright** project at `frontend/e2e/`. It
 drives the real frontend bundle against a real **test-profile backend** (Uvicorn
 + ARQ worker + Postgres + Redis) with two deterministic stubs so it stays fast
 and reproducible. It is the integration-confidence capstone of the hardening
-phase and runs as the **smoke tier** inside the global 2-minute budget (spec 53).
+phase and runs as the **smoke tier** inside the global 3-minute budget (spec 53).
 
 ## Bring-up (Option A: Playwright `webServer`)
 

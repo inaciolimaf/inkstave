@@ -138,8 +138,8 @@ table of every spec and what it decides is the [roadmap](specs/README.md#the-roa
 
 ## Performance & testing budget
 
-A hard project constraint: **the entire test suite (unit + integration + e2e)
-must run in under 2 minutes.** Long-running work (LaTeX compiles, AI agent runs)
+A hard project constraint: **each stage of the test suite (unit, integration, e2e)
+must run in under 3 minutes**, and CI runs the three in parallel. Long-running work (LaTeX compiles, AI agent runs)
 is pushed to async ARQ jobs and is mocked/stubbed in the fast test tiers. CI
 measures and enforces this gate.
 

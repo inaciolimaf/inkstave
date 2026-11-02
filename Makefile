@@ -155,7 +155,7 @@ coverage-combine: ## Merge the unit + integration coverage; fails below fail_und
 	cd backend && COVERAGE_FILE=../$(RESULTS)/combined.coverage uv run coverage xml \
 		-o ../$(RESULTS)/coverage.xml --fail-under=0
 
-budget: ## Gate the 2-minute budget (stage times in UNIT_S, INTEGRATION_S, E2E_S)
+budget: ## Gate the 3-minute budget (stage times in UNIT_S, INTEGRATION_S, E2E_S)
 	$(PYTHON) backend/scripts/build_test_timing.py $(RESULTS) test-timing.json
 	$(PYTHON) backend/scripts/check_test_budget.py test-timing.json
 

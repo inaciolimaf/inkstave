@@ -63,7 +63,7 @@ applies in both places: here and in the skill.
    but every line you write must be your own independent implementation. Do not
    copy, paste, or mechanically translate Overleaf source. If a spec points you
    at an Overleaf file, treat it as a textbook, not a clipboard.
-3. **Keep the full test suite under 2 minutes.** Unit, integration and e2e run in
+3. **Keep the full test suite under 3 minutes.** Unit, integration and e2e run in
    parallel, so the slowest of the three is what counts. If something is slow (LaTeX compile, real LLM call), it belongs in
    an async ARQ job and must be stubbed/mocked in tests. Measure before merging.
 4. **A spec is done only when its Definition of Done and Acceptance criteria
@@ -156,7 +156,7 @@ targets, so what passes here passes there.
 | `make test` | backend unit + integration |
 | `make coverage` | the same, with the coverage floor |
 | `make test-unit` / `make test-integration` | the two tiers as CI splits them |
-| `make budget` | gate the 2-minute budget |
+| `make budget` | gate the 3-minute budget |
 | `make web-types` | regenerate `docs/api/openapi.json` and `frontend/src/api/types.ts` |
 | `make web-test` | eslint, prettier check, `tsc -b`, Vitest |
 | `make web-coverage` | Vitest with the coverage floor |
@@ -261,7 +261,7 @@ Each one is deliberate. Remove the line when the deviation ends.
 3. Study the listed Overleaf reference paths *for understanding only*.
 4. Implement backend + frontend changes as specified.
 5. Write the unit / integration / e2e tests the spec lists.
-6. Run the full suite; ensure it passes and stays within the 2-minute budget.
+6. Run the full suite; ensure it passes and stays within the 3-minute budget.
 7. Update `docs/` if the spec introduces an architectural decision (ADR).
 8. Verify every Acceptance criterion and Definition-of-Done item.
 

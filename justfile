@@ -27,7 +27,7 @@ lint:
 
 # Run the backend fast test tier (unit + integration; excludes slow/e2e).
 # Parallelised with pytest-xdist (`-n auto`, inherited from pyproject addopts) so
-# the day-to-day run matches the < 2-minute budget measured by `just test-timed`.
+# the day-to-day run matches the < 3-minute budget measured by `just test-timed`.
 test:
     make test
 
@@ -86,7 +86,7 @@ bootstrap:
 hooks:
     uv run --project backend pre-commit install
 
-# Run the default suite, measure wall-clock, and enforce the < 2-minute budget gate.
+# Run the default suite, measure wall-clock, and enforce the < 3-minute budget gate.
 test-timed:
     scripts/run_timed.sh
 

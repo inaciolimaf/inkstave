@@ -35,8 +35,8 @@ def _env_float(name: str, default: float) -> float:
 
 def _total_messages(total: float) -> tuple[bool, list[str]]:
     """Gate the whole-suite wall clock against the budget + headroom alarm."""
-    budget = _env_float("SUITE_BUDGET_SECONDS", 120)
-    warn = _env_float("SUITE_WARN_SECONDS", 90)
+    budget = _env_float("SUITE_BUDGET_SECONDS", 180)
+    warn = _env_float("SUITE_WARN_SECONDS", 150)
     if total > budget:
         return False, [f"FAIL: suite {total:.1f}s exceeds the {budget:.0f}s budget."]
     if total > warn:

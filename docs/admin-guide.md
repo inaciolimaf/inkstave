@@ -130,8 +130,8 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `SMTP_TIMEOUT_S` | No | `30` | seconds per SMTP operation | backend, worker |
 | `CACHE_ENABLED` | No | `true` | hot-read Redis cache master switch | backend |
 | `CACHE_TTL_SECONDS` | No | `30` | hot-read cache TTL | backend |
-| `SUITE_BUDGET_SECONDS` | No | `120` | hard CI gate: fail if the suite exceeds this | tests |
-| `SUITE_WARN_SECONDS` | No | `90` | early-warning threshold | tests |
+| `SUITE_BUDGET_SECONDS` | No | `180` | hard CI gate: fail if the slowest stage exceeds this | tests |
+| `SUITE_WARN_SECONDS` | No | `150` | early-warning threshold | tests |
 | `SLOW_TEST_WARN_S` | No | `3` | per-test warn threshold | tests |
 | `SLOW_TEST_FAIL_S` | No | `10` | per-test fail threshold (non-@slow) | tests |
 | `TEST_DB_TEMPLATE` | No | `inkstave_test_tmpl` | not read by any code: each xdist worker migrates its own database (ADR 0053) | tests |
