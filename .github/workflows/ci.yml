@@ -151,7 +151,8 @@ jobs:
   # --- Stage 5: e2e (Playwright smoke; LLM + compile stubbed per spec 54) ----- #
   e2e:
     name: E2E (smoke)
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install Chromium on ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     # Starts its own Postgres + Redis (docker-compose.test.yml); needs no
     # unit/integration artifact, so it depends only on typecheck and runs alongside them.
     needs: typecheck
