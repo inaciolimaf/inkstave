@@ -47,6 +47,7 @@ and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 | `backend/src/inkstave/core/config/agent.py` | `AgentSettings` |
 | `backend/src/inkstave/worker.py` | Registers the job and the cron, picks the stub LLM |
 | `frontend/src/modules/agent/useAgentChat.ts`, `frontend/src/modules/agent/reducer.ts` | Sessions, runs, `EventSource`, transcript |
+| `frontend/src/modules/agent/use-window-size.ts`, `frontend/src/modules/agent/window-resize-handles.tsx` | The window's size on a wide screen: drag, arrow keys, one-click enlarge, kept in `localStorage`. On a phone it stays a full sheet |
 | `frontend/src/modules/agent/file-op-card.tsx` | The card that applies or rejects a file operation |
 | `frontend/src/modules/diff-review/useDiffReview.ts`, `frontend/src/modules/diff-review/hunks.ts` | Hunk decisions, drift, `rebaseHunks` |
 | `frontend/src/modules/diff-review/editor-bridge.ts`, `frontend/src/modules/diff-review/crdt-apply.ts` | Writes through a short-lived collab provider |

@@ -30,6 +30,15 @@ function stubScrollMetrics(
   Object.defineProperty(el, "clientHeight", { configurable: true, value: clientHeight });
 }
 
+it("tells the writer's messages from the agent's, in words", () => {
+  renderItems([
+    { kind: "message", id: "1", role: "user", text: "Hi", status: "complete" },
+    { kind: "message", id: "2", role: "assistant", text: "Hello", status: "complete" },
+  ]);
+  expect(screen.getByText("You")).toBeInTheDocument();
+  expect(screen.getByText("Agent")).toBeInTheDocument();
+});
+
 describe("AgentTranscript rendering", () => {
   it("sanitizes assistant content (no script execution) (AC10)", () => {
     const { container } = renderItems([

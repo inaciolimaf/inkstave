@@ -53,12 +53,23 @@ function MessageBubble({ item }: { item: Extract<TranscriptItem, { kind: "messag
     <div
       data-role={item.role}
       data-status={item.status}
-      className={cn(
-        "min-w-0 text-body",
-        isUser ? "border-t pt-3 font-medium first:border-t-0 first:pt-0" : HAND,
-      )}
+      className={cn("min-w-0 text-body", isUser ? "ml-auto flex max-w-[85%] flex-col items-end" : HAND)}
     >
-      {isUser ? renderText(item.text) : <Markdown>{item.text}</Markdown>}
+      <span
+        className={cn(
+          "mb-0.5 block text-small font-medium",
+          isUser ? "text-muted-foreground" : "text-primary",
+        )}
+      >
+        {t(isUser ? "transcript.you" : "transcript.agent")}
+      </span>
+      {isUser ? (
+        <div className="min-w-0 max-w-full break-words rounded-lg bg-accent px-3 py-2 text-accent-foreground">
+          {renderText(item.text)}
+        </div>
+      ) : (
+        <Markdown>{item.text}</Markdown>
+      )}
       {item.status === "streaming" && (
         <span className="ml-0.5 inline-block animate-pulse" aria-hidden="true">
           ▋

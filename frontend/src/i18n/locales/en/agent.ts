@@ -4,6 +4,12 @@ const dict = {
   minimize: "Minimize the agent",
   launcher: "Agent",
   working: "working",
+  window: {
+    resize: "Resize the agent window",
+    resizeHint: "Drag to resize, or use the arrow keys",
+    enlarge: "Enlarge the agent window",
+    shrink: "Return the agent window to its usual size",
+  },
   quote: {
     label: "{{path}}, lines {{from}}-{{to}}",
     remove: "Remove the selection",
@@ -63,6 +69,8 @@ const dict = {
   },
   transcript: {
     conversation: "Conversation",
+    you: "You",
+    agent: "Agent",
     jumpToLatest: "Jump to latest",
     runCancelled: "Run cancelled",
     steps_one: "{{count}} step",

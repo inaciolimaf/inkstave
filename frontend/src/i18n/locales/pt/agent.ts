@@ -6,6 +6,12 @@ const dict: Dict = {
   minimize: "Minimizar o agente",
   launcher: "Agente",
   working: "trabalhando",
+  window: {
+    resize: "Redimensionar a janela do agente",
+    resizeHint: "Arraste para redimensionar ou use as setas do teclado",
+    enlarge: "Ampliar a janela do agente",
+    shrink: "Voltar a janela do agente ao tamanho normal",
+  },
   quote: {
     label: "{{path}}, linhas {{from}}-{{to}}",
     remove: "Remover a seleção",
@@ -65,6 +71,8 @@ const dict: Dict = {
   },
   transcript: {
     conversation: "Conversa",
+    you: "Você",
+    agent: "Agente",
     jumpToLatest: "Ir para o final",
     runCancelled: "Execução cancelada",
     steps_one: "{{count}} etapa",
