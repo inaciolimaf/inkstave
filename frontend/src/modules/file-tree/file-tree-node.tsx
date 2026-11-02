@@ -150,7 +150,12 @@ function NodeActionsMenu({ node }: { node: TreeNode }) {
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+      {/* The menu portals out but still bubbles through React: a click here must not select the row. */}
+      <DropdownMenuContent
+        align="end"
+        onClick={(e) => e.stopPropagation()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <NodeMenuItems node={node} Item={DropdownMenuItem} Separator={DropdownMenuSeparator} />
       </DropdownMenuContent>
     </DropdownMenu>

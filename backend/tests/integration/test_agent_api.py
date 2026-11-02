@@ -100,11 +100,14 @@ async def test_too_long_message_is_400(
     # Spec 45: a length-cap violation is a bad request (400), not a conflict (409).
     base = f"{API}/{seed.project.id}/agent"
     sid = (await async_client.post(f"{base}/sessions", json={}, headers=seed.headers)).json()["id"]
-    oversized = "x" * (AgentSettings().agent_max_message_chars + 1)
+    limit = AgentSettings().agent_max_message_chars
     r = await async_client.post(
-        f"{base}/sessions/{sid}/messages", json={"content": oversized}, headers=seed.headers
+        f"{base}/sessions/{sid}/messages", json={"content": "x" * (limit + 1)}, headers=seed.headers
     )
     assert r.status_code == 400
+    # The browser builds its message from these two fields.
+    assert r.json()["error"]["type"] == "message_too_long"
+    assert r.json()["error"]["details"] == [{"max_chars": limit}]
 
 
 async def test_list_sessions_http(

@@ -18,14 +18,17 @@ export class ApiError extends Error {
   readonly fieldErrors?: FieldErrors;
   /** Raw `error.details` array from the envelope (e.g. version-conflict state). */
   readonly details?: unknown[];
+  /** `error.type` from the envelope (e.g. `message_too_long`). */
+  readonly type?: string;
 
-  constructor(status: number, detail: string, fieldErrors?: FieldErrors, details?: unknown[]) {
+  constructor(status: number, detail: string, fieldErrors?: FieldErrors, details?: unknown[], type?: string) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
     this.fieldErrors = fieldErrors;
     this.details = details;
+    this.type = type;
   }
 }
 
@@ -79,11 +82,13 @@ async function toApiError(res: Response): Promise<ApiError> {
   let detail = res.statusText || "Request failed";
   let fieldErrors: FieldErrors | undefined;
   let rawDetails: unknown[] | undefined;
+  let type: string | undefined;
   try {
     const data = await res.json();
     const error = data?.error;
     if (error) {
       detail = error.message ?? detail;
+      type = error.type;
       if (Array.isArray(error.details)) {
         rawDetails = error.details;
         const collected: FieldErrors = {};
@@ -101,7 +106,7 @@ async function toApiError(res: Response): Promise<ApiError> {
   } catch {
     // Non-JSON body — keep the status text.
   }
-  return new ApiError(res.status, detail, fieldErrors, rawDetails);
+  return new ApiError(res.status, detail, fieldErrors, rawDetails, type);
 }
 
 async function parseBody<T>(res: Response): Promise<T> {

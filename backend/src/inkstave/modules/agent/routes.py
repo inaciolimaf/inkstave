@@ -85,8 +85,8 @@ class MessageTooLongError(AppError):
     status_code = status.HTTP_400_BAD_REQUEST
     error_type = "message_too_long"
 
-    def __init__(self) -> None:
-        super().__init__("Message exceeds the maximum length.")
+    def __init__(self, max_chars: int) -> None:
+        super().__init__("Message exceeds the maximum length.", details=[{"max_chars": max_chars}])
 
 
 async def _require_member(session: AsyncSession, project_id: UUID, user_id: UUID) -> None:
@@ -187,8 +187,9 @@ async def post_message(
 ) -> PostMessageOut:
     await _require_member(session, project_id, user.id)
     row = await _owned_session(session, project_id, session_id, user.id)
-    if len(body.content) > get_agent_settings().agent_max_message_chars:
-        raise MessageTooLongError()
+    max_chars = get_agent_settings().agent_max_message_chars
+    if len(body.content) > max_chars:
+        raise MessageTooLongError(max_chars)
     if row.run_state in _ACTIVE_RUN_STATES:
         raise RunActiveError()  # 409 — one active run per session
 

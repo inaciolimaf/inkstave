@@ -38,14 +38,11 @@ test("an injected LaTeX error surfaces in the log and annotations @smoke", async
   await editor.open(projectId);
   await preview.compile();
 
-  // A failed compile auto-switches the output region to the Log tab; the error
-  // shows there. Waiting on this also waits for the compile to reach a terminal
-  // state before we toggle tabs.
-  await expect(preview.logRegion()).toContainText("Undefined control sequence", {
-    timeout: 25_000,
-  });
+  // A failed compile opens the output on the Problems tab (spec 107), with the error as
+  // a jump-to-source annotation. Waiting on this also waits for a terminal state.
+  await expect(preview.problem("Undefined control sequence")).toBeVisible({ timeout: 25_000 });
 
-  // The same error is parsed into the Problems tab as a jump-to-source annotation.
-  await preview.openProblems();
-  await expect(preview.problem("Undefined control sequence")).toBeVisible();
+  // The same error shows in the raw log.
+  await preview.openLog();
+  await expect(preview.logRegion()).toContainText("Undefined control sequence");
 });

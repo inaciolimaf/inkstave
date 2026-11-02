@@ -43,6 +43,7 @@ const dict = {
       agent_budget_exceeded: "Budget reached",
       cancelled: "Run cancelled",
       timeout: "Run timed out",
+      message_too_long: "Message too long",
     },
     messages: {
       cancelled: "Run cancelled.",
@@ -56,7 +57,8 @@ const dict = {
         "The run took too long and was stopped. Try a smaller task — e.g. one file or section at a time.",
       generic: "Something went wrong.",
       connectionLost: "Connection lost.",
-      startFailed: "Failed to start the run.",
+      message_too_long:
+        "Your message is over the {{limit}}-character limit. Shorten it, or ask the agent to read the file instead of pasting it.",
     },
   },
   transcript: {

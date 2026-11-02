@@ -42,14 +42,11 @@ test("agent streams, shows tool activity, and applies a reviewed diff @smoke", a
     { timeout: 20_000 },
   );
 
-  // (182b) At least one tool-activity row appears (the stub runs the full
-  // search → read → propose_edit sequence, so several rows match — assert the
-  // first to avoid a strict-mode multiple-match).
-  await expect(transcript.getByText(/Searched the project|Read a file|Proposed an edit/).first()).toBeVisible(
-    {
-      timeout: 20_000,
-    },
-  );
+  // (182b) The tool activity folds into one line (spec 107): the running tool's
+  // label, then the step count once the run settles.
+  await expect(
+    transcript.getByText(/Searched the project|Read a file|Proposed an edit|\d+ steps?/).first(),
+  ).toBeVisible({ timeout: 20_000 });
 
   // The diff proposal surfaces a Review changes button.
   await expect(agent.reviewButton()).toBeVisible({ timeout: 20_000 });

@@ -2,10 +2,31 @@
 import { useCallback, useRef, type Dispatch, type SetStateAction } from "react";
 
 import i18n from "@/i18n/config";
+import { ApiError } from "@/lib/api-client";
+import { formatNumber } from "@/lib/formatting";
 
 import { startRun, stopRun } from "./api";
 import { applyEvent } from "./reducer";
-import type { AgentRunState } from "./types";
+import type { AgentEvent, AgentRunState } from "./types";
+
+const TOO_LONG = "message_too_long";
+
+function tooLongEvent(err: ApiError): AgentEvent {
+  const limit = (err.details?.[0] as { max_chars?: number } | undefined)?.max_chars ?? 0;
+  const message = i18n.t("agent:error.messages.message_too_long", {
+    limit: formatNumber(limit),
+  });
+  return { type: "error", code: TOO_LONG, message };
+}
+
+/** The server's reason for refusing a run; only a 5xx or a network failure is ours to hide. */
+function startFailure(err: unknown): AgentEvent {
+  if (err instanceof ApiError && err.type === TOO_LONG) return tooLongEvent(err);
+  if (err instanceof ApiError && err.status < 500 && err.type) {
+    return { type: "error", code: err.type, message: err.detail };
+  }
+  return { type: "error", code: "internal", message: "" };
+}
 
 export function useRunActions({
   projectId,
@@ -27,9 +48,10 @@ export function useRunActions({
   const lastInstruction = useRef<string>("");
 
   const send = useCallback(
-    async (text: string) => {
+    /** Resolves to false when the server refuses the text itself, so the caller can restore the draft. */
+    async (text: string): Promise<boolean> => {
       const content = text.trim();
-      if (!content || run.phase === "starting" || run.phase === "streaming") return;
+      if (!content || run.phase === "starting" || run.phase === "streaming") return true;
       lastInstruction.current = content;
 
       const sessionId = activeSessionId ?? (await createActiveSession());
@@ -56,14 +78,15 @@ export function useRunActions({
         const { runId } = await startRun(projectId, sessionId, content);
         setRun((prev) => ({ ...prev, runId, phase: "streaming" }));
         openStream(sessionId, runId);
-      } catch {
-        setRun((prev) =>
-          applyEvent(prev, {
-            type: "error",
-            code: "internal",
-            message: i18n.t("agent:error.messages.startFailed"),
-          }),
-        );
+        return true;
+      } catch (err) {
+        const event = startFailure(err);
+        const refused = event.code === TOO_LONG;
+        setRun((prev) => {
+          const items = refused ? prev.items.filter((item) => item.id !== userItem.id) : prev.items;
+          return applyEvent({ ...prev, items }, event);
+        });
+        return !refused;
       }
     },
     [activeSessionId, projectId, run.phase, setRun, createActiveSession, openStream, onBeforeSend],

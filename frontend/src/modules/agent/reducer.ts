@@ -145,7 +145,7 @@ function applyError(base: AgentRunState, event: AgentEvent): AgentRunState {
   if (code === "cancelled") return applyCancelled(base, event);
   const message = friendlyError(code, event.message ?? "");
   const retryable = RETRYABLE.has(code);
-  base.items.push({ kind: "error", id: `e-${event.seq}`, code, message, retryable });
+  base.items.push({ kind: "error", id: `e-${event.seq ?? base.items.length}`, code, message, retryable });
   return { ...base, phase: "error", error: { code, message, retryable } };
 }
 

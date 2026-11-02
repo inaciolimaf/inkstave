@@ -45,6 +45,7 @@ const dict: Dict = {
       agent_budget_exceeded: "Orçamento atingido",
       cancelled: "Execução cancelada",
       timeout: "Tempo esgotado",
+      message_too_long: "Mensagem longa demais",
     },
     messages: {
       cancelled: "Execução cancelada.",
@@ -58,7 +59,8 @@ const dict: Dict = {
         "A execução demorou demais e foi interrompida. Tente uma tarefa menor — por exemplo, um arquivo ou seção por vez.",
       generic: "Algo deu errado.",
       connectionLost: "Conexão perdida.",
-      startFailed: "Não foi possível iniciar a execução.",
+      message_too_long:
+        "Sua mensagem passa do limite de {{limit}} caracteres. Encurte o texto ou peça ao agente para ler o arquivo em vez de colá-lo.",
     },
   },
   transcript: {

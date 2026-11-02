@@ -34,7 +34,8 @@ test("the phone editor shows one thing at a time and reaches all four @smoke", a
 
   await page.getByRole("button", { name: /^Switch file/ }).click();
   await expect(page.getByRole("complementary", { name: "Files" })).toBeVisible();
-  await page.getByRole("button", { name: /go back to the text/ }).click();
+  // The drawer covers the middle of the shade, so tap the strip of it that shows.
+  await page.getByRole("button", { name: /go back to the text/ }).click({ position: { x: 370, y: 200 } });
   await expect(page.getByRole("complementary", { name: "Files" })).toBeHidden();
 
   await nav.getByRole("button", { name: "Agent" }).click();

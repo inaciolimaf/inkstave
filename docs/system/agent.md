@@ -78,7 +78,7 @@ project, is a 404.
 | `POST /sessions` | Create a session, 201. `model` is the current `AGENT_MODEL` | `not_project_member` |
 | `GET /sessions` | The caller's sessions, newest first. `limit` 1–100, default 50 | `not_project_member` |
 | `GET /sessions/{session_id}` | Session, messages, and `proposed` diffs without hunks | `not_project_member` |
-| `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent` | 400 `message_too_long`, 409 `run_active` |
+| `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent` | 400 `message_too_long` with `details: [{max_chars}]`, 409 `run_active` |
 | `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202 | `not_project_member` |
 | `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=` | 401 when no valid token, `not_project_member` |
 | `GET /sessions/{session_id}/diffs` | All the session's diffs. `?status=` filters, `?include=hunks` adds hunks | 422 on an unknown status |
@@ -99,7 +99,9 @@ Keep-alives are `: ping` comments.
 1. `post_message` checks membership, ownership, `AGENT_MAX_MESSAGE_CHARS` and `run_state`. It sets
    `queued` and a new `active_run_id`, runs `flush_open_project_docs` so open CRDT rooms reach
    `documents.content`, then calls `AgentEnqueuer.enqueue`. The browser pushes pending local edits first
-   (`onBeforeSend` in `frontend/src/modules/agent/useAgentChat.ts`).
+   (`onBeforeSend` in `frontend/src/modules/agent/useAgentChat.ts`). On `message_too_long` the panel names
+   the limit, drops the message from the transcript and puts the draft back in the composer.
+   Any other 4xx at this step shows under its error type, and a 5xx or network failure as `internal`.
 2. The browser opens `EventSource` on `stream_url`. `sse_stream` subscribes before it looks for a stored
    terminal event, so it cannot miss one.
 3. The worker runs `run_agent_turn`, which binds log context and calls `_run_agent_turn`. That resolves
@@ -265,7 +267,7 @@ The rest, code default first:
 | Group | Variables |
 |---|---|
 | Provider | `AGENT_LLM_PROVIDER` `anthropic`; `ANTHROPIC_API_KEY` empty, needed when the real client is built; `AGENT_MODEL` `claude-haiku-5-5`; `OPENROUTER_API_KEY` empty, needed with `openrouter`; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_TEMPERATURE` 0.2, OpenRouter only; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
-| Turn | `AGENT_MAX_ITERATIONS` 15; `AGENT_MAX_TOTAL_TOKENS` 60000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 8000 |
+| Turn | `AGENT_MAX_ITERATIONS` 15; `AGENT_MAX_TOTAL_TOKENS` 60000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
 | Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000 |
 | Diffs | `AGENT_DIFF_CONTEXT_LINES` 3; `AGENT_DIFF_MAX_DOC_CHARS` 400000 |
 | Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_STREAM_TRANSPORT` `sse`, unused |

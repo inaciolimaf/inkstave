@@ -53,14 +53,13 @@ for (const theme of THEMES) {
   signedInTest(
     `a project with content passes axe in the ${theme} theme @smoke`,
     async ({ page, seedProject }) => {
-      const { projectId, docName } = await seedProject(`Axe ${theme}`);
+      const { projectId } = await seedProject(`Axe ${theme}`);
 
       await open(page, "/projects", theme);
       await expect(page.getByRole("link", { name: `Axe ${theme}` }).first()).toBeVisible();
       await audit(page, "/projects", theme);
 
       await open(page, `/projects/${projectId}`, theme);
-      await page.getByRole("treeitem", { name: docName }).click();
       await expect(page.locator(".cm-content")).toContainText("Introduction");
       await audit(page, "/projects/:projectId", theme);
     },

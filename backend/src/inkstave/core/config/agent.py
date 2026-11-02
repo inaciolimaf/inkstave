@@ -50,7 +50,8 @@ class AgentSettings(BaseSettings):
     agent_stream_transport: str = "sse"
     agent_stream_heartbeat_s: int = 15
     agent_run_ttl_s: int = 900
-    agent_max_message_chars: int = 8000
+    # Same size as one read_file result, so a pasted file costs what reading it would.
+    agent_max_message_chars: int = 40000
 
     # Context + LaTeX parsing (spec 48).
     agent_context_token_budget: int = 8000

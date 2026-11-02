@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
 
 import { AgentPanel } from "./AgentPanel";
@@ -87,6 +88,26 @@ describe("AgentPanel", () => {
     await waitFor(() => expect(api.startRun).toHaveBeenCalled());
     expect(JSON.stringify(api.startRun.mock.calls[0])).toContain("Selected words");
     expect(screen.queryByText("main.tex, lines 2-3")).toBeNull();
+  });
+
+  it("says why an oversized message was refused and gives the draft back", async () => {
+    api.startRun.mockRejectedValueOnce(
+      new ApiError(
+        400,
+        "Message exceeds the maximum length.",
+        undefined,
+        [{ max_chars: 40000 }],
+        "message_too_long",
+      ),
+    );
+    renderPanel();
+    const composer = await screen.findByLabelText("Message the agent");
+    await userEvent.type(composer, "A long text{Enter}");
+
+    expect(await screen.findByText("Message too long")).toBeInTheDocument();
+    expect(screen.getAllByText(/40[.,]000-character limit/).length).toBeGreaterThan(0);
+    expect(composer).toHaveValue("A long text");
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
   it("sends a request from the editor once, even when effects run twice", async () => {

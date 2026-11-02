@@ -252,9 +252,14 @@ export function AgentPanel({
             onChange={setComposerText}
             disabled={active}
             onSend={(text) => {
-              void chat.send(withQuote(text, quote));
+              const sentQuote = quote;
               setComposerText("");
               setQuote(null);
+              void chat.send(withQuote(text, sentQuote)).then((accepted) => {
+                if (accepted) return;
+                setComposerText(text);
+                setQuote(sentQuote);
+              });
             }}
           />
         </div>

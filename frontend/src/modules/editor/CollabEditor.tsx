@@ -72,7 +72,9 @@ export function CollabEditor({
       )}
       <div className="relative min-h-0 flex-1" onKeyDownCapture={markActivity} onMouseUp={markActivity}>
         {!session.synced && <LoadingOverlay />}
+        {/* The binding is fixed for the life of a view, so a new session needs a new view. */}
         <CodeMirrorEditor
+          key={session.ydoc.guid}
           doc=""
           settings={settings}
           dark={dark}
