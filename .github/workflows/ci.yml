@@ -215,6 +215,8 @@ jobs:
           E2E_S: ${{ needs.e2e.outputs.seconds }}
         run: make budget | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Backend coverage floor (unit + integration)
+        # Runs even when the budget fails, so one red gate cannot hide the other.
+        if: ${{ !cancelled() }}
         run: make coverage-combine
       - uses: actions/upload-artifact@v4
         with:
