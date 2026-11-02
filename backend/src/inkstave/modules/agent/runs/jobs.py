@@ -71,13 +71,13 @@ async def run_agent_turn(
 
 
 def _resolve_llm(ctx: dict[str, Any], settings: Any) -> Any:
-    """The injected LLM client, or the real OpenRouter one (imported lazily)."""
+    """The injected LLM client, or the configured real one (imported lazily)."""
     llm = ctx.get("llm_client")
     if llm is not None:
         return llm
-    from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
+    from inkstave.modules.agent.llm.factory import build_llm_client
 
-    return OpenRouterLLMClient(settings)
+    return build_llm_client(settings)
 
 
 def _build_deps(scope: RunScope, llm: Any, run_id: str) -> AgentDeps:

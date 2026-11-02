@@ -24,9 +24,9 @@ def current_trace_id() -> str | None:
     if not _enabled:
         return None
     try:
-        from opentelemetry import trace  # type: ignore[import-not-found]
+        from opentelemetry.trace import get_current_span
 
-        ctx = trace.get_current_span().get_span_context()
+        ctx = get_current_span().get_span_context()
         if ctx and ctx.trace_id:
             return format(ctx.trace_id, "032x")
     except Exception:  # never let tracing break a request
@@ -40,7 +40,6 @@ def setup_tracing(app: FastAPI, settings: Settings) -> None:
     if not settings.otel_enabled:
         return
     try:
-        from opentelemetry import trace
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import-not-found]
             OTLPSpanExporter,
         )
@@ -52,13 +51,14 @@ def setup_tracing(app: FastAPI, settings: Settings) -> None:
         from opentelemetry.sdk.trace.export import (  # type: ignore[import-not-found]
             BatchSpanProcessor,
         )
+        from opentelemetry.trace import set_tracer_provider
 
         resource = Resource.create({"service.name": settings.otel_service_name})
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(
             BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otel_exporter_otlp_endpoint))
         )
-        trace.set_tracer_provider(provider)
+        set_tracer_provider(provider)
         FastAPIInstrumentor.instrument_app(app)
         _enabled = True
         logger.info("OpenTelemetry tracing enabled")

@@ -1,7 +1,7 @@
 """Provider-agnostic LLM client contract (spec 41).
 
-The graph and nodes depend only on these types — never on the OpenAI SDK. Real
-calls go through ``OpenRouterLLMClient``; tests inject ``FakeLLM``.
+The graph and nodes depend only on these types — never on a provider SDK. Real
+calls go through ``build_llm_client``; tests inject ``FakeLLM``.
 """
 
 from __future__ import annotations
@@ -36,6 +36,9 @@ class LLMMessage(BaseModel):
     tool_calls: list[ToolCall] | None = None  # populated only from spec 42 onward
     tool_call_id: str | None = None
     name: str | None = None  # tool name for role="tool"
+    # The assistant turn as the provider returned it, opaque to the graph. Claude needs its
+    # thinking blocks back unchanged with the tool results; never persisted.
+    provider_blocks: list[dict[str, Any]] | None = None
 
 
 class LLMUsage(BaseModel):
@@ -49,6 +52,7 @@ class LLMResponse(BaseModel):
     tool_calls: list[ToolCall] = Field(default_factory=list)
     usage: LLMUsage = Field(default_factory=LLMUsage)
     finish_reason: str | None = None  # "stop" | "tool_calls" | "error" | ...
+    provider_blocks: list[dict[str, Any]] | None = None
 
 
 class LLMStreamChunk(BaseModel):

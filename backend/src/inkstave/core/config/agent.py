@@ -1,12 +1,13 @@
 """Agent configuration (spec 41).
 
 Constructing ``AgentSettings`` never requires the API key (so tests/CI load
-cleanly); the key is only required when the real ``OpenRouterLLMClient`` is built.
+cleanly); the key of ``AGENT_LLM_PROVIDER`` is only required when its client is built.
 """
 
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,10 +16,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AgentSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore", case_sensitive=False)
 
+    agent_llm_provider: Literal["anthropic", "openrouter"] = "anthropic"
+    anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    agent_model: str = "openai/gpt-4o-mini"
-    agent_temperature: float = 0.2
+    agent_model: str = "claude-haiku-5-5"
+    agent_temperature: float = 0.2  # OpenRouter only; current Claude models reject it
     agent_max_iterations: int = 15
     agent_max_total_tokens: int = 60000
     # Output cap per LLM call. Must be large enough for a propose_edit whose
@@ -68,6 +71,7 @@ class AgentSettings(BaseSettings):
     agent_max_cost_per_day_per_user_usd: float = 0.30  # ~R$0.50/day per user
     agent_model_cost_table: dict[str, dict[str, float]] = Field(
         default_factory=lambda: {
+            "claude-haiku-5-5": {"input": 0.0001, "output": 0.0005},
             "openai/gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
         }
     )

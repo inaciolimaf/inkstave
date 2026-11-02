@@ -98,7 +98,7 @@ Inkstave supports two compile postures, selected by `COMPILE_RUNNER`:
   `JWT_SECRET_PREVIOUS` (verification accepts both during the overlap), then drop the
   previous after the access-token TTL. Rotating without overlap invalidates all
   outstanding tokens.
-- **OPENROUTER_API_KEY / DB / Redis creds:** rotate at the provider, update the env,
+- **ANTHROPIC_API_KEY / DB / Redis creds:** rotate at the provider, update the env,
   restart. Secrets are never written to logs (spec-51 redaction; the spec-55 pass
   also added `access_key` to the denylist so `s3_access_key_id` is redacted).
 

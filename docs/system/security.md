@@ -131,7 +131,7 @@ refuses to construct in these cases, which stops the API, the worker and the CLI
 | `REDIS_URL` empty or the localhost default | `prod` | required connection |
 | `EMAIL_BACKEND=resend` without `RESEND_API_KEY` | `prod` | explicit choice, key cannot be intentional |
 
-`OPENROUTER_API_KEY` is deliberately not a boot refusal, since no setting says a deployment has no
+The agent provider key (`ANTHROPIC_API_KEY` by default) is deliberately not a boot refusal, since no setting says a deployment has no
 agent. `inkstave check-config` reports it in production unless `LLM_STUB=true`, and also reports
 malformed DSNs and `EMAIL_BACKEND=smtp` without `SMTP_HOST`.
 
@@ -151,7 +151,7 @@ Every external call has a bound, so a stuck dependency cannot hold a worker fore
 | Redis connect, socket | `REDIS_CONNECT_TIMEOUT_S`, `REDIS_SOCKET_TIMEOUT_S` | 3 s, 5 s | `create_redis_pool` |
 | S3 connect, read | `S3_CONNECT_TIMEOUT_S`, `S3_READ_TIMEOUT_S` | 5 s, 30 s | `client_config` |
 | SMTP | `SMTP_TIMEOUT_S` | 30 s | Sender |
-| LLM request | `AGENT_REQUEST_TIMEOUT_S` | 120 s | OpenRouter client |
+| LLM request | `AGENT_REQUEST_TIMEOUT_S` | 120 s | LLM client |
 
 `allow_idle` and `allow_long_statements` raise a Postgres limit for one transaction. See
 [overview.md](overview.md). Pub/sub readers must poll below `REDIS_SOCKET_TIMEOUT_S`.
@@ -204,7 +204,7 @@ as Coolify. A standalone run needs a `ports:` entry added.
 | Weak current and previous secrets refuse to boot in prod | `backend/tests/unit/test_production_secrets.py::test_production_refuses_a_bad_current_secret`, `backend/tests/unit/test_production_secrets.py::test_production_refuses_a_bad_previous_secret` |
 | `EXAMPLE_JWT_SECRET` matches `.env.example` | `backend/tests/unit/test_production_secrets.py::test_example_constant_matches_env_example` |
 | Resend without a key refuses to boot | `backend/tests/unit/test_production_secrets.py::test_resend_backend_without_a_key_refuses_to_boot` |
-| A missing OpenRouter key does not stop the boot | `backend/tests/unit/test_production_secrets.py::test_missing_openrouter_key_does_not_stop_the_boot` |
+| A missing LLM key does not stop the boot | `backend/tests/unit/test_production_secrets.py::test_missing_llm_key_does_not_stop_the_boot` |
 | `DATABASE_URL` is required in prod | `backend/tests/unit/test_bootstrap_57.py::test_production_requires_database_url` |
 | Redis client carries both timeouts | `backend/tests/unit/test_external_timeouts.py::test_redis_client_carries_both_timeouts` |
 | SMTP and S3 have timeouts | `backend/tests/unit/test_external_timeouts.py::test_smtp_send_has_a_timeout`, `backend/tests/unit/test_external_timeouts.py::test_s3_client_gets_explicit_timeouts` |

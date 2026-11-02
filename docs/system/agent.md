@@ -20,7 +20,9 @@ through the normal collaboration channel. Specs 41–50 and 67.
 | `backend/src/inkstave/modules/agent/graph/state.py`, `backend/src/inkstave/modules/agent/graph/edits.py` | `AgentState`, `StagedEdit`, `EditMode` |
 | `backend/src/inkstave/modules/agent/graph/prompts.py`, `backend/src/inkstave/modules/agent/graph/agent_deps.py`, `backend/src/inkstave/modules/agent/graph/repository.py` | System prompt, injected `AgentDeps`, session and message queries |
 | `backend/src/inkstave/modules/agent/llm/base.py` | `LLMClient` protocol, message types, `LLMError` |
+| `backend/src/inkstave/modules/agent/llm/anthropic_client.py` | `AnthropicLLMClient`, the default and the only `anthropic` import |
 | `backend/src/inkstave/modules/agent/llm/openrouter.py` | `OpenRouterLLMClient`, the only `openai` import |
+| `backend/src/inkstave/modules/agent/llm/factory.py` | `build_llm_client`, picks the client from `AGENT_LLM_PROVIDER` |
 | `backend/src/inkstave/modules/agent/llm/stub.py`, `backend/src/inkstave/modules/agent/llm/fake.py` | `StubAgentLLM` for e2e, scripted `FakeLLM` for tests |
 | `backend/src/inkstave/modules/agent/tools/base.py` | `Tool`, `ToolContext`, `ToolResult`, `ToolRegistry`, `authorize` |
 | `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages, never applies |
@@ -139,14 +141,23 @@ when there is an error, no pending tool call, `iterations >= AGENT_MAX_ITERATION
 ### LLM client
 
 Nodes see only the `LLMClient` protocol through `AgentDeps.llm`. `_resolve_llm` takes `ctx["llm_client"]`
-when set and otherwise builds `OpenRouterLLMClient`, which needs `OPENROUTER_API_KEY` and is an
-`AsyncOpenAI` with `OPENROUTER_BASE_URL`, so changing provider is a settings change. With `LLM_STUB=true`
+when set and otherwise calls `build_llm_client`, so changing provider is a settings change.
+`AGENT_LLM_PROVIDER=anthropic`, the default, builds `AnthropicLLMClient`, which needs only
+`ANTHROPIC_API_KEY` and runs `claude-haiku-5-5`. `openrouter` builds `OpenRouterLLMClient`, an `AsyncOpenAI`
+with `OPENROUTER_BASE_URL` that needs `OPENROUTER_API_KEY` and a matching `AGENT_MODEL`. With `LLM_STUB=true`
 the worker sets `ctx["llm_client"]` to `StubAgentLLM`, which walks `search_project`, `read_file`,
 `propose_edit`, then a fixed reply, deriving its step from the count of tool messages.
 
 `_parse_tool_calls` keeps a malformed call as `{"_raw": ...}` and sets `finish_reason="error"`. `_run_tool`
 then fails validation and the model sees `invalid_args`. A response with `finish_reason="tool_calls"` and no
 parsed call also becomes `"error"`, and with no call to run `plan` ends the turn with `TOOL_CALL_UNPARSED`.
+
+`AnthropicLLMClient` differs in four ways. `complete` streams and returns the final message, since one call
+can write a whole document. It sends no `temperature`, which Claude Haiku 5.5 rejects, so `AGENT_TEMPERATURE`
+applies only to OpenRouter. The model thinks by default, and thinking blocks must go back unchanged with the
+tool results, so `provider_blocks` carries the assistant turn through the graph's state; it is not persisted,
+so later turns replay only text and tool calls. A tool call cut by `max_tokens` becomes `"error"` with no call,
+and a `refusal` raises `LLMError`.
 
 ### Tools
 
@@ -214,6 +225,8 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | Viewers can read but not propose | `backend/tests/integration/test_agent_tools_authz.py::test_viewer_cannot_propose_but_can_read` |
 | A document from another project is `not_found` | `backend/tests/integration/test_agent_tools_authz.py::test_cross_project_doc_is_not_found` |
 | Only `openrouter.py` imports `openai` | `backend/tests/unit/test_agent_core.py::test_only_openrouter_imports_openai` |
+| Only `anthropic_client.py` imports `anthropic` | `backend/tests/unit/test_agent_core.py::test_only_the_anthropic_client_imports_anthropic` |
+| `AnthropicLLMClient` defaults to Haiku 5.5, sends no sampling parameter and replays thinking | `backend/tests/unit/test_anthropic_adapter.py` |
 | No tool module imports a network client | `backend/tests/unit/test_agent_egress_lock.py::test_no_agent_tool_module_imports_a_network_client` |
 | A tool outside the registry never runs and is flagged | `backend/tests/agent_evals/test_agent_evals.py::test_eval_disallowed_tool_is_flagged` |
 | Injection-shaped document text is flagged and the document kept | `backend/tests/agent_evals/test_agent_evals.py::test_eval_injection_does_not_change_behaviour` |
@@ -251,7 +264,7 @@ The rest, code default first:
 
 | Group | Variables |
 |---|---|
-| Provider | `OPENROUTER_API_KEY` empty, needed when the real client is built; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_MODEL` `openai/gpt-4o-mini`; `AGENT_TEMPERATURE` 0.2; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
+| Provider | `AGENT_LLM_PROVIDER` `anthropic`; `ANTHROPIC_API_KEY` empty, needed when the real client is built; `AGENT_MODEL` `claude-haiku-5-5`; `OPENROUTER_API_KEY` empty, needed with `openrouter`; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_TEMPERATURE` 0.2, OpenRouter only; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
 | Turn | `AGENT_MAX_ITERATIONS` 15; `AGENT_MAX_TOTAL_TOKENS` 60000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 8000 |
 | Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000 |
 | Diffs | `AGENT_DIFF_CONTEXT_LINES` 3; `AGENT_DIFF_MAX_DOC_CHARS` 400000 |
@@ -259,7 +272,7 @@ The rest, code default first:
 | Context | `AGENT_CONTEXT_CACHE` `memory`, and `redis` behaves like `off`; `AGENT_SECTION_EXTRA_COMMANDS` empty; `AGENT_CONTEXT_TOKEN_BUDGET` 8000 and `AGENT_CONTEXT_SURROUNDING_LINES` 40, both unused |
 | Limits, 0 disables | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` 10; `AGENT_MAX_CONCURRENT_RUNS_PER_USER` 2; `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` 20 |
 | Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 120000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30 |
-| Safety | `AGENT_MODEL_COST_TABLE` gpt-4o-mini rates, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
+| Safety | `AGENT_MODEL_COST_TABLE` Claude Haiku 5.5 rates first (they price any model not listed), then gpt-4o-mini, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
 
 Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false),
 `VITE_AGENT_ENABLED` (shows the panel).

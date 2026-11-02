@@ -22,7 +22,12 @@ CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
 
 _DURATION_BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
 # Bound the `model` label cardinality (spec §5.3): only known models keep their name.
-_MODEL_ALLOWLIST = {"openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet"}
+_MODEL_ALLOWLIST = {
+    "claude-haiku-5-5",
+    "openai/gpt-4o-mini",
+    "openai/gpt-4o",
+    "anthropic/claude-3.5-sonnet",
+}
 _ARQ_QUEUE_KEY = "arq:queue"
 
 

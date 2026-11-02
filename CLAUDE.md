@@ -76,9 +76,10 @@ applies in both places: here and in the skill.
 
 - **Backend:** Python ≥ 3.12, FastAPI, SQLAlchemy 2.x (async), Alembic,
   PostgreSQL, Redis, ARQ for jobs, Pydantic v2 for schemas/settings.
-- **LLM access:** OpenAI Python SDK pointed at OpenRouter's base URL. The client
-  must be provided through dependency injection so the provider can be swapped
-  (OpenRouter ↔ OpenAI ↔ local) without touching business logic.
+- **LLM access:** the Anthropic Python SDK against the Claude API, `claude-haiku-5-5`
+  by default (ADR 0109). The client is provided through dependency injection so the
+  provider can be swapped without touching business logic: `AGENT_LLM_PROVIDER=openrouter`
+  uses the OpenAI SDK at OpenRouter's base URL.
 - **AI agent:** LangChain + LangGraph, running server-side. Streams to the
   browser. Produces per-file unified diffs; the user accepts/rejects — the agent
   never writes to documents directly.

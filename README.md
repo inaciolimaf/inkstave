@@ -29,7 +29,7 @@ licensed; see [`LICENSE`](LICENSE)).
 ```bash
 git clone <this-repo> && cd inkstave
 cp .env.example .env
-# Edit .env: set a strong JWT_SECRET, your CORS_ORIGINS, and OPENROUTER_API_KEY
+# Edit .env: set a strong JWT_SECRET, your CORS_ORIGINS, and ANTHROPIC_API_KEY
 # (the AI agent); set ENVIRONMENT=prod for a real deployment.
 
 docker compose -f docker-compose.prod.yml build
@@ -102,7 +102,7 @@ make up-prod          # production stack (see the note on host ports above)
 | Async jobs | **ARQ** |
 | Real-time collaboration | **Yjs** (browser) + **pycrdt** (server) over WebSocket |
 | LaTeX engine | **Tectonic** |
-| AI agent | **LangGraph** + OpenAI SDK pointed at **OpenRouter** (swappable via DI) |
+| AI agent | **LangGraph** + **Anthropic SDK**, Claude Haiku 5.5 by default (OpenRouter by setting) |
 | Frontend | **Vite** · **React** · **TypeScript** · **Tailwind** · **shadcn/ui** · **CodeMirror 6** · **PDF.js** |
 | Auth | **JWT** (access + refresh) |
 | Tests | **pytest** (backend) · **Vitest** (frontend) · **Playwright** (e2e) |

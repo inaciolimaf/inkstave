@@ -129,7 +129,7 @@ class Settings(
     def _guard_production_email(self) -> Settings:
         """EMAIL_BACKEND=resend is an explicit choice, so a missing key is never intentional.
 
-        OPENROUTER_API_KEY stays out of this boot guard on purpose: no setting says "this
+        The agent provider key stays out of this boot guard on purpose: no setting says "this
         deploy has no agent", so refusing here would brick one that simply does not use it.
         `check-config` still reports it.
         """

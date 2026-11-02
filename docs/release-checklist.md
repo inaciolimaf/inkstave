@@ -36,7 +36,7 @@ it. See the [Admin Guide](admin-guide.md) for production operations detail.
 ## 3. Configuration
 
 - [ ] `cp .env.example .env`; set a strong `JWT_SECRET` (≥ 32 bytes),
-      `CORS_ORIGINS` (your public origin), `OPENROUTER_API_KEY`, and
+      `CORS_ORIGINS` (your public origin), `ANTHROPIC_API_KEY`, and
       `ENVIRONMENT=prod`.
 - [ ] **Env validation fails fast on missing secrets:**
       `docker compose -f docker-compose.prod.yml run --rm backend python -m inkstave.cli check-config`
@@ -64,8 +64,8 @@ it. See the [Admin Guide](admin-guide.md) for production operations detail.
 - [ ] Create a project, edit `main.tex`, **compile to PDF**, view the preview.
 - [ ] Open the **AI agent** panel, request an edit, confirm it appears as a
       reviewable diff and is **not** applied without approval.
-- [ ] `just agent-live` passes with a real `OPENROUTER_API_KEY` (run **locally,
-      never in CI** — it makes one real OpenRouter call; skips cleanly without a key).
+- [ ] `just agent-live` passes with a real `ANTHROPIC_API_KEY` (run **locally,
+      never in CI** — it makes one real LLM call; skips cleanly without a key).
 - [ ] `/metrics` is **blocked** at the public proxy (returns 404); `/healthz` is OK.
 
 ## 7. Tag the release

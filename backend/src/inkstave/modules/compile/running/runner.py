@@ -95,7 +95,7 @@ class LocalTectonicRunner:
         if self._bundle_url:
             argv += ["--bundle", self._bundle_url]
         # Minimal, allow-listed environment (spec 52 §5.4): do NOT inherit the full
-        # process env, so application secrets (JWT_SECRET, OPENROUTER_API_KEY, DB/Redis
+        # process env, so application secrets (JWT_SECRET, LLM API keys, DB/Redis
         # creds) are never exposed to a LaTeX compile. Tectonic has no shell-escape, so
         # \write18 is disabled by design.
         passthrough = ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR")

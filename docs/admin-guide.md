@@ -65,7 +65,7 @@ In every environment it also refuses `CORS_ORIGINS` containing `*`,
 not strictly greater than `TECTONIC_COMPILE_TIMEOUT_S`. With `MIGRATE_ON_START=false`
 it refuses a database that is not at the latest migration.
 
-`OPENROUTER_API_KEY` is **not** a boot refusal, because nothing says a deployment
+`ANTHROPIC_API_KEY` is **not** a boot refusal, because nothing says a deployment
 uses the agent. `python -m inkstave.cli check-config` reports it, along with the
 always-required `JWT_SECRET`, `DATABASE_URL` and `REDIS_URL`, and the e-mail settings.
 Run it before deploying.
@@ -85,7 +85,7 @@ The table below documents **every** variable in `.env.example`, including the co
 `POSTGRES_`/`REDIS_`/`DATABASE_`/`REDIS_URL` configure data stores; `JWT_`/`ARGON2_`/
 `RATE_LIMIT_`/`CORS_`/`HSTS_`/`TRUST_PROXY_`/`MAX_*` are auth/security; `COMPILE_`/
 `TECTONIC_`/`SYNCTEX_`/`LOGPARSE_` are compilation; `COLLAB_`/`HISTORY_` are
-collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_`/
+collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_`/
 `METRICS_`/`SERVICE_`/`READINESS_` are observability; `E2E_`/`SUITE_`/`SLOW_TEST_`/
 `TEST_` are CI/test-only; `VITE_` are baked into the frontend build.
 
@@ -225,14 +225,16 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `HISTORY_BLOB_PREFIX` | No | `history/` | blob-storage key prefix for offloaded history | backend, collab/websocket |
 | `HISTORY_DIFF_MAX_BYTES` | No | `2097152` | max reconstructed text per diff side before 413 | backend |
 | `HISTORY_VERSIONS_PAGE_MAX` | No | `200` | upper bound for the versions list `limit` (set false for editor+) | backend |
-| `OPENROUTER_API_KEY` | Yes | `—` | API key for the OpenRouter-backed LLM client (required unless the agent is stubbed) | backend, worker |
-| `OPENROUTER_BASE_URL` | No | `https://openrouter.ai/api/v1` | OpenAI-SDK base URL (swap provider here) | backend, worker |
-| `AGENT_MODEL` | No | `openai/gpt-4o-mini` | model id passed to the SDK | backend, worker |
-| `AGENT_TEMPERATURE` | No | `0.2` | default sampling temperature | backend, worker |
+| `ANTHROPIC_API_KEY` | Yes | `—` | API key for the default LLM client (required unless the agent is stubbed or uses OpenRouter) | backend, worker |
+| `AGENT_LLM_PROVIDER` | No | `anthropic` | `anthropic` or `openrouter` | backend, worker |
+| `AGENT_MODEL` | No | `claude-haiku-5-5` | model id passed to the SDK; set it when you change provider | backend, worker |
+| `OPENROUTER_API_KEY` | No | `—` | needed only with `AGENT_LLM_PROVIDER=openrouter` | backend, worker |
+| `OPENROUTER_BASE_URL` | No | `https://openrouter.ai/api/v1` | OpenAI-SDK base URL | backend, worker |
+| `AGENT_TEMPERATURE` | No | `0.2` | OpenRouter only; current Claude models reject it | backend, worker |
 | `AGENT_MAX_ITERATIONS` | No | `15` | hard cap on plan loops per turn | backend, worker |
 | `AGENT_MAX_TOTAL_TOKENS` | No | `60000` | hard cap on accumulated tokens per turn | backend, worker |
-| `AGENT_MAX_TOKENS_PER_CALL` | No | `1024` | max_tokens per LLM call | backend, worker |
-| `AGENT_REQUEST_TIMEOUT_S` | No | `60` | per-call timeout for the real client | backend, worker |
+| `AGENT_MAX_TOKENS_PER_CALL` | No | `32000` | max_tokens per LLM call | backend, worker |
+| `AGENT_REQUEST_TIMEOUT_S` | No | `120` | per-call timeout for the real client | backend, worker |
 | `AGENT_JOB_TIMEOUT_S` | No | `600` | ARQ timeout for one whole agent run; keep above the per-call timeout | backend, worker |
 | `AGENT_HTTP_REFERER` | No | `https://inkstave.local` | OpenRouter HTTP-Referer header | backend, worker |
 | `AGENT_APP_TITLE` | No | `Inkstave` | OpenRouter X-Title header | backend, worker |
@@ -257,7 +259,7 @@ collaboration; `AGENT_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; `LOG_`/`OTEL_
 | `AGENT_MAX_COST_PER_RUN_USD` | No | `0.30` | hard USD cost cap for a single agent run | backend, worker |
 | `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` | No | `2000000` | daily token budget per project | backend, worker |
 | `AGENT_MAX_COST_PER_DAY_PER_USER_USD` | No | `0.30` | daily USD cost budget per user | backend, worker |
-| `AGENT_MODEL_COST_TABLE` | No | `{"openai/gpt-4o-mini":{"input":0.00015,"output":0.0006}}` | per-model input/output token prices (USD per 1K tokens) for cost accounting | backend, worker |
+| `AGENT_MODEL_COST_TABLE` | No | `{"claude-haiku-5-5":{"input":0.0001,"output":0.0005},"openai/gpt-4o-mini":{"input":0.00015,"output":0.0006}}` | per-model input/output token prices (USD per 1K tokens) for cost accounting | backend, worker |
 | `AGENT_AUDIT_RETENTION_DAYS` | No | `90` | 0 = keep forever | worker |
 | `AGENT_INJECTION_GUARD` | No | `on` | on \| off | backend, worker |
 | `EMAIL_BACKEND` | No | `console` | smtp \| console \| file \| resend  (console in dev/tests) | backend, worker |

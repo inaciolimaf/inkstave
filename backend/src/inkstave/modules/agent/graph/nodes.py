@@ -170,7 +170,12 @@ def _unparsed_tool_call(response: LLMResponse) -> str | None:
 
 def _plan_update(state: AgentState, response: LLMResponse) -> dict[str, Any]:
     """The state update for a completed plan step."""
-    assistant = LLMMessage(role="assistant", content=response.content, tool_calls=response.tool_calls or None)
+    assistant = LLMMessage(
+        role="assistant",
+        content=response.content,
+        tool_calls=response.tool_calls or None,
+        provider_blocks=response.provider_blocks,
+    )
     update: dict[str, Any] = {
         "messages": [assistant],
         "iterations": state.get("iterations", 0) + 1,

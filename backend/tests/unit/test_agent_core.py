@@ -72,6 +72,19 @@ def test_only_openrouter_imports_openai() -> None:
     assert offenders == []
 
 
+def test_only_the_anthropic_client_imports_anthropic() -> None:
+    import inkstave.modules.agent as agent_pkg
+
+    root = Path(agent_pkg.__file__).parent
+    offenders = [
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*.py")
+        if path.name != "anthropic_client.py"
+        and ("import anthropic" in (src := path.read_text()) or "from anthropic" in src)
+    ]
+    assert offenders == []
+
+
 def _deps(script: list, **over: object) -> AgentDeps:
     settings = AgentSettings(**over)  # type: ignore[arg-type]
     return AgentDeps(llm=FakeLLM(script=script), settings=settings)

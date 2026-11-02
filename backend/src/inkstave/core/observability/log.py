@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 # Substrings that mark a key as secret (case-insensitive). Chosen to cover the spec
 # denylist (authorization, cookie/set-cookie, password/hashed_password, x-api-key,
-# openrouter_api_key) WITHOUT false-positiving on benign keys like ``tokens_prompt``.
+# anthropic_api_key, openrouter_api_key) WITHOUT false-positiving on benign keys like ``tokens_prompt``.
 _SECRET_SUBSTRINGS = (
     "password",
     "authorization",
