@@ -69,7 +69,7 @@ export function AgentComposer({
 export function RunControls({ canStop, onStop }: { canStop: boolean; onStop: () => void }) {
   const { t } = useTranslation("agent");
   return (
-    <div className="flex justify-center px-2 pt-2">
+    <div className="flex shrink-0 justify-center">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

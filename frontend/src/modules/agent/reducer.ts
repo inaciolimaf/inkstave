@@ -61,10 +61,18 @@ function applyToken(base: AgentRunState, event: AgentEvent): AgentRunState {
       items[idx] = { ...cur, text: cur.text + (event.text ?? "") };
     }
   }
-  return { ...base, phase: "streaming" };
+  return { ...base, phase: "streaming", activity: { stage: "writing" } };
+}
+
+/** Text after a tool call is a new thought, so it must not join the bubble above the call. */
+function closeAssistant(items: TranscriptItem[]) {
+  const idx = openAssistant(items);
+  const cur = items[idx];
+  if (cur?.kind === "message") items[idx] = { ...cur, status: "complete" };
 }
 
 function applyToolCall(base: AgentRunState, event: AgentEvent): AgentRunState {
+  closeAssistant(base.items);
   base.items.push({
     kind: "tool",
     id: event.tool_call_id ?? `tc-${event.seq}`,
@@ -72,7 +80,7 @@ function applyToolCall(base: AgentRunState, event: AgentEvent): AgentRunState {
     args: event.arguments,
     status: "running",
   });
-  return { ...base, phase: "streaming" };
+  return { ...base, phase: "streaming", activity: { stage: "tool", tool: event.name } };
 }
 
 function applyToolResult(base: AgentRunState, event: AgentEvent): AgentRunState {
@@ -177,6 +185,9 @@ export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunSta
   switch (event.type) {
     case "token":
       return applyToken(base, event);
+    case "status":
+      if (event.stage === "tool_input") closeAssistant(base.items);
+      return { ...base, activity: { stage: event.stage ?? "thinking", tool: event.tool } };
     case "tool_call":
       return applyToolCall(base, event);
     case "tool_result":

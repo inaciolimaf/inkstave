@@ -10,7 +10,7 @@ import pytest
 
 from inkstave.core.config.agent import AgentSettings
 from inkstave.modules.agent.llm.anthropic_client import AnthropicLLMClient
-from inkstave.modules.agent.llm.base import LLMClient, LLMError, LLMMessage, ToolCall, ToolSpec
+from inkstave.modules.agent.llm.base import LLMClient, LLMDelta, LLMError, LLMMessage, ToolCall, ToolSpec
 from inkstave.modules.agent.llm.factory import build_llm_client
 from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
 
@@ -201,3 +201,21 @@ def test_factory_defaults_to_anthropic_and_can_pick_openrouter() -> None:
     assert isinstance(default, AnthropicLLMClient)
     assert isinstance(default, LLMClient)
     assert isinstance(other, OpenRouterLLMClient)
+
+
+async def test_complete_reports_text_and_tool_calls_as_they_arrive() -> None:
+    blocks = [
+        {"type": "text", "text": "Reading."},
+        {"type": "tool_use", "id": "t1", "name": "read_file", "input": {"path": "a.tex"}},
+    ]
+    client, _ = _client(blocks, stop_reason="tool_use")
+    seen: list[LLMDelta] = []
+
+    async def collect(delta: LLMDelta) -> None:
+        seen.append(delta)
+
+    response = await client.complete(HI, on_delta=collect)
+
+    assert "".join(d.text or "" for d in seen) == "Reading."
+    assert [d.tool_name for d in seen if d.tool_name] == ["read_file"]
+    assert response.tool_calls[0].arguments == {"path": "a.tex"}  # the whole response still comes back

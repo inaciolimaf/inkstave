@@ -63,6 +63,8 @@ export interface FileOp {
 
 export type RunPhase = "idle" | "starting" | "streaming" | "stopping" | "done" | "error" | "cancelled";
 
+export type RunStage = "thinking" | "writing" | "tool_input" | "tool";
+
 export interface AgentRunState {
   sessionId: string | null;
   runId: string | null;
@@ -71,6 +73,10 @@ export interface AgentRunState {
   error?: { code: string; message: string; retryable: boolean };
   /** Internal: spec-44 event `seq`s already applied (idempotent reducer). */
   seenSeqs: number[];
+  /** What the run reports doing now; absent until its first event. */
+  activity?: { stage: RunStage; tool?: string | null };
+  startedAt?: number;
+  lastEventAt?: number;
 }
 
 /** A spec-44 SSE event envelope. */
@@ -86,6 +92,8 @@ export interface AgentEvent {
   ok?: boolean;
   summary?: string;
   diff_id?: string;
+  stage?: RunStage;
+  tool?: string | null;
   file_op_id?: string;
   kind?: FileOp["opKind"];
   entity_type?: string;

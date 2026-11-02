@@ -37,6 +37,27 @@ const dict: Dict = {
   run: {
     stop: "Parar",
     stopLabel: "Parar a execução",
+    stages: {
+      sending: "Enviando…",
+      queued: "Aguardando início…",
+      thinking: "Pensando…",
+      writing: "Escrevendo…",
+      tool_input: "Preparando uma mudança…",
+      tool: "Usando uma ferramenta…",
+      stopping: "Parando…",
+    },
+    tools: {
+      search_project: "Pesquisando no projeto…",
+      read_file: "Lendo um arquivo…",
+      list_tree: "Listando os arquivos…",
+      locate_section: "Localizando uma seção…",
+      propose_edit: "Salvando a proposta…",
+      view_image: "Olhando uma imagem…",
+      propose_create: "Salvando a proposta…",
+      propose_delete: "Salvando a proposta…",
+      propose_move: "Salvando a proposta…",
+    },
+    slow: "Sem novidades há um tempo. Respostas longas demoram, ou você pode parar e tentar de novo.",
   },
   error: {
     retry: "Tentar de novo",

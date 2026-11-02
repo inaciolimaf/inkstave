@@ -15,7 +15,7 @@ import httpx
 import pytest
 
 from inkstave.core.config.agent import AgentSettings
-from inkstave.modules.agent.llm.base import LLMClient, LLMError, LLMMessage, ToolSpec
+from inkstave.modules.agent.llm.base import LLMClient, LLMDelta, LLMError, LLMMessage, ToolSpec
 from inkstave.modules.agent.llm.fake import FakeLLM
 from inkstave.modules.agent.llm.openrouter import OpenRouterLLMClient
 
@@ -209,3 +209,41 @@ def test_fake_llm_satisfies_protocol_and_is_di_default() -> None:  # AC8
     # fast suite must never reach it (it is overridden to FakeLLM in the app/agent
     # fixtures — see conftest / agent test wiring).
     assert isinstance(OpenRouterLLMClient(AgentSettings(openrouter_api_key=DUMMY_KEY)), LLMClient)
+
+
+def _tool_chunk(index: int, call_id: str | None, name: str | None, arguments: str) -> dict[str, Any]:
+    call = {
+        "index": index,
+        "id": call_id,
+        "type": "function",
+        "function": {"name": name, "arguments": arguments},
+    }
+    return {**_chunk(), "choices": [{"index": 0, "delta": {"tool_calls": [call]}, "finish_reason": None}]}
+
+
+async def test_complete_with_on_delta_streams_and_rebuilds_the_response() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        body = _sse(
+            _chunk("Read"),
+            _chunk("ing."),
+            _tool_chunk(0, "t1", "read_file", '{"pa'),
+            _tool_chunk(0, None, None, 'th": "a.tex"}'),
+            _chunk(finish_reason="tool_calls"),
+            _usage_event(),
+        )
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=body)
+
+    client, captured = _client_with_transport(handler)
+    seen: list[LLMDelta] = []
+
+    async def collect(delta: LLMDelta) -> None:
+        seen.append(delta)
+
+    response = await client.complete([LLMMessage(role="user", content="hi")], on_delta=collect)
+
+    assert captured["json"]["stream"] is True
+    assert "".join(d.text or "" for d in seen) == "Reading."
+    assert [d.tool_name for d in seen if d.tool_name] == ["read_file"]
+    assert response.content == "Reading." and response.finish_reason == "tool_calls"
+    assert response.tool_calls[0].arguments == {"path": "a.tex"}
+    assert response.usage.total == 5

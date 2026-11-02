@@ -182,3 +182,26 @@ describe("file operations", () => {
     });
   });
 });
+
+describe("live activity", () => {
+  it("keeps text after a tool call out of the bubble before it", () => {
+    const state = feed([
+      { type: "token", seq: 1, text: "Let me look." },
+      { type: "tool_call", seq: 2, tool_call_id: "t", name: "read_file" },
+      { type: "token", seq: 3, text: "Found it." },
+      { type: "done", seq: 4 },
+    ]);
+    const messages = state.items.filter((i) => i.kind === "message");
+    expect(messages.map((m) => m.text)).toEqual(["Let me look.", "Found it."]);
+    expect(state.items.map((i) => i.kind)).toEqual(["message", "tool", "message"]);
+  });
+
+  it("reports the stage from each kind of event", () => {
+    expect(feed([{ type: "status", seq: 1, stage: "thinking" }]).activity?.stage).toBe("thinking");
+    expect(feed([{ type: "token", seq: 1, text: "a" }]).activity?.stage).toBe("writing");
+    expect(feed([{ type: "tool_call", seq: 1, name: "read_file" }]).activity).toEqual({
+      stage: "tool",
+      tool: "read_file",
+    });
+  });
+});

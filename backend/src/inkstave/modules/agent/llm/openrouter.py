@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
 from inkstave.modules.agent.llm.base import (
+    DeltaHandler,
     LLMError,
     LLMImage,
     LLMMessage,
@@ -21,6 +22,7 @@ from inkstave.modules.agent.llm.base import (
     ToolCall,
     ToolSpec,
 )
+from inkstave.modules.agent.llm.openrouter_stream import collect_stream
 
 if TYPE_CHECKING:
     from inkstave.core.config.agent import AgentSettings
@@ -185,23 +187,27 @@ class OpenRouterLLMClient:
         tools: list[ToolSpec] | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        on_delta: DeltaHandler | None = None,
     ) -> LLMResponse:
+        request = {"tools": self._to_openai_tools(tools), **_overrides(temperature, max_tokens)}
         try:
-            resp = await self._create(
-                messages,
-                tools=self._to_openai_tools(tools),
-                **_overrides(temperature, max_tokens),
-            )
+            if on_delta is not None:
+                stream = await self._create(
+                    messages, stream=True, stream_options={"include_usage": True}, **request
+                )
+                choice, usage = await collect_stream(stream, on_delta)
+            else:
+                resp = await self._create(messages, **request)
+                choice, usage = resp.choices[0], resp.usage
         except Exception as exc:  # any network/SDK error
             logger.exception("openrouter complete failed")
             raise LLMError(f"LLM request failed: {exc}") from exc
 
-        choice = resp.choices[0]
         tool_calls, had_error = self._parse_tool_calls(choice.message.tool_calls)
         return LLMResponse(
             content=choice.message.content,
             tool_calls=tool_calls,
-            usage=_usage_of(resp.usage) or LLMUsage(),
+            usage=_usage_of(usage) or LLMUsage(),
             finish_reason=(
                 "error" if self._check_tool_calls(choice, tool_calls, had_error) else choice.finish_reason
             ),

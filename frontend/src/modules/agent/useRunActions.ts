@@ -68,6 +68,9 @@ export function useRunActions({
         sessionId,
         phase: "starting",
         error: undefined,
+        activity: undefined,
+        startedAt: Date.now(),
+        lastEventAt: undefined,
         items: [...prev.items, userItem],
       }));
 

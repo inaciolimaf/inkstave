@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
 
-from inkstave.modules.agent.llm.base import LLMMessage, LLMResponse, LLMStreamChunk, LLMUsage, ToolSpec
+from inkstave.modules.agent.llm.base import (
+    DeltaHandler,
+    LLMMessage,
+    LLMResponse,
+    LLMStreamChunk,
+    LLMUsage,
+    ToolSpec,
+)
 
 ScriptItem = LLMResponse | Callable[[list[LLMMessage]], LLMResponse]
 
@@ -56,6 +63,7 @@ class FakeLLM:
         tools: list[ToolSpec] | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        on_delta: DeltaHandler | None = None,
     ) -> LLMResponse:
         self.calls.append(
             {

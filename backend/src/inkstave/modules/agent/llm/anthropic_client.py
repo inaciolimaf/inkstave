@@ -12,6 +12,8 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from inkstave.modules.agent.llm.base import (
+    DeltaHandler,
+    LLMDelta,
     LLMError,
     LLMMessage,
     LLMResponse,
@@ -104,6 +106,13 @@ def _to_anthropic_tools(tools: list[ToolSpec]) -> list[dict[str, Any]]:
     ]
 
 
+async def _forward(stream: Any, on_delta: DeltaHandler) -> None:
+    async for event in stream:
+        delta = _delta_of(event)
+        if delta is not None:
+            await on_delta(delta)
+
+
 def _usage_of(usage: Any) -> LLMUsage:
     prompt, completion = usage.input_tokens or 0, usage.output_tokens or 0
     return LLMUsage(prompt=prompt, completion=completion, total=prompt + completion)
@@ -129,6 +138,15 @@ def _to_response(message: Any) -> LLMResponse:
         finish_reason=finish_reason,
         provider_blocks=[b.model_dump(mode="json", exclude_none=True) for b in message.content],
     )
+
+
+def _delta_of(event: Any) -> LLMDelta | None:
+    """What a stream event tells the user, if anything."""
+    if event.type == "text":
+        return LLMDelta(text=event.text)
+    if event.type == "content_block_start" and event.content_block.type == "tool_use":
+        return LLMDelta(tool_name=event.content_block.name)
+    return LLMDelta() if event.type in ("thinking", "input_json") else None
 
 
 class AnthropicLLMClient:
@@ -170,9 +188,12 @@ class AnthropicLLMClient:
         tools: list[ToolSpec] | None = None,
         temperature: float | None = None,  # part of the protocol; never sent
         max_tokens: int | None = None,
+        on_delta: DeltaHandler | None = None,
     ) -> LLMResponse:
         try:
             async with self._client.messages.stream(**self._params(messages, tools, max_tokens)) as stream:
+                if on_delta is not None:
+                    await _forward(stream, on_delta)
                 message = await stream.get_final_message()
         except Exception as exc:  # any network/SDK error
             logger.exception("anthropic complete failed")

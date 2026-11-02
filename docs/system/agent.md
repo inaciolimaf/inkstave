@@ -41,6 +41,7 @@ and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 | `backend/src/inkstave/modules/agent/diffs/models.py`, `backend/src/inkstave/modules/agent/diffs/repository.py` | `ProposedDiff`, `ProposedDiffStatus`, queries |
 | `backend/src/inkstave/modules/agent/runs/jobs.py`, `backend/src/inkstave/modules/agent/runs/run_helpers.py` | `run_agent_turn`; `RunScope`, pre-checks, terminal event |
 | `backend/src/inkstave/modules/agent/runs/enqueuer.py`, `backend/src/inkstave/modules/agent/runs/events.py`, `backend/src/inkstave/modules/agent/runs/stream.py` | `AgentEnqueuer`; Redis keys and sinks; `sse_stream` |
+| `backend/src/inkstave/modules/agent/runs/live_text.py`, `backend/src/inkstave/modules/agent/llm/openrouter_stream.py` | `LiveText`: forwards a model call to the stream; `collect_stream`: rebuilds an OpenRouter response from its stream |
 | `backend/src/inkstave/modules/agent/runs/cleanup.py` | `agent_audit_cleanup` cron |
 | `backend/src/inkstave/modules/agent/safety/rate_limit.py`, `backend/src/inkstave/modules/agent/safety/budget.py` | Limits and budgets |
 | `backend/src/inkstave/modules/agent/safety/injection.py`, `backend/src/inkstave/modules/agent/safety/audit.py`, `backend/src/inkstave/modules/agent/safety/models.py` | `wrap_untrusted`, `flag_injection`; `audit`; `AgentAuditLog` |
@@ -48,6 +49,7 @@ and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 | `backend/src/inkstave/worker.py` | Registers the job and the cron, picks the stub LLM |
 | `frontend/src/modules/agent/useAgentChat.ts`, `frontend/src/modules/agent/reducer.ts` | Sessions, runs, `EventSource`, transcript |
 | `frontend/src/modules/agent/use-window-size.ts`, `frontend/src/modules/agent/window-resize-handles.tsx` | The window's size on a wide screen: drag, arrow keys, one-click enlarge, kept in `localStorage`. On a phone it stays a full sheet |
+| `frontend/src/modules/agent/run-status.tsx` | What a run is doing and for how long, above the composer; after 60 s with no event it says so |
 | `frontend/src/modules/agent/file-op-card.tsx` | The card that applies or rejects a file operation |
 | `frontend/src/modules/diff-review/useDiffReview.ts`, `frontend/src/modules/diff-review/hunks.ts` | Hunk decisions, drift, `rebaseHunks` |
 | `frontend/src/modules/diff-review/editor-bridge.ts`, `frontend/src/modules/diff-review/crdt-apply.ts` | Writes through a short-lived collab provider |
@@ -100,7 +102,7 @@ There is no route to apply, accept or reject a diff.
 
 SSE events are named after their `type` and carry `run_id`, `seq`, `ts`: `token` (`text`), `tool_call`
 (`tool_call_id`, `name`, `arguments`), `tool_result` (`tool_call_id`, `name`, `ok`, `summary`),
-`diff_proposed` (`diff_id`, `doc_id`, `path`, `stats`), `file_op_proposed` (`file_op_id`, `kind`,
+`diff_proposed` (`diff_id`, `doc_id`, `path`, `stats`), `status` (`stage`: `thinking` or `tool_input`, `tool`), `file_op_proposed` (`file_op_id`, `kind`,
 `entity_type`, `path`, `new_path`, `affected_paths`, `rationale`), `done` (`usage`, `iterations`, `final_text`),
 `error` (`code`, `message`, and `retry_after` when rate limited). `done` and `error` are terminal. Error
 codes are `agent_rate_limited`, `agent_budget_exceeded`, `cancelled`, `internal`, `timeout`, `not_found`.
@@ -144,9 +146,11 @@ when there is an error, no pending tool call, `iterations >= AGENT_MAX_ITERATION
 `total_tokens >= AGENT_MAX_TOTAL_TOKENS`.
 
 - `plan` checks the cancel flag and the per-run budget, frames tool messages when the guard is on, and
-  makes one `complete()` call. Prose is split into 16-character `token` events afterwards: nothing streams
-  from the provider, by choice, because `tool_calls` and `usage` need the full response (`_complete`
-  documents it, `LLMClient.stream` is unused in the turn).
+  emits `status` and makes one `complete()` call with `on_delta` set to a `LiveText`. Text reaches the
+  user as the provider writes it, batched into a `token` every 80 ms, and a `status` every 2 s tells a
+  long think or a long tool call is alive. `complete()` still returns the whole response, which `tool_calls`
+  and `usage` need. A client that calls no `on_delta`, like `FakeLLM` and the stub, has its text cut into
+  16-character tokens afterwards. `LLMClient.stream` is unused in the turn.
 - `act` checks the cancel flag (cancel is cooperative: a request in flight runs to its end) and runs each pending call through `_dispatch_call`, which emits and audits
   `tool_call` and `tool_result`, and flags injection patterns. Tool failures become `ToolResult` errors the
   model reads; they never raise.
@@ -168,8 +172,8 @@ the worker sets `ctx["llm_client"]` to `StubAgentLLM`, which walks `search_proje
 then fails validation and the model sees `invalid_args`. A response with `finish_reason="tool_calls"` and no
 parsed call also becomes `"error"`, and with no call to run `plan` ends the turn with `TOOL_CALL_UNPARSED`.
 
-`AnthropicLLMClient` differs in four ways. `complete` streams and returns the final message, since one call
-can write a whole document. It sends no `temperature`, which Claude Haiku 5.5 rejects, so `AGENT_TEMPERATURE`
+`AnthropicLLMClient` differs in four ways. `complete` always streams and returns the final message, since one
+call can write a whole document. It sends no `temperature`, which Claude Haiku 5.5 rejects, so `AGENT_TEMPERATURE`
 applies only to OpenRouter. The model thinks by default, and thinking blocks must go back unchanged with the
 tool results, so `provider_blocks` carries the assistant turn through the graph's state; it is not persisted,
 so later turns replay only text and tool calls. A tool call cut by `max_tokens` becomes `"error"` with no call,

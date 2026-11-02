@@ -6,7 +6,7 @@ calls go through ``build_llm_client``; tests inject ``FakeLLM``.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
@@ -71,6 +71,16 @@ class LLMStreamChunk(BaseModel):
     finish_reason: str | None = None
 
 
+class LLMDelta(BaseModel):
+    """Progress of one call: text to show, a tool the model began to call, or (empty) signs of life."""
+
+    text: str | None = None
+    tool_name: str | None = None
+
+
+DeltaHandler = Callable[[LLMDelta], Awaitable[None]]
+
+
 class LLMError(AppError):
     """A failure reaching/parsing the LLM provider. Callers (spec 44) map it to an event."""
 
@@ -90,6 +100,7 @@ class LLMClient(Protocol):
         tools: list[ToolSpec] | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        on_delta: DeltaHandler | None = None,
     ) -> LLMResponse: ...
 
     def stream(

@@ -15,6 +15,7 @@ import {
 import { AgentComposer, RunControls } from "./controls";
 import type { AgentQuote } from "./quote";
 import { withQuote } from "./quote";
+import { RunStatus } from "./run-status";
 import type { useAgentChat } from "./useAgentChat";
 
 export function EmptyState({ onPick }: { onPick: (text: string) => void }) {
@@ -161,7 +162,12 @@ export function PanelFooter({
 }) {
   return (
     <div className="border-t">
-      {active && <RunControls canStop={Boolean(chat.run.runId)} onStop={() => void chat.stop()} />}
+      {active && (
+        <div className="flex items-center justify-between gap-2 px-2 pt-2">
+          <RunStatus run={chat.run} />
+          <RunControls canStop={Boolean(chat.run.runId)} onStop={() => void chat.stop()} />
+        </div>
+      )}
       {quote && <QuoteChip quote={quote} onClear={() => onQuoteChange(null)} />}
       <AgentComposer
         ref={composerRef}

@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 
 from inkstave.modules.agent.graph.state import AgentState
-from inkstave.modules.agent.llm.base import LLMError, LLMMessage, LLMResponse, LLMUsage
+from inkstave.modules.agent.llm.base import DeltaHandler, LLMError, LLMMessage, LLMResponse, LLMUsage
+from inkstave.modules.agent.runs.live_text import LiveText
 from inkstave.modules.agent.safety.budget import cost_for, run_cost_exceeded, run_tokens_exceeded
 from inkstave.modules.agent.safety.injection import flag_injection, wrap_untrusted
 from inkstave.modules.agent.tools.base import ToolResult
@@ -132,15 +133,15 @@ def _budget_exceeded(state: AgentState, settings: AgentSettings, model: str) -> 
 
 
 async def _complete(
-    deps: AgentDeps, messages: list[LLMMessage], tool_specs: list[ToolSpec] | None
+    deps: AgentDeps,
+    messages: list[LLMMessage],
+    tool_specs: list[ToolSpec] | None,
+    on_delta: DeltaHandler | None,
 ) -> LLMResponse:
     """One model call, with every failure mode turned into `_PlanAbortedError`.
 
-    Deliberate deviation from spec 44 §5.4.1 (which calls for `LLMClient.stream`):
-    we use `complete()` because the full response is needed for `tool_calls`/`usage`
-    and to keep tool flows correct and tests deterministic; the prose is re-chunked
-    into `token` events by the caller. See ADR 0044 §3 for the rationale. True
-    incremental token streaming from the provider is a future refinement.
+    Still `complete()`, because the full response is needed for `tool_calls`/`usage`;
+    `on_delta` is how the text reaches the user while the provider writes it.
     """
     try:
         return await deps.llm.complete(
@@ -148,12 +149,30 @@ async def _complete(
             tools=tool_specs,
             temperature=deps.settings.agent_temperature,
             max_tokens=deps.settings.agent_max_tokens_per_call,
+            on_delta=on_delta,
         )
     except LLMError as exc:
         raise _PlanAbortedError(str(exc)) from exc
     except Exception as exc:  # never crash the graph
         logger.exception("plan node failed")
         raise _PlanAbortedError(f"agent error: {exc}") from exc
+
+
+async def _complete_live(
+    deps: AgentDeps, messages: list[LLMMessage], tool_specs: list[ToolSpec] | None
+) -> LLMResponse:
+    """A model call shown as it happens; a client that sent no text has it chunked afterwards."""
+    if deps.events is None:
+        return await _complete(deps, messages, tool_specs, None)
+    await deps.events.emit("status", stage="thinking", tool=None)
+    live = LiveText(deps.events)
+    try:
+        response = await _complete(deps, messages, tool_specs, live)
+    finally:
+        await live.flush()
+    if not live.streamed:
+        await _stream_prose(deps.events, response.content)
+    return response
 
 
 def _unparsed_tool_call(response: LLMResponse) -> str | None:
@@ -201,7 +220,7 @@ def make_plan(deps: AgentDeps) -> Any:
         iteration = state.get("iterations", 0) + 1
         logger.info("agent plan: iteration=%d calling LLM (%d messages)", iteration, len(messages))
         try:
-            response = await _complete(deps, messages, tool_specs)
+            response = await _complete_live(deps, messages, tool_specs)
         except _PlanAbortedError as aborted:
             return _terminal(aborted.error)
 
@@ -216,7 +235,6 @@ def make_plan(deps: AgentDeps) -> Any:
         if unparsed is not None:
             return _terminal(unparsed)
 
-        await _stream_prose(deps.events, response.content)
         return _plan_update(state, response)
 
     return plan

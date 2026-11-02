@@ -9,6 +9,7 @@ import type { AgentEvent, AgentRunState } from "./types";
 
 const STREAM_EVENT_TYPES = [
   "token",
+  "status",
   "tool_call",
   "tool_result",
   "diff_proposed",
@@ -39,7 +40,7 @@ export function useRunStream(projectId: string, setRun: Dispatch<SetStateAction<
         } catch {
           return;
         }
-        setRun((prev) => applyEvent(prev, event));
+        setRun((prev) => ({ ...applyEvent(prev, event), lastEventAt: Date.now() }));
         if (event.type === "done" || event.type === "error") closeStream();
       };
       for (const type of STREAM_EVENT_TYPES) {

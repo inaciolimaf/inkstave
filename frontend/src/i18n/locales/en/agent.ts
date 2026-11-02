@@ -35,6 +35,27 @@ const dict = {
   run: {
     stop: "Stop",
     stopLabel: "Stop the run",
+    stages: {
+      sending: "Sending…",
+      queued: "Waiting to start…",
+      thinking: "Thinking…",
+      writing: "Writing…",
+      tool_input: "Preparing a change…",
+      tool: "Using a tool…",
+      stopping: "Stopping…",
+    },
+    tools: {
+      search_project: "Searching the project…",
+      read_file: "Reading a file…",
+      list_tree: "Listing the files…",
+      locate_section: "Locating a section…",
+      propose_edit: "Saving the proposal…",
+      view_image: "Looking at an image…",
+      propose_create: "Saving the proposal…",
+      propose_delete: "Saving the proposal…",
+      propose_move: "Saving the proposal…",
+    },
+    slow: "No news for a while. Long answers take time, or you can stop and try again.",
   },
   error: {
     retry: "Retry",

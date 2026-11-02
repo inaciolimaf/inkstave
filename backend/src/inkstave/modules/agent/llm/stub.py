@@ -21,6 +21,7 @@ from collections.abc import AsyncIterator
 from uuid import uuid4
 
 from inkstave.modules.agent.llm.base import (
+    DeltaHandler,
     LLMMessage,
     LLMResponse,
     LLMStreamChunk,
@@ -97,6 +98,7 @@ class StubAgentLLM:
         tools: list[ToolSpec] | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        on_delta: DeltaHandler | None = None,
     ) -> LLMResponse:
         await asyncio.sleep(self._delay_s)
         return self._plan(messages)
