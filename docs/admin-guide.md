@@ -231,8 +231,8 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `OPENROUTER_API_KEY` | No | `—` | needed only with `AGENT_LLM_PROVIDER=openrouter` | backend, worker |
 | `OPENROUTER_BASE_URL` | No | `https://openrouter.ai/api/v1` | OpenAI-SDK base URL | backend, worker |
 | `AGENT_TEMPERATURE` | No | `0.2` | OpenRouter only; current Claude models reject it | backend, worker |
-| `AGENT_MAX_ITERATIONS` | No | `15` | hard cap on plan loops per turn | backend, worker |
-| `AGENT_MAX_TOTAL_TOKENS` | No | `60000` | hard cap on accumulated tokens per turn | backend, worker |
+| `AGENT_MAX_ITERATIONS` | No | `50` | hard cap on plan loops per turn | backend, worker |
+| `AGENT_MAX_TOTAL_TOKENS` | No | `256000` | hard cap on accumulated tokens per turn | backend, worker |
 | `AGENT_MAX_TOKENS_PER_CALL` | No | `32000` | max_tokens per LLM call | backend, worker |
 | `AGENT_REQUEST_TIMEOUT_S` | No | `120` | per-call timeout for the real client | backend, worker |
 | `AGENT_JOB_TIMEOUT_S` | No | `600` | ARQ timeout for one whole agent run; keep above the per-call timeout | backend, worker |
@@ -256,7 +256,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` | No | `10` | per-user agent run-rate cap (runs per minute) | backend, worker |
 | `AGENT_MAX_CONCURRENT_RUNS_PER_USER` | No | `2` | max simultaneous agent runs per user | backend, worker |
 | `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` | No | `20` | per-project agent run-rate cap (runs per minute) | backend, worker |
-| `AGENT_MAX_TOKENS_PER_RUN` | No | `120000` | hard token cap for a single agent run | backend, worker |
+| `AGENT_MAX_TOKENS_PER_RUN` | No | `256000` | hard token cap for a single agent run | backend, worker |
 | `AGENT_MAX_COST_PER_RUN_USD` | No | `0.30` | hard USD cost cap for a single agent run | backend, worker |
 | `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` | No | `2000000` | daily token budget per project | backend, worker |
 | `AGENT_MAX_COST_PER_DAY_PER_USER_USD` | No | `0.30` | daily USD cost budget per user | backend, worker |
