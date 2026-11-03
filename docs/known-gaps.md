@@ -162,7 +162,7 @@ run; the rest were read, not run.
 - The daily compile quota counts requests, is a fixed window and fails open. Concurrency caps are count-then-insert
   with no lock.
 - The effective document size limit is `MAX_REQUEST_BODY_BYTES` (1 MiB), not `MAX_DOCUMENT_BYTES` (2 MB).
-- `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 256000 soft cap stops
+- `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 1000000 soft cap stops
   first.
 - `gzip.decompress` on SyncTeX data has no output bound.
 

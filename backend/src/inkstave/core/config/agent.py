@@ -23,7 +23,7 @@ class AgentSettings(BaseSettings):
     agent_model: str = "claude-haiku-5-5"
     agent_temperature: float = 0.2  # OpenRouter only; current Claude models reject it
     agent_max_iterations: int = 50
-    agent_max_total_tokens: int = 256000
+    agent_max_total_tokens: int = 1000000
     # Output cap per LLM call. Must be large enough for a propose_edit whose
     # new_text is a whole document — too small truncates the tool-call JSON, which
     # then fails to parse (the "_raw" fallback) and the edit is rejected.
@@ -64,7 +64,7 @@ class AgentSettings(BaseSettings):
     agent_max_runs_per_minute_per_user: int = 10
     agent_max_concurrent_runs_per_user: int = 2
     agent_max_runs_per_minute_per_project: int = 20
-    agent_max_tokens_per_run: int = 256000
+    agent_max_tokens_per_run: int = 1000000
     # Per-run cap is kept ≤ the per-day-per-user cap below, so a single run can never
     # blow a user's whole daily budget in one shot (the daily gate only blocks the
     # *next* run once the counter is exhausted).

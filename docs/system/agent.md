@@ -310,13 +310,13 @@ Defaults are from `backend/src/inkstave/core/config/agent.py`, and `.env.example
 | Group | Variables |
 |---|---|
 | Provider | `AGENT_LLM_PROVIDER` `anthropic`; `ANTHROPIC_API_KEY` empty, needed when the real client is built; `AGENT_MODEL` `claude-haiku-5-5`; `OPENROUTER_API_KEY` empty, needed with `openrouter`; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_TEMPERATURE` 0.2, OpenRouter only; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
-| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 50; `AGENT_MAX_TOTAL_TOKENS` 256000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
+| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 50; `AGENT_MAX_TOTAL_TOKENS` 1000000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
 | Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000; `AGENT_TOOL_IMAGE_MAX_BYTES` 3750000 |
 | Diffs | `AGENT_DIFF_CONTEXT_LINES` 3; `AGENT_DIFF_MAX_DOC_CHARS` 400000 |
 | Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_STREAM_TRANSPORT` `sse`, unused |
 | Context | `AGENT_CONTEXT_CACHE` `memory`, and `redis` behaves like `off`; `AGENT_SECTION_EXTRA_COMMANDS` empty; `AGENT_CONTEXT_TOKEN_BUDGET` 8000 and `AGENT_CONTEXT_SURROUNDING_LINES` 40, both unused |
 | Limits, 0 disables | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` 10; `AGENT_MAX_CONCURRENT_RUNS_PER_USER` 2; `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` 20 |
-| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 256000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30 |
+| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30 |
 | Safety | `AGENT_MODEL_COST_TABLE` Claude Haiku 5.5 rates first (they price any model not listed), then gpt-4o-mini, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
 
 Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false),
@@ -328,7 +328,7 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 
 **Timeouts.** `AGENT_REQUEST_TIMEOUT_S` bounds one LLM request. `AGENT_JOB_TIMEOUT_S` is the ARQ `timeout` for the whole turn, and `run_turn` passes the same value to `allow_idle`, because the transaction stays open across model calls. Fifty plan steps at 120 s far exceed 600 s, and the SDK's default two retries are not disabled, so one call can take three times the request timeout. The job timeout is the real ceiling and a slow multi-step turn can hit it.
 
-**The per-run token cap is unreachable with defaults.** `route_after_plan` stops at 256000 and the budget check runs at the start of `plan`, which is reached only through that router, so the per-run cap, also 256000, never fires. The cost cap is out of reach too at the default rates. They bite only when set below the soft cap, as the tests do. `AgentDeps.run_token_budget`, `run_cost_budget_usd` and `cost_per_1k` are set and never read; `_budget_exceeded` reads settings directly.
+**The per-run token cap is unreachable with defaults.** `route_after_plan` stops at 1000000 and the budget check runs at the start of `plan`, which is reached only through that router, so the per-run cap, also 1000000, never fires. The total counts every resent transcript, so it grows with the square of the steps: a turn that reads ten files reaches 256000 in under twenty steps. The cost cap is out of reach too at the default rates. They bite only when set below the soft cap, as the tests do. `AgentDeps.run_token_budget`, `run_cost_budget_usd` and `cost_per_1k` are set and never read; `_budget_exceeded` reads settings directly.
 
 **Day counters miss failed runs.** `record_usage` runs in `persist_results`, so a timed-out or crashed turn adds nothing, though the provider billed it. An unknown model is priced with the first table entry.
 
