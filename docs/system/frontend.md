@@ -263,7 +263,9 @@ like any keystroke. A viewer gets the menu disabled.
    `diff_proposed`, `done` and `error`, and passes each event to `applyEvent`.
 3. `applyEvent` in `frontend/src/modules/agent/reducer.ts` drops repeated `seq` values and unknown event types.
 4. A proposal card calls `useInlineReview.open`, which switches the editor to the proposal's document and starts
-   the review on that document's CodeMirror view. There is no dialog (spec 110). `inlineReviewExtension` is part of
+   the review on that document's CodeMirror view. There is no dialog (spec 110). When the switch is needed, the
+   open path changes before the new editor mounts, so the hook skips the editor that was leaving and starts on the
+   next one (`use-inline-review.test.ts`). `inlineReviewExtension` is part of
    every editor's extensions and draws nothing until a review starts: removed lines struck through on the error
    tint, added text in a block under them, and a toolbar per open hunk with Accept and Reject. A blocked hunk
    (its old lines changed) gets only Reject. A viewer sees the drawing and no buttons.

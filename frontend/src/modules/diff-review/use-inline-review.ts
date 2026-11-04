@@ -176,6 +176,10 @@ export function useInlineReview(options: UseInlineReviewOptions) {
   const [bar, setBar] = useState<BarState | null>(null);
   const remembered = useRef(new Map<string, Decided>());
   const started = useRef<EditorView | null>(null);
+  // The editor that was showing another document when a review asked for a switch. The open path changes at once,
+  // but the proposal's editor mounts a moment later: starting on this one would end the review when it unmounts,
+  // so the user had to click twice.
+  const leaving = useRef<EditorView | null>(null);
   const latest = useRef<Latest>({ ...options, request });
   latest.current = { ...options, request };
   const env = useMemo<HookEnv>(() => ({ latest, remembered, started, setRequest, setBar }), []);
@@ -188,12 +192,15 @@ export function useInlineReview(options: UseInlineReviewOptions) {
   // Start the review once the open document is the proposal's and its editor is mounted.
   useEffect(() => {
     if (!request || !view || openPath !== request.path || started.current === view) return;
+    if (view === leaving.current) return;
+    leaving.current = null;
     loadAndStart(view, request, env);
   }, [request, view, openPath, projectId, canDecide, env]);
 
   /** Opens the review of a proposal, switching the editor to its document first. */
   const open = useCallback((ref: ProposalRef) => {
     const page = latest.current;
+    leaving.current = page.openPath === ref.path ? null : page.view;
     if (!page.openDocument(ref.path)) {
       toast.message(tr("toast.notInProject"));
       return;
