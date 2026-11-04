@@ -144,6 +144,7 @@ are English-only today ([known gaps](known-gaps.md)).
 | Review | `DiffReviewDialog` | "Revisar mudanças" |
 | File operation | `ProposedFileOp`, `StagedFileOp`, `FileOpCard` | "Criar arquivo", "Excluir", "Renomear ou mover" |
 | Selection sent to the agent | `AgentQuote`, `withQuote` | "Pedir ao agente" |
+| Dictation (speech into the message box) | `use-dictation`, `startSession` | "Ditado" |
 | File drawer | `FileDrawer` | "Arquivos" |
 | Hunk | `hunks`, `hunk_count` | "hunk" |
 | Budget | `agent_budget_exceeded` | "Orçamento atingido" |

@@ -1,6 +1,6 @@
 /** Composer, run controls, and error state (spec 46). */
 import { Loader2, Send, Square } from "lucide-react";
-import type { KeyboardEvent, Ref } from "react";
+import type { KeyboardEvent, ReactNode, Ref } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,12 +14,15 @@ export function AgentComposer({
   onChange,
   onSend,
   disabled,
+  mic,
 }: {
   ref?: Ref<HTMLTextAreaElement>;
   value: string;
   onChange: (v: string) => void;
   onSend: (text: string) => void;
   disabled: boolean;
+  /** The dictation button (spec 115), placed before Send. */
+  mic?: ReactNode;
 }) {
   const { t } = useTranslation("agent");
   const submit = () => {
@@ -45,6 +48,7 @@ export function AgentComposer({
         aria-label={t("composer.messageLabel")}
         className="resize-none"
       />
+      {mic}
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

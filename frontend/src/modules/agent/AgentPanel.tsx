@@ -14,6 +14,7 @@ import { AgentTranscript } from "./transcript";
 import { EmptyState, Launcher, PanelFooter, PanelHeader } from "./panel-parts";
 import type { AgentQuote, AgentRequest } from "./quote";
 import { useAgentChat } from "./useAgentChat";
+import { useComposer } from "./use-composer";
 import { useWindowSize, type WindowSize } from "./use-window-size";
 import { WindowResizeHandles } from "./window-resize-handles";
 
@@ -102,17 +103,16 @@ export function AgentPanel({
   const { t } = useTranslation("agent");
   const chat = useAgentChat(projectId, onBeforeSend);
   const windowSize = useWindowSize();
-  const [composerText, setComposerText] = useState("");
-  const [quote, setQuote] = useState<AgentQuote | null>(null);
   const [reviewId, setReviewId] = useState<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const active = ACTIVE_PHASES.includes(chat.run.phase);
+  const composer = useComposer({ open, busy: active, send: chat.send, onClose: () => onOpenChange(false) });
 
   useEffect(() => {
     if (open) composerRef.current?.focus();
   }, [open, request]);
 
-  useEditorRequest(request, chat.send, setQuote);
+  useEditorRequest(request, chat.send, composer.setQuote);
 
   const handleReview = (proposalId: string) => {
     onReviewProposal(proposalId);
@@ -131,9 +131,7 @@ export function AgentPanel({
         aria-modal="false"
         aria-labelledby={titleId}
         aria-description={t("description")}
-        onKeyDown={(e) => {
-          if (e.key === "Escape" && e.currentTarget.contains(e.target as Node)) onOpenChange(false);
-        }}
+        onKeyDown={composer.onKeyDown}
         className={cn(
           "fixed inset-x-0 bottom-12 top-12 z-40 flex-col border-t bg-background",
           "md:bottom-4 md:left-auto md:right-4 md:top-auto",
@@ -156,7 +154,7 @@ export function AgentPanel({
         <Conversation
           chat={chat}
           projectId={projectId}
-          onPickExample={setComposerText}
+          onPickExample={composer.setText}
           onReviewProposal={handleReview}
         />
 
@@ -165,11 +163,13 @@ export function AgentPanel({
         <PanelFooter
           chat={chat}
           active={active}
-          text={composerText}
-          onTextChange={setComposerText}
-          quote={quote}
-          onQuoteChange={setQuote}
+          text={composer.text}
+          onTextChange={composer.setText}
+          quote={composer.quote}
+          onQuoteChange={composer.setQuote}
           composerRef={composerRef}
+          onSend={composer.sendTyped}
+          dictation={composer.dictation}
         />
       </section>
 

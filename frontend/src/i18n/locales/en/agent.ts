@@ -32,6 +32,26 @@ const dict = {
     sendLabel: "Send message",
     sendTooltip: "Send (Enter)",
   },
+  dictation: {
+    start: "Dictate",
+    stop: "Stop dictating",
+    options: "Dictation options",
+    sendAfter: "Send after dictation",
+    listening: "Listening…",
+    lang: { en: "English", pt: "Português (Brasil)" },
+    consent: {
+      text: "Your browser may send the audio to its speech service (for Chrome, Google). Inkstave never receives the audio.",
+      accept: "Continue",
+      cancel: "Cancel",
+    },
+    errors: {
+      "not-allowed": "Microphone access was blocked.",
+      "no-speech": "No speech was heard. Try again.",
+      network: "The browser’s speech service could not be reached.",
+      "audio-capture": "No microphone was found.",
+      unknown: "Dictation stopped unexpectedly.",
+    },
+  },
   run: {
     stop: "Stop",
     stopLabel: "Stop the run",

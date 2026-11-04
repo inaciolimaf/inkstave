@@ -34,6 +34,26 @@ const dict: Dict = {
     sendLabel: "Enviar mensagem",
     sendTooltip: "Enviar (Enter)",
   },
+  dictation: {
+    start: "Ditar",
+    stop: "Parar ditado",
+    options: "Opções de ditado",
+    sendAfter: "Enviar após o ditado",
+    listening: "Ouvindo…",
+    lang: { en: "English", pt: "Português (Brasil)" },
+    consent: {
+      text: "Seu navegador pode enviar o áudio ao serviço de voz dele (no Chrome, o Google). O Inkstave nunca recebe o áudio.",
+      accept: "Continuar",
+      cancel: "Cancelar",
+    },
+    errors: {
+      "not-allowed": "O acesso ao microfone foi bloqueado.",
+      "no-speech": "Nenhuma fala foi ouvida. Tente de novo.",
+      network: "Não foi possível conectar ao serviço de voz do navegador.",
+      "audio-capture": "Nenhum microfone foi encontrado.",
+      unknown: "O ditado parou inesperadamente.",
+    },
+  },
   run: {
     stop: "Parar",
     stopLabel: "Parar a execução",

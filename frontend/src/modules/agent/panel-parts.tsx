@@ -14,9 +14,11 @@ import {
 
 import { AgentComposer, RunControls } from "./controls";
 import type { AgentQuote } from "./quote";
-import { withQuote } from "./quote";
 import { RunStatus } from "./run-status";
 import type { useAgentChat } from "./useAgentChat";
+import { DictateButton } from "./voice/mic-button";
+import { DictationStatus } from "./voice/dictation-status";
+import type { DictationApi } from "./voice/use-dictation";
 
 export function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   const { t } = useTranslation("agent");
@@ -151,6 +153,8 @@ export function PanelFooter({
   quote,
   onQuoteChange,
   composerRef,
+  onSend,
+  dictation,
 }: {
   chat: ReturnType<typeof useAgentChat>;
   active: boolean;
@@ -159,6 +163,8 @@ export function PanelFooter({
   quote: AgentQuote | null;
   onQuoteChange: (quote: AgentQuote | null) => void;
   composerRef: Ref<HTMLTextAreaElement>;
+  onSend: (text: string) => void;
+  dictation: DictationApi;
 }) {
   return (
     <div className="border-t">
@@ -169,21 +175,14 @@ export function PanelFooter({
         </div>
       )}
       {quote && <QuoteChip quote={quote} onClear={() => onQuoteChange(null)} />}
+      <DictationStatus dictation={dictation} />
       <AgentComposer
         ref={composerRef}
         value={text}
         onChange={onTextChange}
         disabled={active}
-        onSend={(text) => {
-          const sentQuote = quote;
-          onTextChange("");
-          onQuoteChange(null);
-          void chat.send(withQuote(text, sentQuote)).then((accepted) => {
-            if (accepted) return;
-            onTextChange(text);
-            onQuoteChange(sentQuote);
-          });
-        }}
+        onSend={onSend}
+        mic={<DictateButton dictation={dictation} disabled={active} />}
       />
     </div>
   );

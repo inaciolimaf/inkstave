@@ -83,6 +83,16 @@ never changes your documents on its own** — proposed changes appear as a
 reject individual hunks, and only when you click **Apply** are the accepted
 changes written to your document (live, through the same collaboration channel).
 
+**Dictate** instead of typing: press the microphone beside Send and speak; the words
+appear in the message box, where you can correct them before sending. Press it again, or
+pause for two seconds, to stop. The dictation language follows the interface, and the menu
+beside the microphone switches it. Dictation never sends a message unless you turn on
+**Send after dictation** in that menu. Ctrl+Shift+M (Cmd+Shift+M on a Mac) toggles it.
+Dictation uses your browser's own speech recognition, which is not available in every browser
+(Firefox has none, so the microphone is absent there). Where the browser cannot recognise speech on
+the device, Inkstave first shows a notice that the browser may send the audio to its speech service
+(for Chrome, Google). Inkstave never receives the audio.
+
 Agent usage is bounded by per-user/project **rate and cost limits** and a daily
 budget; if you hit a limit the run is refused with a clear message. Untrusted
 document/tool content is framed so it can't hijack the assistant.

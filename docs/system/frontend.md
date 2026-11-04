@@ -77,6 +77,9 @@ The frontend has no database. Server state lives in the React Query cache. Local
 |---|---|---|
 | `inkstave.refresh_token` | `localStorage` | The refresh token |
 | `inkstave.agent.open.<projectId>` | `localStorage` | Agent panel open flag |
+| `inkstave.agent.dictation.cloudConsent` | `localStorage` | `1` once the user accepted cloud speech recognition |
+| `inkstave.agent.dictation.sendAfter` | `localStorage` | `1` to send a message when dictation ends |
+| `inkstave.agent.dictation.lang` | `localStorage` | `en-US` or `pt-BR`, the dictation language |
 | `inkstave:split:<projectId>` | `localStorage`, via `autoSaveId` of `react-resizable-panels` | Size of the text and PDF panes |
 | `inkstave:editor-settings` | `localStorage` | Line wrapping; the other fields are ignored |
 | `inkstave:tree-expanded:<projectId>` | `sessionStorage` | Expanded folders |
@@ -201,6 +204,25 @@ on screen with a notice.
 6. `createEditorBridge` opens a short-lived provider per document. `applyTargetToYText` writes one minimal edit
    in a transaction tagged `agent-apply`, so other users' edits outside the region survive.
 
+### Dictation (spec 115)
+
+The microphone beside Send in the agent's message box uses the browser's `SpeechRecognition` and nothing else.
+`voice/speech.ts` is the only file that touches it, and it hands over text only: Inkstave never receives, stores
+or sends audio, and it never calls `getUserMedia`. The button is absent where the API is missing.
+
+1. `useDictation` (`voice/use-dictation.ts`) runs `idle → asking-consent → listening → idle`. `startSession`
+   (`voice/session.ts`) owns the recognizer and its timers: two seconds of silence, or a second press, stop it;
+   a browser that never reports the end is cut off after 1.5 s.
+2. `processLocally` is set when `SpeechRecognition.available` answers `available` for the language. Otherwise the
+   first use shows the notice that the browser may send audio to its speech service; the answer is kept in
+   `localStorage`. Cancel starts nothing.
+3. Interim words show in a muted line above the box; each final phrase is appended to the draft (`useComposer`,
+   `frontend/src/modules/agent/use-composer.ts`). Nothing is sent unless "Send after dictation" is on.
+4. Folding the panel, a send, an unmount or Escape while listening abort the session; Escape also drops the words
+   that session added. Ctrl/Cmd+Shift+M toggles it while the panel has focus.
+5. Errors (`not-allowed`, `no-speech`, `network`, `audio-capture`) are shown in plain words under the box, never as
+   a dialog. The strings live in the `agent` namespace under `dictation`.
+
 ### Notifications, history, sharing
 
 - `NotificationsBell` polls the unread count and loads the list only while open. Dismiss is optimistic and rolls
@@ -298,6 +320,9 @@ Name the projects when running Playwright. A bare `playwright test` runs the sli
 | A hunk that no longer matches is never applied | `frontend/src/modules/diff-review/hunks.test.ts`, "never includes a blocked hunk in the rebased target" |
 | An agent apply keeps a concurrent edit elsewhere | `frontend/src/modules/diff-review/crdt-apply.test.ts`, "converges collaborators and preserves an unrelated concurrent edit (AC6)" |
 | Assistant Markdown cannot run scripts | `frontend/src/modules/agent/transcript.test.tsx`, "sanitizes assistant content (no script execution) (AC10)" |
+| Inkstave never receives or stores audio | `frontend/src/modules/agent/voice/speech.test.ts`, "passes final phrases once and the pending words as interim text" |
+| Dictation never sends a message unless the user chose it | `frontend/src/modules/agent/voice/use-dictation.test.tsx`, "reports sendAfter false by default, so dictation alone never sends" |
+| Cloud recognition needs the user's consent first | `frontend/src/modules/agent/voice/use-dictation.test.tsx`, "asks before cloud recognition and starts nothing when cancelled" |
 | The provider stops on a terminal close | `frontend/src/modules/collab/InkstaveWsProvider.lifecycle.test.ts`, "stops reconnecting after a terminal auth close (4401) — no spin (spec 35)" |
 | A viewer cannot type in the editor | `frontend/src/modules/editor/CollabEditor.test.tsx`, "is non-editable with a 'View only' banner when readOnly (spec 34 AC10)" |
 | Modules import each other only through `index.ts` | No dedicated test; `no-restricted-imports` in `frontend/eslint.config.js` |
