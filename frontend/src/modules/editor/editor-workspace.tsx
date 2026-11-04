@@ -1,5 +1,3 @@
-import type { EditorView } from "@codemirror/view";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Desk } from "@/components/manuscript";
@@ -11,24 +9,27 @@ import { FileTreePanel } from "@/modules/file-tree";
 import type { TreeEntity } from "@/modules/file-tree";
 import { PreviewPane } from "@/modules/pdf-preview";
 import type { Problem } from "@/modules/pdf-preview";
-import { getProject, projectKey } from "@/modules/projects";
-import { InsertMenu } from "@/modules/insert-tools";
 import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
-
 import { AskAgentButton } from "./ask-agent-button";
 import { ContentPane } from "./content-pane";
-import { EditorBar } from "./editor-bar";
 import { MobileTabs, type MobileView } from "./mobile-tabs";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useAgentOpen } from "./use-agent-open";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
 import { useDocumentBridge } from "./use-document-bridge";
-import { useMainDocumentText } from "./use-main-document-text";
-import { useAgentAsks, useFlushBeforeCompile, useSourceJumps, useWorkspaceTree } from "./workspace-hooks";
+import {
+  useAgentAsks,
+  useFlushBeforeCompile,
+  useSourceJumps,
+  useWorkspaceDialogs,
+  useWorkspaceTree,
+} from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useSourceSync } from "./use-source-sync";
 import { type WorkspaceOutline, useWorkspaceOutline } from "./workspace-outline";
+import { useWorkspaceChat } from "./workspace-chat";
+import { WorkspaceBar } from "./workspace-bar";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
@@ -174,21 +175,6 @@ function WorkspaceContent({
   );
 }
 
-/** The Insert menu, with the main document's text for the packages it loads (spec 114). */
-function WorkspaceInsert({
-  projectId,
-  view,
-  readOnly,
-}: {
-  projectId: string;
-  view: EditorView | null;
-  readOnly: boolean;
-}) {
-  const project = useQuery({ queryKey: projectKey(projectId), queryFn: () => getProject(projectId) });
-  const mainText = useMainDocumentText(projectId, project.data?.rootDocId);
-  return <InsertMenu view={view} readOnly={readOnly} mainText={mainText} />;
-}
-
 /** The whole editor screen (spec 107): one bar, the text and the PDF, and the rest on demand. */
 export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<TreeEntity | null>(null);
@@ -202,9 +188,9 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const dialogs = useWorkspaceDialogs();
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
+  const chat = useWorkspaceChat(projectId, agentOpen, setAgentOpen);
   const documentBridge = useDocumentBridge(projectId, treeRoot);
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
@@ -239,20 +225,19 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   return (
     <Desk
       bar={
-        <EditorBar
+        <WorkspaceBar
           projectId={projectId}
           projectName={project?.name}
-          fileName={sync.openDoc?.name}
-          onOpenFiles={() => setFilesOpen((v) => !v)}
+          sync={sync}
           compileSlotRef={slots.setCompile}
-          historyDisabled={sync.openDoc?.type !== "doc"}
-          onOpenHistory={() => setHistoryOpen(true)}
-          onOpenShare={() => setShareOpen(true)}
-          insert={<WorkspaceInsert projectId={projectId} view={sync.editorView} readOnly={readOnly} />}
+          readOnly={readOnly}
+          chatButton={chat.button}
+          dialogs={dialogs}
+          onOpenFiles={() => setFilesOpen((v) => !v)}
         />
       }
     >
-      <ShareDialog projectId={projectId} open={shareOpen} onOpenChange={setShareOpen} />
+      <ShareDialog projectId={projectId} open={dialogs.shareOpen} onOpenChange={dialogs.setShareOpen} />
       <WorkspaceDrawers
         projectId={projectId}
         openDoc={sync.openDoc}
@@ -261,8 +246,9 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         agentRequest={asks.request}
         documentBridge={documentBridge}
         onBeforeSend={flushBeforeCompile}
-        historyOpen={historyOpen}
-        onHistoryOpenChange={setHistoryOpen}
+        historyOpen={dialogs.historyOpen}
+        onHistoryOpenChange={dialogs.setHistoryOpen}
+        side={chat.side}
       />
       <Panes
         projectId={projectId}

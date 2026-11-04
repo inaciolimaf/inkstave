@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 import { AgentComposer, RunControls } from "./controls";
 import type { AgentQuote } from "./quote";
@@ -42,6 +43,36 @@ export function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   );
 }
 
+export type SideView = "agent" | "chat";
+
+/** The agent and the project chat share one window; this switch picks which one it shows (spec 117). */
+export function SideSwitch({ view, onChange }: { view: SideView; onChange: (view: SideView) => void }) {
+  const { t } = useTranslation(["agent", "discussion"]);
+  const option = (value: SideView, label: string) => (
+    <button
+      type="button"
+      aria-pressed={view === value}
+      onClick={() => onChange(value)}
+      className={cn(
+        "h-7 rounded px-2.5 text-small font-medium",
+        view === value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div
+      role="group"
+      aria-label={t("agent:sideSwitch.label")}
+      className="flex min-w-0 flex-1 items-center gap-1"
+    >
+      {option("agent", t("agent:sideSwitch.agent"))}
+      {option("chat", t("discussion:tabs.chat"))}
+    </div>
+  );
+}
+
 export function PanelHeader({
   titleId,
   title,
@@ -49,6 +80,7 @@ export function PanelHeader({
   onMinimize,
   large,
   onToggleLarge,
+  side,
 }: {
   titleId: string;
   title: string;
@@ -56,38 +88,49 @@ export function PanelHeader({
   onMinimize: () => void;
   large: boolean;
   onToggleLarge: () => void;
+  /** Present when the window also holds the project chat: the switch replaces the title. */
+  side?: { view: SideView; onViewChange: (view: SideView) => void };
 }) {
   const { t } = useTranslation("agent");
+  const agentView = side === undefined || side.view === "agent";
   return (
     <div className="flex items-center gap-1 border-b py-1.5 pl-3 pr-1.5 md:pl-6">
-      <h2 id={titleId} className="min-w-0 flex-1 truncate font-serif text-heading font-medium">
-        {title}
-      </h2>
-      <Button
-        size="icon"
-        variant="ghost"
-        className="size-7"
-        aria-label={t("newChat")}
-        onClick={() => void chat.newChat()}
-      >
-        <MessageSquarePlus className="size-4" />
-      </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="sm" variant="ghost" className="h-7">
-            {t("sessions")}
+      {side ? (
+        <SideSwitch view={side.view} onChange={side.onViewChange} />
+      ) : (
+        <h2 id={titleId} className="min-w-0 flex-1 truncate font-serif text-heading font-medium">
+          {title}
+        </h2>
+      )}
+      {agentView && (
+        <>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7"
+            aria-label={t("newChat")}
+            onClick={() => void chat.newChat()}
+          >
+            <MessageSquarePlus className="size-4" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
-          {chat.sessions.length > 0 && <DropdownMenuSeparator />}
-          {chat.sessions.map((s) => (
-            <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
-              {s.title ?? t("untitledChat")}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="ghost" className="h-7">
+                {t("sessions")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void chat.newChat()}>{t("newChat")}</DropdownMenuItem>
+              {chat.sessions.length > 0 && <DropdownMenuSeparator />}
+              {chat.sessions.map((s) => (
+                <DropdownMenuItem key={s.id} onClick={() => void chat.selectSession(s.id)}>
+                  {s.title ?? t("untitledChat")}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
       <Button
         size="icon"
         variant="ghost"

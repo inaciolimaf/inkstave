@@ -15,6 +15,8 @@ from inkstave.modules.agent.file_ops import routes as agent_file_op_routes
 from inkstave.modules.auth.routes import auth, users
 from inkstave.modules.compile.routes import compile as compile_routes
 from inkstave.modules.compile.routes import logparse, synctex
+from inkstave.modules.discussion.routes import chat as chat_routes
+from inkstave.modules.discussion.routes import events as event_routes
 from inkstave.modules.history import routes as history
 from inkstave.modules.notifications import routes as notifications
 from inkstave.modules.projects.routes import documents, files, project_import, projects, sharing, tree
@@ -33,6 +35,8 @@ api_v1.include_router(files.router)
 api_v1.include_router(compile_routes.router)
 api_v1.include_router(synctex.router)
 api_v1.include_router(logparse.router)
+api_v1.include_router(chat_routes.router)
+api_v1.include_router(event_routes.router)
 api_v1.include_router(history.router)
 api_v1.include_router(notifications.router)
 api_v1.include_router(agent_routes.router)

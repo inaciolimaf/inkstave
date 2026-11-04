@@ -137,6 +137,14 @@ are English-only today ([known gaps](known-gaps.md)).
 | Snapshot | `base_snapshot`, `crdt_document_state` | — |
 | Compaction | `compact_history` | — |
 
+## Project chat and events
+
+| Term | Code | Portuguese |
+|---|---|---|
+| Project chat | `ProjectChatMessage`, `ProjectChatRead` | "Chat do projeto" |
+| Project event stream | `project:events`, `project_events_stream` | — |
+| Unread count | `unread_count`, `ChatService.unread_count` | "não lidas" |
+
 ## Notifications and e-mail
 
 | Term | Code | Portuguese |

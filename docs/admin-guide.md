@@ -144,6 +144,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `RATE_LIMIT_COMPILE_DAILY` | No | `30/86400` | per-user daily compile quota (anti-DoS, spec 105) | backend |
 | `RATE_LIMIT_AGENT` | No | `30/60` | per-user agent cap | backend |
 | `RATE_LIMIT_UPLOAD` | No | `60/60` | per-user upload cap | backend |
+| `RATE_LIMIT_CHAT` | No | `30/60` | project chat posts, per user per project (spec 117) | backend |
 | `ARGON2_TIME_COST` | No | `3` | iterations | backend |
 | `ARGON2_MEMORY_COST` | No | `65536` | KiB of memory | backend |
 | `ARGON2_PARALLELISM` | No | `4` | lanes | backend |
@@ -192,6 +193,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `COMPILE_JOB_TIMEOUT_S` | No | `120` | ARQ job timeout (must exceed engine timeout) | worker |
 | `COMPILE_QUEUE_NAME` | No | `compiles` | ARQ queue / Redis key prefix | backend, worker |
 | `COMPILE_SSE_KEEPALIVE_S` | No | `15` | SSE keep-alive comment interval | backend |
+| `PROJECT_EVENTS_KEEPALIVE_S` | No | `15` | project event stream keep-alive; membership is re-checked at each one (spec 117) | backend |
 | `COMPILE_CANCEL_FLAG_TTL_S` | No | `300` | TTL for the Redis cancel flag | backend, worker |
 | `SYNCTEX_MAX_GZ_BYTES` | No | `33554432` | refuse to parse synctex.gz larger than this (32 MiB) | backend |
 | `SYNCTEX_INDEX_CACHE_SIZE` | No | `16` | parsed synctex indices cached per process (0 disables) | backend |

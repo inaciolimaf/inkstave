@@ -76,6 +76,8 @@ not trust nginx's forwarded headers. *Why:* Docker is left untouched for now.
 (`_admit` in `backend/src/inkstave/modules/collab/ws/router.py`, `sse_user` in
 `backend/src/inkstave/modules/auth/deps.py`). The same holds when a collaborator is removed or demoted:
 `can_write` is fixed at join. *Why:* it needs a kick channel from the revoking request to every instance.
+The project event stream (`backend/src/inkstave/modules/discussion/events/stream.py`) is the exception: it
+re-checks membership at every keep-alive, so a removed member's stream ends within one interval.
 
 **Refresh-token reuse detection misses `sid`.** `_validate_refresh` in
 `backend/src/inkstave/modules/auth/accounts/login.py` revokes the refresh family in Redis but does not call

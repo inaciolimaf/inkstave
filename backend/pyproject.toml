@@ -187,7 +187,7 @@ layers = ["inkstave.modules", "inkstave.infra", "inkstave.core"]
 name = "module order, top to bottom"
 type = "layers"
 containers = ["inkstave.modules"]
-layers = ["admin | agent", "compile", "history", "collab", "projects", "notifications", "auth"]
+layers = ["admin | agent", "compile", "discussion", "history", "collab", "projects", "notifications", "auth"]
 ignore_imports = [
     # The room builds the history capture service and feeds it each CRDT update, while history
     # reads CRDT state back. Target: collab emits an update event that history subscribes to.
@@ -233,6 +233,13 @@ name = "compile: other modules only use its public interface"
 type = "forbidden"
 source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
 forbidden_modules = ["inkstave.modules.compile.assembly", "inkstave.modules.compile.deps", "inkstave.modules.compile.logparse", "inkstave.modules.compile.models", "inkstave.modules.compile.outputs", "inkstave.modules.compile.queue", "inkstave.modules.compile.routes", "inkstave.modules.compile.running", "inkstave.modules.compile.schemas", "inkstave.modules.compile.synctex"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "discussion: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.discussion.chat", "inkstave.modules.discussion.events", "inkstave.modules.discussion.errors", "inkstave.modules.discussion.models", "inkstave.modules.discussion.routes", "inkstave.modules.discussion.schemas"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

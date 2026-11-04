@@ -127,6 +127,8 @@ class AuthSettingsMixin:
     rate_limit_compile: str = "20/60"
     rate_limit_agent: str = "30/60"
     rate_limit_upload: str = "60/60"
+    # Project chat posts, per user per project (spec 117).
+    rate_limit_chat: str = "30/60"
     # Daily anti-DoS compile quota for public multi-tenant operation (spec 105):
     # 30 compiles per user per 24h. Layered on top of the per-minute compile cap.
     rate_limit_compile_daily: str = "30/86400"
@@ -264,6 +266,8 @@ class CompileSettingsMixin:
     compile_job_timeout_s: int = 120
     compile_queue_name: str = "compiles"
     compile_sse_keepalive_s: int = 15
+    # Keep-alive interval of the project event stream; also how often it re-checks membership (spec 117).
+    project_events_keepalive_s: int = 15
     compile_cancel_flag_ttl_s: int = 300
 
 

@@ -78,6 +78,7 @@ export function EditorBar({
   onOpenHistory,
   onOpenShare,
   insert,
+  chatButton,
 }: {
   projectId: string;
   projectName: string | undefined;
@@ -89,6 +90,8 @@ export function EditorBar({
   onOpenShare: () => void;
   /** The Insert menu (spec 114); it needs the open document, so the workspace renders it. */
   insert?: ReactNode;
+  /** The project chat's button, with its unread count (spec 117). */
+  chatButton?: ReactNode;
 }) {
   const { t } = useTranslation(["editor", "common"]);
   return (
@@ -117,6 +120,7 @@ export function EditorBar({
           {t("toolbar.share")}
         </Button>
         {insert}
+        {chatButton}
         <NotificationsBell />
         <MoreMenu
           projectId={projectId}

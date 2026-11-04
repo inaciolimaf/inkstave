@@ -87,3 +87,10 @@ export function useAgentAsks(openDoc: TreeEntity | null, setAgentOpen: (open: bo
   };
   return { request, aboutSelection, aboutProblem };
 }
+
+/** Which of the bar's dialogs is open: share and history. */
+export function useWorkspaceDialogs() {
+  const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  return { shareOpen, setShareOpen, historyOpen, setHistoryOpen };
+}

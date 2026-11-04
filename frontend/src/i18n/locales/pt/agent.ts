@@ -5,6 +5,10 @@ const dict: Dict = {
   ariaLabel: "Agente de IA",
   minimize: "Minimizar o agente",
   launcher: "Agente",
+  sideSwitch: {
+    label: "Agente ou chat",
+    agent: "Agente",
+  },
   working: "trabalhando",
   window: {
     resize: "Redimensionar a janela do agente",
