@@ -3,14 +3,14 @@
  * `suggest` requests with the engine of `spell-engine.ts`. Its only network calls fetch dictionary files;
  * the text of the document never leaves the browser.
  */
-import { createSpellEngine, fetchDictionaryText, type SpellEngine } from "./spell-engine";
+import { createSpellEngine, fetchDictionaryBytes, type SpellEngine } from "./spell-engine";
 import type { SpellRequest, SpellResponse } from "./spell-protocol";
 
 /** Created by the first request, which carries the base URL the dictionaries are served from. */
 let engine: SpellEngine | null = null;
 
 function engineFor(base: string): SpellEngine {
-  engine ??= createSpellEngine(fetchDictionaryText, base);
+  engine ??= createSpellEngine(fetchDictionaryBytes, base);
   return engine;
 }
 

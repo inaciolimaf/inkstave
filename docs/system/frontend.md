@@ -40,7 +40,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | PDF | `pdfjs-dist` | ^4.9.0 | 4.10.38 |
 | Equation editor | `mathlive` (MIT), loaded on first use | 0.111.1 | 0.111.1 |
 | i18n | `i18next`, `react-i18next`, `i18next-browser-languagedetector` | ^26.3.1, ^17.0.8, ^8.2.1 | 26.3.1, 17.0.8 |
-| Spelling | `nspell`, `@types/nspell` | ^2.1.5, ^2.1.6 (dev) | 2.1.5, 2.1.6 |
+| Spelling | `hunspell-asm` (MIT wrapper; Hunspell under MPL-1.1), in the spell worker only | 4.0.2 | 4.0.2 |
 | Styling | `tailwindcss`, `tailwindcss-animate`, Radix primitives | ^3.4.17 | 3.4.19 |
 | Language and build | `typescript`, `vite` | ^5.7.2, ^5.4.11 | 5.9.3, 5.4.21 |
 | API types | `openapi-typescript` | ^7.13.0 | 7.13.0 |
@@ -321,8 +321,8 @@ changes it later.
    it has not asked about in this language, and marks the misspelled ones that `accepts` does not keep with the
    `cm-misspelled` class (a wavy underline in `--error-text`).
 4. `spell-client.ts` owns one worker per tab, created by the first request, so a project with the check off never
-   starts it. Each request has a 15 s deadline. `spell.worker.ts` answers with `spell-engine.ts`: nspell over the
-   Hunspell pair at `dictionaries/<language>.aff.gz` and `.dic.gz`, unzipped in the worker and loaded once per language.
+   starts it. Each request has a 15 s deadline. `spell.worker.ts` answers with `spell-engine.ts`: Hunspell compiled to
+   WebAssembly (`hunspell-asm`, compiled once per worker) over the Hunspell pair at `dictionaries/<language>.aff.gz` and `.dic.gz`, unzipped in the worker and loaded once per language.
    A failed load is forgotten, so the next request retries.
 5. A right click on a mark (a long press where the browser sends `contextmenu`) opens `SpellMenu`: up to five
    suggestions, then "Add to dictionary" (`POST /api/v1/me/dictionary`, applied at once) and "Ignore in this document"
@@ -344,7 +344,11 @@ output folder is git-ignored. Their licences are in the ADR `docs/adr/0113-spell
 | `en-US` | `en-US.aff.gz`, `en-US.dic.gz`, `en-US.LICENSE.txt` | npm `dictionary-en` 4.0.0 (wooorm/dictionaries, from SCOWL) | `(MIT AND BSD)`; the notices are in the `.LICENSE.txt` |
 | `pt-BR` | `pt-BR.aff.gz`, `pt-BR.dic.gz`, `pt-BR.LICENSE.txt` | npm `dictionary-pt` 4.0.0 (wooorm/dictionaries, from LibreOffice VERO pt_BR) | `(LGPL-3.0 OR MPL-2.0)`; used under MPL-2.0, unmodified |
 
-The engine is `nspell` 2.1.5 (MIT), with `@types/nspell` 2.1.6 for development. To add a language: add its npm
+The engine is `hunspell-asm` 4.0.2 (ADR 0122), which loads the pt-BR dictionary in about 350 ms; nspell, the first
+engine, never finished building it. Its ESM build calls namespace imports of CommonJS functions, which a bundle cannot
+call, so `frontend/vite-plugins/hunspell-interop.ts` rewrites them to default imports, as a Rollup plugin for the worker
+bundle and an esbuild plugin for the dev server's dependency pre-bundling (`frontend/vite.config.ts`). The test
+`the real pt-BR dictionary` in `spell-engine.test.ts` loads the real Portuguese files. To add a language: add its npm
 dictionary package to devDependencies and to `sources` in `frontend/scripts/copy-dictionaries.mjs`, check its licence
 in the ADR, add it to `SPELL_LANGUAGES` and `DICTIONARY_LANGUAGES` in `frontend/src/modules/spellcheck/types.ts`, and
 add its label to `spelling-menu-items.tsx` and both locales.

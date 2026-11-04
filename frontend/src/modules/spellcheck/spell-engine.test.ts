@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createSpellEngine, decodeDictionary, type FetchText } from "./spell-engine";
+import { createSpellEngine, decodeDictionary, type FetchBytes } from "./spell-engine";
 
 // A tiny Hunspell pair, so the tests never load a real dictionary.
 const AFF = "SET UTF-8\nTRY esianrtolcdugmphbyfvkwz\n";
@@ -11,11 +12,11 @@ const DIC = "4\nthe\ncat\nmethodology\nsat\n";
 
 function fakeFetch(files: Record<string, string>) {
   const requested: string[] = [];
-  const fetchText = vi.fn<FetchText>(async (url) => {
+  const fetchText = vi.fn<FetchBytes>(async (url) => {
     requested.push(url);
     const body = files[url];
     if (body === undefined) throw new Error(`404 ${url}`);
-    return body;
+    return new TextEncoder().encode(body);
   });
   return { fetchText, requested };
 }
@@ -68,6 +69,21 @@ describe("spell engine", () => {
   });
 });
 
+describe("the real pt-BR dictionary", () => {
+  // Regression: nspell never finished building this dictionary, so Portuguese spell check never loaded.
+  it("loads in a few seconds and knows Portuguese words", async () => {
+    const dir = dirname(createRequire(import.meta.url).resolve("dictionary-pt"));
+    const files: Record<string, Uint8Array> = {
+      "/dictionaries/pt-BR.aff.gz": readFileSync(join(dir, "index.aff")),
+      "/dictionaries/pt-BR.dic.gz": readFileSync(join(dir, "index.dic")),
+    };
+    const engine = createSpellEngine(async (url) => files[url]!, "/");
+    const words = ["contribuições", "seguem", "Revisão", "trabalhao"];
+    expect(await engine.check("pt-BR", words)).toEqual(["trabalhao"]);
+    expect(await engine.suggest("pt-BR", "trabalhao")).toContain("trabalho");
+  }, 10_000);
+});
+
 describe("dictionary files", () => {
   async function gzip(text: string): Promise<Uint8Array> {
     const body = new Response(new TextEncoder().encode(text)).body!;
@@ -76,11 +92,12 @@ describe("dictionary files", () => {
   }
 
   it("unzips a gzipped dictionary", async () => {
-    expect(await decodeDictionary(await gzip(DIC))).toBe(DIC);
+    expect(new TextDecoder().decode(await decodeDictionary(await gzip(DIC)))).toBe(DIC);
   });
 
-  it("takes plain text as it is when the server has already unzipped it", async () => {
-    expect(await decodeDictionary(new TextEncoder().encode(AFF))).toBe(AFF);
+  it("takes plain bytes as they are when the server has already unzipped them", async () => {
+    const plain = new TextEncoder().encode(AFF);
+    expect(await decodeDictionary(plain)).toBe(plain);
   });
 });
 

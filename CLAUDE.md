@@ -131,6 +131,7 @@ frontend/
   tests/            cross-cutting Vitest suites (router, boundaries, e2e route list, contrast, CSS rules)
   e2e/              Playwright: routes.spec.ts, mobile.spec.ts, a11y.spec.ts, flows/
   scripts/          copy-dictionaries.mjs: the spell-check dictionaries, from npm packages, before dev and build (spec 113)
+  vite-plugins/     build-time fixes for dependencies (hunspell-interop.ts, ADR 0122); `build/` is git-ignored
 infra/              nginx config, Tectonic package set and sandbox image
 scripts/            function-size lint, timing, dependency audit, bundle budget
 tools/              docs_coverage.py (`make docs`)
