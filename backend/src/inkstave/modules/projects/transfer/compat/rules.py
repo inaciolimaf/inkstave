@@ -15,7 +15,23 @@ from typing import Any
 
 from inkstave.core.errors import AppError
 
-COMPAT_RULES_PATH = Path("infra/tectonic/compat-rules.toml")
+_RULES_RELATIVE = Path("infra/tectonic/compat-rules.toml")
+# The image copies the file under its working directory; a checkout keeps it at the repository root, which is
+# not the working directory when the backend runs from backend/ (the e2e bring-up, `make` targets).
+# This file sits at backend/src/inkstave/modules/projects/transfer/compat/, seven levels below that root.
+_CHECKOUT_DEPTH = 7
+
+
+def _default_rules_path() -> Path:
+    if _RULES_RELATIVE.is_file():
+        return _RULES_RELATIVE
+    parents = Path(__file__).resolve().parents
+    if len(parents) <= _CHECKOUT_DEPTH:
+        return _RULES_RELATIVE
+    return parents[_CHECKOUT_DEPTH] / _RULES_RELATIVE
+
+
+COMPAT_RULES_PATH = _default_rules_path()
 
 SEVERITIES = frozenset({"info", "warning"})
 # Scopes by file kind; any other ``applies_to`` names one bare file.
