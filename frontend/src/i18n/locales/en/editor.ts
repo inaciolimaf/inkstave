@@ -90,6 +90,22 @@ const dict = {
     peopleOnline: "People online",
     moreOnline: "{{count}} more online",
   },
+  spellcheck: {
+    menuLabel: "Spelling",
+    language: {
+      off: "Off",
+      enUS: "English",
+      ptBR: "Português (Brasil)",
+    },
+    addToDictionary: "Add to dictionary",
+    ignoreInDocument: "Ignore in this document",
+    loading: "Looking for suggestions…",
+    noSuggestions: "No suggestions",
+    unavailable: "Spell check unavailable: the dictionary did not load.",
+    saveFailed: "Could not change the spelling language.",
+    dictionaryFull: "Your personal dictionary is full (5000 words).",
+    dictionaryFailed: "Could not update your personal dictionary.",
+  },
 };
 
 export default dict;

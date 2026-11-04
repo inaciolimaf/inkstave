@@ -9,7 +9,7 @@ order, then tick it. Specs 01–108 are already implemented.
 - [ ] 110-inline-diff-review
 - [ ] 111-document-outline
 - [ ] 112-latex-autocomplete
-- [ ] 113-spell-check
+- [x] 113-spell-check
 - [ ] 114-math-and-table-tools
 - [ ] 115-voice-to-agent
 - [ ] 116-link-sharing

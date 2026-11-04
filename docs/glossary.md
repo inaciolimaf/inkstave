@@ -149,6 +149,13 @@ are English-only today ([known gaps](known-gaps.md)).
 | Budget | `agent_budget_exceeded` | "Orçamento atingido" |
 | Rate limit | `agent_rate_limited` | "Limite de uso atingido" |
 
+## Spell check
+
+| Term | Code | Portuguese |
+|---|---|---|
+| Spell check | `spellcheck`, `SpellLanguage` | "Ortografia" |
+| Personal dictionary | `user_dictionary_words`, `usePersonalDictionary` | "Dicionário pessoal" |
+
 ## Platform
 
 | Term | Code | Portuguese |

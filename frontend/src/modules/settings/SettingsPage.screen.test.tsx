@@ -27,6 +27,7 @@ describe("/settings", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
       "Profile",
       "Editor preferences",
+      "Personal dictionary",
       "Email",
       "Password",
       "Delete account",

@@ -3,7 +3,7 @@
 Accounts, sign-in and the end of a session, plus first-run admin setup. A user registers with an
 e-mail and password, or signs in by e-mail link, and gets a short JWT access token and a rotating
 refresh token. Self-service settings (profile, editor preferences, password, e-mail, deletion) live
-here too. From specs 06–08, 10, 59, 63, 92 and 104; setup and provisioning come from spec 57.
+here too. From specs 06–08, 10, 59, 63, 92, 104 and 113; setup and provisioning come from spec 57.
 
 ## Where it is
 
@@ -22,6 +22,10 @@ here too. From specs 06–08, 10, 59, 63, 92 and 104; setup and provisioning com
 | `backend/src/inkstave/modules/auth/throttling/limiter.py` | Per-scope limiter, `client_ip`, `hit_window` |
 | `backend/src/inkstave/modules/auth/throttling/login_attempts.py` | `LoginThrottle` |
 | `backend/src/inkstave/modules/auth/throttling/policies.py` | Named per-user policies (compile, agent, upload), `check_rate_limit` |
+| `backend/src/inkstave/modules/auth/accounts/dictionary.py` | Personal spell-check dictionary: `list_words`, `add_word` (idempotent, 5000-word cap), `remove_word` |
+| `backend/src/inkstave/modules/auth/models/user_dictionary_word.py` | `user_dictionary_words` as a Core table (its key is an expression, so it cannot be a primary key) |
+| `backend/src/inkstave/modules/auth/schemas/dictionary.py` | `DictionaryWordCreate` (trim, 1–64 characters, no whitespace), `DictionaryList`, `DictionaryWordRead` |
+| `backend/src/inkstave/modules/auth/routes/dictionary.py` | `/me/dictionary` routes |
 | `backend/src/inkstave/modules/auth/routes/auth.py`, `backend/src/inkstave/modules/auth/routes/users.py` | `/auth/*` and `/users/*` routes |
 | `backend/src/inkstave/modules/admin` | Admin, health and setup routes, provisioning |
 | `backend/src/inkstave/modules/admin/routes/setup.py`, `backend/src/inkstave/modules/admin/routes/admin.py`, `backend/src/inkstave/modules/admin/routes/health.py` | `/api/setup`; `/admin/ping`; probes and metrics (see the observability file) |
@@ -39,6 +43,7 @@ here too. From specs 06–08, 10, 59, 63, 92 and 104; setup and provisioning com
 |---|---|---|
 | Postgres `users` | Identity, `hashed_password`, `is_admin`, `email_confirmed`, `session_version`, `is_active`, profile, pending e-mail change | `backend/migrations/versions/20260609_1607_2672f3100dca_create_users.py`, `backend/migrations/versions/20260610_1844_fda790a9deeb_user_settings_avatar_editor_preferences_.py`, `backend/migrations/versions/20261030_1000_b4d8f1a2c6e3_add_session_revocation.py` |
 | Postgres `revoked_sessions` | `session_id` (primary key, no foreign key), `expires_at` (indexed) | `backend/migrations/versions/20261030_1000_b4d8f1a2c6e3_add_session_revocation.py` |
+| Postgres `user_dictionary_words` | `user_id` (cascade), `word`, `created_at`; unique index `uq_user_dictionary_words_user_lower_word` on `(user_id, lower(word))` | `backend/migrations/versions/20261104_1200_4dd4cd5a3e49_spec113_spellcheck.py` |
 | Postgres `auth_tokens` | Link tokens: `purpose`, `user_id` (cascade), `email`, unique `token_hash`, `expires_at`, `consumed_at` | `backend/migrations/versions/20260612_1200_a3c7e9d21f44_create_auth_tokens.py` |
 | Redis `refresh:{jti}` | JSON: `user_id`, `family_id`, `rotated`, `created_at`, `expires_at`. TTL is the refresh lifetime | `RefreshStore.store_refresh` |
 | Redis `refresh_family_revoked:{family_id}` | Family marker, TTL is the refresh lifetime | `RefreshStore.revoke_family` |
@@ -81,6 +86,9 @@ Every 401 is `unauthorized` with `WWW-Authenticate: Bearer`.
 | PATCH `/api/v1/users/me` | Update `display_name`, `avatar_url` | 401 `unauthorized` |
 | DELETE `/api/v1/users/me` | Hard delete after password and `confirm: true` | 401 `unauthorized`, 422 |
 | PUT `/api/v1/users/me/editor-preferences` | Replace `theme`, `font_size`, `keymap` | 401 `unauthorized` |
+| GET `/api/v1/me/dictionary` | The personal spell-check dictionary, `{"words": [...]}`, sorted without case | 401 `unauthorized` |
+| POST `/api/v1/me/dictionary` | Add a word, 201; a word already there (in any case) is a no-op | 401 `unauthorized`, 409 `dictionary_full` past 5000, 422 |
+| DELETE `/api/v1/me/dictionary/{word}` | Remove a word, 204; the path accepts `/` | 401 `unauthorized` |
 | POST `/api/v1/users/me/change-password` | New password, end every session | 400 `bad_request`, 401 `unauthorized`, 429 `rate_limited` |
 | POST `/api/v1/users/me/change-email` | Stage an e-mail change, 202 | 400 `bad_request`, 401 `unauthorized`, 409 `conflict` |
 | POST `/api/v1/users/confirm-email-change` | Unauthenticated; apply the change | 400 `bad_request`, 409 `conflict`, 410 `gone` |
@@ -251,8 +259,18 @@ Names from `backend/src/inkstave/core/config/groups.py`, as environment variable
 | `EMAIL_VERIFICATION_TOKEN_TTL`, `EMAIL_CHANGE_TOKEN_TTL`, `MAGIC_LOGIN_TOKEN_TTL`, `PASSWORD_RESET_TOKEN_TTL` | `86400`, `86400`, `600`, `3600` | |
 | `REQUIRE_VERIFIED_EMAIL_TO_LOGIN` | `false` | Password login only; link flows confirm the e-mail |
 
+## Personal dictionary
+
+Spec 113. A word is kept per user and matched without case: `POST` checks for the word under
+`lower(word)`, returns at once when it is there, and otherwise inserts it. `add_word` locks the user row first,
+so two tabs cannot pass the 5000-word cap together. The table cascades with its user. The browser reads the
+list and checks words against it; the server never sees the text it is checked in.
+
 ## Points of attention
 
+- **The personal dictionary's key is a unique index, not a primary key.** The spec named the primary key
+  `(user_id, lower(word))`, which PostgreSQL does not allow: a primary key takes columns, not expressions. The unique
+  index enforces the same rule. See `docs/adr/0113-spell-check-dictionaries.md`.
 - **Reuse does not reach access tokens.** Reuse revokes the family in Redis only. `_validate_refresh`
   raises, so the unit of work would roll back any `revoked_sessions` row, and the code writes none.
   An attacker's access token runs out its TTL, up to 15 minutes by default.

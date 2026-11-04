@@ -93,6 +93,22 @@ const dict: Dict = {
     peopleOnline: "Pessoas online",
     moreOnline: "Mais {{count}} online",
   },
+  spellcheck: {
+    menuLabel: "Ortografia",
+    language: {
+      off: "Desligada",
+      enUS: "Inglês",
+      ptBR: "Português (Brasil)",
+    },
+    addToDictionary: "Adicionar ao dicionário",
+    ignoreInDocument: "Ignorar neste documento",
+    loading: "Buscando sugestões…",
+    noSuggestions: "Sem sugestões",
+    unavailable: "Ortografia indisponível: o dicionário não carregou.",
+    saveFailed: "Não foi possível alterar o idioma da ortografia.",
+    dictionaryFull: "Seu dicionário pessoal está cheio (5000 palavras).",
+    dictionaryFailed: "Não foi possível atualizar seu dicionário pessoal.",
+  },
 };
 
 export default dict;

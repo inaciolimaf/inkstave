@@ -3,7 +3,7 @@
 A project is the container a user creates and works in: a name, an owner, a file tree, and the
 documents and files hanging off that tree. This domain covers the project catalog (create, list,
 rename, delete), the file tree (folders, documents and files as one table), and moving a whole project
-in and out as a `.zip`. It comes from specs 11, 12, 15, 95, 101 and 102. Document text and binary bytes
+in and out as a `.zip`. It comes from specs 11, 12, 15, 95, 101, 102 and 113. Document text and binary bytes
 are in [documents.md](documents.md). Roles and capabilities (`access/`, `sharing/`) are in
 [sharing.md](sharing.md).
 
@@ -14,12 +14,12 @@ The module is `backend/src/inkstave/modules/projects/`.
 | File | Role |
 |---|---|
 | `backend/src/inkstave/modules/projects/__init__.py` | Public interface other modules may import |
-| `backend/src/inkstave/modules/projects/catalog/service.py` | Project create, list, rename, soft delete; `ProjectNotFoundError` |
+| `backend/src/inkstave/modules/projects/catalog/service.py` | Project create, list, rename, soft delete, spell-check language; `ProjectNotFoundError` |
 | `backend/src/inkstave/modules/projects/tree/service.py` | Tree create, rename, move, delete, `get_tree`, `ensure_root` |
 | `backend/src/inkstave/modules/projects/tree/builder.py` | `compute_path`, `build_tree`: pure path and nesting helpers |
 | `backend/src/inkstave/modules/projects/tree/safe_path.py` | `validate_name_segment`, the rules for one name |
 | `backend/src/inkstave/modules/projects/tree/errors.py` | Tree error types |
-| `backend/src/inkstave/modules/projects/routes/projects.py` | Catalog routes, permissions, zip export route |
+| `backend/src/inkstave/modules/projects/routes/projects.py` | Catalog routes, permissions, zip export route, `PATCH .../settings` |
 | `backend/src/inkstave/modules/projects/routes/tree.py` | Tree routes |
 | `backend/src/inkstave/modules/projects/routes/project_import.py` | Zip import, its poll and SSE status routes |
 | `backend/src/inkstave/modules/projects/deps.py` | `get_import_enqueuer` |
@@ -48,7 +48,7 @@ Tests live in `backend/tests/integration/test_projects_api.py`,
 
 | Table | Key columns | Migration |
 |---|---|---|
-| `projects` | `owner_id`, `name`, `root_doc_id`, `deleted_at` | `backend/migrations/versions/20260609_1709_feb8f5c76b1a_create_projects.py` |
+| `projects` | `owner_id`, `name`, `root_doc_id`, `deleted_at`, `spellcheck_language` | `backend/migrations/versions/20260609_1709_feb8f5c76b1a_create_projects.py`; `spellcheck_language` in `backend/migrations/versions/20261104_1200_4dd4cd5a3e49_spec113_spellcheck.py` |
 | `tree_entities` | `project_id`, `parent_id`, `type`, `name`, `is_root` | `backend/migrations/versions/20260609_1722_8b301674ef53_create_tree_entities.py` |
 | `project_imports` | `project_id`, `requested_by`, `status`, `source_key`, `source_bytes`, `job_id`, `entries_total`, `entries_imported`, `error_type`, `error_message`, `started_at`, `finished_at` | `backend/migrations/versions/20260612_1000_e2f4a8b13c90_create_project_imports.py` |
 
@@ -81,11 +81,12 @@ caller's role lacks the capability. The capability column names the check.
 
 | Method and path | Capability | What it does | Errors |
 |---|---|---|---|
-| `POST /projects` | any user | Create project, root folder, owner membership | 422 |
+| `POST /projects` | any user | Create project, root folder, owner membership; optional `spellcheck_language` (default `en-US`) | 422 |
 | `GET /projects` | any user | List projects the caller owns; `limit` 1 to 100, default 50, `offset` | 422 |
 | `GET /projects/{project_id}` | `PROJECT_READ` | Read metadata, cached in Redis | 404 |
 | `GET /projects/{project_id}/permissions` | member | Caller's role and capability codes | 404 |
 | `PATCH /projects/{project_id}` | `PROJECT_WRITE` | Rename | 404, 403, 422 |
+| `PATCH /projects/{project_id}/settings` | `DOC_WRITE` | Set `spellcheck_language` to `off`, `en-US` or `pt-BR`; editors may | 404, 403, 422 |
 | `DELETE /projects/{project_id}` | `PROJECT_DELETE` | Soft delete, sweep compile outputs; 204 | 404, 403 |
 | `GET /projects/{project_id}/export.zip` | `PROJECT_DOWNLOAD` | Stream the project as a zip | 404, 413 `export_too_large` |
 | `POST /projects/import` | any user, `upload` rate limit | Stage a zip, create a new project, enqueue; 202 | 413 `file_too_large`, 415 `unsupported_media_type`, 429 |
@@ -98,7 +99,8 @@ caller's role lacks the capability. The capability column names the check.
 | `PATCH /projects/{project_id}/tree/entities/{entity_id}/move` | `DOC_WRITE` | Reparent | 404 `entity_not_found`, `parent_not_found`, 409 `tree_cycle`, `name_conflict`, `root_immutable`, 422 `parent_not_a_folder` |
 | `DELETE /projects/{project_id}/tree/entities/{entity_id}` | `DOC_WRITE` | Delete, recursive for folders; 204 | 404 `entity_not_found`, 409 `root_immutable` |
 
-Owner holds every capability. Editors lack `PROJECT_WRITE`, `PROJECT_DELETE` and `PROJECT_SHARE`.
+Owner holds every capability. Editors lack `PROJECT_WRITE`, `PROJECT_DELETE` and `PROJECT_SHARE`; they do hold
+`DOC_WRITE`, which is why the spell-check language route is not `PROJECT_WRITE`.
 Viewers have `PROJECT_READ`, `DOC_READ`, `FILE_READ` and `PROJECT_DOWNLOAD`, so a viewer can export.
 
 ## How it works
@@ -109,8 +111,8 @@ Viewers have `PROJECT_READ`, `DOC_READ`, `FILE_READ` and `PROJECT_DOWNLOAD`, so 
 one transaction. `ProjectCreate` and `ProjectRename` strip the name and reject blanks; the database
 also checks `name_not_blank`.
 
-`get_project` is authorized first, then served from `RedisCache` under `project_meta_key`. Rename and
-delete invalidate the key. `rename_project` sets `updated_at = clock_timestamp()` so it advances even
+`get_project` is authorized first, then served from `RedisCache` under `project_meta_key`. Rename, delete
+and the settings route invalidate the key. `rename_project` sets `updated_at = clock_timestamp()` so it advances even
 inside one transaction.
 
 ### Delete
@@ -223,6 +225,13 @@ subscribes before sending its snapshot so no transition is lost.
 | A skipped entry ends `partial` | `backend/tests/integration/test_project_import_job.py::test_import_partial_when_entry_skipped` |
 | The job re-checks ownership and ends `error` if lost | `backend/tests/integration/test_project_import_job.py::test_ownership_defence_marks_error` |
 | A decompressed entry over its limit is stopped by `_read_member_bounded` | no dedicated test |
+
+## Spell-check language
+
+Spec 113. `projects.spellcheck_language` is `off`, `en-US` or `pt-BR`, with a check constraint, and
+existing rows get `en-US`. `ProjectRead` returns it; `ProjectCreate` accepts it, so the client sends the creator's
+interface language. The check itself runs in the browser (see `docs/system/frontend.md`, Spell check); the server
+only stores the choice and never sees the text.
 
 ## Settings
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/modules/notifications";
 
 import { DangerZone } from "./DangerZone";
+import { DictionarySection } from "./DictionarySection";
 import { EditorPreferencesSection } from "./EditorPreferencesSection";
 import { EmailSection } from "./EmailSection";
 import { PasswordSection } from "./PasswordSection";
@@ -48,6 +49,7 @@ export function SettingsPage() {
       <div className="mt-8 space-y-10">
         <ProfileSection />
         <EditorPreferencesSection />
+        <DictionarySection />
         <EmailSection />
         <PasswordSection />
         <DangerZone />

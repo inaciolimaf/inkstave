@@ -23,7 +23,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | `frontend/src/i18n/config.ts` | The global i18next instance and `NAMESPACES` |
 | `frontend/src/i18n/locales` | `en/`, `pt/` and `landing.ts` |
 | `frontend/src/routes` | 14 thin route components, one per screen, each loaded on demand by `lazy` in `router.tsx` |
-| `frontend/src/modules` | 13 feature modules |
+| `frontend/src/modules` | 14 feature modules |
 | `frontend/eslint.config.js` | Lint rules, size caps, boundaries, exceptions |
 | `frontend/playwright.config.ts` | E2e projects and stack bring-up |
 
@@ -39,6 +39,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | CRDT | `yjs`, `y-codemirror.next`, `y-protocols`, `lib0` | ^13.6.31 | 13.6.31 |
 | PDF | `pdfjs-dist` | ^4.9.0 | 4.10.38 |
 | i18n | `i18next`, `react-i18next`, `i18next-browser-languagedetector` | ^26.3.1, ^17.0.8, ^8.2.1 | 26.3.1, 17.0.8 |
+| Spelling | `nspell`, `@types/nspell` | ^2.1.5, ^2.1.6 (dev) | 2.1.5, 2.1.6 |
 | Styling | `tailwindcss`, `tailwindcss-animate`, Radix primitives | ^3.4.17 | 3.4.19 |
 | Language and build | `typescript`, `vite` | ^5.7.2, ^5.4.11 | 5.9.3, 5.4.21 |
 | API types | `openapi-typescript` | ^7.13.0 | 7.13.0 |
@@ -63,10 +64,11 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/notifications` | Bell, inbox list | `NotificationsBell` | none |
 | `frontend/src/modules/pdf-preview` | Compile button, PDF viewer, log, problems, SyncTeX | `PreviewPane`, `useProblems`, `useSyncTex`, types `Problem`, `ProblemSeverity` | none |
 | `frontend/src/modules/projects` | Project list, dialogs, zip import, download | `ProjectsPage`, `getProject`, `useDownloadProject` | auth, notifications |
-| `frontend/src/modules/settings` | Settings sections, e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth |
+| `frontend/src/modules/spellcheck` | Project language, personal dictionary hooks, the spell worker and its engine, the CodeMirror extension, the suggestion menu | `SpellingMenuItems`, `SpellMenu`, `spellcheckFor`, `misspelledAt`, `useSpellcheck`, `usePersonalDictionary`, types `SpellLanguage`, `SpellcheckBinding` | projects |
+| `frontend/src/modules/settings` | Settings sections, e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth, spellcheck |
 | `frontend/src/modules/sharing` | Share dialog, invites, permissions | `ShareDialog`, `AcceptInvitePage`, `usePermissions`, `hasCapability`, `isReadOnly` | auth |
 
-`editor` is the hub: it depends on 11 modules and nothing depends on it except `frontend/src/App.tsx` and
+`editor` is the hub: it depends on 12 modules and nothing depends on it except `frontend/src/App.tsx` and
 `frontend/src/routes/editor.tsx`. The graph has no cycle.
 
 ## Data
@@ -79,6 +81,7 @@ The frontend has no database. Server state lives in the React Query cache. Local
 | `inkstave.agent.open.<projectId>` | `localStorage` | Agent panel open flag |
 | `inkstave:split:<projectId>` | `localStorage`, via `autoSaveId` of `react-resizable-panels` | Size of the text and PDF panes |
 | `inkstave:editor-settings` | `localStorage` | Line wrapping; the other fields are ignored |
+| `inkstave:spellcheck-ignore:<documentId>` | `localStorage` | Words ignored in one document, lowercase |
 | `inkstave:tree-expanded:<projectId>` | `sessionStorage` | Expanded folders |
 
 Access to these stores is wrapped in `try`/`catch`, so a blocked store degrades to defaults. The access token
@@ -208,6 +211,51 @@ on screen with a notice.
 - `HistoryPanel` is shown for an open `doc`. Its write controls need the `doc_write` capability, read through
   `usePermissions` and `hasCapability`.
 
+### Spell check
+
+Spec 113. The spelling language belongs to the project: `projects.spellcheck_language` is `off`, `en-US` or
+`pt-BR`, and any member who may write documents changes it with `PATCH /api/v1/projects/{id}/settings`.
+`useSpellLanguage` reads it from the project query, which the editor bar and the editor share. A new project
+takes the creator's interface language (`createProject` in `frontend/src/modules/projects/use-projects.ts`).
+
+1. `useSpellcheck(projectId, documentId)` builds a `SpellcheckBinding` for the open document. It is null while the
+   language is `off` or the personal dictionary has not loaded, and the dictionary is fetched only while a language is
+   on. `accepts` answers for the personal dictionary and for the document's ignore list, compared in lowercase.
+2. `EditorPane` passes the binding to `CodeMirrorEditor` and `CollabEditor`. They add `spellcheckFor(binding, ...)` through
+   the `spell` compartment, so a change of language or words reconfigures the view and keeps it.
+3. `spellcheckExtension` is a view plugin. 400 ms after an edit, a scroll or a reconfiguration it takes the words of
+   `checkableWords` (`tokenize.ts`) for the visible lines plus 50 lines either side, asks the checker about the words
+   it has not asked about in this language, and marks the misspelled ones that `accepts` does not keep with the
+   `cm-misspelled` class (a wavy underline in `--error-text`).
+4. `spell-client.ts` owns one worker per tab, created by the first request, so a project with the check off never
+   starts it. Each request has a 15 s deadline. `spell.worker.ts` answers with `spell-engine.ts`: nspell over the
+   Hunspell pair at `dictionaries/<language>.aff.gz` and `.dic.gz`, unzipped in the worker and loaded once per language.
+   A failed load is forgotten, so the next request retries.
+5. A right click on a mark (a long press where the browser sends `contextmenu`) opens `SpellMenu`: up to five
+   suggestions, then "Add to dictionary" (`POST /api/v1/me/dictionary`, applied at once) and "Ignore in this document"
+   (`localStorage`). A right click elsewhere returns false from the handler, so the native menu stays.
+6. A failed dictionary load calls `reportFailure`: the status line shows a notice and the plugin stops marking. Editing
+   goes on.
+
+The language menu is `SpellingMenuItems`, in the editor bar's "More actions" menu. The settings page lists the personal
+dictionary with `DictionarySection`.
+
+Dictionaries are static files in `frontend/public/dictionaries/`, served as they are and never bundled. They are not
+committed: `frontend/scripts/copy-dictionaries.mjs` writes them from the pinned npm packages `dictionary-en` and
+`dictionary-pt` (devDependencies) before `dev` and `build` (the `predev` and `prebuild` scripts). Each `.aff` and `.dic`
+is gzipped, because the Portuguese list is 4.5 MB raw, and the package's licence notice is copied beside it. The
+output folder is git-ignored. Their licences are in the ADR `docs/adr/0113-spell-check-dictionaries.md`:
+
+| Language | Files | Source | Licence |
+|---|---|---|---|
+| `en-US` | `en-US.aff.gz`, `en-US.dic.gz`, `en-US.LICENSE.txt` | npm `dictionary-en` 4.0.0 (wooorm/dictionaries, from SCOWL) | `(MIT AND BSD)`; the notices are in the `.LICENSE.txt` |
+| `pt-BR` | `pt-BR.aff.gz`, `pt-BR.dic.gz`, `pt-BR.LICENSE.txt` | npm `dictionary-pt` 4.0.0 (wooorm/dictionaries, from LibreOffice VERO pt_BR) | `(LGPL-3.0 OR MPL-2.0)`; used under MPL-2.0, unmodified |
+
+The engine is `nspell` 2.1.5 (MIT), with `@types/nspell` 2.1.6 for development. To add a language: add its npm
+dictionary package to devDependencies and to `sources` in `frontend/scripts/copy-dictionaries.mjs`, check its licence
+in the ADR, add it to `SPELL_LANGUAGES` and `DICTIONARY_LANGUAGES` in `frontend/src/modules/spellcheck/types.ts`, and
+add its label to `spelling-menu-items.tsx` and both locales.
+
 ### Internationalisation
 
 Every screen is bilingual. `frontend/src/i18n/config.ts` builds one global i18next instance:
@@ -257,7 +305,7 @@ Newsreader from Google Fonts on every page. The landing respects `prefers-reduce
 `AbortController` for React Router under jsdom. `frontend/src/test/setup.ts` adds jest-dom, loads i18n and stubs
 the browser APIs that Radix, CodeMirror and PDF.js expect.
 
-- 101 test files: 98 next to the code in `frontend/src` and 3 in `frontend/tests`.
+- 124 test files: 117 next to the code in `frontend/src` and 7 in `frontend/tests`.
 - `frontend/tests/router.test.tsx` runs the real router and providers over `fakeApi` from
   `frontend/tests/helpers/screen.tsx`.
 - `frontend/tests/module-boundaries.test.ts` fails on an import cycle between modules.
@@ -298,6 +346,10 @@ Name the projects when running Playwright. A bare `playwright test` runs the sli
 | A hunk that no longer matches is never applied | `frontend/src/modules/diff-review/hunks.test.ts`, "never includes a blocked hunk in the rebased target" |
 | An agent apply keeps a concurrent edit elsewhere | `frontend/src/modules/diff-review/crdt-apply.test.ts`, "converges collaborators and preserves an unrelated concurrent edit (AC6)" |
 | Assistant Markdown cannot run scripts | `frontend/src/modules/agent/transcript.test.tsx`, "sanitizes assistant content (no script execution) (AC10)" |
+| Document text never leaves the browser for spell checking | `frontend/src/modules/spellcheck/spell-engine.test.ts`, "has no network API besides fetching the dictionary files" |
+| Commands, keys and math are never checked | `frontend/src/modules/spellcheck/tokenize.test.ts`, the "skips" table |
+| A dictionary load failure never blocks editing | `frontend/src/modules/spellcheck/spellcheck-extension.test.ts`, "keeps the editor working when the dictionary fails to load" |
+| Dictionaries are not in the initial bundle | `make web-budget` (the dictionaries are in `public/`, outside the bundle) |
 | The provider stops on a terminal close | `frontend/src/modules/collab/InkstaveWsProvider.lifecycle.test.ts`, "stops reconnecting after a terminal auth close (4401) — no spin (spec 35)" |
 | A viewer cannot type in the editor | `frontend/src/modules/editor/CollabEditor.test.tsx`, "is non-editable with a 'View only' banner when readOnly (spec 34 AC10)" |
 | Modules import each other only through `index.ts` | No dedicated test; `no-restricted-imports` in `frontend/eslint.config.js` |
@@ -319,6 +371,13 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
 
 ## Points of attention
 
+- **The spell-check menu is a Radix popover, not a Radix context menu.** A context-menu trigger suppresses the native
+  menu for every word of the editor. The popover is anchored at the pointer by a zero-size `PopoverAnchor` and
+  is opened by the plugin's `contextmenu` handler only over a misspelled word. Its items are buttons: Tab reaches
+  them, arrow keys do not (`docs/known-gaps.md`).
+- **Spell check ignores what the dictionary cannot judge.** Words with digits, contractions and elisions (`don't`,
+  `d'água`), all-caps words of up to five letters and one-letter words are not checked. A `[…]` option of a command
+  is skipped too, so `\section[short]{Long}` does not check `short`.
 - **`QueryView` shows the error over stale data.** A failed refetch replaces cached data with the error, and a
   settled query with no data, such as a paused one, counts as an error. `file-tree-body.tsx` keeps the tree on a
   background failure by rendering its alert above it. The invite 410 and the setup skeleton stay early returns.

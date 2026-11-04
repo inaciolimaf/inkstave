@@ -13,6 +13,7 @@ import { useCollabDoc } from "@/modules/collab";
 import { ApiError } from "@/lib/api-client";
 import { useShortcuts } from "@/lib/shortcuts";
 import type { TreeEntity } from "@/modules/file-tree";
+import { useSpellcheck, type SpellcheckBinding } from "@/modules/spellcheck";
 
 import { getDocument } from "./api";
 import { useDocumentAutosave, type DocumentAutosave } from "./autosave/use-document-autosave";
@@ -135,6 +136,7 @@ function PaneBody({
   onEditorView,
   currentUser,
   statusSlot,
+  spellcheck,
 }: {
   document: ReturnType<typeof useOpenDocument>;
   autosave: DocumentAutosave;
@@ -143,6 +145,7 @@ function PaneBody({
   onEditorView: EditorPaneProps["onEditorView"];
   currentUser: { id: string; name: string } | null;
   statusSlot: HTMLElement | null | undefined;
+  spellcheck: SpellcheckBinding | null;
 }) {
   const { t } = useTranslation("editor");
   if (!openEntity) return <EmptyState />;
@@ -158,6 +161,7 @@ function PaneBody({
         onView={onEditorView}
         currentUser={currentUser}
         statusSlot={statusSlot}
+        spellcheck={spellcheck}
       />
     );
   }
@@ -177,6 +181,7 @@ function PaneBody({
           onChange={autosave.onLocalChange}
           onBlur={autosave.saveNow}
           onView={onEditorView}
+          spellcheck={spellcheck}
         />
       )}
     </QueryView>
@@ -209,6 +214,7 @@ export function EditorPane({
     readOnly,
   });
   const { openEntity, isDoc, collabActive, loaded } = openDocument;
+  const spell = useSpellcheck(projectId, openEntity?.type === "doc" ? openEntity.id : null);
   const autosave = useDocumentAutosave(projectId, loaded);
   const { status, hasUnsaved, conflict, lastSavedAt, saveNow, resolveReload, resolveKeepMine } = autosave;
 
@@ -230,6 +236,11 @@ export function EditorPane({
     <>
       {isDoc && !collabActive && (
         <SaveStatusIndicator status={status} onRetry={saveNow} lastSavedAt={lastSavedAt} />
+      )}
+      {spell.failed && (
+        <span role="status" className="text-small text-muted-foreground">
+          {t("spellcheck.unavailable")}
+        </span>
       )}
       {isDoc && onSyncToPdf && (
         <Button
@@ -269,6 +280,7 @@ export function EditorPane({
           onEditorView={onEditorView}
           currentUser={currentUser}
           statusSlot={statusSlot}
+          spellcheck={spell.binding}
         />
       </div>
       <ConflictDialog

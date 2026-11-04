@@ -12,8 +12,8 @@ Domain names come from [`docs/glossary.md`](../glossary.md). What is knowingly u
 | File | Domain | Specs |
 |---|---|---|
 | [overview.md](overview.md) | Architecture, lifecycle, settings, errors, database, migrations, CLI, domain map | 01–05, 53, 56, 57, 62, 63 |
-| [auth.md](auth.md) | Accounts, sessions, `session_version`, `revoked_sessions`, login limits, e-mail link flows, admin setup | 06–08, 10, 59, 63, 92, 104 |
-| [projects.md](projects.md) | Projects, file tree, zip import and export | 11, 12, 15, 95, 101, 102 |
+| [auth.md](auth.md) | Accounts, sessions, `session_version`, `revoked_sessions`, login limits, e-mail link flows, admin setup, personal spell-check dictionary | 06–08, 10, 59, 63, 92, 104, 113 |
+| [projects.md](projects.md) | Projects, file tree, zip import and export, spell-check language per project | 11, 12, 15, 95, 101, 102, 113 |
 | [documents.md](documents.md) | Document content, autosave contract, binary files, object storage | 13, 14, 19 |
 | [compile.md](compile.md) | Compile queue, runners and sandbox, outputs, SyncTeX, log parsing | 21–23, 25–27, 105 |
 | [collab.md](collab.md) | CRDT documents, rooms, the collaboration WebSocket, presence | 28–30, 65, 66, 74 |
@@ -23,7 +23,7 @@ Domain names come from [`docs/glossary.md`](../glossary.md). What is knowingly u
 | [agent.md](agent.md) | AI agent: graph, tools, diffs, streaming, safety | 41–50, 67, 108 |
 | [observability.md](observability.md) | Logs, metrics, tracing, health and readiness | 51 |
 | [security.md](security.md) | Threat model, headers, limits, secrets, proxy trust | 52, 55, 91 |
-| [frontend.md](frontend.md) | Stack, routes, API client, modules, i18n, tests | 09, 16–18, 24, 31, 32, 38, 46, 47, 61, 64 |
+| [frontend.md](frontend.md) | Stack, routes, API client, modules, i18n, spell check, tests | 09, 16–18, 24, 31, 32, 38, 46, 47, 61, 64, 113 |
 
 ## Template
 

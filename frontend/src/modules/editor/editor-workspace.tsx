@@ -225,6 +225,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           onOpenFiles={() => setFilesOpen((v) => !v)}
           compileSlotRef={slots.setCompile}
           historyDisabled={sync.openDoc?.type !== "doc"}
+          readOnly={readOnly}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenShare={() => setShareOpen(true)}
         />

@@ -21,6 +21,8 @@ htmlcov/
 # --- Node / frontend ---
 node_modules/
 dist/
+# Spell-check dictionaries, copied from their npm packages at build time (spec 113).
+frontend/public/dictionaries/
 build/
 .pnpm-store/
 

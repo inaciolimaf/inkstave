@@ -73,6 +73,7 @@ export interface EditorCompartments {
   wrap: Compartment;
   keys: Compartment;
   editable: Compartment;
+  spell: Compartment;
 }
 
 export function createCompartments(): EditorCompartments {
@@ -82,6 +83,7 @@ export function createCompartments(): EditorCompartments {
     wrap: new Compartment(),
     keys: new Compartment(),
     editable: new Compartment(),
+    spell: new Compartment(),
   };
 }
 
@@ -100,12 +102,22 @@ export function editorExtensions(options: {
   compartments: EditorCompartments;
   callbacks: RefObject<ViewCallbacks>;
   collabExtension?: Extension;
+  spellcheck?: Extension;
   settings: EditorSettings;
   dark: boolean;
   editable: boolean;
   label: string;
 }): Extension[] {
-  const { compartments: c, callbacks, collabExtension, settings, dark, editable, label } = options;
+  const {
+    compartments: c,
+    callbacks,
+    collabExtension,
+    spellcheck,
+    settings,
+    dark,
+    editable,
+    label,
+  } = options;
   return [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -133,5 +145,6 @@ export function editorExtensions(options: {
     c.font.of(fontTheme(settings.fontSize)),
     c.wrap.of(wrapExtension(settings.lineWrapping)),
     c.theme.of(colourTheme(dark)),
+    c.spell.of(spellcheck ?? []),
   ];
 }

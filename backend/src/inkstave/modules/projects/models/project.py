@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,6 +15,9 @@ from inkstave.core.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from inkstave.modules.auth import User
     from inkstave.modules.projects.models.tree_entity import TreeEntity
+
+# Spell-check languages a project can use (spec 113). "off" loads no dictionary.
+SPELLCHECK_LANGUAGES: tuple[str, ...] = ("off", "en-US", "pt-BR")
 
 
 class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -31,6 +34,8 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     root_doc_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     # Non-null => soft-deleted (see docs/adr/0011-project-delete.md).
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Spell-check language, chosen by a member who may write documents (spec 113).
+    spellcheck_language: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'en-US'"))
 
     owner: Mapped[User] = relationship(back_populates="projects")
     tree_entities: Mapped[list[TreeEntity]] = relationship(
@@ -42,6 +47,7 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint("char_length(trim(name)) > 0", name="name_not_blank"),
+        CheckConstraint("spellcheck_language IN ('off', 'en-US', 'pt-BR')", name="spellcheck_language_valid"),
         Index("ix_projects_owner_id", "owner_id"),
         # "My active projects, recent first" — partial so soft-deleted rows are
         # excluded from the hot listing path.

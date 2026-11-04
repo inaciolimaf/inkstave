@@ -600,6 +600,51 @@
         "title": "DeleteAccountRequest",
         "type": "object"
       },
+      "DictionaryList": {
+        "properties": {
+          "words": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "title": "DictionaryList",
+        "type": "object"
+      },
+      "DictionaryWordCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "word": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word"
+        ],
+        "title": "DictionaryWordCreate",
+        "type": "object"
+      },
+      "DictionaryWordRead": {
+        "properties": {
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word"
+        ],
+        "title": "DictionaryWordRead",
+        "type": "object"
+      },
       "DiffHunk": {
         "properties": {
           "new_lines": {
@@ -1772,6 +1817,16 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "spellcheck_language": {
+            "default": "en-US",
+            "enum": [
+              "off",
+              "en-US",
+              "pt-BR"
+            ],
+            "title": "Spellcheck Language",
+            "type": "string"
           }
         },
         "required": [
@@ -1949,6 +2004,16 @@
             ],
             "title": "Root Doc Id"
           },
+          "spellcheck_language": {
+            "default": "en-US",
+            "enum": [
+              "off",
+              "en-US",
+              "pt-BR"
+            ],
+            "title": "Spellcheck Language",
+            "type": "string"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -2011,6 +2076,26 @@
           "results"
         ],
         "title": "ProjectRestoreResponse",
+        "type": "object"
+      },
+      "ProjectSettingsUpdate": {
+        "additionalProperties": false,
+        "description": "Project settings a document writer may change (spec 113).",
+        "properties": {
+          "spellcheck_language": {
+            "enum": [
+              "off",
+              "en-US",
+              "pt-BR"
+            ],
+            "title": "Spellcheck Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spellcheck_language"
+        ],
+        "title": "ProjectSettingsUpdate",
         "type": "object"
       },
       "ProposedDiffSummary": {
@@ -3825,6 +3910,156 @@
         "summary": "Decline Invite",
         "tags": [
           "sharing"
+        ]
+      }
+    },
+    "/api/v1/me/dictionary": {
+      "get": {
+        "operationId": "list_dictionary_api_v1_me_dictionary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the personal dictionary",
+        "tags": [
+          "dictionary"
+        ]
+      },
+      "post": {
+        "operationId": "add_dictionary_word_api_v1_me_dictionary_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DictionaryWordCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryWordRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add a word to the personal dictionary (idempotent)",
+        "tags": [
+          "dictionary"
+        ]
+      }
+    },
+    "/api/v1/me/dictionary/{word}": {
+      "delete": {
+        "operationId": "remove_dictionary_word_api_v1_me_dictionary__word__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "word",
+            "required": true,
+            "schema": {
+              "title": "Word",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove a word from the personal dictionary",
+        "tags": [
+          "dictionary"
         ]
       }
     },
@@ -8492,6 +8727,74 @@
           }
         ],
         "summary": "The caller's role + capabilities on a project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/settings": {
+      "patch": {
+        "operationId": "update_project_settings_api_v1_projects__project_id__settings_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change the project's spell-check language",
         "tags": [
           "projects"
         ]

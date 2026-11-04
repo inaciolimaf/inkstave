@@ -7,6 +7,9 @@ import { tokenStore } from "@/lib/token-store";
 
 import type { Project } from "./types";
 
+/** Spell-check languages a project can use (spec 113); the server validates them. */
+type SpellcheckLanguage = "off" | "en-US" | "pt-BR";
+
 type ProjectWire = Schemas["ProjectRead"];
 
 type ProjectListWire = Schemas["ProjectList"];
@@ -17,6 +20,7 @@ function toProject(wire: ProjectWire): Project {
     name: wire.name,
     ownerId: wire.owner_id,
     rootDocId: wire.root_doc_id,
+    spellcheckLanguage: wire.spellcheck_language,
     createdAt: wire.created_at,
     updatedAt: wire.updated_at,
   };
@@ -31,8 +35,10 @@ export async function getProject(id: string): Promise<Project> {
   return toProject(await apiClient.get<ProjectWire>(`/api/v1/projects/${id}`));
 }
 
-export async function createProject(name: string): Promise<Project> {
-  return toProject(await apiClient.post<ProjectWire>("/api/v1/projects", { name }));
+export async function createProject(name: string, spellcheckLanguage: SpellcheckLanguage): Promise<Project> {
+  return toProject(
+    await apiClient.post<ProjectWire>("/api/v1/projects", { name, spellcheck_language: spellcheckLanguage }),
+  );
 }
 
 export async function renameProject(id: string, name: string): Promise<Project> {
