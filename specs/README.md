@@ -164,8 +164,32 @@ fix-packs; implement after the core system is green.
 | 102 | `102-project-zip-export` — download the whole project as a streamed `.zip` (member-only, deterministic) | 🟢 |
 | 103 | `103-email-delivery` — Mailpit dev inbox + Resend production sender; wire all transactional emails | 🟢 |
 | 104 | `104-email-auth-flows` — link-based email verification, passwordless magic-link login, and password reset (shared single-use token store) | 🟢 |
+| 105 | `105-sandboxed-compiles` — per-compile gVisor isolation for public multi-tenant operation | 🟢 |
+| 106 | `106-visual-identity-manuscript` — the "manuscript on the desk" visual identity | 🟢 |
+| 107 | `107-editor-focus-layout` — one bar, text and PDF always on screen, docked agent window | 🟢 |
+| 108 | `108-agent-file-operations` — the agent views images and proposes file operations | 🟢 |
 
-**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100 and feature specs 101–104.**
+### Phase 11 — Competitive features
+Chosen on 2026-11-04 from a comparison with Overleaf, OpenAI Prism, TeXPage and Typst. Ordered from the bug fix to
+the largest change; implement in this order.
 
-> The roadmap can be extended later (the user may add requirements). New specs
-> continue the numbering and keep the every-5th refactor cadence.
+| # | Spec | Type |
+| --- | --- | --- |
+| 109 | `109-shared-projects-dashboard` — shared projects listed, with filters and the owner | 🟢 |
+| 110 | `110-inline-diff-review` — review the agent's hunks inside the text; outcomes stored | 🟢 |
+| 111 | `111-document-outline` — project-wide outline following `\input`/`\include`; the project index | 🟢 |
+| 112 | `112-latex-autocomplete` — commands, environments, `\cite`, `\ref`, files and packages | 🟢 |
+| 113 | `113-spell-check` — Hunspell in a worker, en-US and pt-BR, personal dictionary | 🟢 |
+| 114 | `114-math-and-table-tools` — symbol palette, table builder, visual equation editor | 🟢 |
+| 115 | `115-voice-to-agent` — dictate agent messages with the browser's speech recognition | 🟢 |
+| 116 | `116-link-sharing` — view and edit links, rotate and revoke | 🟢 |
+| 117 | `117-project-chat` — per-project chat and the project event stream | 🟢 |
+| 118 | `118-comments` — anchored comment threads, resolve, mentions | 🟢 |
+| 119 | `119-track-changes` — per-user Suggesting mode, accept and reject | 🟢 |
+| 120 | `120-overleaf-template-import` — start from a zip downloaded from Overleaf, compatibility report | 🟢 |
+| 121 | `121-git-bridge` — Smart HTTP Git access with personal access tokens | 🟢 |
+
+**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100 and feature specs 101–121.**
+
+> The roadmap can be extended later (the user may add requirements). New specs continue the numbering. The
+> every-5th refactor cadence applied to specs 01–60; later phases use fix-packs instead.

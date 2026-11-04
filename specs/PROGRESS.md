@@ -1,11 +1,23 @@
 # Inkstave — Implementation progress
 
 This is the cursor for `/loop`. Implement the **first unchecked** spec below, in
-order, then tick it. Specs 01–100 are already implemented.
+order, then tick it. Specs 01–108 are already implemented.
 
 ## Backlog (only these remain)
 
-_All planned specs are implemented._
+- [ ] 109-shared-projects-dashboard
+- [ ] 110-inline-diff-review
+- [ ] 111-document-outline
+- [ ] 112-latex-autocomplete
+- [ ] 113-spell-check
+- [ ] 114-math-and-table-tools
+- [ ] 115-voice-to-agent
+- [ ] 116-link-sharing
+- [ ] 117-project-chat
+- [ ] 118-comments
+- [ ] 119-track-changes
+- [ ] 120-overleaf-template-import
+- [ ] 121-git-bridge
 
 ## Done
 
