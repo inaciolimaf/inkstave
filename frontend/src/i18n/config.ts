@@ -10,6 +10,7 @@ import enCommon from "./locales/en/common";
 import enEditor from "./locales/en/editor";
 import enFiles from "./locales/en/files";
 import enHistory from "./locales/en/history";
+import enInsert from "./locales/en/insert";
 import enNotifications from "./locales/en/notifications";
 import enPreview from "./locales/en/preview";
 import enProjects from "./locales/en/projects";
@@ -22,6 +23,7 @@ import ptCommon from "./locales/pt/common";
 import ptEditor from "./locales/pt/editor";
 import ptFiles from "./locales/pt/files";
 import ptHistory from "./locales/pt/history";
+import ptInsert from "./locales/pt/insert";
 import ptNotifications from "./locales/pt/notifications";
 import ptPreview from "./locales/pt/preview";
 import ptProjects from "./locales/pt/projects";
@@ -47,6 +49,7 @@ export const NAMESPACES = [
   "agent",
   "review",
   "history",
+  "insert",
   "settings",
   "sharing",
   "notifications",
@@ -64,6 +67,7 @@ const resources = {
     agent: enAgent,
     review: enReview,
     history: enHistory,
+    insert: enInsert,
     settings: enSettings,
     sharing: enSharing,
     notifications: enNotifications,
@@ -79,6 +83,7 @@ const resources = {
     agent: ptAgent,
     review: ptReview,
     history: ptHistory,
+    insert: ptInsert,
     settings: ptSettings,
     sharing: ptSharing,
     notifications: ptNotifications,

@@ -1,3 +1,4 @@
+import type { EditorView } from "@codemirror/view";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -11,6 +12,7 @@ import type { TreeEntity } from "@/modules/file-tree";
 import { PreviewPane } from "@/modules/pdf-preview";
 import type { Problem } from "@/modules/pdf-preview";
 import { getProject, projectKey } from "@/modules/projects";
+import { InsertMenu } from "@/modules/insert-tools";
 import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
 
 import { AskAgentButton } from "./ask-agent-button";
@@ -22,6 +24,7 @@ import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useAgentOpen } from "./use-agent-open";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
 import { useDocumentBridge } from "./use-document-bridge";
+import { useMainDocumentText } from "./use-main-document-text";
 import { useAgentAsks, useFlushBeforeCompile, useSourceJumps } from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
 import { useSelectionFollowsTree } from "./selection-follows-tree";
@@ -168,6 +171,21 @@ function WorkspaceContent({
   );
 }
 
+/** The Insert menu, with the main document's text for the packages it loads (spec 114). */
+function WorkspaceInsert({
+  projectId,
+  view,
+  readOnly,
+}: {
+  projectId: string;
+  view: EditorView | null;
+  readOnly: boolean;
+}) {
+  const project = useQuery({ queryKey: projectKey(projectId), queryFn: () => getProject(projectId) });
+  const mainText = useMainDocumentText(projectId, project.data?.rootDocId);
+  return <InsertMenu view={view} readOnly={readOnly} mainText={mainText} />;
+}
+
 /** The whole editor screen (spec 107): one bar, the text and the PDF, and the rest on demand. */
 export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<TreeEntity | null>(null);
@@ -227,6 +245,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           historyDisabled={sync.openDoc?.type !== "doc"}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenShare={() => setShareOpen(true)}
+          insert={<WorkspaceInsert projectId={projectId} view={sync.editorView} readOnly={readOnly} />}
         />
       }
     >

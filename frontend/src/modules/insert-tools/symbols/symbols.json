@@ -1,0 +1,1053 @@
+[
+  { "command": "\\alpha", "unicode": "α", "category": "greek", "keywords": ["alpha", "greek", "a"] },
+  { "command": "\\beta", "unicode": "β", "category": "greek", "keywords": ["beta", "greek", "b"] },
+  { "command": "\\gamma", "unicode": "γ", "category": "greek", "keywords": ["gamma", "greek", "g"] },
+  { "command": "\\delta", "unicode": "δ", "category": "greek", "keywords": ["delta", "greek", "d"] },
+  { "command": "\\epsilon", "unicode": "ϵ", "category": "greek", "keywords": ["epsilon", "greek", "e"] },
+  {
+    "command": "\\varepsilon",
+    "unicode": "ε",
+    "category": "greek",
+    "keywords": ["varepsilon", "epsilon", "greek"]
+  },
+  { "command": "\\zeta", "unicode": "ζ", "category": "greek", "keywords": ["zeta", "greek"] },
+  { "command": "\\eta", "unicode": "η", "category": "greek", "keywords": ["eta", "greek"] },
+  { "command": "\\theta", "unicode": "θ", "category": "greek", "keywords": ["theta", "greek"] },
+  {
+    "command": "\\vartheta",
+    "unicode": "ϑ",
+    "category": "greek",
+    "keywords": ["vartheta", "theta", "greek"]
+  },
+  { "command": "\\iota", "unicode": "ι", "category": "greek", "keywords": ["iota", "greek"] },
+  { "command": "\\kappa", "unicode": "κ", "category": "greek", "keywords": ["kappa", "greek", "k"] },
+  { "command": "\\lambda", "unicode": "λ", "category": "greek", "keywords": ["lambda", "greek", "l"] },
+  { "command": "\\mu", "unicode": "μ", "category": "greek", "keywords": ["mu", "greek", "micro"] },
+  { "command": "\\nu", "unicode": "ν", "category": "greek", "keywords": ["nu", "greek", "n"] },
+  { "command": "\\xi", "unicode": "ξ", "category": "greek", "keywords": ["xi", "greek"] },
+  { "command": "\\pi", "unicode": "π", "category": "greek", "keywords": ["pi", "greek", "p"] },
+  { "command": "\\varpi", "unicode": "ϖ", "category": "greek", "keywords": ["varpi", "pi", "greek"] },
+  { "command": "\\rho", "unicode": "ρ", "category": "greek", "keywords": ["rho", "greek", "r"] },
+  { "command": "\\varrho", "unicode": "ϱ", "category": "greek", "keywords": ["varrho", "rho", "greek"] },
+  { "command": "\\sigma", "unicode": "σ", "category": "greek", "keywords": ["sigma", "greek", "s"] },
+  {
+    "command": "\\varsigma",
+    "unicode": "ς",
+    "category": "greek",
+    "keywords": ["varsigma", "sigma", "greek"]
+  },
+  { "command": "\\tau", "unicode": "τ", "category": "greek", "keywords": ["tau", "greek", "t"] },
+  { "command": "\\upsilon", "unicode": "υ", "category": "greek", "keywords": ["upsilon", "greek", "u"] },
+  { "command": "\\phi", "unicode": "ϕ", "category": "greek", "keywords": ["phi", "greek", "f"] },
+  { "command": "\\varphi", "unicode": "φ", "category": "greek", "keywords": ["varphi", "phi", "greek"] },
+  { "command": "\\chi", "unicode": "χ", "category": "greek", "keywords": ["chi", "greek", "c"] },
+  { "command": "\\psi", "unicode": "ψ", "category": "greek", "keywords": ["psi", "greek"] },
+  { "command": "\\omega", "unicode": "ω", "category": "greek", "keywords": ["omega", "greek", "w"] },
+  { "command": "\\Gamma", "unicode": "Γ", "category": "greek", "keywords": ["Gamma", "greek"] },
+  { "command": "\\Delta", "unicode": "Δ", "category": "greek", "keywords": ["Delta", "greek"] },
+  { "command": "\\Theta", "unicode": "Θ", "category": "greek", "keywords": ["Theta", "greek"] },
+  { "command": "\\Lambda", "unicode": "Λ", "category": "greek", "keywords": ["Lambda", "greek"] },
+  { "command": "\\Xi", "unicode": "Ξ", "category": "greek", "keywords": ["Xi", "greek"] },
+  { "command": "\\Pi", "unicode": "Π", "category": "greek", "keywords": ["Pi", "greek"] },
+  { "command": "\\Sigma", "unicode": "Σ", "category": "greek", "keywords": ["Sigma", "greek"] },
+  { "command": "\\Upsilon", "unicode": "Υ", "category": "greek", "keywords": ["Upsilon", "greek"] },
+  { "command": "\\Phi", "unicode": "Φ", "category": "greek", "keywords": ["Phi", "greek"] },
+  { "command": "\\Psi", "unicode": "Ψ", "category": "greek", "keywords": ["Psi", "greek"] },
+  { "command": "\\Omega", "unicode": "Ω", "category": "greek", "keywords": ["Omega", "greek"] },
+  { "command": "\\leq", "unicode": "≤", "category": "relations", "keywords": ["leq", "less", "equal", "le"] },
+  { "command": "\\le", "unicode": "≤", "category": "relations", "keywords": ["le", "less", "equal", "leq"] },
+  {
+    "command": "\\geq",
+    "unicode": "≥",
+    "category": "relations",
+    "keywords": ["geq", "greater", "equal", "ge"]
+  },
+  {
+    "command": "\\ge",
+    "unicode": "≥",
+    "category": "relations",
+    "keywords": ["ge", "greater", "equal", "geq"]
+  },
+  { "command": "\\neq", "unicode": "≠", "category": "relations", "keywords": ["neq", "not", "equal", "ne"] },
+  { "command": "\\ne", "unicode": "≠", "category": "relations", "keywords": ["ne", "not", "equal", "neq"] },
+  { "command": "\\approx", "unicode": "≈", "category": "relations", "keywords": ["approx", "approximately"] },
+  {
+    "command": "\\equiv",
+    "unicode": "≡",
+    "category": "relations",
+    "keywords": ["equiv", "equivalent", "congruent"]
+  },
+  { "command": "\\sim", "unicode": "∼", "category": "relations", "keywords": ["sim", "similar", "tilde"] },
+  {
+    "command": "\\simeq",
+    "unicode": "≃",
+    "category": "relations",
+    "keywords": ["simeq", "similar", "equal"]
+  },
+  {
+    "command": "\\cong",
+    "unicode": "≅",
+    "category": "relations",
+    "keywords": ["cong", "congruent", "isomorphic"]
+  },
+  { "command": "\\ll", "unicode": "≪", "category": "relations", "keywords": ["much", "less"] },
+  { "command": "\\gg", "unicode": "≫", "category": "relations", "keywords": ["much", "greater"] },
+  { "command": "\\prec", "unicode": "≺", "category": "relations", "keywords": ["precedes", "prec"] },
+  { "command": "\\succ", "unicode": "≻", "category": "relations", "keywords": ["succeeds", "succ"] },
+  {
+    "command": "\\preceq",
+    "unicode": "⪯",
+    "category": "relations",
+    "keywords": ["preceq", "precedes", "equal"]
+  },
+  {
+    "command": "\\succeq",
+    "unicode": "⪰",
+    "category": "relations",
+    "keywords": ["succeq", "succeeds", "equal"]
+  },
+  { "command": "\\in", "unicode": "∈", "category": "relations", "keywords": ["in", "element", "belongs"] },
+  { "command": "\\notin", "unicode": "∉", "category": "relations", "keywords": ["notin", "not", "element"] },
+  { "command": "\\ni", "unicode": "∋", "category": "relations", "keywords": ["ni", "contains", "owns"] },
+  { "command": "\\subset", "unicode": "⊂", "category": "relations", "keywords": ["subset", "proper"] },
+  {
+    "command": "\\subseteq",
+    "unicode": "⊆",
+    "category": "relations",
+    "keywords": ["subseteq", "subset", "included"]
+  },
+  {
+    "command": "\\supset",
+    "unicode": "⊃",
+    "category": "relations",
+    "keywords": ["supset", "superset", "proper"]
+  },
+  {
+    "command": "\\supseteq",
+    "unicode": "⊇",
+    "category": "relations",
+    "keywords": ["supseteq", "superset", "contains"]
+  },
+  { "command": "\\propto", "unicode": "∝", "category": "relations", "keywords": ["propto", "proportional"] },
+  {
+    "command": "\\perp",
+    "unicode": "⊥",
+    "category": "relations",
+    "keywords": ["perp", "perpendicular", "orthogonal"]
+  },
+  { "command": "\\parallel", "unicode": "∥", "category": "relations", "keywords": ["parallel", "par"] },
+  {
+    "command": "\\mid",
+    "unicode": "∣",
+    "category": "relations",
+    "keywords": ["mid", "divides", "such that"]
+  },
+  {
+    "command": "\\models",
+    "unicode": "⊨",
+    "category": "relations",
+    "keywords": ["models", "satisfies", "entails"]
+  },
+  {
+    "command": "\\vdash",
+    "unicode": "⊢",
+    "category": "relations",
+    "keywords": ["vdash", "proves", "turnstile"]
+  },
+  { "command": "\\dashv", "unicode": "⊣", "category": "relations", "keywords": ["dashv", "turnstile"] },
+  {
+    "command": "\\doteq",
+    "unicode": "≐",
+    "category": "relations",
+    "keywords": ["doteq", "equal", "approaches"]
+  },
+  { "command": "\\asymp", "unicode": "≍", "category": "relations", "keywords": ["asymp", "asymptotic"] },
+  {
+    "command": "\\sqsubset",
+    "unicode": "⊏",
+    "category": "relations",
+    "keywords": ["sqsubset", "subset", "square"]
+  },
+  {
+    "command": "\\sqsupset",
+    "unicode": "⊐",
+    "category": "relations",
+    "keywords": ["sqsupset", "superset", "square"]
+  },
+  {
+    "command": "\\leqslant",
+    "unicode": "⩽",
+    "category": "relations",
+    "keywords": ["leqslant", "less", "equal"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\geqslant",
+    "unicode": "⩾",
+    "category": "relations",
+    "keywords": ["geqslant", "greater", "equal"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\nleq",
+    "unicode": "≰",
+    "category": "relations",
+    "keywords": ["nleq", "not", "less"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\ngeq",
+    "unicode": "≱",
+    "category": "relations",
+    "keywords": ["ngeq", "not", "greater"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\nless",
+    "unicode": "≮",
+    "category": "relations",
+    "keywords": ["nless", "not", "less"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\ngtr",
+    "unicode": "≯",
+    "category": "relations",
+    "keywords": ["ngtr", "not", "greater"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\nsubseteq",
+    "unicode": "⊈",
+    "category": "relations",
+    "keywords": ["nsubseteq", "not", "subset"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\nmid",
+    "unicode": "∤",
+    "category": "relations",
+    "keywords": ["nmid", "not", "divides"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\lesssim",
+    "unicode": "≲",
+    "category": "relations",
+    "keywords": ["lesssim", "less", "similar"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\gtrsim",
+    "unicode": "≳",
+    "category": "relations",
+    "keywords": ["gtrsim", "greater", "similar"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\approxeq",
+    "unicode": "≊",
+    "category": "relations",
+    "keywords": ["approxeq", "approximately", "equal"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\triangleq",
+    "unicode": "≜",
+    "category": "relations",
+    "keywords": ["triangleq", "defined", "equal"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\sqsubseteq",
+    "unicode": "⊑",
+    "category": "relations",
+    "keywords": ["sqsubseteq", "subset", "square"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\sqsupseteq",
+    "unicode": "⊒",
+    "category": "relations",
+    "keywords": ["sqsupseteq", "superset", "square"],
+    "package": "amssymb"
+  },
+  { "command": "\\smile", "unicode": "⌣", "category": "relations", "keywords": ["smile", "frown"] },
+  { "command": "\\frown", "unicode": "⌢", "category": "relations", "keywords": ["frown", "smile"] },
+  {
+    "command": "\\pm",
+    "unicode": "±",
+    "category": "operators",
+    "keywords": ["pm", "plus minus", "plusminus"]
+  },
+  {
+    "command": "\\mp",
+    "unicode": "∓",
+    "category": "operators",
+    "keywords": ["mp", "minus plus", "minusplus"]
+  },
+  {
+    "command": "\\times",
+    "unicode": "×",
+    "category": "operators",
+    "keywords": ["times", "multiply", "cross"]
+  },
+  { "command": "\\div", "unicode": "÷", "category": "operators", "keywords": ["div", "divide", "division"] },
+  { "command": "\\cdot", "unicode": "⋅", "category": "operators", "keywords": ["cdot", "dot", "multiply"] },
+  {
+    "command": "\\ast",
+    "unicode": "∗",
+    "category": "operators",
+    "keywords": ["ast", "asterisk", "convolution"]
+  },
+  { "command": "\\star", "unicode": "⋆", "category": "operators", "keywords": ["star", "asterisk"] },
+  {
+    "command": "\\circ",
+    "unicode": "∘",
+    "category": "operators",
+    "keywords": ["circ", "composition", "compose"]
+  },
+  { "command": "\\bullet", "unicode": "•", "category": "operators", "keywords": ["bullet", "dot"] },
+  {
+    "command": "\\oplus",
+    "unicode": "⊕",
+    "category": "operators",
+    "keywords": ["oplus", "direct sum", "xor"]
+  },
+  { "command": "\\ominus", "unicode": "⊖", "category": "operators", "keywords": ["ominus", "minus"] },
+  {
+    "command": "\\otimes",
+    "unicode": "⊗",
+    "category": "operators",
+    "keywords": ["otimes", "tensor", "kronecker"]
+  },
+  {
+    "command": "\\oslash",
+    "unicode": "⊘",
+    "category": "operators",
+    "keywords": ["oslash", "slash", "divide"]
+  },
+  { "command": "\\odot", "unicode": "⊙", "category": "operators", "keywords": ["odot", "dot"] },
+  { "command": "\\wr", "unicode": "≀", "category": "operators", "keywords": ["wreath", "wr"] },
+  { "command": "\\amalg", "unicode": "⨿", "category": "operators", "keywords": ["amalg", "coproduct"] },
+  {
+    "command": "\\lhd",
+    "unicode": "◁",
+    "category": "operators",
+    "keywords": ["lhd", "subgroup", "triangle"]
+  },
+  { "command": "\\rhd", "unicode": "▷", "category": "operators", "keywords": ["rhd", "triangle"] },
+  { "command": "\\sum", "unicode": "∑", "category": "operators", "keywords": ["sum", "summation", "sigma"] },
+  { "command": "\\prod", "unicode": "∏", "category": "operators", "keywords": ["prod", "product", "pi"] },
+  { "command": "\\coprod", "unicode": "∐", "category": "operators", "keywords": ["coprod", "coproduct"] },
+  { "command": "\\int", "unicode": "∫", "category": "operators", "keywords": ["int", "integral"] },
+  { "command": "\\iint", "unicode": "∬", "category": "operators", "keywords": ["iint", "double integral"] },
+  { "command": "\\iiint", "unicode": "∭", "category": "operators", "keywords": ["iiint", "triple integral"] },
+  {
+    "command": "\\oint",
+    "unicode": "∮",
+    "category": "operators",
+    "keywords": ["oint", "contour", "loop integral"]
+  },
+  { "command": "\\bigcup", "unicode": "⋃", "category": "operators", "keywords": ["bigcup", "union", "big"] },
+  {
+    "command": "\\bigcap",
+    "unicode": "⋂",
+    "category": "operators",
+    "keywords": ["bigcap", "intersection", "big"]
+  },
+  { "command": "\\bigvee", "unicode": "⋁", "category": "operators", "keywords": ["bigvee", "or", "big"] },
+  {
+    "command": "\\bigwedge",
+    "unicode": "⋀",
+    "category": "operators",
+    "keywords": ["bigwedge", "and", "big"]
+  },
+  {
+    "command": "\\bigoplus",
+    "unicode": "⨁",
+    "category": "operators",
+    "keywords": ["bigoplus", "direct sum", "big"]
+  },
+  {
+    "command": "\\bigotimes",
+    "unicode": "⨂",
+    "category": "operators",
+    "keywords": ["bigotimes", "tensor", "big"]
+  },
+  { "command": "\\lim", "unicode": "lim", "category": "operators", "keywords": ["lim", "limit"] },
+  { "command": "\\sup", "unicode": "sup", "category": "operators", "keywords": ["sup", "supremum"] },
+  { "command": "\\inf", "unicode": "inf", "category": "operators", "keywords": ["inf", "infimum"] },
+  { "command": "\\max", "unicode": "max", "category": "operators", "keywords": ["max", "maximum"] },
+  { "command": "\\min", "unicode": "min", "category": "operators", "keywords": ["min", "minimum"] },
+  { "command": "\\arg", "unicode": "arg", "category": "operators", "keywords": ["arg", "argument"] },
+  { "command": "\\det", "unicode": "det", "category": "operators", "keywords": ["det", "determinant"] },
+  { "command": "\\exp", "unicode": "exp", "category": "operators", "keywords": ["exp", "exponential"] },
+  { "command": "\\log", "unicode": "log", "category": "operators", "keywords": ["log", "logarithm"] },
+  { "command": "\\ln", "unicode": "ln", "category": "operators", "keywords": ["ln", "natural logarithm"] },
+  {
+    "command": "\\sin",
+    "unicode": "sin",
+    "category": "operators",
+    "keywords": ["sin", "sine", "trigonometry"]
+  },
+  {
+    "command": "\\cos",
+    "unicode": "cos",
+    "category": "operators",
+    "keywords": ["cos", "cosine", "trigonometry"]
+  },
+  {
+    "command": "\\tan",
+    "unicode": "tan",
+    "category": "operators",
+    "keywords": ["tan", "tangent", "trigonometry"]
+  },
+  {
+    "command": "\\sqrt",
+    "unicode": "√",
+    "category": "operators",
+    "keywords": ["sqrt", "square root", "root"],
+    "args": 1
+  },
+  {
+    "command": "\\frac",
+    "unicode": "a/b",
+    "category": "operators",
+    "keywords": ["frac", "fraction", "divide"],
+    "args": 2
+  },
+  {
+    "command": "\\binom",
+    "unicode": "C",
+    "category": "operators",
+    "keywords": ["binom", "binomial", "choose"],
+    "args": 2
+  },
+  {
+    "command": "\\leftarrow",
+    "unicode": "←",
+    "category": "arrows",
+    "keywords": ["leftarrow", "left", "arrow", "gets"]
+  },
+  {
+    "command": "\\rightarrow",
+    "unicode": "→",
+    "category": "arrows",
+    "keywords": ["rightarrow", "right", "arrow", "to"]
+  },
+  {
+    "command": "\\leftrightarrow",
+    "unicode": "↔",
+    "category": "arrows",
+    "keywords": ["leftrightarrow", "both", "arrow"]
+  },
+  {
+    "command": "\\Leftarrow",
+    "unicode": "⇐",
+    "category": "arrows",
+    "keywords": ["Leftarrow", "implied", "double arrow"]
+  },
+  {
+    "command": "\\Rightarrow",
+    "unicode": "⇒",
+    "category": "arrows",
+    "keywords": ["Rightarrow", "implies", "double arrow"]
+  },
+  {
+    "command": "\\Leftrightarrow",
+    "unicode": "⇔",
+    "category": "arrows",
+    "keywords": ["Leftrightarrow", "if and only if", "double arrow"]
+  },
+  { "command": "\\uparrow", "unicode": "↑", "category": "arrows", "keywords": ["uparrow", "up", "arrow"] },
+  {
+    "command": "\\downarrow",
+    "unicode": "↓",
+    "category": "arrows",
+    "keywords": ["downarrow", "down", "arrow"]
+  },
+  {
+    "command": "\\updownarrow",
+    "unicode": "↕",
+    "category": "arrows",
+    "keywords": ["updownarrow", "up down", "arrow"]
+  },
+  {
+    "command": "\\Uparrow",
+    "unicode": "⇑",
+    "category": "arrows",
+    "keywords": ["Uparrow", "up", "double arrow"]
+  },
+  {
+    "command": "\\Downarrow",
+    "unicode": "⇓",
+    "category": "arrows",
+    "keywords": ["Downarrow", "down", "double arrow"]
+  },
+  {
+    "command": "\\mapsto",
+    "unicode": "↦",
+    "category": "arrows",
+    "keywords": ["mapsto", "maps to", "function"]
+  },
+  {
+    "command": "\\longrightarrow",
+    "unicode": "⟶",
+    "category": "arrows",
+    "keywords": ["longrightarrow", "long", "arrow", "to"]
+  },
+  {
+    "command": "\\longleftarrow",
+    "unicode": "⟵",
+    "category": "arrows",
+    "keywords": ["longleftarrow", "long", "arrow"]
+  },
+  {
+    "command": "\\longleftrightarrow",
+    "unicode": "⟷",
+    "category": "arrows",
+    "keywords": ["longleftrightarrow", "long", "both"]
+  },
+  {
+    "command": "\\Longrightarrow",
+    "unicode": "⟹",
+    "category": "arrows",
+    "keywords": ["Longrightarrow", "implies", "long"]
+  },
+  {
+    "command": "\\Longleftarrow",
+    "unicode": "⟸",
+    "category": "arrows",
+    "keywords": ["Longleftarrow", "implied by", "long"]
+  },
+  {
+    "command": "\\Longleftrightarrow",
+    "unicode": "⟺",
+    "category": "arrows",
+    "keywords": ["Longleftrightarrow", "if and only if", "long"]
+  },
+  {
+    "command": "\\hookrightarrow",
+    "unicode": "↪",
+    "category": "arrows",
+    "keywords": ["hookrightarrow", "injection", "embedding"]
+  },
+  {
+    "command": "\\hookleftarrow",
+    "unicode": "↩",
+    "category": "arrows",
+    "keywords": ["hookleftarrow", "hook"]
+  },
+  {
+    "command": "\\nearrow",
+    "unicode": "↗",
+    "category": "arrows",
+    "keywords": ["nearrow", "northeast", "arrow"]
+  },
+  {
+    "command": "\\searrow",
+    "unicode": "↘",
+    "category": "arrows",
+    "keywords": ["searrow", "southeast", "arrow"]
+  },
+  {
+    "command": "\\nwarrow",
+    "unicode": "↖",
+    "category": "arrows",
+    "keywords": ["nwarrow", "northwest", "arrow"]
+  },
+  {
+    "command": "\\swarrow",
+    "unicode": "↙",
+    "category": "arrows",
+    "keywords": ["swarrow", "southwest", "arrow"]
+  },
+  { "command": "\\to", "unicode": "→", "category": "arrows", "keywords": ["to", "arrow", "maps"] },
+  { "command": "\\gets", "unicode": "←", "category": "arrows", "keywords": ["gets", "arrow", "assign"] },
+  {
+    "command": "\\rightleftharpoons",
+    "unicode": "⇌",
+    "category": "arrows",
+    "keywords": ["rightleftharpoons", "equilibrium"]
+  },
+  {
+    "command": "\\leftharpoonup",
+    "unicode": "↼",
+    "category": "arrows",
+    "keywords": ["leftharpoonup", "harpoon"]
+  },
+  {
+    "command": "\\rightharpoonup",
+    "unicode": "⇀",
+    "category": "arrows",
+    "keywords": ["rightharpoonup", "harpoon"]
+  },
+  {
+    "command": "\\dashrightarrow",
+    "unicode": "⇢",
+    "category": "arrows",
+    "keywords": ["dashrightarrow", "dashed", "arrow"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\emptyset",
+    "unicode": "∅",
+    "category": "sets",
+    "keywords": ["emptyset", "empty set", "null"]
+  },
+  {
+    "command": "\\varnothing",
+    "unicode": "∅",
+    "category": "sets",
+    "keywords": ["varnothing", "empty set", "null"],
+    "package": "amssymb"
+  },
+  { "command": "\\cup", "unicode": "∪", "category": "sets", "keywords": ["cup", "union"] },
+  { "command": "\\cap", "unicode": "∩", "category": "sets", "keywords": ["cap", "intersection"] },
+  {
+    "command": "\\setminus",
+    "unicode": "∖",
+    "category": "sets",
+    "keywords": ["setminus", "minus", "difference"]
+  },
+  { "command": "\\uplus", "unicode": "⊎", "category": "sets", "keywords": ["uplus", "multiset union"] },
+  { "command": "\\sqcup", "unicode": "⊔", "category": "sets", "keywords": ["sqcup", "square union", "join"] },
+  {
+    "command": "\\sqcap",
+    "unicode": "⊓",
+    "category": "sets",
+    "keywords": ["sqcap", "square intersection", "meet"]
+  },
+  {
+    "command": "\\forall",
+    "unicode": "∀",
+    "category": "sets",
+    "keywords": ["forall", "for all", "universal"]
+  },
+  {
+    "command": "\\exists",
+    "unicode": "∃",
+    "category": "sets",
+    "keywords": ["exists", "there exists", "existential"]
+  },
+  {
+    "command": "\\nexists",
+    "unicode": "∄",
+    "category": "sets",
+    "keywords": ["nexists", "not exists"],
+    "package": "amssymb"
+  },
+  { "command": "\\neg", "unicode": "¬", "category": "sets", "keywords": ["neg", "not", "negation"] },
+  { "command": "\\lnot", "unicode": "¬", "category": "sets", "keywords": ["lnot", "not", "negation"] },
+  { "command": "\\land", "unicode": "∧", "category": "sets", "keywords": ["land", "and", "conjunction"] },
+  { "command": "\\lor", "unicode": "∨", "category": "sets", "keywords": ["lor", "or", "disjunction"] },
+  { "command": "\\wedge", "unicode": "∧", "category": "sets", "keywords": ["wedge", "and", "meet"] },
+  { "command": "\\vee", "unicode": "∨", "category": "sets", "keywords": ["vee", "or", "join"] },
+  {
+    "command": "\\implies",
+    "unicode": "⟹",
+    "category": "sets",
+    "keywords": ["implies", "then", "implication"]
+  },
+  {
+    "command": "\\impliedby",
+    "unicode": "⟸",
+    "category": "sets",
+    "keywords": ["impliedby", "implied by", "because"]
+  },
+  {
+    "command": "\\iff",
+    "unicode": "⟺",
+    "category": "sets",
+    "keywords": ["iff", "if and only if", "equivalence"]
+  },
+  {
+    "command": "\\therefore",
+    "unicode": "∴",
+    "category": "sets",
+    "keywords": ["therefore", "hence", "so"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\because",
+    "unicode": "∵",
+    "category": "sets",
+    "keywords": ["because", "since"],
+    "package": "amssymb"
+  },
+  { "command": "\\top", "unicode": "⊤", "category": "sets", "keywords": ["top", "true", "tautology"] },
+  {
+    "command": "\\bot",
+    "unicode": "⊥",
+    "category": "sets",
+    "keywords": ["bot", "false", "contradiction", "bottom"]
+  },
+  {
+    "command": "\\mathbb",
+    "unicode": "ℝ",
+    "category": "sets",
+    "keywords": ["mathbb", "blackboard", "double struck", "reals", "naturals"],
+    "package": "amssymb",
+    "args": 1
+  },
+  {
+    "command": "\\mathcal",
+    "unicode": "𝒜",
+    "category": "sets",
+    "keywords": ["mathcal", "calligraphic", "script"],
+    "args": 1
+  },
+  {
+    "command": "\\mathscr",
+    "unicode": "𝒜",
+    "category": "sets",
+    "keywords": ["mathscr", "script", "lagrangian"],
+    "package": "mathrsfs",
+    "args": 1
+  },
+  {
+    "command": "\\mathfrak",
+    "unicode": "𝔄",
+    "category": "sets",
+    "keywords": ["mathfrak", "fraktur", "gothic"],
+    "package": "amssymb",
+    "args": 1
+  },
+  {
+    "command": "\\mathbf",
+    "unicode": "𝐀",
+    "category": "sets",
+    "keywords": ["mathbf", "bold", "vector"],
+    "args": 1
+  },
+  {
+    "command": "\\mathrm",
+    "unicode": "Aa",
+    "category": "sets",
+    "keywords": ["mathrm", "roman", "upright"],
+    "args": 1
+  },
+  { "command": "\\mathit", "unicode": "𝐴", "category": "sets", "keywords": ["mathit", "italic"], "args": 1 },
+  {
+    "command": "\\mathsf",
+    "unicode": "𝖠",
+    "category": "sets",
+    "keywords": ["mathsf", "sans serif"],
+    "args": 1
+  },
+  {
+    "command": "\\mathtt",
+    "unicode": "𝙰",
+    "category": "sets",
+    "keywords": ["mathtt", "typewriter", "monospace"],
+    "args": 1
+  },
+  {
+    "command": "\\langle",
+    "unicode": "⟨",
+    "category": "delimiters",
+    "keywords": ["langle", "angle", "bracket", "inner product"]
+  },
+  {
+    "command": "\\rangle",
+    "unicode": "⟩",
+    "category": "delimiters",
+    "keywords": ["rangle", "angle", "bracket", "inner product"]
+  },
+  {
+    "command": "\\lfloor",
+    "unicode": "⌊",
+    "category": "delimiters",
+    "keywords": ["lfloor", "floor", "integer part"]
+  },
+  { "command": "\\rfloor", "unicode": "⌋", "category": "delimiters", "keywords": ["rfloor", "floor"] },
+  { "command": "\\lceil", "unicode": "⌈", "category": "delimiters", "keywords": ["lceil", "ceiling"] },
+  { "command": "\\rceil", "unicode": "⌉", "category": "delimiters", "keywords": ["rceil", "ceiling"] },
+  {
+    "command": "\\lvert",
+    "unicode": "|",
+    "category": "delimiters",
+    "keywords": ["lvert", "absolute value", "bar"],
+    "package": "amsmath"
+  },
+  {
+    "command": "\\rvert",
+    "unicode": "|",
+    "category": "delimiters",
+    "keywords": ["rvert", "absolute value", "bar"],
+    "package": "amsmath"
+  },
+  {
+    "command": "\\lVert",
+    "unicode": "‖",
+    "category": "delimiters",
+    "keywords": ["lVert", "norm", "double bar"],
+    "package": "amsmath"
+  },
+  {
+    "command": "\\rVert",
+    "unicode": "‖",
+    "category": "delimiters",
+    "keywords": ["rVert", "norm", "double bar"],
+    "package": "amsmath"
+  },
+  { "command": "\\vert", "unicode": "|", "category": "delimiters", "keywords": ["vert", "bar", "pipe"] },
+  {
+    "command": "\\Vert",
+    "unicode": "‖",
+    "category": "delimiters",
+    "keywords": ["Vert", "norm", "double bar"]
+  },
+  { "command": "\\{", "unicode": "{", "category": "delimiters", "keywords": ["left brace", "set", "curly"] },
+  { "command": "\\}", "unicode": "}", "category": "delimiters", "keywords": ["right brace", "set", "curly"] },
+  {
+    "command": "\\llbracket",
+    "unicode": "⟦",
+    "category": "delimiters",
+    "keywords": ["llbracket", "semantic", "bracket"],
+    "package": "stmaryrd"
+  },
+  {
+    "command": "\\rrbracket",
+    "unicode": "⟧",
+    "category": "delimiters",
+    "keywords": ["rrbracket", "semantic", "bracket"],
+    "package": "stmaryrd"
+  },
+  {
+    "command": "\\hat",
+    "unicode": "◌̂",
+    "category": "accents",
+    "keywords": ["hat", "estimate", "caret"],
+    "args": 1
+  },
+  {
+    "command": "\\widehat",
+    "unicode": "◌̂",
+    "category": "accents",
+    "keywords": ["widehat", "hat", "wide"],
+    "args": 1
+  },
+  {
+    "command": "\\check",
+    "unicode": "◌̌",
+    "category": "accents",
+    "keywords": ["check", "caron", "vee"],
+    "args": 1
+  },
+  { "command": "\\tilde", "unicode": "◌̃", "category": "accents", "keywords": ["tilde", "wave"], "args": 1 },
+  {
+    "command": "\\widetilde",
+    "unicode": "◌̃",
+    "category": "accents",
+    "keywords": ["widetilde", "tilde", "wide"],
+    "args": 1
+  },
+  { "command": "\\acute", "unicode": "◌́", "category": "accents", "keywords": ["acute", "accent"], "args": 1 },
+  { "command": "\\grave", "unicode": "◌̀", "category": "accents", "keywords": ["grave", "accent"], "args": 1 },
+  {
+    "command": "\\dot",
+    "unicode": "◌̇",
+    "category": "accents",
+    "keywords": ["dot", "derivative", "time derivative"],
+    "args": 1
+  },
+  {
+    "command": "\\ddot",
+    "unicode": "◌̈",
+    "category": "accents",
+    "keywords": ["ddot", "double dot", "second derivative"],
+    "args": 1
+  },
+  {
+    "command": "\\bar",
+    "unicode": "◌̄",
+    "category": "accents",
+    "keywords": ["bar", "mean", "average", "macron"],
+    "args": 1
+  },
+  { "command": "\\breve", "unicode": "◌̆", "category": "accents", "keywords": ["breve", "short"], "args": 1 },
+  {
+    "command": "\\vec",
+    "unicode": "◌⃗",
+    "category": "accents",
+    "keywords": ["vec", "vector", "arrow"],
+    "args": 1
+  },
+  {
+    "command": "\\overrightarrow",
+    "unicode": "◌⃗",
+    "category": "accents",
+    "keywords": ["overrightarrow", "vector", "arrow"],
+    "args": 1
+  },
+  {
+    "command": "\\overline",
+    "unicode": "◌̅",
+    "category": "accents",
+    "keywords": ["overline", "bar", "complex conjugate"],
+    "args": 1
+  },
+  {
+    "command": "\\underline",
+    "unicode": "◌̲",
+    "category": "accents",
+    "keywords": ["underline", "under"],
+    "args": 1
+  },
+  {
+    "command": "\\mathring",
+    "unicode": "◌̊",
+    "category": "accents",
+    "keywords": ["mathring", "ring", "circle"],
+    "args": 1
+  },
+  {
+    "command": "\\overbrace",
+    "unicode": "︷",
+    "category": "accents",
+    "keywords": ["overbrace", "brace", "over"],
+    "args": 1
+  },
+  {
+    "command": "\\underbrace",
+    "unicode": "︸",
+    "category": "accents",
+    "keywords": ["underbrace", "brace", "under"],
+    "args": 1
+  },
+  { "command": "\\infty", "unicode": "∞", "category": "misc", "keywords": ["infty", "infinity", "limit"] },
+  { "command": "\\aleph", "unicode": "ℵ", "category": "misc", "keywords": ["aleph", "cardinal", "alef"] },
+  {
+    "command": "\\beth",
+    "unicode": "ℶ",
+    "category": "misc",
+    "keywords": ["beth", "cardinal"],
+    "package": "amssymb"
+  },
+  { "command": "\\hbar", "unicode": "ℏ", "category": "misc", "keywords": ["hbar", "planck", "reduced"] },
+  {
+    "command": "\\hslash",
+    "unicode": "ℏ",
+    "category": "misc",
+    "keywords": ["hslash", "planck"],
+    "package": "amssymb"
+  },
+  { "command": "\\ell", "unicode": "ℓ", "category": "misc", "keywords": ["ell", "script l", "liter"] },
+  { "command": "\\Re", "unicode": "ℜ", "category": "misc", "keywords": ["Re", "real part"] },
+  { "command": "\\Im", "unicode": "ℑ", "category": "misc", "keywords": ["Im", "imaginary part"] },
+  { "command": "\\wp", "unicode": "℘", "category": "misc", "keywords": ["wp", "weierstrass"] },
+  { "command": "\\nabla", "unicode": "∇", "category": "misc", "keywords": ["nabla", "gradient", "del"] },
+  { "command": "\\partial", "unicode": "∂", "category": "misc", "keywords": ["partial", "derivative", "d"] },
+  {
+    "command": "\\prime",
+    "unicode": "′",
+    "category": "misc",
+    "keywords": ["prime", "derivative", "apostrophe"]
+  },
+  { "command": "\\ldots", "unicode": "…", "category": "misc", "keywords": ["ldots", "dots", "ellipsis"] },
+  {
+    "command": "\\cdots",
+    "unicode": "⋯",
+    "category": "misc",
+    "keywords": ["cdots", "dots", "ellipsis", "centred"]
+  },
+  { "command": "\\vdots", "unicode": "⋮", "category": "misc", "keywords": ["vdots", "dots", "vertical"] },
+  { "command": "\\ddots", "unicode": "⋱", "category": "misc", "keywords": ["ddots", "dots", "diagonal"] },
+  { "command": "\\angle", "unicode": "∠", "category": "misc", "keywords": ["angle", "geometry"] },
+  {
+    "command": "\\measuredangle",
+    "unicode": "∡",
+    "category": "misc",
+    "keywords": ["measuredangle", "angle", "measured"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\triangle",
+    "unicode": "△",
+    "category": "misc",
+    "keywords": ["triangle", "delta", "geometry"]
+  },
+  {
+    "command": "\\square",
+    "unicode": "□",
+    "category": "misc",
+    "keywords": ["square", "box", "qed"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\blacksquare",
+    "unicode": "■",
+    "category": "misc",
+    "keywords": ["blacksquare", "qed", "end of proof", "box"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\lozenge",
+    "unicode": "◊",
+    "category": "misc",
+    "keywords": ["lozenge", "diamond"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\checkmark",
+    "unicode": "✓",
+    "category": "misc",
+    "keywords": ["checkmark", "tick", "done"],
+    "package": "amssymb"
+  },
+  {
+    "command": "\\dagger",
+    "unicode": "†",
+    "category": "misc",
+    "keywords": ["dagger", "footnote", "adjoint"]
+  },
+  { "command": "\\ddagger", "unicode": "‡", "category": "misc", "keywords": ["ddagger", "footnote"] },
+  { "command": "\\S", "unicode": "§", "category": "misc", "keywords": ["S", "section", "paragraph sign"] },
+  { "command": "\\P", "unicode": "¶", "category": "misc", "keywords": ["P", "paragraph", "pilcrow"] },
+  { "command": "\\copyright", "unicode": "©", "category": "misc", "keywords": ["copyright", "c"] },
+  {
+    "command": "\\pounds",
+    "unicode": "£",
+    "category": "misc",
+    "keywords": ["pounds", "sterling", "currency"]
+  },
+  { "command": "\\surd", "unicode": "√", "category": "misc", "keywords": ["surd", "root", "radical"] },
+  { "command": "\\imath", "unicode": "ı", "category": "misc", "keywords": ["imath", "dotless i"] },
+  { "command": "\\jmath", "unicode": "ȷ", "category": "misc", "keywords": ["jmath", "dotless j"] },
+  { "command": "\\sharp", "unicode": "♯", "category": "misc", "keywords": ["sharp", "music", "note"] },
+  { "command": "\\flat", "unicode": "♭", "category": "misc", "keywords": ["flat", "music", "note"] },
+  { "command": "\\natural", "unicode": "♮", "category": "misc", "keywords": ["natural", "music", "note"] },
+  {
+    "command": "\\clubsuit",
+    "unicode": "♣",
+    "category": "misc",
+    "keywords": ["clubsuit", "club", "card suit"]
+  },
+  {
+    "command": "\\diamondsuit",
+    "unicode": "♢",
+    "category": "misc",
+    "keywords": ["diamondsuit", "diamond", "card suit"]
+  },
+  {
+    "command": "\\heartsuit",
+    "unicode": "♡",
+    "category": "misc",
+    "keywords": ["heartsuit", "heart", "card suit"]
+  },
+  {
+    "command": "\\spadesuit",
+    "unicode": "♠",
+    "category": "misc",
+    "keywords": ["spadesuit", "spade", "card suit"]
+  },
+  {
+    "command": "\\text",
+    "unicode": "Tx",
+    "category": "misc",
+    "keywords": ["text", "words", "roman text"],
+    "args": 1
+  }
+]

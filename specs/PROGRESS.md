@@ -10,7 +10,7 @@ order, then tick it. Specs 01–108 are already implemented.
 - [ ] 111-document-outline
 - [ ] 112-latex-autocomplete
 - [ ] 113-spell-check
-- [ ] 114-math-and-table-tools
+- [x] 114-math-and-table-tools
 - [ ] 115-voice-to-agent
 - [ ] 116-link-sharing
 - [ ] 117-project-chat

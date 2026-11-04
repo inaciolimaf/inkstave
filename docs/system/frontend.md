@@ -23,7 +23,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | `frontend/src/i18n/config.ts` | The global i18next instance and `NAMESPACES` |
 | `frontend/src/i18n/locales` | `en/`, `pt/` and `landing.ts` |
 | `frontend/src/routes` | 14 thin route components, one per screen, each loaded on demand by `lazy` in `router.tsx` |
-| `frontend/src/modules` | 13 feature modules |
+| `frontend/src/modules` | 14 feature modules |
 | `frontend/eslint.config.js` | Lint rules, size caps, boundaries, exceptions |
 | `frontend/playwright.config.ts` | E2e projects and stack bring-up |
 
@@ -38,6 +38,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | Editor | `@codemirror/view` and siblings; Vim and Emacs keymaps from `@replit` | ^6.36.0 | 6.43.1 |
 | CRDT | `yjs`, `y-codemirror.next`, `y-protocols`, `lib0` | ^13.6.31 | 13.6.31 |
 | PDF | `pdfjs-dist` | ^4.9.0 | 4.10.38 |
+| Equation editor | `mathlive` (MIT), loaded on first use | 0.111.1 | 0.111.1 |
 | i18n | `i18next`, `react-i18next`, `i18next-browser-languagedetector` | ^26.3.1, ^17.0.8, ^8.2.1 | 26.3.1, 17.0.8 |
 | Styling | `tailwindcss`, `tailwindcss-animate`, Radix primitives | ^3.4.17 | 3.4.19 |
 | Language and build | `typescript`, `vite` | ^5.7.2, ^5.4.11 | 5.9.3, 5.4.21 |
@@ -59,6 +60,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |
+| `frontend/src/modules/insert-tools` | Insert menu, symbol palette, table builder, equation editor (spec 114) | `InsertMenu` | none |
 | `frontend/src/modules/landing` | Public marketing page | `LandingPage` | auth |
 | `frontend/src/modules/notifications` | Bell, inbox list | `NotificationsBell` | none |
 | `frontend/src/modules/pdf-preview` | Compile button, PDF viewer, log, problems, SyncTeX | `PreviewPane`, `useProblems`, `useSyncTex`, types `Problem`, `ProblemSeverity` | none |
@@ -66,7 +68,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/settings` | Settings sections, e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth |
 | `frontend/src/modules/sharing` | Share dialog, invites, permissions | `ShareDialog`, `AcceptInvitePage`, `usePermissions`, `hasCapability`, `isReadOnly` | auth |
 
-`editor` is the hub: it depends on 11 modules and nothing depends on it except `frontend/src/App.tsx` and
+`editor` is the hub: it depends on 12 modules and nothing depends on it except `frontend/src/App.tsx` and
 `frontend/src/routes/editor.tsx`. The graph has no cycle.
 
 ## Data
@@ -80,6 +82,7 @@ The frontend has no database. Server state lives in the React Query cache. Local
 | `inkstave:split:<projectId>` | `localStorage`, via `autoSaveId` of `react-resizable-panels` | Size of the text and PDF panes |
 | `inkstave:editor-settings` | `localStorage` | Line wrapping; the other fields are ignored |
 | `inkstave:tree-expanded:<projectId>` | `sessionStorage` | Expanded folders |
+| `inkstave.insert.recent-symbols` | `localStorage` | Up to 16 recently used symbol commands |
 
 Access to these stores is wrapped in `try`/`catch`, so a blocked store degrades to defaults. The access token
 lives only in a module variable of `frontend/src/lib/token-store.ts`. The `QueryClient` in
@@ -158,6 +161,9 @@ Compile. Two resizable panels stay on screen, `EditorPane` and `PreviewPane`. `C
 under the text and `FileDrawer`, the file list over the text, with the text `inert` while it is open.
 `pickStartDocument` opens the root document, `main.tex` or the first `.tex` on arrival.
 
+The Insert button (spec 114) sits in the bar before the notifications bell. `WorkspaceInsert` gives `InsertMenu`
+the open view, the viewer's read-only state and the saved text of the main document.
+
 Below 768 px, through `useMediaQuery`, `Panes` shows one pane at a time and `MobileTabs` switches between Content,
 Preview and Agent. Both panes stay mounted. A successful compile shows the PDF; a problem or a PDF click shows
 the text.
@@ -178,6 +184,29 @@ on screen with a notice.
   assigns its `flushRef`, so it does nothing today (`docs/known-gaps.md`).
 - SyncTeX and diagnostics: `useSyncTex` resolves both directions, and `jumpToSource` opens another document when
   needed. `useProblems` feeds the problems panel, and `applyDiagnostics` draws those of the open file.
+
+### Insert tools
+
+`frontend/src/modules/insert-tools` holds the Insert menu (spec 114). Each tool writes to the open CodeMirror
+view through `insertSnippet` or `insertBlock`, in one transaction marked `isolateHistory`, so one Undo takes back
+that tool's change and nothing typed before it. In a live session the change reaches the CRDT through `yCollab`
+like any keystroke. A viewer gets the menu disabled.
+
+- Shortcuts: `Ctrl/Cmd+Shift+Y` opens the palette and `Ctrl/Cmd+Shift+E` the equation editor. `useShortcuts`
+  looks up `mod+shift+<key>` before `mod+<key>`. CodeMirror, the Vim keymap and the Emacs keymap bind neither key.
+- Symbol palette: `symbols/symbols.json` holds 275 symbols, each with a glyph, keywords and, when it needs one, the
+  package. A centred dialog on a wide screen and a bottom sheet on a phone show the same panel. Choosing a symbol
+  inserts it and keeps the palette open, so the package hint stays in reach. `insert-symbol.ts` adds `{}` for a
+  command with arguments and a space after a letter command that a letter would follow.
+- Table builder: `table-model.ts` is the draft, with immutable updates and limits of 30 rows and 15 columns.
+  `to-latex.ts` writes the code and escapes cell text, unless "Cells contain LaTeX" is ticked, which also applies
+  to the caption. `paste.ts` reads the tab and line separated text of a spreadsheet and fills the grid from the
+  focused cell. The builder only creates tables; it never reads an existing `tabular`.
+- Equation editor: `find-math.ts` returns the math under the cursor, with its delimiters. Save replaces only the
+  body. `mathlive-loader.ts` imports MathLive and its font stylesheet when the dialog opens. If that fails, the
+  dialog shows a textarea. The decision is in `docs/adr/0111-mathlive-equation-editor.md`.
+- Packages: `PackageHint` checks the saved text of the main document. "Add it" writes `\usepackage{…}` before
+  `\begin{document}` of the open text, when that text has one; otherwise it says where the line goes.
 
 ### Compile preview
 
@@ -216,11 +245,11 @@ Every screen is bilingual. `frontend/src/i18n/config.ts` builds one global i18ne
 - Detection: `navigator`, then `htmlTag`. `caches: []` means nothing persists. The UI has no language switcher;
   `changeLanguage` is not called anywhere.
 - `<html lang>` follows the active language.
-- Namespaces, 13 in total: `common` (default), `landing`, `auth`, `projects`, `editor`, `files`, `preview`,
-  `agent`, `review`, `history`, `settings`, `sharing`, `notifications`.
+- Namespaces, 14 in total: `common` (default), `landing`, `auth`, `projects`, `editor`, `files`, `preview`,
+  `agent`, `review`, `history`, `insert`, `settings`, `sharing`, `notifications`.
 
-Twelve namespaces have one file each under `frontend/src/i18n/locales/en` and `frontend/src/i18n/locales/pt`.
-Eleven of them export `Dict` from English and type Portuguese with it, so `tsc` catches a missing key. `common` does not.
+Thirteen namespaces have one file each under `frontend/src/i18n/locales/en` and `frontend/src/i18n/locales/pt`.
+Twelve of them export `Dict` from English and type Portuguese with it, so `tsc` catches a missing key. `common` does not.
 `landing` keeps both languages in `frontend/src/i18n/locales/landing.ts`, with `landingPt` typed as
 `typeof landingEn`. Components call `useTranslation`; hooks outside React call `i18n.t` from the same instance.
 
@@ -257,7 +286,7 @@ Newsreader from Google Fonts on every page. The landing respects `prefers-reduce
 `AbortController` for React Router under jsdom. `frontend/src/test/setup.ts` adds jest-dom, loads i18n and stubs
 the browser APIs that Radix, CodeMirror and PDF.js expect.
 
-- 101 test files: 98 next to the code in `frontend/src` and 3 in `frontend/tests`.
+- 128 test files: 121 next to the code in `frontend/src` and 7 in `frontend/tests`.
 - `frontend/tests/router.test.tsx` runs the real router and providers over `fakeApi` from
   `frontend/tests/helpers/screen.tsx`.
 - `frontend/tests/module-boundaries.test.ts` fails on an import cycle between modules.

@@ -66,6 +66,15 @@ are English-only today ([known gaps](known-gaps.md)).
 | Saved, saving | `SaveStatus` | "Salvo", "Salvando…" |
 | Unsaved changes | `SaveStatus` | "Alterações não salvas" |
 
+## Editor tools
+
+| Term | Code | Portuguese |
+|---|---|---|
+| Insert menu | `InsertMenu` | "Inserir" |
+| Symbol palette | `SymbolPalette` | "Símbolos" |
+| Table builder | `TableBuilder` | "Gerador de tabela" |
+| Equation editor | `EquationDialog` | "Editor de equação" |
+
 ## Compile and preview
 
 | Term | Code | Portuguese |
