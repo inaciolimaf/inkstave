@@ -23,6 +23,7 @@ class AgentAuditAction(enum.StrEnum):
     tool_result = "tool_result"
     proposal_created = "proposal_created"
     apply_recorded = "apply_recorded"
+    proposal_decided = "proposal_decided"
     limit_block = "limit_block"
     budget_block = "budget_block"
     injection_flagged = "injection_flagged"

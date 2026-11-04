@@ -1,4 +1,4 @@
-/** Fetch a proposal's full diff via the spec-44 diffs endpoint (spec 47). */
+/** The diff-review API: a proposal's hunks (spec 47) and the user's decision on them (spec 110). */
 import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 
@@ -23,6 +23,7 @@ export async function fetchProposal(
     id: row.id,
     projectId,
     sessionId,
+    status: row.status,
     createdAt: row.created_at,
     files: [
       {
@@ -33,4 +34,25 @@ export async function fetchProposal(
       },
     ],
   };
+}
+
+/** The hunk ids the user accepted, rejected, or found no longer applicable (stale). */
+export interface DecisionLists {
+  accepted: string[];
+  rejected: string[];
+  stale: string[];
+}
+
+/** Record the decision once; resolves with the proposal's new status (spec 110). */
+export async function recordDecision(
+  projectId: string,
+  sessionId: string,
+  proposalId: string,
+  lists: DecisionLists,
+): Promise<string> {
+  const row = await apiClient.post<{ status: string }>(
+    `/api/v1/projects/${projectId}/agent/sessions/${sessionId}/diffs/${proposalId}/outcome`,
+    lists,
+  );
+  return row.status;
 }

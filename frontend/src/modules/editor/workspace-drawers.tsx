@@ -1,7 +1,7 @@
 import { config } from "@/config";
 import { AgentPanel } from "@/modules/agent";
 import type { AgentRequest, AgentSide } from "@/modules/agent";
-import type { DocumentBridge } from "@/modules/diff-review";
+import type { ProposalRef } from "@/modules/diff-review";
 import type { TreeEntity } from "@/modules/file-tree";
 import { HistoryPanel } from "@/modules/history";
 
@@ -12,10 +12,9 @@ export function WorkspaceDrawers({
   agentOpen,
   onAgentOpenChange,
   agentRequest,
-  documentBridge,
+  proposals,
   onBeforeSend,
-  historyOpen,
-  onHistoryOpenChange,
+  dialogs,
   side,
 }: {
   projectId: string;
@@ -23,10 +22,10 @@ export function WorkspaceDrawers({
   agentOpen: boolean;
   onAgentOpenChange: (open: boolean) => void;
   agentRequest: AgentRequest | null;
-  documentBridge: DocumentBridge | undefined;
+  /** The inline review of the agent's proposals (spec 110). */
+  proposals: { proposalStatuses: Record<string, string>; open: (ref: ProposalRef) => void };
   onBeforeSend: () => Promise<void>;
-  historyOpen: boolean;
-  onHistoryOpenChange: (open: boolean) => void;
+  dialogs: { historyOpen: boolean; setHistoryOpen: (open: boolean) => void };
   /** The project chat that shares the agent window (spec 117). */
   side: AgentSide;
 }) {
@@ -38,11 +37,9 @@ export function WorkspaceDrawers({
           open={agentOpen}
           onOpenChange={onAgentOpenChange}
           request={agentRequest}
-          documentBridge={documentBridge}
+          proposalStatuses={proposals.proposalStatuses}
           onBeforeSend={onBeforeSend}
-          onReviewProposal={() => {
-            // The diff-review surface (spec 47) opens inside the panel via documentBridge.
-          }}
+          onReviewProposal={proposals.open}
           side={side}
         />
       )}
@@ -50,8 +47,8 @@ export function WorkspaceDrawers({
         <HistoryPanel
           projectId={projectId}
           docId={openDoc.id}
-          open={historyOpen}
-          onOpenChange={onHistoryOpenChange}
+          open={dialogs.historyOpen}
+          onOpenChange={dialogs.setHistoryOpen}
         />
       )}
     </>

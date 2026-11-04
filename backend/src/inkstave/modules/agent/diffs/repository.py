@@ -70,25 +70,11 @@ async def list_open_for_project(db: AsyncSession, project_id: UUID) -> list[Prop
     return list(rows.scalars())
 
 
+async def get_for_session(db: AsyncSession, session_id: UUID, diff_id: UUID) -> ProposedDiff | None:
+    """The row, locked for the caller's transaction, if it belongs to ``session_id``."""
+    row = await db.get(ProposedDiff, diff_id, with_for_update=True)
+    return row if row is not None and row.session_id == session_id else None
+
+
 async def get(db: AsyncSession, diff_id: UUID) -> ProposedDiff | None:
     return await db.get(ProposedDiff, diff_id)
-
-
-async def set_status(
-    db: AsyncSession,
-    diff_id: UUID,
-    status: str,
-    *,
-    applied_hunk_ids: list[str] | None = None,
-) -> ProposedDiff | None:
-    row = await db.get(ProposedDiff, diff_id)
-    if row is None:
-        return None
-    row.status = status
-    if applied_hunk_ids is not None:
-        # Record which hunks were applied for partial applies (spec 47).
-        stats = dict(row.stats)
-        stats["applied_hunk_ids"] = applied_hunk_ids
-        row.stats = stats
-    await db.flush()
-    return row

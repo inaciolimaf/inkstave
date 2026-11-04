@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Desk } from "@/components/manuscript";
 import { config } from "@/config";
@@ -16,7 +16,6 @@ import { MobileTabs, type MobileView } from "./mobile-tabs";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useAgentOpen } from "./use-agent-open";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
-import { useDocumentBridge } from "./use-document-bridge";
 import {
   useAgentAsks,
   useFlushBeforeCompile,
@@ -26,6 +25,7 @@ import {
 } from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
 import { WorkspaceDrawers } from "./workspace-drawers";
+import { useProposalReview } from "./use-proposal-review";
 import { useSourceSync } from "./use-source-sync";
 import { type WorkspaceOutline, useWorkspaceOutline } from "./workspace-outline";
 import { useWorkspaceChat } from "./workspace-chat";
@@ -117,6 +117,7 @@ function WorkspaceContent({
   setFilesOpen,
   slots,
   outline,
+  reviewBar,
 }: {
   projectId: string;
   selected: TreeEntity | null;
@@ -129,6 +130,7 @@ function WorkspaceContent({
   setFilesOpen: (open: boolean) => void;
   slots: ReturnType<typeof useSlots>;
   outline: WorkspaceOutline;
+  reviewBar: ReactNode;
 }) {
   const { user } = useAuth();
   const pickFile = (entity: TreeEntity) => {
@@ -169,6 +171,7 @@ function WorkspaceContent({
           statusSlotRef={slots.setStatus}
           outputSlotRef={slots.setOutput}
           outline={outline.panel}
+          reviewBar={reviewBar}
         />
       </div>
     </div>
@@ -190,7 +193,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const dialogs = useWorkspaceDialogs();
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
   const chat = useWorkspaceChat(projectId, agentOpen, setAgentOpen);
-  const documentBridge = useDocumentBridge(projectId, treeRoot);
+  const proposals = useProposalReview({ projectId, sync, treeRoot, readOnly, wide, setSelected, setView });
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
   const jumps = useSourceJumps(sync, setView);
@@ -218,6 +221,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       setFilesOpen={setFilesOpen}
       slots={slots}
       outline={outline}
+      reviewBar={proposals.reviewBar}
     />
   );
 
@@ -244,10 +248,9 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         agentOpen={agentOpen}
         onAgentOpenChange={setAgentOpen}
         agentRequest={asks.request}
-        documentBridge={documentBridge}
+        proposals={proposals}
         onBeforeSend={flushBeforeCompile}
-        historyOpen={dialogs.historyOpen}
-        onHistoryOpenChange={dialogs.setHistoryOpen}
+        dialogs={dialogs}
         side={chat.side}
       />
       <Panes

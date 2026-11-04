@@ -160,7 +160,7 @@ describe("AgentPanel", () => {
       stats: { hunk_count: 1 },
     });
     await userEvent.click(await screen.findByRole("button", { name: /Review changes/ }));
-    expect(onReview).toHaveBeenCalledWith("d9");
+    expect(onReview).toHaveBeenCalledWith({ sessionId: "s1", proposalId: "d9", path: "main.tex" });
 
     es.emit({ type: "done", seq: 3, final_text: "Found it in main.tex", usage: {}, iterations: 1 });
     // Composer re-enabled after the run finishes.

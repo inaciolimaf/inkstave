@@ -79,6 +79,7 @@ describe("AgentTranscript rendering", () => {
           kind: "diff-proposal",
           id: "d1",
           proposalId: "prop-123",
+          status: "proposed",
           files: [{ path: "main.tex", hunkCount: 2 }],
         },
       ],
@@ -89,7 +90,42 @@ describe("AgentTranscript rendering", () => {
     // The composer's send button is the sheet's one solid action (spec 106).
     expect(review).not.toHaveClass("bg-primary");
     await userEvent.click(review);
-    expect(onReview).toHaveBeenCalledWith("prop-123");
+    expect(onReview).toHaveBeenCalledWith("prop-123", "main.tex");
+  });
+
+  it("shows a decided proposal as decided, with no review to open (spec 110)", () => {
+    const items: TranscriptItem[] = [
+      {
+        kind: "diff-proposal",
+        id: "d1",
+        proposalId: "prop-9",
+        status: "partially_applied",
+        files: [{ path: "main.tex", hunkCount: 3 }],
+      },
+    ];
+    render(
+      <AgentTranscript
+        items={items}
+        loading={false}
+        onReviewProposal={vi.fn()}
+        proposalStatuses={{ "prop-9": "applied" }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Review changes/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Applied")).toBeInTheDocument();
+  });
+
+  it("shows the outcome of a proposal from the stored status when no decision came in this page", () => {
+    renderItems([
+      {
+        kind: "diff-proposal",
+        id: "d2",
+        proposalId: "prop-10",
+        status: "rejected",
+        files: [{ path: "a.tex", hunkCount: 1 }],
+      },
+    ]);
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
   });
 
   it("folds neighbouring tool calls into one line that opens in plain words (spec 107)", async () => {

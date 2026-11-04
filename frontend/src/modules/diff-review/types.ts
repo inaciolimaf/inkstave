@@ -22,27 +22,17 @@ export interface ProposedFileDiff {
   baseVersion: string;
   docId: string;
   hunks: DiffHunk[];
-  isNewFile?: boolean;
-  isDeletion?: boolean;
 }
 
 export interface DiffProposal {
   id: string;
   projectId: string;
   sessionId: string;
+  /** The proposal's status; only `proposed` can still be reviewed (spec 110). */
+  status: string;
   files: ProposedFileDiff[];
   createdAt: string; // mapped from wire createdAt
 }
-
-export interface FileReviewState {
-  path: string;
-  baseVersion: string;
-  decisions: Record<string, boolean>; // hunkId -> accepted (default true)
-  baseChanged: boolean;
-  blockedHunkIds: string[];
-}
-
-export type ApplyPhase = "idle" | "confirming" | "applying" | "applied" | "error";
 
 /** The editor-provided capability to read + write a document's live CRDT text. */
 export interface DocumentBridge {
@@ -52,11 +42,4 @@ export interface DocumentBridge {
   applyContent(path: string, target: string): Promise<void>;
   /** Release any transient resources (open providers). */
   destroy?(): void;
-}
-
-export interface ApplyFileResult {
-  path: string;
-  appliedHunks: string[];
-  blockedHunks: string[];
-  error?: string;
 }

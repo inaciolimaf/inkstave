@@ -1,12 +1,11 @@
 /** The agent: a floating window that blocks nothing behind it, or a sheet on a phone (specs 46, 107). */
-import { type CSSProperties, type ReactNode, type Ref, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, type Ref, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-import { DiffReviewDialog } from "@/modules/diff-review";
-import type { DocumentBridge } from "@/modules/diff-review";
+import type { ProposalRef } from "@/modules/diff-review";
 
 import { AgentErrorState } from "./controls";
 import { FileOpCard } from "./file-op-card";
@@ -30,12 +29,14 @@ function Conversation({
   chat,
   onPickExample,
   onReviewProposal,
+  proposalStatuses,
   projectId,
 }: {
   chat: ReturnType<typeof useAgentChat>;
   projectId: string;
   onPickExample: (text: string) => void;
-  onReviewProposal: (proposalId: string) => void;
+  onReviewProposal: (proposalId: string, path: string) => void;
+  proposalStatuses: Record<string, string>;
 }) {
   const { t } = useTranslation("agent");
   const sessionId = chat.activeSessionId;
@@ -45,6 +46,7 @@ function Conversation({
         items={chat.run.items}
         loading={chat.transcriptLoading}
         onReviewProposal={onReviewProposal}
+        proposalStatuses={proposalStatuses}
         renderFileOp={(item) =>
           sessionId && <FileOpCard projectId={projectId} sessionId={sessionId} op={item} />
         }
@@ -66,32 +68,6 @@ function Conversation({
   );
 }
 
-/** The diff review of a proposal in the open session, opened from the transcript (spec 47). */
-function ProposalReview({
-  projectId,
-  sessionId,
-  bridge,
-  proposalId,
-  onClose,
-}: {
-  projectId: string;
-  sessionId: string;
-  bridge: DocumentBridge;
-  proposalId: string | null;
-  onClose: () => void;
-}) {
-  return (
-    <DiffReviewDialog
-      projectId={projectId}
-      sessionId={sessionId}
-      proposalId={proposalId}
-      bridge={bridge}
-      open={proposalId !== null}
-      onOpenChange={(o) => !o && onClose()}
-    />
-  );
-}
-
 /** The agent's view of the window: the conversation, any error, and the composer. */
 function AgentBody({
   chat,
@@ -100,13 +76,15 @@ function AgentBody({
   composer,
   composerRef,
   onReviewProposal,
+  proposalStatuses,
 }: {
   chat: ReturnType<typeof useAgentChat>;
   projectId: string;
   active: boolean;
   composer: ReturnType<typeof useComposer>;
   composerRef: Ref<HTMLTextAreaElement>;
-  onReviewProposal: (proposalId: string) => void;
+  onReviewProposal: (proposalId: string, path: string) => void;
+  proposalStatuses: Record<string, string>;
 }) {
   return (
     <>
@@ -115,6 +93,7 @@ function AgentBody({
         projectId={projectId}
         onPickExample={composer.setText}
         onReviewProposal={onReviewProposal}
+        proposalStatuses={proposalStatuses}
       />
       {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
       <PanelFooter
@@ -159,7 +138,7 @@ export function AgentPanel({
   open,
   onOpenChange,
   onReviewProposal,
-  documentBridge,
+  proposalStatuses = {},
   onBeforeSend,
   request = null,
   side,
@@ -167,8 +146,10 @@ export function AgentPanel({
   projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReviewProposal: (proposalId: string) => void;
-  documentBridge?: DocumentBridge;
+  /** The user asked to review a proposal in its text (spec 110). */
+  onReviewProposal: (ref: ProposalRef) => void;
+  /** Outcomes decided in the editor, by proposal id: a decided card shows it at once. */
+  proposalStatuses?: Record<string, string>;
   /** Flush open collab docs before a run so the agent reads current text (spec 28/42). */
   onBeforeSend?: () => Promise<void>;
   /** Something the editor asked for: a selection to discuss, or a problem to fix. */
@@ -179,7 +160,6 @@ export function AgentPanel({
   const chat = useAgentChat(projectId, onBeforeSend);
   const chatView = side?.view === "chat";
   const windowSize = useWindowSize();
-  const [reviewId, setReviewId] = useState<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const active = ACTIVE_PHASES.includes(chat.run.phase);
   const composer = useComposer({ open, busy: active, send: chat.send, onClose: () => onOpenChange(false) });
@@ -190,9 +170,8 @@ export function AgentPanel({
 
   useEditorRequest(request, chat.send, composer.setQuote);
 
-  const handleReview = (proposalId: string) => {
-    onReviewProposal(proposalId);
-    if (documentBridge) setReviewId(proposalId);
+  const handleReview = (proposalId: string, path: string) => {
+    if (chat.activeSessionId) onReviewProposal({ sessionId: chat.activeSessionId, proposalId, path });
   };
 
   const title = chat.sessions.find((s) => s.id === chat.activeSessionId)?.title ?? t("newChat");
@@ -241,19 +220,10 @@ export function AgentPanel({
             composer={composer}
             composerRef={composerRef}
             onReviewProposal={handleReview}
+            proposalStatuses={proposalStatuses}
           />
         )}
       </section>
-
-      {documentBridge && chat.activeSessionId && (
-        <ProposalReview
-          projectId={projectId}
-          sessionId={chat.activeSessionId}
-          bridge={documentBridge}
-          proposalId={reviewId}
-          onClose={() => setReviewId(null)}
-        />
-      )}
     </>
   );
 }

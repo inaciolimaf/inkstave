@@ -6,7 +6,7 @@ order, then tick it. Specs 01–108 are already implemented.
 ## Backlog (only these remain)
 
 - [x] 109-shared-projects-dashboard
-- [ ] 110-inline-diff-review
+- [x] 110-inline-diff-review
 - [x] 111-document-outline
 - [ ] 112-latex-autocomplete
 - [ ] 113-spell-check

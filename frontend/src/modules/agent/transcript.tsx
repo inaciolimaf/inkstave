@@ -155,15 +155,28 @@ function foldTools(items: TranscriptItem[]): (Exclude<TranscriptItem, ToolItem> 
   return folded;
 }
 
+/** The outcomes the card can show once the user has decided (spec 110). */
+const DECIDED_LABEL = {
+  applied: "applied",
+  partially_applied: "partlyApplied",
+  rejected: "rejected",
+  stale: "stale",
+} as const;
+
 function DiffProposalCard({
   item,
+  status,
   onReviewProposal,
 }: {
   item: Extract<TranscriptItem, { kind: "diff-proposal" }>;
-  onReviewProposal: (proposalId: string) => void;
+  status: string;
+  onReviewProposal: (proposalId: string, path: string) => void;
 }) {
   const { t } = useTranslation("agent");
   const hunks = item.files.reduce((n, f) => n + f.hunkCount, 0);
+  const decided = status !== "proposed";
+  const label =
+    decided && status in DECIDED_LABEL ? DECIDED_LABEL[status as keyof typeof DECIDED_LABEL] : null;
   return (
     <div className={cn(HAND, "space-y-2")}>
       <div className="flex items-center gap-2 text-body font-medium">
@@ -175,9 +188,17 @@ function DiffProposalCard({
           <li key={f.path}>{t("transcript.hunkLine", { path: f.path, count: f.hunkCount })}</li>
         ))}
       </ul>
-      <Button size="sm" variant="outline" onClick={() => onReviewProposal(item.proposalId)}>
-        {hunks ? t("transcript.reviewChangesCount", { count: hunks }) : t("transcript.reviewChanges")}
-      </Button>
+      {decided ? (
+        label && <p className="text-small font-medium">{t(`transcript.diffStatus.${label}`)}</p>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onReviewProposal(item.proposalId, item.files[0]?.path ?? "")}
+        >
+          {hunks ? t("transcript.reviewChangesCount", { count: hunks }) : t("transcript.reviewChanges")}
+        </Button>
+      )}
     </div>
   );
 }
@@ -186,11 +207,14 @@ export function AgentTranscript({
   items,
   loading,
   onReviewProposal,
+  proposalStatuses = {},
   renderFileOp,
 }: {
   items: TranscriptItem[];
   loading: boolean;
-  onReviewProposal: (proposalId: string) => void;
+  onReviewProposal: (proposalId: string, path: string) => void;
+  /** Outcomes decided since the transcript was loaded, by proposal id. */
+  proposalStatuses?: Record<string, string>;
   renderFileOp?: (item: Extract<TranscriptItem, { kind: "file-op" }>) => ReactNode;
 }) {
   const { t } = useTranslation("agent");
@@ -245,7 +269,15 @@ export function AgentTranscript({
           if (Array.isArray(item)) return <ToolActivity key={item[0]!.id} items={item} />;
           if (item.kind === "message") return <MessageBubble key={item.id} item={item} />;
           if (item.kind === "diff-proposal") {
-            return <DiffProposalCard key={item.id} item={item} onReviewProposal={onReviewProposal} />;
+            const status = proposalStatuses[item.proposalId] ?? item.status;
+            return (
+              <DiffProposalCard
+                key={item.id}
+                item={item}
+                status={status}
+                onReviewProposal={onReviewProposal}
+              />
+            );
           }
           if (item.kind === "file-op") return <Fragment key={item.id}>{renderFileOp?.(item)}</Fragment>;
           return (

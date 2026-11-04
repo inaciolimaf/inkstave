@@ -12,7 +12,7 @@
  */
 import { test, expect } from "../support/fixtures";
 import { injectAuth } from "../support/auth";
-import { AgentPanel, DiffReview, EditorPage, PreviewPanel } from "../support/pages";
+import { AgentPanel, EditorPage, InlineReview, PreviewPanel } from "../support/pages";
 
 const APPLIED_MARKER = "rewritten by the Inkstave AI agent";
 
@@ -20,7 +20,7 @@ test("agent diff can be rejected without touching the document @full", async ({ 
   const { projectId } = await seedProject();
   const editor = new EditorPage(page);
   const agent = new AgentPanel(page);
-  const review = new DiffReview(page);
+  const review = new InlineReview(page);
 
   await editor.open(projectId);
   await editor.openFile("main.tex");
@@ -32,13 +32,14 @@ test("agent diff can be rejected without touching the document @full", async ({ 
   await agent.send("Rewrite the introduction.");
   await expect(agent.reviewButton()).toBeVisible({ timeout: 20_000 });
 
+  // Reject every change: the review closes by itself once the last one is decided.
   await review.openFromAgent();
-  // Reject every hunk, then close: nothing is applied.
-  await review.dialog().getByRole("button", { name: "Reject all" }).click();
-  await page.keyboard.press("Escape");
+  await review.rejectAll();
+  await expect(review.bar()).toHaveCount(0);
 
   await expect(editor.content()).toContainText("original introduction");
   await expect(editor.content()).not.toContainText(APPLIED_MARKER);
+  await expect(page.getByText("Rejected", { exact: true })).toBeVisible({ timeout: 20_000 });
 });
 
 test("a real Tectonic compile produces a one-page PDF preview @full", async ({ page, seedProject }) => {
@@ -72,7 +73,7 @@ test("multi-hunk diff supports a partial accept @full", async ({ page, seedProje
   const { projectId } = await seedProject();
   const editor = new EditorPage(page);
   const agent = new AgentPanel(page);
-  const review = new DiffReview(page);
+  const review = new InlineReview(page);
 
   await editor.open(projectId);
   await editor.openFile("main.tex");
@@ -84,23 +85,23 @@ test("multi-hunk diff supports a partial accept @full", async ({ page, seedProje
   await expect(agent.reviewButton()).toBeVisible({ timeout: 20_000 });
 
   await review.openFromAgent();
-  const dialog = page.getByRole("dialog");
 
-  // Every hunk starts accepted. Reject all but the first so this is a genuine
-  // *partial* accept (robust whether the proposal has one hunk or several).
-  const switches = dialog.getByRole("switch");
-  const count = await switches.count();
-  expect(count).toBeGreaterThan(0);
-  for (let i = 1; i < count; i++) {
-    const sw = switches.nth(i);
-    if (await sw.isChecked()) await sw.click();
+  // Accept the first change and reject every later one, so this is a genuine
+  // *partial* accept (robust whether the proposal has one change or several).
+  await review.accept(1);
+  for (
+    let index = 2;
+    (await review
+      .bar()
+      .getByRole("button", { name: `Reject change ${index}` })
+      .count()) > 0;
+    index++
+  ) {
+    await review.reject(index);
   }
-  await expect(switches.first()).toBeChecked();
 
-  // Apply the accepted subset → confirm → the open editor converges to include
-  // the accepted rewrite, and the agent never auto-wrote before this confirm.
-  await review.applyAll();
-  await expect(page.getByText("Changes applied", { exact: true })).toBeVisible();
+  // The accepted change is in the text, and the review closed once every change was decided.
+  await expect(review.bar()).toHaveCount(0);
   await expect(editor.content()).toContainText(APPLIED_MARKER);
 });
 

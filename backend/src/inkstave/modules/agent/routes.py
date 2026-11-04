@@ -16,12 +16,19 @@ from inkstave.modules.agent.access import owned_session, require_member
 from inkstave.modules.agent.deps import get_agent_enqueuer
 from inkstave.modules.agent.diffs import repository as diff_repo
 from inkstave.modules.agent.diffs.models import ProposedDiffStatus
+from inkstave.modules.agent.diffs.outcome import (
+    DiffForbiddenError,
+    DiffNotFoundError,
+    record_outcome,
+)
+from inkstave.modules.agent.diffs.schemas import DiffOutcomeIn
 from inkstave.modules.agent.file_ops import repo as file_op_repo
 from inkstave.modules.agent.file_ops.schemas import ProposedFileOpOut
 from inkstave.modules.agent.graph import repository as agent_repo
 from inkstave.modules.agent.models import AgentRunState
 from inkstave.modules.agent.runs.events import request_cancel
 from inkstave.modules.agent.runs.stream import sse_stream
+from inkstave.modules.agent.safety import AgentAuditAction, AuditSubject, audit
 from inkstave.modules.agent.schemas import (
     AgentMessageOut,
     AgentSessionOut,
@@ -37,6 +44,7 @@ from inkstave.modules.auth import (
     sse_user,
 )
 from inkstave.modules.collab import flush_open_project_docs
+from inkstave.modules.projects import Capability, capabilities_for, role_for
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -138,10 +146,11 @@ async def get_session_detail(
     return SessionDetailOut(
         session=AgentSessionOut.model_validate(row),
         messages=[AgentMessageOut.model_validate(m) for m in messages],
+        # Decided proposals come back with their status, so the panel shows them as decided (spec 110).
         diffs=[
             _diff_summary(d, include_hunks=False)
             for d in diffs
-            if d.status == ProposedDiffStatus.proposed.value
+            if d.status != ProposedDiffStatus.superseded.value
         ],
         file_ops=[
             ProposedFileOpOut.model_validate(op).model_copy(update={"content": None})
@@ -247,3 +256,38 @@ async def list_diffs(
         rows = [r for r in rows if r.status == status_filter]
     include_hunks = include == "hunks"
     return [_diff_summary(r, include_hunks=include_hunks) for r in rows]
+
+
+@router.post(
+    "/sessions/{session_id}/diffs/{diff_id}/outcome",
+    response_model=ProposedDiffSummary,
+    responses={**_ERRORS, status.HTTP_409_CONFLICT: {"model": ErrorEnvelope}},
+)
+async def record_diff_outcome(
+    project_id: UUID,
+    session_id: UUID,
+    diff_id: UUID,
+    body: DiffOutcomeIn,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = UNIT_OF_WORK,
+) -> ProposedDiffSummary:
+    """Store which hunks the user accepted, rejected or found stale; the status follows (spec 110)."""
+    await require_member(session, project_id, user.id)
+    await owned_session(session, project_id, session_id, user.id)
+    if Capability.DOC_WRITE not in capabilities_for(await role_for(session, user.id, project_id)):
+        raise DiffForbiddenError()
+    diff = await diff_repo.get_for_session(session, session_id, diff_id)
+    if diff is None:
+        raise DiffNotFoundError()
+    await record_outcome(session, diff, body, user.id)
+    detail = {
+        "diff_id": str(diff.id),
+        "path": diff.path,
+        "status": diff.status,
+        "accepted": len(body.accepted),
+        "rejected": len(body.rejected),
+        "stale": len(body.stale),
+    }
+    subject = AuditSubject(user.id, project_id, session_id, None)
+    await audit(session, AgentAuditAction.proposal_decided, subject, detail=detail)
+    return _diff_summary(diff, include_hunks=False)

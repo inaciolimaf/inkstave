@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from inkstave.core.schemas import StrictModel
 
 
 class HunkLine(BaseModel):
@@ -47,3 +49,11 @@ class ProposedDiffOut(BaseModel):
     status: str
     rationale: str | None
     created_at: datetime
+
+
+class DiffOutcomeIn(StrictModel):
+    """The user's decision on each hunk of a proposal (spec 110). Ids are the ``hunk_id`` values."""
+
+    accepted: list[str] = Field(default_factory=list)
+    rejected: list[str] = Field(default_factory=list)
+    stale: list[str] = Field(default_factory=list)

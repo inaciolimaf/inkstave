@@ -56,7 +56,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/agent` | Agent panel, run reducer, SSE stream; its window also holds the project chat (`SideSwitch`) | `AgentPanel`, type `SideView` | diff-review |
 | `frontend/src/modules/auth` | Session context, guards, theme application, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, `useApplyTheme`, the 8 page components | none |
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
-| `frontend/src/modules/diff-review` | Hunk review dialog, rebase, CRDT apply | `DiffReviewDialog`, `createEditorBridge`, type `DocumentBridge` | collab |
+| `frontend/src/modules/diff-review` | Inline review of agent proposals in the text, rebase, CRDT apply | `ReviewBar`, `useInlineReview`, `inlineReviewExtension`, `createEditorBridge`, type `DocumentBridge` | collab |
 | `frontend/src/modules/discussion` | Project chat panel, its unread button, the shared project event stream | `ChatPanel`, `ChatButton`, `useChatUnread`, `useProjectEvents`, `subscribeProjectEvents`, `PROJECT_EVENT_TYPES`, types `ProjectEvent`, `ProjectEventHandlers` | auth |
 | `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, outline | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
@@ -242,12 +242,19 @@ like any keystroke. A viewer gets the menu disabled.
 2. `startRun` posts the message. `openStream` opens an `EventSource` for `token`, `tool_call`, `tool_result`,
    `diff_proposed`, `done` and `error`, and passes each event to `applyEvent`.
 3. `applyEvent` in `frontend/src/modules/agent/reducer.ts` drops repeated `seq` values and unknown event types.
-4. A proposal card opens `DiffReviewDialog`, if `documentBridge` exists. `useDiffReview` loads the proposal,
-   marks every hunk accepted, and reads the live content of each file to find blocked hunks.
-5. The user toggles hunks and confirms. `apply` re-reads the live content, runs `rebaseHunks`, and calls
-   `bridge.applyContent` only when at least one hunk applies.
-6. `createEditorBridge` opens a short-lived provider per document. `applyTargetToYText` writes one minimal edit
-   in a transaction tagged `agent-apply`, so other users' edits outside the region survive.
+4. A proposal card calls `useInlineReview.open`, which switches the editor to the proposal's document and starts
+   the review on that document's CodeMirror view. There is no dialog (spec 110). `inlineReviewExtension` is part of
+   every editor's extensions and draws nothing until a review starts: removed lines struck through on the error
+   tint, added text in a block under them, and a toolbar per open hunk with Accept and Reject. A blocked hunk
+   (its old lines changed) gets only Reject. A viewer sees the drawing and no buttons.
+5. Accept writes that hunk: `bridge.readContent` gives the live text, `rebaseHunks` applies the one hunk, and
+   `bridge.applyContent` writes it. Reject changes no text. `ReviewBar` above the text shows "Change n of m", moves
+   between changes, and offers Accept all and Reject all. Keys: `Alt+]` and `Alt+[` move, `Alt+Enter` accepts,
+   `Alt+Backspace` rejects.
+6. When the last hunk is decided, `recordDecision` posts the lists to the outcome route and the review closes. The
+   card shows the returned status. The state field re-places hunks on every change, so a collaborator's edit
+   inside a hunk blocks it while the rest stay acceptable. `createEditorBridge` opens a short-lived provider per
+   document, and `applyTargetToYText` writes one minimal edit in a transaction tagged `agent-apply`.
 
 ### Dictation (spec 115)
 
@@ -361,7 +368,7 @@ Name the projects when running Playwright. A bare `playwright test` runs the sli
 | The e2e route list equals the router | `frontend/tests/e2e-routes.test.ts`, "covers every route of the router, and nothing else" |
 | No route crashes | `frontend/e2e/routes.spec.ts` |
 | No route but the editor scrolls sideways at 390 px | `frontend/e2e/mobile.spec.ts` |
-| Agent edits apply only after confirmation, and only accepted hunks | `frontend/src/modules/diff-review/DiffReviewDialog.apply.test.tsx`, "gates apply behind confirm, then writes only accepted hunks (AC4, AC5, AC8)" |
+| Agent edits apply only when accepted, and only accepted hunks | `frontend/src/modules/diff-review/inline-review-actions.test.ts`, "accepting a hunk" and "recording the outcome" |
 | A hunk that no longer matches is never applied | `frontend/src/modules/diff-review/hunks.test.ts`, "never includes a blocked hunk in the rebased target" |
 | An agent apply keeps a concurrent edit elsewhere | `frontend/src/modules/diff-review/crdt-apply.test.ts`, "converges collaborators and preserves an unrelated concurrent edit (AC6)" |
 | Assistant Markdown cannot run scripts | `frontend/src/modules/agent/transcript.test.tsx`, "sanitizes assistant content (no script execution) (AC10)" |
@@ -439,7 +446,7 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
   so a Portuguese user can see English. The invite notification also prints `payload.role` raw, without
   translating it.
 - **Dead code.** `useDocument` in `frontend/src/modules/editor/use-document.ts` has no caller; only `documentKey` is
-  used. `onReviewProposal` in `EditorWorkspace` is an empty callback.
+  used.
 
 ## Frontend standard
 

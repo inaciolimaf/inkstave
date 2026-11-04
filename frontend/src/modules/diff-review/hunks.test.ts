@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { blockedAgainst, minimalEdit, previewContent, rebaseHunks } from "./hunks";
+import { minimalEdit, rebaseHunks } from "./hunks";
 import type { DiffHunk, LineType } from "./types";
 
 function hunk(id: string, oldStart: number, lines: [LineType, string][]): DiffHunk {
@@ -61,29 +61,6 @@ describe("rebaseHunks", () => {
     ]);
     expect(rebaseHunks("a\nb\nc\n", [h], ALL("h1")).target).toBe("a\nB\nc\n");
     expect(rebaseHunks("a\nb\nc", [h], ALL("h1")).target).toBe("a\nB\nc");
-  });
-
-  it("excludes rejected hunks (preview)", () => {
-    const h1 = hunk("h1", 2, [
-      ["del", "b"],
-      ["add", "B"],
-    ]);
-    const h2 = hunk("h2", 3, [
-      ["del", "c"],
-      ["add", "C"],
-    ]);
-    expect(previewContent("a\nb\nc\n", [h1, h2], ALL("h1"))).toBe("a\nB\nc\n");
-  });
-});
-
-describe("base-change detection", () => {
-  it("blocks hunks whose old lines no longer match the live content (AC7)", () => {
-    const h = hunk("h1", 2, [
-      ["del", "b"],
-      ["add", "B"],
-    ]);
-    expect(blockedAgainst("a\nb\nc\n", [h])).toEqual([]); // still applies
-    expect(blockedAgainst("a\nDIFFERENT\nc\n", [h])).toEqual(["h1"]); // diverged → blocked
   });
 
   it("never includes a blocked hunk in the rebased target", () => {

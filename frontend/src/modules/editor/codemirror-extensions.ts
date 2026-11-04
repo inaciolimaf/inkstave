@@ -12,6 +12,8 @@ import {
 } from "@codemirror/view";
 import type { RefObject } from "react";
 
+import { inlineReviewExtension } from "@/modules/diff-review";
+
 import { lintGutterExtension } from "./diagnostics";
 import { keymapExtension } from "./keymap-extension";
 import { latex } from "./latex-language";
@@ -117,6 +119,7 @@ export function editorExtensions(options: {
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     latex(),
     syncHighlightExtension,
+    inlineReviewExtension,
     lintGutterExtension,
     ...(collabExtension ? [collabExtension] : []),
     EditorView.updateListener.of((u) => {
