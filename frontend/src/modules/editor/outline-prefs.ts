@@ -1,7 +1,12 @@
-/** What the writer last chose for the outline: the drawer tab, and whether it is pinned beside the text (spec 111). */
-import { useState } from "react";
+/**
+ * What the writer last chose for the drawer: its tab (Files, Outline, Search: specs 111 and 122), and whether the
+ * outline is pinned beside the text.
+ */
+import { useCallback, useState } from "react";
 
-export type DrawerTab = "files" | "outline";
+export type DrawerTab = "files" | "outline" | "search";
+
+const TABS: readonly DrawerTab[] = ["files", "outline", "search"];
 
 const TAB_KEY = "inkstave:drawer-tab";
 const PINNED_KEY = "inkstave:outline-pinned";
@@ -24,13 +29,14 @@ function writeFlag(key: string, value: string): void {
 }
 
 export function useDrawerTab(): [DrawerTab, (tab: DrawerTab) => void] {
-  const [tab, setTabState] = useState<DrawerTab>(() =>
-    readFlag(TAB_KEY) === "outline" ? "outline" : "files",
-  );
-  const setTab = (next: DrawerTab) => {
+  const [tab, setTabState] = useState<DrawerTab>(() => {
+    const saved = readFlag(TAB_KEY);
+    return TABS.find((name) => name === saved) ?? "files";
+  });
+  const setTab = useCallback((next: DrawerTab) => {
     writeFlag(TAB_KEY, next);
     setTabState(next);
-  };
+  }, []);
   return [tab, setTab];
 }
 

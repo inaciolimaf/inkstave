@@ -5,8 +5,19 @@ import * as Y from "yjs";
 import { InkstaveWsProvider, collabDocUrl } from "@/modules/collab";
 import { tokenStore } from "@/lib/token-store";
 
-import { applyTargetToYText } from "./crdt-apply";
-import type { DocumentBridge } from "./types";
+import { applySplicesToYText, applyTargetToYText } from "./crdt-apply";
+import type { LiveTextBridge } from "./types";
+
+/** How long a replace waits for a document's first sync before it gives up on that file (spec 122). */
+export const SYNC_DEADLINE_MS = 10_000;
+
+function withDeadline(ready: Promise<void>, ms: number): Promise<void> {
+  let timer = 0;
+  const late = new Promise<never>((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error("The document did not sync in time.")), ms);
+  });
+  return Promise.race([ready, late]).finally(() => window.clearTimeout(timer));
+}
 
 interface Entry {
   ydoc: Y.Doc;
@@ -22,7 +33,7 @@ interface Entry {
 export function createEditorBridge(
   projectId: string,
   resolveDocId: (path: string) => string | null,
-): DocumentBridge {
+): LiveTextBridge {
   const cache = new Map<string, Entry>();
 
   const open = (path: string): Entry | null => {
@@ -64,6 +75,15 @@ export function createEditorBridge(
       await entry.ready;
       applyTargetToYText(entry.ydoc.getText("content"), target);
       await entry.provider.flush();
+    },
+    async transformContent(path, edit) {
+      const entry = open(path);
+      if (!entry) return null;
+      await withDeadline(entry.ready, SYNC_DEADLINE_MS);
+      const ytext = entry.ydoc.getText("content");
+      applySplicesToYText(ytext, edit(ytext.toString()));
+      await entry.provider.flush();
+      return ytext.toString();
     },
     destroy() {
       for (const entry of cache.values()) entry.provider.destroy();

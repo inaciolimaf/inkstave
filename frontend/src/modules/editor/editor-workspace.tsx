@@ -170,6 +170,7 @@ function WorkspaceContent({
             statusSlotRef={slots.setStatus}
             outputSlotRef={slots.setOutput}
             outline={outline.panel}
+            search={outline.search}
             reviewBar={reviewBar}
           />
         </div>
@@ -200,14 +201,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const comments = useWorkspaceComments(projectId, sync.editorView, selected, setSelected, chat.button);
 
   const flushBeforeCompile = useFlushBeforeCompile();
-  const outline = useWorkspaceOutline({
-    projectId,
-    treeRoot,
-    rootDocId: project?.rootDocId,
-    sync,
-    jumps,
-    setFilesOpen,
-  });
+  const outline = useWorkspaceOutline({ projectId, treeRoot, project, sync, jumps, setFilesOpen, readOnly });
 
   const content = (
     <WorkspaceContent

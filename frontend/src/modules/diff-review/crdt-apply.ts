@@ -2,7 +2,7 @@
 import * as Y from "yjs";
 
 import { minimalEdit } from "./hunks";
-import type { DocumentBridge } from "./types";
+import type { DocumentBridge, TextSplice } from "./types";
 
 export const AGENT_APPLY_ORIGIN = "agent-apply";
 
@@ -22,6 +22,30 @@ export function applyTargetToYText(
   const run = () => {
     if (edit.deleteLength > 0) ytext.delete(edit.start, edit.deleteLength);
     if (edit.insert) ytext.insert(edit.start, edit.insert);
+  };
+  if (ytext.doc) ytext.doc.transact(run, origin);
+  else run();
+}
+
+export const SEARCH_REPLACE_ORIGIN = "search-replace";
+
+/**
+ * Writes `splices` into `ytext` in one transaction, last first, so each offset still means what it meant in the
+ * text they were computed on. Each splice touches only its own range, so a collaborator's edit between two
+ * matches survives (spec 122). The splices must not overlap.
+ */
+export function applySplicesToYText(
+  ytext: Y.Text,
+  splices: readonly TextSplice[],
+  origin: unknown = SEARCH_REPLACE_ORIGIN,
+): void {
+  if (splices.length === 0) return;
+  const ordered = [...splices].sort((a, b) => b.from - a.from);
+  const run = () => {
+    for (const splice of ordered) {
+      if (splice.to > splice.from) ytext.delete(splice.from, splice.to - splice.from);
+      if (splice.insert) ytext.insert(splice.from, splice.insert);
+    }
   };
   if (ytext.doc) ytext.doc.transact(run, origin);
   else run();

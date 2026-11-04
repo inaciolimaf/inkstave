@@ -57,7 +57,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/agent` | Agent panel, run reducer, SSE stream; its window also holds the project chat (`SideSwitch`) | `AgentPanel`, type `SideView` | diff-review |
 | `frontend/src/modules/auth` | Session context, guards, theme application, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, `useApplyTheme`, the 8 page components | none |
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
-| `frontend/src/modules/diff-review` | Inline review of agent proposals in the text, rebase, CRDT apply | `ReviewBar`, `useInlineReview`, `inlineReviewExtension`, `createEditorBridge`, type `DocumentBridge` | collab |
+| `frontend/src/modules/diff-review` | Inline review of agent proposals in the text, rebase, CRDT apply, and the live write a search replace uses | `ReviewBar`, `useInlineReview`, `inlineReviewExtension`, `createEditorBridge`, types `DocumentBridge`, `LiveTextBridge`, `TextSplice` | collab |
 | `frontend/src/modules/discussion` | Project chat panel, its unread button, the shared project event stream, comment threads on the text (spec 118) | `ChatPanel`, `ChatButton`, `useChatUnread`, `useProjectEvents`, `subscribeProjectEvents`, `PROJECT_EVENT_TYPES`, `CommentsPanel`, `CommentsButton`, `useCommentThreads`, `useCommentMutations`, `commentMarks`, `encodeAnchor`, `resolveAnchor`, types `ProjectEvent`, `ProjectEventHandlers`, `CommentThread` | auth, sharing (the member list, through its index) |
 | `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, outline, LaTeX autocomplete (`completion/`), the Git clone dialog (spec 121), and the comments wiring (`useWorkspaceComments`) | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
@@ -66,13 +66,14 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/landing` | Public marketing page | `LandingPage` | auth |
 | `frontend/src/modules/notifications` | Bell, inbox list | `NotificationsBell` | none |
 | `frontend/src/modules/pdf-preview` | Compile button, PDF viewer, log, problems, SyncTeX | `PreviewPane`, `useProblems`, `useSyncTex`, types `Problem`, `ProblemSeverity` | none |
-| `frontend/src/modules/project-index` | Structure parser, include resolver, the index of sections, labels, `.bib` entries and files | `useProjectIndex`, `parseStructure`, `resolveIncludes`, `findCurrentEntry`, `parseBib`, types `StructureItem`, `ResolvedItem`, `IndexStatus`, `BibEntry`, `BibRef`, `LabelRef`, `ProjectFile` | none |
+| `frontend/src/modules/project-index` | Structure parser, include resolver, the index of sections, labels, `.bib` entries, files and document texts | `useProjectIndex`, `parseStructure`, `resolveIncludes`, `findCurrentEntry`, `parseBib`, types `StructureItem`, `ResolvedItem`, `IndexStatus`, `BibEntry`, `BibRef`, `DocText`, `LabelRef`, `ProjectFile` | none |
+| `frontend/src/modules/project-search` | Search and replace over every document (spec 122): matcher, matches, replacement, the panel | `SearchPanel`, `useProjectSearch`, `applyEdits`, types `ProjectSearchState`, `SearchPanelProps`, `SearchStatus`, `MatchTarget`, `SourceText`, `TextMatch`, `TextEdit`, `TextWriter` | none |
 | `frontend/src/modules/projects` | Project list, dialogs, zip import, download | `ProjectsPage`, `getProject`, `useDownloadProject` | auth, notifications |
 | `frontend/src/modules/spellcheck` | Project language, personal dictionary hooks, the spell worker and its engine, the CodeMirror extension, the suggestion menu | `SpellingMenuItems`, `SpellMenu`, `spellcheckFor`, `misspelledAt`, `useSpellcheck`, `usePersonalDictionary`, types `SpellLanguage`, `SpellcheckBinding` | projects |
 | `frontend/src/modules/settings` | Settings sections, Git access tokens (spec 121), e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth, spellcheck |
 | `frontend/src/modules/sharing` | Share dialog, invites, permissions | `ShareDialog`, `AcceptInvitePage`, `usePermissions`, `hasCapability`, `isReadOnly` | auth |
 
-`editor` is the hub: it depends on 12 modules and nothing depends on it except `frontend/src/App.tsx` and
+`editor` is the hub: it depends on 13 modules and nothing depends on it except `frontend/src/App.tsx` and
 `frontend/src/routes/editor.tsx`. The graph has no cycle.
 
 ## Data
@@ -187,7 +188,7 @@ on screen with a notice.
   `BinaryNotice`; a folder changes nothing.
 - Outline: `OutlinePanel` in `frontend/src/modules/editor/outline-panel.tsx` lists the sections of the project, from
   `useWorkspaceOutline` (`frontend/src/modules/editor/workspace-outline.tsx`). `FileDrawer` has two tabs, Files and
-  Outline (`drawer.tabs` in the `editor` namespace), and the last tab is remembered in `localStorage` through
+  Outline, and Search since spec 122 (`drawer.tabs` in the `editor` namespace), and the last tab is remembered in `localStorage` through
   `frontend/src/modules/editor/outline-prefs.ts`, as is the pin. From 1280 px the outline can be pinned as a 14rem
   column left of the text. Entries open through `jumpToSource`, the same path as a problem.
 - Project index: `useProjectIndex` in `frontend/src/modules/project-index/use-project-index.ts` fetches each
@@ -201,6 +202,22 @@ on screen with a notice.
   The same index feeds the completion: `labels` (every `\label`), `bib` (every `.bib` entry, parsed by
   `parse-bib.ts`, a key once with `alsoIn` for the other files that define it) and `files` (every document and
   file of the tree). `EditorWorkspace` hands it to `CompletionDataProvider`, which keeps it in a ref.
+- Project search (spec 122): `SearchPanel` in `frontend/src/modules/project-search/` is the drawer's third tab,
+  Search, wired by `useWorkspaceSearch` (`frontend/src/modules/editor/workspace-search.tsx`), which
+  `useWorkspaceOutline` calls because both read the project index. The texts are the index's `texts` (the open file
+  live, the others as fetched; past the caps only the open file). `buildMatcher` (`matcher.ts`) turns the query and
+  its three toggles (match case, whole word, regular expression) into a `g` pattern, `searchSources` lists at most
+  1000 matches by file in path order, and the query settles 200 ms first. A row opens through `onMatchJump`, which
+  hands `jumpToSource` a `{column, length}` span that `revealLine` selects. Replace writes through
+  `createEditorBridge(...).transformContent` (`frontend/src/modules/diff-review/editor-bridge.ts`): a short-lived
+  provider per document reads the live `Y.Text`, the edits are computed on it, and `applySplicesToYText` writes them
+  last first in one transaction with origin `search-replace`, so text typed between matches survives. One replace
+  relocates its match on the live text (`relocate` in `replace.ts`) and writes nothing when its line changed. Replace
+  all confirms first with a count over every match, past the list's cap too, and goes file by file; a file that
+  fails is named in a toast and the others still change. Each new text goes back into the index's query cache
+  through `setDocText`. A viewer gets no replace controls. `Ctrl/Cmd+Shift+F` opens the drawer on Search
+  (`useShortcuts`), so `FileDrawer` takes its tab from the host here; the drawer is 20rem wide on that tab. A
+  replace is not undone by Ctrl+Z, since the undo manager tracks the editor's own typing; history restores it.
 - LaTeX autocomplete (spec 112): `frontend/src/modules/editor/completion/`. `extension.ts` builds the
   `autocompletion` extension from nine sources, one file each in `sources/`: commands and environments (static
   data), bib keys, labels, `\input`/`\include`/`\subfile` paths, `\includegraphics`, `\bibliography`,
@@ -461,6 +478,10 @@ Name the projects when running Playwright. A bare `playwright test` runs the sli
 | Includes are followed once, cycles cut | `frontend/src/modules/project-index/resolve-includes.test.ts`, "renders each file once and stops at a cycle" |
 | The current section is marked for assistive tech | `frontend/src/modules/editor/outline-panel.test.tsx`, "marks the section that holds the cursor for assistive tech" |
 | Past the caps only the open file is indexed | `frontend/src/modules/project-index/build-index.test.ts`, "keeps only the open file past the document cap" |
+| A search replace never lands on a line the writer did not see | `frontend/src/modules/project-search/replace-actions.test.ts`, "writes nothing when the match's line changed" |
+| A replace all keeps a concurrent edit between matches | `frontend/src/modules/diff-review/crdt-apply.test.ts`, "keeps a collaborator's edit between two replaced matches (spec 122)" |
+| Replace all asks first, counting every match | `frontend/src/modules/project-search/search-panel.test.tsx`, "replaces all only after a confirmation that counts every match" |
+| A viewer cannot replace | `frontend/src/modules/project-search/search-panel.test.tsx`, "offers no replace to a viewer" |
 | Completion never fires in comments or verbatim | `frontend/src/modules/editor/completion/context.test.ts`, "is silent at the cursor of a comment and speaks again after it" and "is silent inside a verbatim block" |
 | A malformed `.bib` never breaks completion | `frontend/src/modules/project-index/parse-bib.test.ts`, "keeps the readable entries of a half-typed file" and "skips a malformed entry and keeps reading the next one" |
 | Completion data is not in the initial bundle | `make web-budget` (the data is dynamic imports) |

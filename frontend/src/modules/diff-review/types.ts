@@ -43,3 +43,21 @@ export interface DocumentBridge {
   /** Release any transient resources (open providers). */
   destroy?(): void;
 }
+
+/** One change to a document's text: `[from, to)` becomes `insert` (spec 122). */
+export interface TextSplice {
+  from: number;
+  to: number;
+  insert: string;
+}
+
+/** A bridge that can also compute edits on the live text and write them at once (spec 122: replace). */
+export interface LiveTextBridge extends DocumentBridge {
+  /**
+   * Reads the live text at `path`, asks `edit` for splices on it, writes them in one transaction and resolves to the
+   * new text, or `null` when the document cannot be opened. Nothing runs between the read and the write, so the
+   * splices land on the text they were computed from. An error thrown by `edit` writes nothing.
+   */
+  transformContent(path: string, edit: (text: string) => TextSplice[]): Promise<string | null>;
+  destroy(): void;
+}

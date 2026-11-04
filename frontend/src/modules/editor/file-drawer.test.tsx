@@ -72,4 +72,37 @@ describe("FileDrawer", () => {
     expect(screen.getByRole("tab", { name: "Outline" })).toHaveAttribute("aria-selected", "true");
     window.localStorage.removeItem("inkstave:drawer-tab");
   });
+
+  it("shows the search as a third tab, and lets the host hold the tab", async () => {
+    const onTabChange = vi.fn();
+    const { rerender } = render(
+      <FileDrawer
+        open
+        onClose={vi.fn()}
+        outline={<p>outline</p>}
+        search={<p>search</p>}
+        tab="files"
+        onTabChange={onTabChange}
+      >
+        <p>tree</p>
+      </FileDrawer>,
+    );
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Files", "Outline", "Search"]);
+    await userEvent.click(screen.getByRole("tab", { name: "Search" }));
+    expect(onTabChange).toHaveBeenCalledWith("search");
+    rerender(
+      <FileDrawer
+        open
+        onClose={vi.fn()}
+        outline={<p>outline</p>}
+        search={<p>search</p>}
+        tab="search"
+        onTabChange={onTabChange}
+      >
+        <p>tree</p>
+      </FileDrawer>,
+    );
+    expect(screen.getByText("search")).toBeVisible();
+    expect(screen.getByText("tree")).not.toBeVisible();
+  });
 });

@@ -105,6 +105,14 @@ preference, and invites to non-users have no recipient record at all.
 
 ### Frontend
 
+**No search inside the open file.** The editor has no `@codemirror/search`, so Ctrl+F is the browser's, which
+finds only the lines CodeMirror has drawn. The project search (spec 122) covers the open file too, from the
+drawer. *Why:* out of spec 122's scope.
+
+**A project replace is not undone by Ctrl+Z.** `Y.UndoManager` tracks the editor's own origin, and a replace
+arrives from a separate provider (origin `search-replace`). *Why:* undoing it means one undo step across several
+documents; Version history restores each file meanwhile.
+
 **The spell-check menu has no arrow-key navigation.** Tab moves through its items, but the arrow keys do not. *Why:* it is a popover of buttons, not a full menu; a roving-focus menu is a follow-up of spec 113.
 
 **Spell check on iOS does not open its menu on a long press.** iOS Safari sends no `contextmenu` event for a long press on text, so the suggestions are reachable only where the browser sends one. *Why:* the only workaround takes over every long press of the editor, and the native menu must stay for other words.

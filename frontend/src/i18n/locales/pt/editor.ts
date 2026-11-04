@@ -45,9 +45,10 @@ const dict: Dict = {
   },
   drawer: {
     shade: "Feche a lista de arquivos para voltar ao texto",
-    tabs: "Arquivos e estrutura",
+    tabs: "Arquivos, estrutura e busca",
     files: "Arquivos",
     outline: "Estrutura",
+    search: "Buscar",
   },
   outline: {
     title: "Estrutura",

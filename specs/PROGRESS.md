@@ -18,6 +18,7 @@ order, then tick it. Specs 01–108 are already implemented.
 - [x] 119-track-changes
 - [x] 120-overleaf-template-import
 - [x] 121-git-bridge
+- [x] 122-project-search-replace
 
 ## Done
 

@@ -22,6 +22,13 @@ afterEach(() => {
 });
 
 describe("revealLine", () => {
+  it("selects a search match in the line when given its span (spec 122)", () => {
+    view = makeView("one\nsee net here\nthree");
+    revealLine(view, 2, { column: 4, length: 3 });
+    const { from, to } = view.state.selection.main;
+    expect(view.state.sliceDoc(from, to)).toBe("net");
+  });
+
   it("moves the cursor to the target line and flashes it", () => {
     view = makeView("one\ntwo\nthree\nfour");
     revealLine(view, 3);

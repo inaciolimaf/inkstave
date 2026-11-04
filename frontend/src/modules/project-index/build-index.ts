@@ -64,6 +64,33 @@ export function withLiveText(
   return index;
 }
 
+/** A document's text, for the project search (spec 122). */
+export interface DocText {
+  id: string;
+  path: string;
+  text: string;
+}
+
+/**
+ * Every fetched document with its text, the open one live. Past the caps only the open file is searched, as
+ * only it is indexed.
+ */
+export function collectTexts(
+  docs: readonly DocRef[],
+  texts: readonly (string | undefined)[],
+  openDocId: string | null,
+  liveText: string | null,
+  limited: boolean,
+): DocText[] {
+  const out: DocText[] = [];
+  docs.forEach((doc, i) => {
+    if (limited && doc.id !== openDocId) return;
+    const text = doc.id === openDocId && liveText !== null ? liveText : texts[i];
+    if (text !== undefined) out.push({ ...doc, text });
+  });
+  return out;
+}
+
 /** A project file as completion sees it: a text document or a binary file (images, PDFs). */
 export interface ProjectFile {
   path: string;

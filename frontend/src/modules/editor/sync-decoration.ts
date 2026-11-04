@@ -49,12 +49,20 @@ export function cursorLine(view: EditorView): number {
   return view.state.doc.lineAt(view.state.selection.main.head).number;
 }
 
-/** Scroll to `line`, place the cursor there, and flash it (auto-clearing). */
-export function revealLine(view: EditorView, line: number): void {
+/** A stretch of a line to select on arrival: a search match (spec 122). */
+export interface LineSpan {
+  column: number;
+  length: number;
+}
+
+/** Scroll to `line`, place the cursor there (or select `span` in it), and flash it (auto-clearing). */
+export function revealLine(view: EditorView, line: number, span?: LineSpan): void {
   const lineNo = Math.max(1, Math.min(line, view.state.doc.lines));
-  const pos = view.state.doc.line(lineNo).from;
+  const target = view.state.doc.line(lineNo);
+  const pos = target.from + Math.min(span?.column ?? 0, target.length);
+  const head = span ? Math.min(pos + span.length, view.state.doc.length) : pos;
   view.dispatch({
-    selection: { anchor: pos },
+    selection: { anchor: pos, head },
     effects: [EditorView.scrollIntoView(pos, { y: "center" }), setSyncLine.of(lineNo)],
     scrollIntoView: true,
   });

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { EditorPane } from "./editor-pane";
 import { FileDrawer } from "./file-drawer";
+import type { WorkspaceSearch } from "./workspace-search";
 
 /**
  * The text with its status line (spec 107). The file list opens over it, and the rest is `inert` until it
@@ -16,6 +17,7 @@ export function ContentPane({
   onCloseFiles,
   fileTree,
   outline,
+  search,
   statusSlotRef,
   outputSlotRef,
 }: {
@@ -28,6 +30,8 @@ export function ContentPane({
   fileTree: ReactNode;
   /** The outline, the drawer's second tab (spec 111). */
   outline?: ReactNode;
+  /** The project search, the drawer's third tab, which also holds the tab (spec 122). */
+  search?: WorkspaceSearch;
   statusSlotRef: (element: HTMLDivElement | null) => void;
   outputSlotRef: (element: HTMLDivElement | null) => void;
 }) {
@@ -51,7 +55,14 @@ export function ContentPane({
       >
         {t("toolbar.files")}
       </button>
-      <FileDrawer open={filesOpen} onClose={onCloseFiles} outline={outline}>
+      <FileDrawer
+        open={filesOpen}
+        onClose={onCloseFiles}
+        outline={outline}
+        search={search?.panel}
+        tab={search?.tab}
+        onTabChange={search?.setTab}
+      >
         {fileTree}
       </FileDrawer>
     </div>

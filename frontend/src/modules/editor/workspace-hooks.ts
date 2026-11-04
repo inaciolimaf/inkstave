@@ -10,6 +10,7 @@ import { getProject, projectKey } from "@/modules/projects";
 import type { MobileView } from "./mobile-tabs";
 import { useSelectionFollowsTree } from "./selection-follows-tree";
 import { useStartDocument } from "./start-document";
+import type { LineSpan } from "./sync-decoration";
 import type { EditorSelection } from "./use-editor-selection";
 import type { useSourceSync } from "./use-source-sync";
 
@@ -67,8 +68,16 @@ export function useSourceJumps(sync: ReturnType<typeof useSourceSync>, setView: 
     setView("preview");
     handleSyncToPdf();
   }, [handleSyncToPdf, setView]);
+  // A search match jumps the same way, and selects the matched text (spec 122).
+  const onMatchJump = useCallback(
+    (file: string, line: number, span: LineSpan) => {
+      setView("content");
+      jumpToSource(file, line, span);
+    },
+    [jumpToSource, setView],
+  );
   // The outline jumps the same way a problem does: the text shows, on a phone, and the line is revealed.
-  return { showPreview, onProblemJump, onOutlineJump: onProblemJump, onPdfClick, onSyncToPdf };
+  return { showPreview, onProblemJump, onOutlineJump: onProblemJump, onMatchJump, onPdfClick, onSyncToPdf };
 }
 
 /** What the editor can ask the agent for: a word on a selection, or a fix for a compile error. */

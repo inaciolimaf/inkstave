@@ -43,9 +43,10 @@ const dict = {
   },
   drawer: {
     shade: "Close the file list to go back to the text",
-    tabs: "Files and outline",
+    tabs: "Files, outline and search",
     files: "Files",
     outline: "Outline",
+    search: "Search",
   },
   outline: {
     title: "Outline",

@@ -5,4 +5,4 @@ export { ReviewBar } from "./review-bar";
 export type { ReviewBarProps } from "./review-bar";
 export { useInlineReview } from "./use-inline-review";
 export type { ProposalRef } from "./use-inline-review";
-export type { DocumentBridge } from "./types";
+export type { DocumentBridge, LiveTextBridge, TextSplice } from "./types";

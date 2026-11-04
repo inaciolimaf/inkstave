@@ -1,0 +1,43 @@
+/** Textos em português da busca no projeto (o namespace `search`, spec 122). */
+import type { Dict } from "../en/search";
+
+const dict: Dict = {
+  title: "Buscar",
+  query: "Buscar no projeto",
+  queryPlaceholder: "Buscar",
+  replacement: "Substituir por",
+  replacementPlaceholder: "Substituir",
+  options: "Opções da busca",
+  caseSensitive: "Diferenciar maiúsculas",
+  wholeWord: "Palavra inteira",
+  regex: "Usar expressão regular",
+  shortcut: "Ctrl+Shift+F",
+  results_one: "{{count}} resultado",
+  results_other: "{{count}} resultados",
+  files_one: "{{count}} arquivo",
+  files_other: "{{count}} arquivos",
+  matches_one: "{{count}} ocorrência",
+  matches_other: "{{count}} ocorrências",
+  summary: "{{results}} em {{files}}",
+  truncated: "Mostrando os primeiros {{count}}. Substituir tudo ainda troca todas as ocorrências.",
+  none: "Nenhum resultado.",
+  invalid: "Expressão regular inválida: {{message}}",
+  limited: "O projeto é grande demais para buscar inteiro. Só o arquivo aberto é buscado.",
+  loading: "Lendo os arquivos do projeto…",
+  idle: "Digite para buscar em todos os arquivos do projeto.",
+  line: "Linha {{line}}",
+  replaceOne: "Substituir esta ocorrência",
+  matchLabel: "{{path}}, linha {{line}}: {{text}}",
+  replaceOneAt: "Substituir a ocorrência de {{path}}, linha {{line}}",
+  replaceAll: "Substituir tudo",
+  confirm: "Substituir {{matches}} em {{files}}?",
+  confirmAction: "Substituir",
+  cancel: "Cancelar",
+  replacing: "Substituindo…",
+  done: "Substituição feita: {{matches}} em {{files}}.",
+  failed: "Não foi possível alterar {{paths}}.",
+  stale: "Essa ocorrência mudou desde a busca. Os resultados já estão atualizados.",
+  viewOnly: "Você só pode ver este projeto, então substituir está desativado.",
+};
+
+export default dict;

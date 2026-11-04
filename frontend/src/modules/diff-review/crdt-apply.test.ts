@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 
-import { AGENT_APPLY_ORIGIN, applyTargetToYText, createYDocBridge } from "./crdt-apply";
+import {
+  AGENT_APPLY_ORIGIN,
+  SEARCH_REPLACE_ORIGIN,
+  applySplicesToYText,
+  applyTargetToYText,
+  createYDocBridge,
+} from "./crdt-apply";
 
 describe("applyTargetToYText", () => {
   it("writes the target as a minimal, origin-tagged edit (AC5)", () => {
@@ -59,5 +65,39 @@ describe("createYDocBridge", () => {
     expect(await bridge.readContent("main.tex")).toBe("x\ny\n");
     await bridge.applyContent("main.tex", "x\nY\n");
     expect(bridge.getText("main.tex").toString()).toBe("x\nY\n");
+  });
+});
+
+describe("applySplicesToYText", () => {
+  it("writes every splice in one origin-tagged transaction", () => {
+    const doc = new Y.Doc();
+    const text = doc.getText("content");
+    text.insert(0, "net a net b net");
+    const origins: unknown[] = [];
+    doc.on("update", (_u: Uint8Array, o: unknown) => origins.push(o));
+    applySplicesToYText(text, [
+      { from: 0, to: 3, insert: "NET" },
+      { from: 12, to: 15, insert: "NET" },
+      { from: 6, to: 9, insert: "NET" },
+    ]);
+    expect(text.toString()).toBe("NET a NET b NET");
+    expect(origins).toEqual([SEARCH_REPLACE_ORIGIN]);
+  });
+
+  it("keeps a collaborator's edit between two replaced matches (spec 122)", () => {
+    const a = new Y.Doc();
+    const b = new Y.Doc();
+    a.getText("content").insert(0, "net\nmiddle\nnet\n");
+    Y.applyUpdate(b, Y.encodeStateAsUpdate(a));
+    // B types in the middle line while A replaces both matches around it.
+    b.getText("content").insert(4, "typed ");
+    applySplicesToYText(a.getText("content"), [
+      { from: 0, to: 3, insert: "model" },
+      { from: 11, to: 14, insert: "model" },
+    ]);
+    Y.applyUpdate(b, Y.encodeStateAsUpdate(a));
+    Y.applyUpdate(a, Y.encodeStateAsUpdate(b));
+    expect(a.getText("content").toString()).toBe("model\ntyped middle\nmodel\n");
+    expect(b.getText("content").toString()).toBe(a.getText("content").toString());
   });
 });

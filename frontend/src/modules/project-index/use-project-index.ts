@@ -1,18 +1,20 @@
 import type { EditorView } from "@codemirror/view";
 import { type UseQueryResult, useQueries, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { TreeNode } from "@/modules/file-tree";
 
 import { fetchDocumentText } from "./api";
 import {
   type BibRef,
+  type DocText,
   type LabelRef,
   type ProjectFile,
   MAX_INDEXED_DOCUMENTS,
   buildIndex,
   collectBib,
   collectLabels,
+  collectTexts,
   listDocuments,
   listFiles,
   withLiveText,
@@ -38,6 +40,10 @@ export interface ProjectIndex {
   bib: BibRef[];
   /** Every document and file of the tree (spec 112: `\input` and `\includegraphics` paths). */
   files: ProjectFile[];
+  /** The text of every indexed document, the open one live (spec 122: the project search). */
+  texts: DocText[];
+  /** Records a document's new text, written by this page, so the index does not wait for a refetch. */
+  setDocText: (docId: string, text: string) => void;
 }
 
 /**
@@ -105,6 +111,17 @@ export function useProjectIndex({
     [docs, texts, openDocId, live.text],
   );
   const files = useMemo(() => listFiles(root), [root]);
+  const docTexts = useMemo(
+    () => collectTexts(docs, texts, openDocId, live.text, base.limited),
+    [docs, texts, openDocId, live.text, base.limited],
+  );
+  const setDocText = useCallback(
+    (docId: string, text: string) => {
+      if (docId === openDocId) snapshots.current.set(docId, text);
+      queryClient.setQueryData(indexKey(projectId, docId), text);
+    },
+    [openDocId, projectId, queryClient],
+  );
 
   const previous = useRef(openDocId);
   useEffect(() => {
@@ -120,5 +137,5 @@ export function useProjectIndex({
     : pending && entries.length === 0
       ? "loading"
       : "ready";
-  return { entries, status, cursorLine: live.line, labels, bib, files };
+  return { entries, status, cursorLine: live.line, labels, bib, files, texts: docTexts, setDocText };
 }

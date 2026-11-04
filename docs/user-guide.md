@@ -39,6 +39,13 @@ configurable font size. Edits are saved automatically — when collaborating, yo
 keystrokes sync live (see [Collaboration](#collaboration)); otherwise a save-status
 badge shows **Saved** / **Unsaved changes**. Your content survives a reload.
 
+**Search and replace across the project.** The **Search** tab of the file list (Ctrl+Shift+F, Cmd+Shift+F on a
+Mac) searches every file of the project at once. The three buttons beside the box match case, match whole words
+and switch to a regular expression, where `$1` in the replacement is the first group. Results are grouped by
+file; click one to open it with the match selected. The button on a row replaces that match only; **Replace all**
+asks first and changes every match, in every file, live for everyone editing. Ctrl+Z does not undo a replace in
+another file: use [Version history](#version-history). Viewers can search but not replace.
+
 ## Compiling
 
 1. Click **Compile**. The job runs server-side with the Tectonic engine.

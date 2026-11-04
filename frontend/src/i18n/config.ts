@@ -18,6 +18,7 @@ import enProjects from "./locales/en/projects";
 import enReview from "./locales/en/review";
 import enSettings from "./locales/en/settings";
 import enSharing from "./locales/en/sharing";
+import enSearch from "./locales/en/search";
 import enSuggest from "./locales/en/suggest";
 import ptAgent from "./locales/pt/agent";
 import ptAuth from "./locales/pt/auth";
@@ -33,6 +34,7 @@ import ptProjects from "./locales/pt/projects";
 import ptReview from "./locales/pt/review";
 import ptSettings from "./locales/pt/settings";
 import ptSharing from "./locales/pt/sharing";
+import ptSearch from "./locales/pt/search";
 import ptSuggest from "./locales/pt/suggest";
 
 /*
@@ -59,6 +61,7 @@ export const NAMESPACES = [
   "notifications",
   "discussion",
   "suggest",
+  "search",
 ] as const;
 
 const resources = {
@@ -79,6 +82,7 @@ const resources = {
     notifications: enNotifications,
     discussion: enDiscussion,
     suggest: enSuggest,
+    search: enSearch,
   },
   pt: {
     common: ptCommon,
@@ -97,6 +101,7 @@ const resources = {
     notifications: ptNotifications,
     discussion: ptDiscussion,
     suggest: ptSuggest,
+    search: ptSearch,
   },
 };
 

@@ -7,7 +7,7 @@ import type { TreeEntity, TreeNode } from "@/modules/file-tree";
 import { useProblems, useSyncTex } from "@/modules/pdf-preview";
 
 import { applyDiagnostics } from "./diagnostics";
-import { cursorLine, findNodeByPath, revealLine } from "./sync-decoration";
+import { type LineSpan, cursorLine, findNodeByPath, revealLine } from "./sync-decoration";
 
 /** Ties the open document to the PDF: SyncTeX both ways, jumps to a source line, and diagnostics. */
 export function useSourceSync(
@@ -24,7 +24,7 @@ export function useSourceSync(
   const { pdfTarget, syncFromSource, syncFromPdf } = useSyncTex(projectId, syncCompileId);
   const problemsState = useProblems(projectId, problemsKey);
   const viewRef = useRef<EditorView | null>(null);
-  const pendingReveal = useRef<{ path: string; line: number } | null>(null);
+  const pendingReveal = useRef<{ path: string; line: number; span?: LineSpan } | null>(null);
 
   // Track the currently-open document (the last selected non-folder doc).
   useEffect(() => {
@@ -47,14 +47,14 @@ export function useSourceSync(
 
   // Reveal a source location, opening a different document first if needed.
   const jumpToSource = useCallback(
-    (file: string, line: number) => {
+    (file: string, line: number, span?: LineSpan) => {
       if (openDoc?.path === file && viewRef.current) {
-        revealLine(viewRef.current, line);
+        revealLine(viewRef.current, line, span);
         return;
       }
       const node = treeRoot ? findNodeByPath(treeRoot, file) : null;
       if (node && node.type === "doc") {
-        pendingReveal.current = { path: file, line };
+        pendingReveal.current = { path: file, line, span };
         onSelect(node);
       } else {
         toast.message(t("toolbar.notInProject"));
@@ -67,7 +67,7 @@ export function useSourceSync(
   const handleDocumentLoaded = useCallback((entity: TreeEntity) => {
     const pending = pendingReveal.current;
     if (pending && pending.path === entity.path && viewRef.current) {
-      revealLine(viewRef.current, pending.line);
+      revealLine(viewRef.current, pending.line, pending.span);
       pendingReveal.current = null;
     }
   }, []);

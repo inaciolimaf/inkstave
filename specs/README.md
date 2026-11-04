@@ -188,8 +188,9 @@ the largest change; implement in this order.
 | 119 | `119-track-changes` — per-user Suggesting mode, accept and reject | 🟢 |
 | 120 | `120-overleaf-template-import` — start from a zip downloaded from Overleaf, compatibility report | 🟢 |
 | 121 | `121-git-bridge` — Smart HTTP Git access with personal access tokens | 🟢 |
+| 122 | `122-project-search-replace` — Search and replace across every document of the project | 🟢 |
 
-**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100 and feature specs 101–121.**
+**Core roadmap: 60 specs (48 feature 🟢 + 12 refactor 🔧), extended by fix-packs 61–100 and feature specs 101–122.**
 
 > The roadmap can be extended later (the user may add requirements). New specs continue the numbering. The
 > every-5th refactor cadence applied to specs 01–60; later phases use fix-packs instead.
