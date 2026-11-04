@@ -21,6 +21,18 @@ const dict = {
     files: "Files",
     switchFile: "Switch file ({{name}})",
     noFile: "No file open",
+    git: "Git",
+  },
+  git: {
+    title: "Git",
+    description:
+      "Clone this project with Git and push your changes back. Git asks for your user name and a token.",
+    cloneUrl: "Clone URL",
+    command: "Command",
+    copy: "Copy",
+    copied: "Copied.",
+    passwordNote: "The password is a Git access token, not your account password.",
+    manageTokens: "Manage tokens",
   },
   problemPrompt: "Fix this compile error: {{message}}{{where}}",
   mobile: {

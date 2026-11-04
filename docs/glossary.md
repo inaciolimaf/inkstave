@@ -108,6 +108,18 @@ are English-only today ([known gaps](known-gaps.md)).
 | Presence | `AwarenessRegistry` | "Pessoas online" |
 | Connection status | `ProviderStatus` | "Ao vivo", "Conectando…", "Reconectando…", "Offline" |
 
+## Git access
+
+| Term | Code | Portuguese |
+|---|---|---|
+| Git access | module `git` | "Git" |
+| Git access token | `GitAccessToken` | "Token de acesso Git" |
+| Git push | `receive_pack`, origin `git-push` | "envio pelo Git" |
+| Git fetch | `upload_pack` | "obtenção pelo Git" |
+| Snapshot commit | `snapshot_commit` | — |
+| Repository state | `GitRepoState` | — |
+| Git lock | `project_git_lock` | — |
+
 ## Sharing and authorization
 
 | Term | Code | Portuguese |

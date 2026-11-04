@@ -23,6 +23,18 @@ const dict: Dict = {
     files: "Arquivos",
     switchFile: "Trocar de arquivo ({{name}})",
     noFile: "Nenhum arquivo aberto",
+    git: "Git",
+  },
+  git: {
+    title: "Git",
+    description:
+      "Clone este projeto com Git e envie suas alterações de volta. O Git pede seu nome de usuário e um token.",
+    cloneUrl: "URL de clonagem",
+    command: "Comando",
+    copy: "Copiar",
+    copied: "Copiado.",
+    passwordNote: "A senha é um token de acesso Git, não a senha da sua conta.",
+    manageTokens: "Gerenciar tokens",
   },
   problemPrompt: "Corrija este erro de compilação: {{message}}{{where}}",
   mobile: {

@@ -59,7 +59,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
 | `frontend/src/modules/diff-review` | Inline review of agent proposals in the text, rebase, CRDT apply | `ReviewBar`, `useInlineReview`, `inlineReviewExtension`, `createEditorBridge`, type `DocumentBridge` | collab |
 | `frontend/src/modules/discussion` | Project chat panel, its unread button, the shared project event stream | `ChatPanel`, `ChatButton`, `useChatUnread`, `useProjectEvents`, `subscribeProjectEvents`, `PROJECT_EVENT_TYPES`, types `ProjectEvent`, `ProjectEventHandlers` | auth |
-| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, outline, LaTeX autocomplete (`completion/`) | `EditorWorkspace` | every other module except landing |
+| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, outline, LaTeX autocomplete (`completion/`), the Git clone dialog (spec 121) | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |
 | `frontend/src/modules/insert-tools` | Insert menu, symbol palette, table builder, equation editor (spec 114) | `InsertMenu` | none |
@@ -69,7 +69,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/project-index` | Structure parser, include resolver, the index of sections, labels, `.bib` entries and files | `useProjectIndex`, `parseStructure`, `resolveIncludes`, `findCurrentEntry`, `parseBib`, types `StructureItem`, `ResolvedItem`, `IndexStatus`, `BibEntry`, `BibRef`, `LabelRef`, `ProjectFile` | none |
 | `frontend/src/modules/projects` | Project list, dialogs, zip import, download | `ProjectsPage`, `getProject`, `useDownloadProject` | auth, notifications |
 | `frontend/src/modules/spellcheck` | Project language, personal dictionary hooks, the spell worker and its engine, the CodeMirror extension, the suggestion menu | `SpellingMenuItems`, `SpellMenu`, `spellcheckFor`, `misspelledAt`, `useSpellcheck`, `usePersonalDictionary`, types `SpellLanguage`, `SpellcheckBinding` | projects |
-| `frontend/src/modules/settings` | Settings sections, e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth, spellcheck |
+| `frontend/src/modules/settings` | Settings sections, Git access tokens (spec 121), e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth, spellcheck |
 | `frontend/src/modules/sharing` | Share dialog, invites, permissions | `ShareDialog`, `AcceptInvitePage`, `usePermissions`, `hasCapability`, `isReadOnly` | auth |
 
 `editor` is the hub: it depends on 12 modules and nothing depends on it except `frontend/src/App.tsx` and

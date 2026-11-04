@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from inkstave.modules.admin.routes import admin
+from inkstave.modules.admin.routes import admin, public_config
 from inkstave.modules.agent import routes as agent_routes
 from inkstave.modules.agent.file_ops import routes as agent_file_op_routes
 from inkstave.modules.auth.routes import auth, dictionary, users
@@ -17,6 +17,8 @@ from inkstave.modules.compile.routes import compile as compile_routes
 from inkstave.modules.compile.routes import logparse, synctex
 from inkstave.modules.discussion.routes import chat as chat_routes
 from inkstave.modules.discussion.routes import events as event_routes
+from inkstave.modules.git.routes import smart_http as git_smart_http
+from inkstave.modules.git.routes import tokens as git_tokens
 from inkstave.modules.history import routes as history
 from inkstave.modules.notifications import routes as notifications
 from inkstave.modules.projects.routes import (
@@ -34,6 +36,9 @@ api_v1.include_router(auth.router)
 api_v1.include_router(users.router)
 api_v1.include_router(dictionary.router)
 api_v1.include_router(admin.router)
+api_v1.include_router(public_config.router)
+api_v1.include_router(git_tokens.router)
+api_v1.include_router(git_smart_http.router)
 api_v1.include_router(projects.router)
 api_v1.include_router(project_import.router)
 api_v1.include_router(sharing.router)

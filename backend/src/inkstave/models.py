@@ -23,6 +23,7 @@ from inkstave.modules.collab.models import CrdtDocumentState, CrdtUpdate
 from inkstave.modules.compile.models.compile import Compile, CompileJobStatus
 from inkstave.modules.compile.models.compile_output import CompileOutput, OutputKind
 from inkstave.modules.discussion.models import ProjectChatMessage, ProjectChatRead
+from inkstave.modules.git.models import GitAccessToken, GitRepoState
 from inkstave.modules.history.models import HistoryChunk, HistoryLabel, HistoryUpdate
 from inkstave.modules.notifications.models import Notification, NotificationType
 from inkstave.modules.projects.models.document import Document
@@ -50,6 +51,8 @@ __all__ = [
     "CrdtUpdate",
     "Document",
     "File",
+    "GitAccessToken",
+    "GitRepoState",
     "HistoryChunk",
     "HistoryLabel",
     "HistoryUpdate",

@@ -65,6 +65,22 @@ Every edit is captured into a compact history. Open **History** to:
 - **Restore** an earlier version (with confirmation) — it becomes a new version,
   so nothing is lost. You can also attach **labels** to versions.
 
+## Git
+
+If your server runs Git access (ask the administrator), a project can be cloned, pulled and pushed with Git.
+
+- **Create a token.** In **Settings → Git access tokens**, name the token and optionally set an expiry. The token
+  is shown once: copy it then.
+- **Clone.** In the editor, open **More → Git** to see the clone address and the `git clone` command. Git asks for
+  a user name and a password: use any user name, and the token as the password.
+- **Pull and push.** A pull first saves what the editors have typed, so it always sees the current project. A push
+  must build on the current project: if someone changed the project in Inkstave since your last pull, Git says
+  "Pull first: the project changed in Inkstave." Pull, then push again.
+- **Edits arrive live.** A pushed change appears in the open editors at once, and in **History** as a Git push.
+- **Refused pushes change nothing.** A file with a forbidden name, a type that is not allowed or a size over the
+  limit refuses the whole push, and Git lists the files.
+- **Revoke** a token you no longer use in the same Settings section.
+
 ## Collaboration
 
 Share a project to work together in real time:

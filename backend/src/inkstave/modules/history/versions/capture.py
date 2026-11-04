@@ -52,6 +52,7 @@ def _sha256_digest(data: bytes) -> bytes:
 class _DocBuffer:
     updates: list[bytes] = field(default_factory=list)
     author_id: UUID | None = None
+    origin: str | None = None
     last_at: datetime | None = None
     timer: asyncio.TimerHandle | None = None
 
@@ -65,6 +66,7 @@ class _Pending:
     author_id: UUID | None
     at: datetime
     project_id: UUID
+    origin: str | None = None
 
 
 class HistoryCaptureService:
@@ -95,6 +97,7 @@ class HistoryCaptureService:
         update: bytes,
         author_id: UUID | None,
         at: datetime,
+        origin: str | None = None,
     ) -> None:
         """Buffer one raw server-applied update; returns without any DB write."""
         async with self._lock(doc_id):
@@ -106,6 +109,7 @@ class HistoryCaptureService:
             buf = self._buffers.setdefault(doc_id, _DocBuffer())
             buf.updates.append(update)
             buf.author_id = author_id
+            buf.origin = origin
             buf.last_at = at
             self._project_ids[doc_id] = project_id
             over_threshold = len(buf.updates) >= self._settings.history_flush_max_buffer
@@ -140,6 +144,7 @@ class HistoryCaptureService:
             author_id=buf.author_id,
             at=buf.last_at or _utcnow(),
             project_id=self._project_ids[doc_id],
+            origin=buf.origin,
         )
 
     async def _write(self, doc_id: UUID, pending: _Pending) -> None:
@@ -167,6 +172,7 @@ class HistoryCaptureService:
                     op_count=pending.op_count,
                     author_id=pending.author_id,
                     at=pending.at,
+                    origin=pending.origin,
                 ),
             )
             open_chunk.end_version = next_v
@@ -301,6 +307,7 @@ class HistoryCaptureService:
                 payload_blob_key=blob_key,
                 payload_size=len(entry.payload),
                 op_count=entry.op_count,
+                origin=entry.origin,
             )
         )
 
@@ -317,6 +324,7 @@ class _UpdateEntry:
     op_count: int
     author_id: UUID | None
     at: datetime
+    origin: str | None = None
 
 
 def _utcnow() -> datetime:

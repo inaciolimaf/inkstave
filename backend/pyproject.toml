@@ -29,6 +29,7 @@ dependencies = [
     "prometheus-client>=0.25.0",
     "psycopg2-binary>=2.9.12",
     "anthropic>=2.4.0",
+    "dulwich==1.2.17",
 ]
 
 [project.scripts]
@@ -187,7 +188,7 @@ layers = ["inkstave.modules", "inkstave.infra", "inkstave.core"]
 name = "module order, top to bottom"
 type = "layers"
 containers = ["inkstave.modules"]
-layers = ["admin | agent", "compile", "discussion", "history", "collab", "projects", "notifications", "auth"]
+layers = ["admin | agent", "compile", "discussion | git", "history", "collab", "projects", "notifications", "auth"]
 ignore_imports = [
     # The room builds the history capture service and feeds it each CRDT update, while history
     # reads CRDT state back. Target: collab emits an update event that history subscribes to.
@@ -261,6 +262,13 @@ name = "projects: other modules only use its public interface"
 type = "forbidden"
 source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications"]
 forbidden_modules = ["inkstave.modules.projects.access", "inkstave.modules.projects.catalog", "inkstave.modules.projects.content", "inkstave.modules.projects.deps", "inkstave.modules.projects.models", "inkstave.modules.projects.routes", "inkstave.modules.projects.schemas", "inkstave.modules.projects.sharing", "inkstave.modules.projects.transfer", "inkstave.modules.projects.tree"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "git: other modules only use its public interface"
+type = "forbidden"
+source_modules = ["inkstave.modules.admin", "inkstave.modules.agent", "inkstave.modules.auth", "inkstave.modules.collab", "inkstave.modules.compile", "inkstave.modules.history", "inkstave.modules.notifications", "inkstave.modules.projects"]
+forbidden_modules = ["inkstave.modules.git.auth", "inkstave.modules.git.errors", "inkstave.modules.git.lock", "inkstave.modules.git.push", "inkstave.modules.git.repo", "inkstave.modules.git.routes", "inkstave.modules.git.schemas", "inkstave.modules.git.service"]
 allow_indirect_imports = true
 
 [tool.docs-coverage]

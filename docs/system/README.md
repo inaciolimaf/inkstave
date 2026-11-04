@@ -24,6 +24,7 @@ Domain names come from [`docs/glossary.md`](../glossary.md). What is knowingly u
 | [agent.md](agent.md) | AI agent: graph, tools, diffs, streaming, safety | 41–50, 67, 108 |
 | [observability.md](observability.md) | Logs, metrics, tracing, health and readiness | 51 |
 | [security.md](security.md) | Threat model, headers, limits, secrets, proxy trust | 52, 55, 91 |
+| [git.md](git.md) | Git access over Smart HTTP, personal access tokens, snapshot-then-push | 121 |
 | [frontend.md](frontend.md) | Stack, routes, API client, modules, i18n, spell check, tests | 09, 16–18, 24, 31, 32, 38, 46, 47, 61, 64, 113 |
 
 ## Template

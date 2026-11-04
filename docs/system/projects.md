@@ -313,6 +313,7 @@ only stores the choice and never sees the text.
 - A case-only clash between text entries (`A.tex`, `a.tex`) still ends a plain zip's import `error`: `_import_text` lets `NameConflictError` escape. A template renames the second entry. The same clash for binaries is a skip.
 - In `_ensure_folder`, when a path segment clashes with an existing non-folder, `_find_child_folder` returns `None`, and `None` means root. Entries below it land in the project root.
 - A rollback in `_import_archive` drops rows, but blobs already written by `upload_file` stay as orphans.
+- A Git push (spec 121) changes the tree through these services in its own transaction, so names and sibling rules match the web app. A renamed or moved file keeps its entity id, and so its history and labels. See [git.md](git.md).
 - When `_still_owned` fails, the job settles without reaching `_import_archive`, so `_cleanup` never runs and the staged blob stays.
 - EPS figures are kept since spec 120. Whether Tectonic renders them is not verified; the `eps_figure` rule asks the person to check the preview.
 - The first compile of a template is started through the `ctx` hook, so the job does not import the compile module. The hook builds its coordinator with `ArqEnqueuer`, which the worker's ARQ pool serves.

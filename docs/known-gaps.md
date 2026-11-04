@@ -61,6 +61,10 @@ without the `network.host` entitlement, which Coolify does not pass. Look for th
 **No `docker-compose-coolify.yml` or `docs/deploy-coolify.md`.** *Why:* user decision, not yet.
 `docker-compose.prod.yml` is the only production file, publishes no host port and has no migrate step.
 
+**Git access is off the shipped compose files.** `docker-compose.prod.yml` mounts no volume at `GIT_REPOS_ROOT`
+(`/data/git`), so an operator who turns `GIT_ENABLED` on must add one; see [the admin guide](admin-guide.md#git-access-spec-121).
+*Why:* Docker files are left untouched by spec 121 (user decision).
+
 **nginx does not proxy `/health`.** `infra/nginx/default.conf` proxies only `/api/` and `/ws/`, so `/health`,
 `/ready`, `/readyz`, `/docs` and `/redoc` hit the SPA fallback and answer 200. `/healthz` is answered by nginx
 itself. *Why:* nginx is left as is by user decision.

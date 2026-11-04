@@ -5,12 +5,14 @@ import { useAuth } from "@/modules/auth";
 import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Manuscript, ManuscriptHeader, Rule } from "@/components/manuscript";
 import { Button } from "@/components/ui/button";
+import { usePublicConfig } from "@/lib/public-config";
 import { NotificationsBell } from "@/modules/notifications";
 
 import { DangerZone } from "./DangerZone";
 import { DictionarySection } from "./DictionarySection";
 import { EditorPreferencesSection } from "./EditorPreferencesSection";
 import { EmailSection } from "./EmailSection";
+import { GitAccessSection } from "./GitAccessSection";
 import { PasswordSection } from "./PasswordSection";
 import { ProfileSection } from "./ProfileSection";
 
@@ -42,6 +44,7 @@ function SettingsBar() {
 
 export function SettingsPage() {
   const { t } = useTranslation("settings");
+  const { git_enabled: gitEnabled } = usePublicConfig();
   return (
     <Manuscript bar={<SettingsBar />}>
       <ManuscriptHeader title={t("page.title")} />
@@ -52,6 +55,7 @@ export function SettingsPage() {
         <DictionarySection />
         <EmailSection />
         <PasswordSection />
+        {gitEnabled && <GitAccessSection />}
         <DangerZone />
       </div>
     </Manuscript>

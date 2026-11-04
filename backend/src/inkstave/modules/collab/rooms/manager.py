@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import Callable, Sequence
 from time import monotonic
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
 
 from inkstave.modules.collab.crdt.protocol import encode_sync_step1, encode_sync_step2
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from inkstave.modules.collab.crdt.awareness import AwarenessRegistry
     from inkstave.modules.collab.rooms.content_bridge import ContentBridge
     from inkstave.modules.collab.rooms.store import CrdtStore
+
+_T = TypeVar("_T")
 
 __all__ = [
     "CollabSettings",
@@ -184,6 +187,36 @@ class DocumentManager:
                 await self._maybe_compact(document_id, entry)
             self._schedule_flush(document_id)
             return update
+        finally:
+            await self.release(document_id)
+
+    async def apply_server_edits(
+        self,
+        document_id: UUID,
+        plan: Callable[[str], tuple[Sequence[tuple[int, int, str]], _T]],
+        origin: str | None,
+    ) -> tuple[bytes, _T]:
+        """Apply server-computed character edits to the live text (spec 121, Git push).
+
+        ``plan`` receives the live text as it is inside the document lock and returns the edits to
+        apply and a value for the caller. Returns the raw update (empty when there was nothing to
+        change) and that value. The same persistence and flush path as ``apply_server_update``.
+        """
+        await self.acquire(document_id)
+        try:
+            async with self._lock(document_id):
+                entry = self._require(document_id)
+                edits, outcome = plan(entry.ydoc.text)
+                if not edits:
+                    return b"", outcome
+                update = entry.ydoc.apply_edits(edits)
+                new_id = await self._store.append_update(document_id, update, origin)
+                entry.last_update_id = max(entry.last_update_id, new_id)
+                entry.updates_since_snapshot += 1
+                entry.dirty_text = True
+                await self._maybe_compact(document_id, entry)
+            self._schedule_flush(document_id)
+            return update, outcome
         finally:
             await self.release(document_id)
 

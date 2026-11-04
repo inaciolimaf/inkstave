@@ -41,11 +41,15 @@ checks; it states no DDL changes.
 | Table | Key columns | Constraints |
 |---|---|---|
 | `history_chunks` | `project_id`, `doc_id`, `start_version`, `end_version`, `base_version`, `base_snapshot` or `base_snapshot_blob_key`, `base_snapshot_size`, `sealed` | `uq_history_chunks_open`: at most one unsealed chunk per document. `ck_history_chunks_base_xor`: exactly one of snapshot and key |
-| `history_updates` | `chunk_id`, `project_id`, `doc_id`, `version`, `timestamp`, `author_id`, `payload` or `payload_blob_key`, `payload_size`, `op_count` | `uq_history_updates_doc_version`. `ck_history_updates_payload_xor`. `author_id` is `SET NULL` on user delete |
+| `history_updates` | `chunk_id`, `project_id`, `doc_id`, `version`, `timestamp`, `author_id`, `payload` or `payload_blob_key`, `payload_size`, `op_count`, `origin` | `uq_history_updates_doc_version`. `ck_history_updates_payload_xor`. `author_id` is `SET NULL` on user delete |
 | `history_labels` | `project_id`, `doc_id` (NULL for project level), `version`, `name`, `created_by`, `created_at`, `payload` | `uq_history_labels_doc_name` and `uq_history_labels_project_name`, partial on `doc_id` |
 
 `doc_id` references `documents.entity_id` with cascade. A project-level label has `version = 0` and a `payload` of
 `{doc_id: version}`.
+
+`origin` (migration `backend/migrations/versions/20261104_1100_f2b4d6e8a0c1_history_update_origin.py`, spec 121) is `git-push` for a
+version captured from a Git push, and `NULL` for an editor's change. The version list returns it. A push is recorded
+under the pusher's `author_id`. See [git.md](git.md).
 
 A chunk is a base snapshot plus the ordered updates after it. A version number is per document, starts at 1, and
 is the state after that update applies. Payloads and snapshots over `HISTORY_INLINE_MAX_BYTES` live in object

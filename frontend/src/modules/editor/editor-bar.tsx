@@ -1,5 +1,14 @@
-import { ChevronDown, ClipboardList, Download, History, MoreHorizontal, Share2, Undo2 } from "lucide-react";
-import type { ReactNode } from "react";
+import {
+  ChevronDown,
+  ClipboardList,
+  Download,
+  GitBranch,
+  History,
+  MoreHorizontal,
+  Share2,
+  Undo2,
+} from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -11,9 +20,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePublicConfig } from "@/lib/public-config";
 import { NotificationsBell } from "@/modules/notifications";
 import { useDownloadProject } from "@/modules/projects";
 import { SpellingMenuItems } from "@/modules/spellcheck";
+
+import { GitCloneDialog } from "./git-clone-dialog";
 
 /** The tools a person reaches for now and then wait in one menu, so the bar stays one quiet row. */
 function MoreMenu({
@@ -35,6 +47,8 @@ function MoreMenu({
 }) {
   const { t } = useTranslation("editor");
   const { download, downloadingId } = useDownloadProject();
+  const { git_enabled: gitEnabled } = usePublicConfig();
+  const [gitOpen, setGitOpen] = useState(false);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -65,6 +79,12 @@ function MoreMenu({
             {t("toolbar.compatReport")}
           </DropdownMenuItem>
         )}
+        {gitEnabled && (
+          <DropdownMenuItem onSelect={() => setGitOpen(true)}>
+            <GitBranch aria-hidden="true" className="size-4" />
+            {t("toolbar.git")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link to="/projects">
             <Undo2 aria-hidden="true" className="size-4" />
@@ -72,6 +92,7 @@ function MoreMenu({
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
+      {gitEnabled && <GitCloneDialog projectId={projectId} open={gitOpen} onOpenChange={setGitOpen} />}
     </DropdownMenu>
   );
 }

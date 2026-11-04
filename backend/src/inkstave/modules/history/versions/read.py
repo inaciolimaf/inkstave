@@ -81,6 +81,7 @@ async def list_versions(
             op_count=r.op_count,
             size=r.payload_size,
             labels=labels_by_version.get(r.version, []),
+            origin=r.origin,
         )
         for r in rows
     ]

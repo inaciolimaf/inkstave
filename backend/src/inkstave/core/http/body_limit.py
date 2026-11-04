@@ -36,15 +36,20 @@ class BodySizeLimitMiddleware:
     # Path suffixes that carry binary payloads, not JSON — exempt from the small
     # JSON cap so a legitimately large upload isn't rejected before the route can
     # apply its own (stricter, streamed) size guard.
-    _UPLOAD_SUFFIXES = ("/files", "/import")
+    _UPLOAD_SUFFIXES = ("/files", "/import", "/git-upload-pack")
+    # A Git push is a pack: its own cap (GIT_MAX_PUSH_BYTES, spec 121), larger than JSON.
+    _PUSH_SUFFIX = "/git-receive-pack"
 
     def __init__(self, app: ASGIApp, settings: Settings) -> None:
         self.app = app
         self.json_cap = settings.max_request_body_bytes
         self.upload_cap = settings.max_upload_bytes
+        self.push_cap = settings.git_max_push_bytes
 
     def _cap(self, path: str) -> int:
         stripped = path.rstrip("/")
+        if stripped.endswith(self._PUSH_SUFFIX):
+            return self.push_cap
         is_upload = any(stripped.endswith(suffix) for suffix in self._UPLOAD_SUFFIXES)
         return self.upload_cap if is_upload else self.json_cap
 
