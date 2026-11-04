@@ -1,7 +1,8 @@
-import { Download, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Download, LogOut, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,18 +16,27 @@ import { formatDate } from "@/lib/formatting";
 
 import { useDownloadProject } from "./use-download-project";
 import { usePrefetchProject } from "./use-prefetch-project";
-import type { Project } from "./types";
+import type { ListedProject } from "./types";
 
 interface RowActions {
-  onOpen: (p: Project) => void;
-  onRename: (p: Project) => void;
-  onDelete: (p: Project) => void;
+  onOpen: (p: ListedProject) => void;
+  onRename: (p: ListedProject) => void;
+  onDelete: (p: ListedProject) => void;
+  onLeave: (p: ListedProject) => void;
 }
 
-export function RowActionsMenu({ project, onOpen, onRename, onDelete }: { project: Project } & RowActions) {
+/** Owners rename and delete; editors and viewers leave. Everyone downloads (spec 109). */
+export function RowActionsMenu({
+  project,
+  onOpen,
+  onRename,
+  onDelete,
+  onLeave,
+}: { project: ListedProject } & RowActions) {
   const { t } = useTranslation("projects");
   const { download, downloadingId } = useDownloadProject();
   const isDownloading = downloadingId === project.id;
+  const isOwner = project.role === "owner";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -47,25 +57,50 @@ export function RowActionsMenu({ project, onOpen, onRename, onDelete }: { projec
           {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
           {t("actionsMenu.download")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onRename(project)}>
-          <Pencil />
-          {t("common:action.rename")}
-        </DropdownMenuItem>
+        {isOwner && (
+          <DropdownMenuItem onSelect={() => onRename(project)}>
+            <Pencil />
+            {t("common:action.rename")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={() => onDelete(project)}
-          className="text-error-text focus:text-error-text"
-        >
-          <Trash2 />
-          {t("common:action.delete")}
-        </DropdownMenuItem>
+        {isOwner ? (
+          <DropdownMenuItem
+            onSelect={() => onDelete(project)}
+            className="text-error-text focus:text-error-text"
+          >
+            <Trash2 />
+            {t("common:action.delete")}
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={() => onLeave(project)}>
+            <LogOut />
+            {t("actionsMenu.leave")}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
+/** The owner line: "You" for the caller's own projects, otherwise the owner's name and the caller's role. */
+function OwnerLine({ project }: { project: ListedProject }) {
+  const { t } = useTranslation("projects");
+  const isOwner = project.role === "owner";
+  return (
+    <span className="flex min-w-0 items-baseline gap-2 text-small text-muted-foreground">
+      <span className="truncate">{isOwner ? t("owner.you") : project.owner.displayName}</span>
+      {!isOwner && (
+        <Badge variant="outline" className="shrink-0 font-normal">
+          {t(`role.${project.role}`)}
+        </Badge>
+      )}
+    </span>
+  );
+}
+
 /** The index of works: each project a line of a table of contents, title, leader and date. */
-export function ProjectIndex({ projects, ...actions }: { projects: Project[] } & RowActions) {
+export function ProjectIndex({ projects, ...actions }: { projects: ListedProject[] } & RowActions) {
   const { t } = useTranslation("projects");
   const prefetchProject = usePrefetchProject();
   return (
@@ -82,6 +117,7 @@ export function ProjectIndex({ projects, ...actions }: { projects: Project[] } &
             >
               {project.name}
             </Link>
+            <OwnerLine project={project} />
             <span
               aria-hidden="true"
               className="hidden flex-1 border-b border-dotted border-border-strong sm:block"

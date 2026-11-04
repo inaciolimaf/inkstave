@@ -20,11 +20,13 @@ from inkstave.modules.projects.access.capabilities import Capability, capabiliti
 from inkstave.modules.projects.access.deps import require_capability
 from inkstave.modules.projects.access.service import role_for
 from inkstave.modules.projects.catalog import service as project_service
-from inkstave.modules.projects.catalog.service import ProjectNotFoundError
+from inkstave.modules.projects.catalog.service import ListedProject, ProjectNotFoundError, ProjectScope
 from inkstave.modules.projects.schemas.project import (
     PermissionsRead,
     ProjectCreate,
     ProjectList,
+    ProjectListItem,
+    ProjectOwner,
     ProjectRead,
     ProjectRename,
 )
@@ -69,15 +71,22 @@ async def create_project(
     return ProjectRead.model_validate(project)
 
 
+def _list_item(row: ListedProject) -> ProjectListItem:
+    base = ProjectRead.model_validate(row.project).model_dump()
+    owner = ProjectOwner(id=row.project.owner_id, display_name=row.owner_name)
+    return ProjectListItem(**base, role=row.role, owner=owner)
+
+
 @router.get("", response_model=ProjectList, summary="List the caller's projects")
 async def list_projects(
+    scope: ProjectScope = Query(ProjectScope.all),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> ProjectList:
-    items, total = await project_service.list_projects(session, user.id, limit, offset)
-    return ProjectList(items=[ProjectRead.model_validate(p) for p in items], total=total)
+    listed, total = await project_service.list_projects(session, user.id, scope, limit, offset)
+    return ProjectList(items=[_list_item(row) for row in listed], total=total)
 
 
 @router.get(

@@ -1,7 +1,7 @@
 import { Plus, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "@/modules/auth";
 import { InkstaveLogo } from "@/components/inkstave-logo";
@@ -12,14 +12,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 import { ImportProjectDialog } from "./import-project-dialog";
-import { CreateProjectDialog, DeleteProjectDialog, RenameProjectDialog } from "./project-dialogs";
+import {
+  CreateProjectDialog,
+  DeleteProjectDialog,
+  LeaveProjectDialog,
+  RenameProjectDialog,
+} from "./project-dialogs";
 import { ProjectListView } from "./project-list-view";
-import type { Project, SortKey } from "./types";
+import { ProjectScopeControl } from "./project-scope-control";
+import type { ListedProject, ProjectScope, SortKey } from "./types";
 import { NotificationsBell } from "@/modules/notifications";
 
-import { useProjects, visibleProjects } from "./use-projects";
+import { parseScope, useProjects, visibleProjects } from "./use-projects";
 
-type DialogState = { type: "create" | "import" | "rename" | "delete" | null; project?: Project };
+type DialogState = {
+  type: "create" | "import" | "rename" | "delete" | "leave" | null;
+  project?: ListedProject;
+};
 
 /** The projects dashboard header: title, search, sort, and new-project action (spec 16 §5.3.2). */
 function ProjectsHeader({
@@ -86,8 +95,11 @@ function ProjectsHeader({
 export function ProjectsPage() {
   const { t } = useTranslation("projects");
   const projectsQuery = useProjects();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
+  // The filter lives in `?scope=` so a reload keeps it (spec 109).
+  const [params, setParams] = useSearchParams();
+  const scope = parseScope(params.get("scope"));
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 150);
@@ -96,9 +108,20 @@ export function ProjectsPage() {
 
   const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
   const visible = useMemo(
-    () => visibleProjects(projects, debouncedSearch, sortKey),
-    [projects, debouncedSearch, sortKey],
+    () => visibleProjects(projects, debouncedSearch, sortKey, scope),
+    [projects, debouncedSearch, sortKey, scope],
   );
+
+  const onScopeChange = (next: ProjectScope) =>
+    setParams(
+      (prev) => {
+        const updated = new URLSearchParams(prev);
+        if (next === "all") updated.delete("scope");
+        else updated.set("scope", next);
+        return updated;
+      },
+      { replace: true },
+    );
 
   const closeDialog = (open: boolean) => {
     if (!open) setDialog({ type: null });
@@ -135,18 +158,28 @@ export function ProjectsPage() {
         onImport={() => setDialog({ type: "import" })}
       />
 
+      <ProjectScopeControl value={scope} onChange={onScopeChange} />
+
       <ProjectListView
         query={projectsQuery}
         searchTerm={debouncedSearch}
+        scope={scope}
         visible={visible}
         onCreate={() => setDialog({ type: "create" })}
         onClearSearch={() => setSearch("")}
         onOpen={(p) => navigate(`/projects/${p.id}`)}
         onRename={(p) => setDialog({ type: "rename", project: p })}
         onDelete={(p) => setDialog({ type: "delete", project: p })}
+        onLeave={(p) => setDialog({ type: "leave", project: p })}
       />
 
       <CreateProjectDialog open={dialog.type === "create"} onOpenChange={closeDialog} />
+      <LeaveProjectDialog
+        open={dialog.type === "leave"}
+        onOpenChange={closeDialog}
+        project={dialog.project ?? null}
+        userId={user?.id ?? null}
+      />
       <ImportProjectDialog open={dialog.type === "import"} onOpenChange={closeDialog} />
       <RenameProjectDialog
         open={dialog.type === "rename"}

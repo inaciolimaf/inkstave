@@ -2261,9 +2261,51 @@ export interface components {
         /** ProjectList */
         ProjectList: {
             /** Items */
-            items: components["schemas"]["ProjectRead"][];
+            items: components["schemas"]["ProjectListItem"][];
             /** Total */
             total: number;
+        };
+        /**
+         * ProjectListItem
+         * @description A project in the caller's listing: their role in it and who owns it (spec 109).
+         */
+        ProjectListItem: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            owner: components["schemas"]["ProjectOwner"];
+            /**
+             * Owner Id
+             * Format: uuid
+             */
+            owner_id: string;
+            role: components["schemas"]["MembershipRole"];
+            /** Root Doc Id */
+            root_doc_id: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProjectOwner */
+        ProjectOwner: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /**
          * ProjectRead
@@ -2313,6 +2355,12 @@ export interface components {
             /** Results */
             results: components["schemas"]["DocRestoreResult"][];
         };
+        /**
+         * ProjectScope
+         * @description Which memberships a listing covers: all of them, the caller's own, or the ones shared with them.
+         * @enum {string}
+         */
+        ProjectScope: "all" | "owned" | "shared";
         /** ProposedDiffSummary */
         ProposedDiffSummary: {
             /** Base Version */
@@ -3529,6 +3577,7 @@ export interface operations {
     list_projects_api_v1_projects_get: {
         parameters: {
             query?: {
+                scope?: components["schemas"]["ProjectScope"];
                 limit?: number;
                 offset?: number;
             };

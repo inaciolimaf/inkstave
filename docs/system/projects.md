@@ -14,7 +14,7 @@ The module is `backend/src/inkstave/modules/projects/`.
 | File | Role |
 |---|---|
 | `backend/src/inkstave/modules/projects/__init__.py` | Public interface other modules may import |
-| `backend/src/inkstave/modules/projects/catalog/service.py` | Project create, list, rename, soft delete; `ProjectNotFoundError` |
+| `backend/src/inkstave/modules/projects/catalog/service.py` | Project create, list by membership (`ProjectScope`, `ListedProject`), rename, soft delete; `ProjectNotFoundError` |
 | `backend/src/inkstave/modules/projects/tree/service.py` | Tree create, rename, move, delete, `get_tree`, `ensure_root` |
 | `backend/src/inkstave/modules/projects/tree/builder.py` | `compute_path`, `build_tree`: pure path and nesting helpers |
 | `backend/src/inkstave/modules/projects/tree/safe_path.py` | `validate_name_segment`, the rules for one name |
@@ -33,7 +33,7 @@ The module is `backend/src/inkstave/modules/projects/`.
 | `backend/src/inkstave/modules/projects/transfer/zip_import/content.py` | `decode_text`, `detect_root_doc` |
 | `backend/src/inkstave/worker.py` | Registers `import_project_zip` with `max_tries=1` |
 | `frontend/src/routes/projects.tsx` | Project list route |
-| `frontend/src/modules/projects/` | List page, dialogs, import dialog, download hook |
+| `frontend/src/modules/projects/` | List page, scope filter (`?scope=`), owner column, role-based row actions, dialogs (including leave), import dialog, download hook |
 | `frontend/src/modules/file-tree/` | Tree panel, drag and drop, uploads |
 
 Tests live in `backend/tests/integration/test_projects_api.py`,
@@ -63,7 +63,8 @@ Tests live in `backend/tests/integration/test_projects_api.py`,
 "Parent must be a folder" is not expressible as a constraint. The service enforces it.
 
 `projects.root_doc_id` holds a tree-entity id with no foreign key. `ix_projects_owner_active` is a
-partial index on `(owner_id, updated_at DESC) WHERE deleted_at IS NULL`.
+partial index on `(owner_id, updated_at DESC) WHERE deleted_at IS NULL`. The listing no longer uses it
+(it joins memberships since spec 109), so it is a candidate for removal.
 
 `project_imports.status` is `queued`, `running`, `success`, `partial`, `failure` or `error`. `failure`
 is a rejected archive, `error` an unexpected fault. The last four are terminal.
@@ -82,7 +83,7 @@ caller's role lacks the capability. The capability column names the check.
 | Method and path | Capability | What it does | Errors |
 |---|---|---|---|
 | `POST /projects` | any user | Create project, root folder, owner membership | 422 |
-| `GET /projects` | any user | List projects the caller owns; `limit` 1 to 100, default 50, `offset` | 422 |
+| `GET /projects` | any user | List the live projects where the caller is an active member, each with the caller's `role` and `owner`; `scope` `all`, `owned` or `shared` (default `all`), `limit` 1 to 100, default 50, `offset` | 422 |
 | `GET /projects/{project_id}` | `PROJECT_READ` | Read metadata, cached in Redis | 404 |
 | `GET /projects/{project_id}/permissions` | member | Caller's role and capability codes | 404 |
 | `PATCH /projects/{project_id}` | `PROJECT_WRITE` | Rename | 404, 403, 422 |
@@ -108,6 +109,14 @@ Viewers have `PROJECT_READ`, `DOC_READ`, `FILE_READ` and `PROJECT_DOWNLOAD`, so 
 `create_project` inserts the row, calls `ensure_root` and adds the owner's `ProjectMembership`, all in
 one transaction. `ProjectCreate` and `ProjectRename` strip the name and reject blanks; the database
 also checks `name_not_blank`.
+
+`list_projects` (spec 109) lists by membership, not ownership: it joins `project_memberships` on the caller
+with `status = 'active'` and the owner's `users` row for the display name, and skips soft-deleted projects.
+`scope` maps to the membership role: `owned` is `owner`, `shared` is `editor` or `viewer`. The page is one
+statement with a window `count(*) over ()` for the total. An empty page past the end runs a second count.
+Items are `ProjectListItem`, which extends `ProjectRead` with `role` and `owner`. Order stays
+`updated_at DESC, id DESC`. The dashboard fetches `scope=all` once and filters by `role` on the client, so
+the three filters switch without a request and optimistic rename, delete and leave still patch one cache.
 
 `get_project` is authorized first, then served from `RedisCache` under `project_meta_key`. Rename and
 delete invalidate the key. `rename_project` sets `updated_at = clock_timestamp()` so it advances even
@@ -195,6 +204,7 @@ subscribes before sending its snapshot so no transition is lost.
 | A non-member gets 404 with no body data, never 403 | `backend/tests/integration/test_projects_api.py::test_ownership_is_existence` |
 | A soft-deleted project is not reachable through `get_owned_project` | `backend/tests/integration/test_project_service.py::test_soft_delete_hides_project` |
 | Listing excludes deleted projects and orders by recency | `backend/tests/integration/test_project_service.py::test_list_excludes_deleted_and_orders_by_recency` |
+| A user's list is every live project they actively belong to, shared ones included | `backend/tests/integration/test_projects_api.py::test_list_includes_shared_projects` |
 | Rename strictly advances `updated_at` | `backend/tests/integration/test_project_service.py::test_rename_bumps_updated_at` |
 | A new project has a root folder | `backend/tests/integration/test_tree_api.py::test_root_auto_created` |
 | Tree routes hide other users' projects | `backend/tests/integration/test_tree_api_delete.py::test_ownership_isolation` |
@@ -245,7 +255,6 @@ subscribes before sending its snapshot so no transition is lost.
 
 ## Points of attention
 
-- `GET /projects` filters on `owner_id`. A collaborator's accepted projects do not appear, and `frontend/src/modules/projects/api.ts` has no other list call.
 - Import is exposed to a race. `_create_import` enqueues before the unit of work commits. A worker that picks the job up first finds no row, returns, and with `max_tries=1` the row stays `queued` and the staged blob stays. No test covers this, since tests use a fake enqueuer.
 - A case-only clash between text entries (`A.tex`, `a.tex`) is not handled. `_import_text` lets `NameConflictError` escape, so the whole import ends `error`. The same clash for binaries is a skip.
 - In `_ensure_folder`, when a path segment clashes with an existing non-folder, `_find_child_folder` returns `None`, and `None` means root. Entries below it land in the project root.

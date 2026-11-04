@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectsPage } from "./projects-page";
 
-vi.mock("@/modules/auth/auth-context", () => ({ useAuth: () => ({ logout: vi.fn() }) }));
+vi.mock("@/modules/auth/auth-context", () => ({
+  useAuth: () => ({ logout: vi.fn(), user: { id: "me", display_name: "Me" } }),
+}));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
@@ -17,10 +19,31 @@ interface Wire {
   root_doc_id: string | null;
   created_at: string;
   updated_at: string;
+  role: "owner" | "editor" | "viewer";
+  owner: { id: string; display_name: string };
 }
 
 function wire(id: string, name: string, updated = "2026-01-01T00:00:00Z"): Wire {
-  return { id, name, owner_id: "u", root_doc_id: null, created_at: updated, updated_at: updated };
+  return {
+    id,
+    name,
+    owner_id: "me",
+    root_doc_id: null,
+    created_at: updated,
+    updated_at: updated,
+    role: "owner",
+    owner: { id: "me", display_name: "Me" },
+  };
+}
+
+/** A project another user owns and shared with the caller as an editor. */
+function shared(id: string, name: string, updated = "2026-01-01T00:00:00Z"): Wire {
+  return {
+    ...wire(id, name, updated),
+    owner_id: "ann",
+    role: "editor",
+    owner: { id: "ann", display_name: "Ann" },
+  };
 }
 
 function json(body: unknown, status: number): Response {
@@ -73,13 +96,13 @@ function installFetch(initial: Wire[]) {
   return fetchMock;
 }
 
-function renderPage() {
+function renderPage(path = "/projects") {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={["/projects"]}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:projectId" element={<div>Editor shell</div>} />
@@ -228,5 +251,73 @@ describe("ProjectsPage", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Could not delete project"));
     await hasLink("Alpha");
     await hasLink("Beta");
+  });
+});
+
+describe("ProjectsPage scope filter", () => {
+  const mixed = () => [wire("1", "Mine"), shared("2", "Theirs")];
+
+  it("shows every project under All and only the shared ones under Shared with me", async () => {
+    installFetch(mixed());
+    renderPage();
+    await hasLink("Mine");
+    await hasLink("Theirs");
+
+    await userEvent.click(screen.getByRole("button", { name: "Shared with me" }));
+    await waitFor(() => noLink("Mine"));
+    await hasLink("Theirs");
+    expect(screen.getByRole("button", { name: "Shared with me" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("keeps the chosen filter across a reload", async () => {
+    installFetch(mixed());
+    renderPage("/projects?scope=owned");
+    await hasLink("Mine");
+    noLink("Theirs");
+    expect(screen.getByRole("button", { name: "Owned by me" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("explains an empty Shared with me list instead of saying nothing matches", async () => {
+    installFetch([wire("1", "Mine")]);
+    renderPage("/projects?scope=shared");
+    expect(
+      await screen.findByText("Nothing shared with you yet. Projects others invite you to appear here."),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("ProjectsPage leave flow", () => {
+  it("asks for confirmation, calls the membership route and removes the row", async () => {
+    let items = [shared("2", "Theirs")];
+    const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const path = new URL(String(input), "http://localhost").pathname;
+      const method = init?.method ?? "GET";
+      if (path === "/api/v1/projects" && method === "GET") {
+        return json({ items, total: items.length }, 200);
+      }
+      if (path === "/api/v1/projects/2/members/me" && method === "DELETE") {
+        items = [];
+        return new Response(null, { status: 204 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderPage();
+    await hasLink("Theirs");
+
+    await openRowMenu("Theirs");
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Leave project" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("Leave “Theirs”?")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Leave project" }));
+
+    await waitFor(() => noLink("Theirs"));
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) => String(url).endsWith("/api/v1/projects/2/members/me") && init?.method === "DELETE",
+      ),
+    ).toBe(true);
+    expect(toast.success).toHaveBeenCalledWith("You left the project");
   });
 });

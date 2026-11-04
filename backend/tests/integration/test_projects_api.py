@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import get_settings
 from inkstave.modules.auth.credentials.tokens import build_token_service
 from inkstave.modules.auth.models.user import User
 from tests.factories import UserFactory
+
+from ._sharing_api_support import FakeInviteEnqueuer, _add_member, _auth, _project, enqueuer
+
+__all__ = ["enqueuer"]
 
 pytestmark = pytest.mark.integration
 
@@ -146,3 +152,140 @@ async def test_bad_uuid_path_param(async_client: AsyncClient, db_session: AsyncS
     resp = await async_client.get(f"{PROJECTS}/not-a-uuid", headers=headers)
     assert resp.status_code == 422
     assert resp.json()["error"]["type"] == "validation_error"
+
+
+# --------------------------------------------------------------------------- #
+# Shared projects on the dashboard (spec 109)
+# --------------------------------------------------------------------------- #
+
+
+async def _ids(client: AsyncClient, headers: dict[str, str], **params: str) -> list[str]:
+    resp = await client.get(PROJECTS, params=params, headers=headers)
+    assert resp.status_code == 200, resp.text
+    return [item["id"] for item in resp.json()["items"]]
+
+
+async def test_list_includes_shared_projects(
+    async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
+) -> None:
+    owner, owner_h = await _auth(db_session, email="owner@example.com")
+    pid = await _project(async_client, owner_h, "Shared paper")
+    _, bob_h = await _add_member(async_client, db_session, owner_h, pid, "bob@example.com", "editor")
+
+    items = (await async_client.get(PROJECTS, headers=bob_h)).json()["items"]
+    assert [i["id"] for i in items] == [pid]
+    assert items[0]["role"] == "editor"
+    assert items[0]["owner"] == {"id": str(owner.id), "display_name": owner.display_name}
+    assert items[0]["owner_id"] == str(owner.id)
+
+
+async def test_owner_row_carries_owner_role(async_client: AsyncClient, db_session: AsyncSession) -> None:
+    owner, owner_h = await _auth(db_session)
+    pid = await _project(async_client, owner_h, "Mine")
+    items = (await async_client.get(PROJECTS, headers=owner_h)).json()["items"]
+    assert [i["id"] for i in items] == [pid]
+    assert items[0]["role"] == "owner"
+    assert items[0]["owner"]["display_name"] == owner.display_name
+
+
+async def test_left_member_does_not_see_project(
+    async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
+) -> None:
+    _, owner_h = await _auth(db_session, email="owner@example.com")
+    pid = await _project(async_client, owner_h, "Paper")
+    bob, bob_h = await _add_member(async_client, db_session, owner_h, pid, "bob@example.com", "viewer")
+    assert await _ids(async_client, bob_h) == [pid]
+
+    left = await async_client.delete(f"{PROJECTS}/{pid}/members/{bob.id}", headers=bob_h)
+    assert left.status_code == 204
+    assert await _ids(async_client, bob_h) == []
+    assert await _ids(async_client, owner_h) == [pid]
+
+
+async def test_transfer_keeps_project_for_former_owner(
+    async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
+) -> None:
+    _, owner_h = await _auth(db_session, email="owner@example.com")
+    pid = await _project(async_client, owner_h, "Handed over")
+    bob, bob_h = await _add_member(async_client, db_session, owner_h, pid, "bob@example.com", "viewer")
+
+    moved = await async_client.post(
+        f"{PROJECTS}/{pid}/members/transfer", json={"to_user_id": str(bob.id)}, headers=owner_h
+    )
+    assert moved.status_code == 200, moved.text
+
+    old = (await async_client.get(PROJECTS, headers=owner_h)).json()["items"]
+    assert [(i["id"], i["role"]) for i in old] == [(pid, "editor")]
+    new = (await async_client.get(PROJECTS, headers=bob_h)).json()["items"]
+    assert [(i["id"], i["role"]) for i in new] == [(pid, "owner")]
+    assert new[0]["owner"]["id"] == str(bob.id)
+
+
+async def test_scopes_partition_all(
+    async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
+) -> None:
+    _, owner_h = await _auth(db_session, email="owner@example.com")
+    shared_with_bob = await _project(async_client, owner_h, "A2")
+    _, bob_h = await _add_member(async_client, db_session, owner_h, shared_with_bob, "bob@example.com")
+    own_pid = await _project(async_client, bob_h, "B1")
+    await _project(async_client, bob_h, "B2")
+    await async_client.delete(f"{PROJECTS}/{own_pid}", headers=bob_h)
+
+    everything = await _ids(async_client, bob_h, scope="all")
+    owned = await _ids(async_client, bob_h, scope="owned")
+    shared = await _ids(async_client, bob_h, scope="shared")
+    assert shared == [shared_with_bob]
+    assert len(owned) == 1 and own_pid not in owned
+    assert set(owned).isdisjoint(shared)
+    assert sorted(owned + shared) == sorted(everything)
+
+
+async def test_soft_deleted_project_appears_for_nobody(
+    async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
+) -> None:
+    _, owner_h = await _auth(db_session, email="owner@example.com")
+    pid = await _project(async_client, owner_h, "Doomed")
+    _, bob_h = await _add_member(async_client, db_session, owner_h, pid, "bob@example.com")
+    assert await _ids(async_client, bob_h) == [pid]
+
+    await async_client.delete(f"{PROJECTS}/{pid}", headers=owner_h)
+    assert await _ids(async_client, owner_h) == []
+    assert await _ids(async_client, bob_h) == []
+
+
+async def test_unknown_scope_is_validation_error(async_client: AsyncClient, db_session: AsyncSession) -> None:
+    _, headers = await _auth_user(db_session)
+    resp = await async_client.get(PROJECTS, params={"scope": "archived"}, headers=headers)
+    assert resp.status_code == 422
+    assert resp.json()["error"]["type"] == "validation_error"
+
+
+async def test_offset_past_end_keeps_total(async_client: AsyncClient, db_session: AsyncSession) -> None:
+    _, headers = await _auth_user(db_session)
+    for i in range(3):
+        await async_client.post(PROJECTS, json={"name": f"P{i}"}, headers=headers)
+    resp = await async_client.get(PROJECTS, params={"offset": 10}, headers=headers)
+    assert resp.json() == {"items": [], "total": 3}
+
+
+async def test_list_projects_single_query(
+    async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
+) -> None:
+    _, owner_h = await _auth(db_session, email="owner@example.com")
+    for i in range(3):
+        await _project(async_client, owner_h, f"P{i}")
+
+    statements: list[str] = []
+
+    def record(conn: object, cursor: object, statement: str, *args: object) -> None:
+        statements.append(statement)
+
+    event.listen(Engine, "before_cursor_execute", record)
+    try:
+        resp = await async_client.get(PROJECTS, headers=owner_h)
+    finally:
+        event.remove(Engine, "before_cursor_execute", record)
+
+    assert resp.status_code == 200
+    assert len(resp.json()["items"]) == 3
+    assert len([s for s in statements if "project_memberships" in s]) == 1

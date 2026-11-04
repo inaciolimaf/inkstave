@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { Project } from "./types";
-import { visibleProjects } from "./use-projects";
+import type { ListedProject } from "./types";
+import { parseScope, visibleProjects } from "./use-projects";
 
-function p(over: Partial<Project>): Project {
+function p(over: Partial<ListedProject>): ListedProject {
   return {
     id: "id",
     name: "Name",
@@ -11,15 +11,39 @@ function p(over: Partial<Project>): Project {
     rootDocId: null,
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
+    role: "owner",
+    owner: { id: "u", displayName: "Me" },
     ...over,
   };
 }
 
 const projects = [
   p({ id: "1", name: "Beta", createdAt: "2026-01-01", updatedAt: "2026-01-02" }),
-  p({ id: "2", name: "alpha", createdAt: "2026-01-03", updatedAt: "2026-01-05" }),
-  p({ id: "3", name: "Gamma", createdAt: "2026-01-02", updatedAt: "2026-01-03" }),
+  p({ id: "2", name: "alpha", createdAt: "2026-01-03", updatedAt: "2026-01-05", role: "editor" }),
+  p({ id: "3", name: "Gamma", createdAt: "2026-01-02", updatedAt: "2026-01-03", role: "viewer" }),
 ];
+
+describe("parseScope", () => {
+  it("accepts the three scopes and falls back to all", () => {
+    expect(parseScope("owned")).toBe("owned");
+    expect(parseScope("shared")).toBe("shared");
+    expect(parseScope("all")).toBe("all");
+    expect(parseScope("archived")).toBe("all");
+    expect(parseScope(null)).toBe("all");
+  });
+});
+
+describe("visibleProjects scope", () => {
+  it("keeps the owner's projects for owned and the rest for shared", () => {
+    const ids = (scope: "all" | "owned" | "shared") =>
+      visibleProjects(projects, "", "name", scope)
+        .map((x) => x.id)
+        .sort();
+    expect(ids("owned")).toEqual(["1"]);
+    expect(ids("shared")).toEqual(["2", "3"]);
+    expect(ids("all")).toEqual(["1", "2", "3"]);
+  });
+});
 
 describe("visibleProjects", () => {
   it("filters by name case-insensitively", () => {

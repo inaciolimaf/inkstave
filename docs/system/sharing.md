@@ -47,7 +47,9 @@ which also backfills an active `owner` membership for every live project.
 | `status` | `active`, `pending`, `left` (check constraint). The code writes only `active` and `left` |
 
 `uq_membership_one_owner` is a partial unique index on `project_id` where `role = 'owner'`: at most one
-owner per project at the database level. `create_project` in
+owner per project at the database level. `ix_project_memberships_user_active` is a partial index on
+`(user_id, project_id)` where `status = 'active'`, which the dashboard listing joins on (spec 109; migration
+`backend/migrations/versions/20261104_1200_f6a2b8c4d1e9_spec109_membership_active_index.py`). `create_project` in
 `backend/src/inkstave/modules/projects/catalog/service.py` adds the creator's owner membership.
 `projects.owner_id` is kept in step with it by `transfer_ownership`.
 
@@ -194,7 +196,9 @@ non-pending invite, an expired one, or one whose project is soft-deleted.
 
 ### Members and ownership transfer
 
-`remove_member` with the caller's own id is a leave: the owner gets 400, anyone else moves to `left`.
+`remove_member` with the caller's own id is a leave: the owner gets 400, anyone else moves to `left`. The
+dashboard's "Leave project" action (spec 109) calls this route with the caller's own id after a confirmation,
+and the project leaves the caller's `GET /api/v1/projects` list at once.
 With another id it requires the owner and moves the target to `left`. The row stays, so a later invite
 re-activates it.
 
@@ -226,6 +230,12 @@ undo route.
 | Decline creates no membership | `backend/tests/integration/test_sharing_api.py::test_decline_creates_no_membership` |
 | An expired invite answers 410 on accept and decline | `backend/tests/integration/test_sharing_api.py::test_expired_invite_returns_410`, `backend/tests/integration/test_sharing_api.py::test_expired_invite_decline_returns_410` |
 | The owner cannot leave | `backend/tests/integration/test_sharing_api_members.py::test_owner_cannot_leave` |
+| A user's dashboard lists every live project they actively belong to, with their role and the owner | `backend/tests/integration/test_projects_api.py::test_list_includes_shared_projects` |
+| A left membership hides the project from the list | `backend/tests/integration/test_projects_api.py::test_left_member_does_not_see_project` |
+| A former owner still sees a transferred project, as editor | `backend/tests/integration/test_projects_api.py::test_transfer_keeps_project_for_former_owner` |
+| A soft-deleted project appears for nobody | `backend/tests/integration/test_projects_api.py::test_soft_deleted_project_appears_for_nobody` |
+| The `owned` and `shared` scopes partition `all` | `backend/tests/integration/test_projects_api.py::test_scopes_partition_all` |
+| The listing of a page is one query over memberships | `backend/tests/integration/test_projects_api.py::test_list_projects_single_query` |
 | `owner` is reachable only through transfer | `backend/tests/integration/test_sharing_service.py::test_change_role_transitions_and_rejects_owner` |
 | Transfer leaves one owner, demotes the old one, updates the project row | `backend/tests/integration/test_sharing_api_members.py::test_transfer_ownership_single_owner` |
 | Transfer needs an active member | `backend/tests/integration/test_sharing_service.py::test_transfer_to_non_member_rejected` |
@@ -256,9 +266,6 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
   `backend/src/inkstave/modules/projects/sharing` are English. `frontend/src/modules/sharing/useSharing.ts`
   and `frontend/src/modules/sharing/AcceptInvitePage.tsx` show the server message when present, so a
   Portuguese UI shows these English strings instead of its translated fallback.
-- **Shared projects are not listed.** `list_projects` filters on `Project.owner_id`, so `GET
-  /api/v1/projects` returns only projects the caller owns. A collaborator reaches a shared project only by
-  its URL, and a former owner loses it from the list after a transfer.
 - **The `expired` status is not persisted by the routes.** `_require_pending` and `decline_invite` set
   `expired`, flush, then raise `InviteGoneError`. The unit of work rolls back on any exception, so the row
   stays `pending`. Nothing sweeps invites either. Pending invites past their expiry stay in `list_invites`

@@ -43,8 +43,20 @@ class ProjectRead(BaseModel):
     updated_at: datetime
 
 
+class ProjectOwner(BaseModel):
+    id: UUID
+    display_name: str
+
+
+class ProjectListItem(ProjectRead):
+    """A project in the caller's listing: their role in it and who owns it (spec 109)."""
+
+    role: MembershipRole
+    owner: ProjectOwner
+
+
 class ProjectList(BaseModel):
-    items: list[ProjectRead]
+    items: list[ProjectListItem]
     total: int
 
 

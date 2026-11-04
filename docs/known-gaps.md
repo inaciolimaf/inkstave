@@ -141,7 +141,6 @@ run; the rest were read, not run.
 ### Authorization and security
 
 - Agent event and cancel routes accept any `run_id`, unbound to the session in the path.
-- `list_projects` filters on `owner_id`, so shared projects never appear in a collaborator's list.
 - `COMPILE_ALLOWED_FOR_VIEWERS` is ignored by the compile job and the compile SSE route.
 - Password-reset links survive an e-mail change, and `complete_password_reset` ignores `is_active`.
 - Deleting the last admin reopens the public `POST /api/setup/admin`.

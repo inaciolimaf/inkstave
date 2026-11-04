@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { ProjectIndex } from "./project-index";
-import type { Project } from "./types";
+import type { ListedProject, ProjectScope } from "./types";
 
 function ProjectListSkeleton() {
   const { t } = useTranslation("projects");
@@ -46,26 +46,40 @@ function ProjectListNoResults({ term, onClear }: { term: string; onClear: () => 
   );
 }
 
+/** A filter with nothing in it and no search: explain the filter rather than "no match". */
+function ProjectListScopeEmpty({ scope }: { scope: Exclude<ProjectScope, "all"> }) {
+  const { t } = useTranslation("projects");
+  return (
+    <p className="py-12 text-body text-muted-foreground">
+      {t(scope === "shared" ? "list.sharedEmpty" : "list.ownedEmpty")}
+    </p>
+  );
+}
+
 interface ProjectListViewProps {
-  query: Pick<UseQueryResult<Project[]>, "data" | "isLoading" | "isError" | "refetch">;
+  query: Pick<UseQueryResult<ListedProject[]>, "data" | "isLoading" | "isError" | "refetch">;
   searchTerm: string;
-  visible: Project[];
+  scope: ProjectScope;
+  visible: ListedProject[];
   onCreate: () => void;
   onClearSearch: () => void;
-  onOpen: (p: Project) => void;
-  onRename: (p: Project) => void;
-  onDelete: (p: Project) => void;
+  onOpen: (p: ListedProject) => void;
+  onRename: (p: ListedProject) => void;
+  onDelete: (p: ListedProject) => void;
+  onLeave: (p: ListedProject) => void;
 }
 
 export function ProjectListView({
   query,
   searchTerm,
+  scope,
   visible,
   onCreate,
   onClearSearch,
   onOpen,
   onRename,
   onDelete,
+  onLeave,
 }: ProjectListViewProps) {
   const { t } = useTranslation("projects");
   return (
@@ -77,8 +91,18 @@ export function ProjectListView({
     >
       {(projects) => {
         if (projects.length === 0) return <ProjectListEmpty onCreate={onCreate} />;
+        if (visible.length === 0 && !searchTerm && scope !== "all")
+          return <ProjectListScopeEmpty scope={scope} />;
         if (visible.length === 0) return <ProjectListNoResults term={searchTerm} onClear={onClearSearch} />;
-        return <ProjectIndex projects={visible} onOpen={onOpen} onRename={onRename} onDelete={onDelete} />;
+        return (
+          <ProjectIndex
+            projects={visible}
+            onOpen={onOpen}
+            onRename={onRename}
+            onDelete={onDelete}
+            onLeave={onLeave}
+          />
+        );
       }}
     </QueryView>
   );
