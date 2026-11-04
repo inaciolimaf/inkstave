@@ -1,5 +1,5 @@
 /** The agent: a floating window that blocks nothing behind it, or a sheet on a phone (specs 46, 107). */
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, type Ref, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ import type { DocumentBridge } from "@/modules/diff-review";
 import { AgentErrorState } from "./controls";
 import { FileOpCard } from "./file-op-card";
 import { AgentTranscript } from "./transcript";
-import { EmptyState, Launcher, PanelFooter, PanelHeader } from "./panel-parts";
+import { EmptyState, Launcher, PanelFooter, PanelHeader, type SideView } from "./panel-parts";
 import type { AgentQuote, AgentRequest } from "./quote";
 import { useAgentChat } from "./useAgentChat";
 import { useWindowSize, type WindowSize } from "./use-window-size";
@@ -65,6 +65,74 @@ function Conversation({
   );
 }
 
+/** The diff review of a proposal in the open session, opened from the transcript (spec 47). */
+function ProposalReview({
+  projectId,
+  sessionId,
+  bridge,
+  proposalId,
+  onClose,
+}: {
+  projectId: string;
+  sessionId: string;
+  bridge: DocumentBridge;
+  proposalId: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <DiffReviewDialog
+      projectId={projectId}
+      sessionId={sessionId}
+      proposalId={proposalId}
+      bridge={bridge}
+      open={proposalId !== null}
+      onOpenChange={(o) => !o && onClose()}
+    />
+  );
+}
+
+/** The agent's view of the window: the conversation, any error, and the composer. */
+function AgentBody({
+  chat,
+  projectId,
+  active,
+  composer,
+  onReviewProposal,
+}: {
+  chat: ReturnType<typeof useAgentChat>;
+  projectId: string;
+  active: boolean;
+  composer: {
+    text: string;
+    onTextChange: (text: string) => void;
+    quote: AgentQuote | null;
+    onQuoteChange: (quote: AgentQuote | null) => void;
+    ref: Ref<HTMLTextAreaElement>;
+  };
+  onReviewProposal: (proposalId: string) => void;
+}) {
+  return (
+    <>
+      <Conversation
+        chat={chat}
+        projectId={projectId}
+        onPickExample={composer.onTextChange}
+        onReviewProposal={onReviewProposal}
+      />
+      {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
+      <PanelFooter
+        chat={chat}
+        active={active}
+        text={composer.text}
+        onTextChange={composer.onTextChange}
+        quote={composer.quote}
+        onQuoteChange={composer.onQuoteChange}
+        composerRef={composer.ref}
+      />
+    </>
+  );
+}
+
 /** Each request is a new object, so the same selection can be asked about twice, and handled once. */
 function useEditorRequest(
   request: AgentRequest | null,
@@ -80,6 +148,13 @@ function useEditorRequest(
   }, [request, send, setQuote]);
 }
 
+/** The project chat that shares the window (spec 117): which view shows, and the chat itself. */
+export interface AgentSide {
+  view: SideView;
+  onViewChange: (view: SideView) => void;
+  chat: ReactNode;
+}
+
 export function AgentPanel({
   projectId,
   open,
@@ -88,6 +163,7 @@ export function AgentPanel({
   documentBridge,
   onBeforeSend,
   request = null,
+  side,
 }: {
   projectId: string;
   open: boolean;
@@ -98,9 +174,11 @@ export function AgentPanel({
   onBeforeSend?: () => Promise<void>;
   /** Something the editor asked for: a selection to discuss, or a problem to fix. */
   request?: AgentRequest | null;
+  side?: AgentSide;
 }) {
-  const { t } = useTranslation("agent");
+  const { t } = useTranslation(["agent", "discussion"]);
   const chat = useAgentChat(projectId, onBeforeSend);
+  const chatView = side?.view === "chat";
   const windowSize = useWindowSize();
   const [composerText, setComposerText] = useState("");
   const [quote, setQuote] = useState<AgentQuote | null>(null);
@@ -119,8 +197,7 @@ export function AgentPanel({
     if (documentBridge) setReviewId(proposalId);
   };
 
-  const activeSession = chat.sessions.find((s) => s.id === chat.activeSessionId);
-  const title = activeSession?.title ?? t("newChat");
+  const title = chat.sessions.find((s) => s.id === chat.activeSessionId)?.title ?? t("newChat");
   const titleId = `agent-title-${projectId}`;
 
   return (
@@ -129,8 +206,9 @@ export function AgentPanel({
       <section
         role="dialog"
         aria-modal="false"
-        aria-labelledby={titleId}
-        aria-description={t("description")}
+        aria-labelledby={chatView ? undefined : titleId}
+        aria-label={chatView ? t("discussion:title") : undefined}
+        aria-description={chatView ? undefined : t("description")}
         onKeyDown={(e) => {
           if (e.key === "Escape" && e.currentTarget.contains(e.target as Node)) onOpenChange(false);
         }}
@@ -152,35 +230,34 @@ export function AgentPanel({
           onMinimize={() => onOpenChange(false)}
           large={windowSize.large}
           onToggleLarge={windowSize.toggleLarge}
+          side={side && { view: side.view, onViewChange: side.onViewChange }}
         />
-        <Conversation
-          chat={chat}
-          projectId={projectId}
-          onPickExample={setComposerText}
-          onReviewProposal={handleReview}
-        />
-
-        {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
-
-        <PanelFooter
-          chat={chat}
-          active={active}
-          text={composerText}
-          onTextChange={setComposerText}
-          quote={quote}
-          onQuoteChange={setQuote}
-          composerRef={composerRef}
-        />
+        {chatView && side ? (
+          side.chat
+        ) : (
+          <AgentBody
+            chat={chat}
+            projectId={projectId}
+            active={active}
+            composer={{
+              text: composerText,
+              onTextChange: setComposerText,
+              quote,
+              onQuoteChange: setQuote,
+              ref: composerRef,
+            }}
+            onReviewProposal={handleReview}
+          />
+        )}
       </section>
 
       {documentBridge && chat.activeSessionId && (
-        <DiffReviewDialog
+        <ProposalReview
           projectId={projectId}
           sessionId={chat.activeSessionId}
-          proposalId={reviewId}
           bridge={documentBridge}
-          open={reviewId !== null}
-          onOpenChange={(o) => !o && setReviewId(null)}
+          proposalId={reviewId}
+          onClose={() => setReviewId(null)}
         />
       )}
     </>

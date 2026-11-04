@@ -28,6 +28,7 @@ const dict: Dict = {
     views: "Tela",
     content: "Conteúdo",
     preview: "Prévia",
+    agentChat: "Agente / Chat",
   },
   drawer: {
     shade: "Feche a lista de arquivos para voltar ao texto",

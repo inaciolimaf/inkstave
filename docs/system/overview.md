@@ -37,8 +37,10 @@ holds the domains. The composition root (`app`, `cli`, `main`, `models`, `router
 everything and stays out of the contracts.
 
 Module order, from `[tool.importlinter]` in `backend/pyproject.toml`, top to bottom: `admin` and
-`agent` (same level, they may not import each other), `compile`, `history`, `collab`, `projects`,
-`notifications`, `auth`. A module may import only what is below it.
+`agent` (same level, they may not import each other), `compile`, `discussion`, `history`, `collab`,
+`projects`, `notifications`, `auth`. A module may import only what is below it. `discussion` sits above
+`projects` because it asks `projects` for memberships and capabilities; spec 117 placed it below `projects`,
+which that import cannot satisfy.
 
 Three kinds of rule enforce this:
 

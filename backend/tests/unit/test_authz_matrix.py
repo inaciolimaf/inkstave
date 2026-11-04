@@ -22,6 +22,7 @@ _EXPECTED: dict[MembershipRole | None, set[Capability]] = {
         C.COLLAB_WRITE,
         C.COMPILE,
         C.PROJECT_DOWNLOAD,
+        C.DISCUSSION_WRITE,
     },
     MembershipRole.viewer: {
         C.PROJECT_READ,
@@ -30,6 +31,7 @@ _EXPECTED: dict[MembershipRole | None, set[Capability]] = {
         C.COLLAB_READ,
         C.COMPILE,
         C.PROJECT_DOWNLOAD,
+        C.DISCUSSION_WRITE,
     },
     None: set(),
 }

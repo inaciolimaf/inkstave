@@ -52,7 +52,7 @@ export function MobileTabs({
       {config.agentEnabled && (
         <Tab pressed={agentOpen} onClick={onToggleAgent}>
           <Sparkles aria-hidden="true" className="size-4" />
-          {t("toolbar.agent")}
+          {t("mobile.agentChat")}
         </Tab>
       )}
     </nav>

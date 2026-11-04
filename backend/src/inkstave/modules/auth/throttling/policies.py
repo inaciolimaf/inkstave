@@ -45,7 +45,7 @@ class RateLimitPolicy(BaseModel):
     name: str
     limit: int
     window_seconds: int
-    key: Literal["ip", "user", "user_or_ip"]
+    key: Literal["ip", "user", "user_or_ip", "user_project"]
 
 
 @dataclass
@@ -105,6 +105,8 @@ _NAMED_POLICIES: dict[str, tuple[str, str]] = {
     "compile_daily": ("rate_limit_compile_daily", "user"),
     "agent": ("rate_limit_agent", "user"),
     "upload": ("rate_limit_upload", "user"),
+    # Project chat posts: the cap is per user in each project (spec 117).
+    "chat": ("rate_limit_chat", "user_project"),
 }
 
 
@@ -173,6 +175,9 @@ def _scope_id(policy: RateLimitPolicy, request: Request, user: User | None, sett
         return ip
     if policy.key == "user":
         return f"user:{user.id}" if user is not None else f"ip:{ip}"
+    if policy.key == "user_project":
+        project = request.path_params.get("project_id", "")
+        return f"user:{user.id}:project:{project}" if user is not None else f"ip:{ip}:project:{project}"
     return f"user:{user.id}" if user is not None else f"ip:{ip}"  # user_or_ip
 
 

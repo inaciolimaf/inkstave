@@ -52,10 +52,11 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 
 | Module | Holds | Public exports | Depends on |
 |---|---|---|---|
-| `frontend/src/modules/agent` | Chat panel, run reducer, SSE stream | `AgentPanel` | diff-review |
+| `frontend/src/modules/agent` | Agent panel, run reducer, SSE stream; its window also holds the project chat (`SideSwitch`) | `AgentPanel`, type `SideView` | diff-review |
 | `frontend/src/modules/auth` | Session context, guards, theme application, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, `useApplyTheme`, the 8 page components | none |
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
 | `frontend/src/modules/diff-review` | Hunk review dialog, rebase, CRDT apply | `DiffReviewDialog`, `createEditorBridge`, type `DocumentBridge` | collab |
+| `frontend/src/modules/discussion` | Project chat panel, its unread button, the shared project event stream | `ChatPanel`, `ChatButton`, `useChatUnread`, `useProjectEvents`, `subscribeProjectEvents`, `PROJECT_EVENT_TYPES`, types `ProjectEvent`, `ProjectEventHandlers` | auth |
 | `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |

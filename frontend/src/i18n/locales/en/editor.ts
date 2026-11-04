@@ -26,6 +26,7 @@ const dict = {
     views: "Screen",
     content: "Content",
     preview: "Preview",
+    agentChat: "Agent / Chat",
   },
   drawer: {
     shade: "Close the file list to go back to the text",

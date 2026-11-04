@@ -13,7 +13,7 @@ order, then tick it. Specs 01–108 are already implemented.
 - [ ] 114-math-and-table-tools
 - [ ] 115-voice-to-agent
 - [ ] 116-link-sharing
-- [ ] 117-project-chat
+- [x] 117-project-chat
 - [ ] 118-comments
 - [ ] 119-track-changes
 - [ ] 120-overleaf-template-import

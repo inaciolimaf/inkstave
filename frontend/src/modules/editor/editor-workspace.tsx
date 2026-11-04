@@ -12,7 +12,6 @@ import { PreviewPane } from "@/modules/pdf-preview";
 import type { Problem } from "@/modules/pdf-preview";
 import { getProject, projectKey } from "@/modules/projects";
 import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
-
 import { AskAgentButton } from "./ask-agent-button";
 import { ContentPane } from "./content-pane";
 import { EditorBar } from "./editor-bar";
@@ -27,6 +26,7 @@ import { Panes } from "./workspace-panes";
 import { useSelectionFollowsTree } from "./selection-follows-tree";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useSourceSync } from "./use-source-sync";
+import { useWorkspaceChat } from "./workspace-chat";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
@@ -177,18 +177,15 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [filesOpen, setFilesOpen] = useState(false);
   const slots = useSlots();
 
-  const tree = useProjectTree(projectId);
-  const treeRoot = tree.data;
+  const treeRoot = useProjectTree(projectId).data;
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
-  const projectQuery = useQuery({
-    queryKey: projectKey(projectId),
-    queryFn: () => getProject(projectId),
-  });
+  const projectQuery = useQuery({ queryKey: projectKey(projectId), queryFn: () => getProject(projectId) });
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
+  const chat = useWorkspaceChat(projectId, agentOpen, setAgentOpen);
   const documentBridge = useDocumentBridge(projectId, treeRoot);
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
@@ -227,6 +224,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           historyDisabled={sync.openDoc?.type !== "doc"}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenShare={() => setShareOpen(true)}
+          chatButton={chat.button}
         />
       }
     >
@@ -241,6 +239,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         onBeforeSend={flushBeforeCompile}
         historyOpen={historyOpen}
         onHistoryOpenChange={setHistoryOpen}
+        side={chat.side}
       />
       <Panes
         projectId={projectId}

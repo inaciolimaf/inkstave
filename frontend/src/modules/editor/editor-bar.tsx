@@ -1,4 +1,5 @@
 import { ChevronDown, Download, History, MoreHorizontal, Share2, Undo2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -76,6 +77,7 @@ export function EditorBar({
   historyDisabled,
   onOpenHistory,
   onOpenShare,
+  chatButton,
 }: {
   projectId: string;
   projectName: string | undefined;
@@ -85,6 +87,8 @@ export function EditorBar({
   historyDisabled: boolean;
   onOpenHistory: () => void;
   onOpenShare: () => void;
+  /** The project chat's button, with its unread count (spec 117). */
+  chatButton?: ReactNode;
 }) {
   const { t } = useTranslation(["editor", "common"]);
   return (
@@ -112,6 +116,7 @@ export function EditorBar({
           <Share2 aria-hidden="true" className="size-4" />
           {t("toolbar.share")}
         </Button>
+        {chatButton}
         <NotificationsBell />
         <MoreMenu
           projectId={projectId}

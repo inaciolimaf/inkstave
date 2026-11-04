@@ -7,6 +7,7 @@ import { landingEn, landingPt } from "@/i18n/locales/landing";
 import enAgent from "./locales/en/agent";
 import enAuth from "./locales/en/auth";
 import enCommon from "./locales/en/common";
+import enDiscussion from "./locales/en/discussion";
 import enEditor from "./locales/en/editor";
 import enFiles from "./locales/en/files";
 import enHistory from "./locales/en/history";
@@ -19,6 +20,7 @@ import enSharing from "./locales/en/sharing";
 import ptAgent from "./locales/pt/agent";
 import ptAuth from "./locales/pt/auth";
 import ptCommon from "./locales/pt/common";
+import ptDiscussion from "./locales/pt/discussion";
 import ptEditor from "./locales/pt/editor";
 import ptFiles from "./locales/pt/files";
 import ptHistory from "./locales/pt/history";
@@ -50,6 +52,7 @@ export const NAMESPACES = [
   "settings",
   "sharing",
   "notifications",
+  "discussion",
 ] as const;
 
 const resources = {
@@ -67,6 +70,7 @@ const resources = {
     settings: enSettings,
     sharing: enSharing,
     notifications: enNotifications,
+    discussion: enDiscussion,
   },
   pt: {
     common: ptCommon,
@@ -82,6 +86,7 @@ const resources = {
     settings: ptSettings,
     sharing: ptSharing,
     notifications: ptNotifications,
+    discussion: ptDiscussion,
   },
 };
 

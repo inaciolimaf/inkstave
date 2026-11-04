@@ -1,6 +1,6 @@
 import { config } from "@/config";
 import { AgentPanel } from "@/modules/agent";
-import type { AgentRequest } from "@/modules/agent";
+import type { AgentRequest, AgentSide } from "@/modules/agent";
 import type { DocumentBridge } from "@/modules/diff-review";
 import type { TreeEntity } from "@/modules/file-tree";
 import { HistoryPanel } from "@/modules/history";
@@ -16,6 +16,7 @@ export function WorkspaceDrawers({
   onBeforeSend,
   historyOpen,
   onHistoryOpenChange,
+  side,
 }: {
   projectId: string;
   openDoc: TreeEntity | null;
@@ -26,6 +27,8 @@ export function WorkspaceDrawers({
   onBeforeSend: () => Promise<void>;
   historyOpen: boolean;
   onHistoryOpenChange: (open: boolean) => void;
+  /** The project chat that shares the agent window (spec 117). */
+  side: AgentSide;
 }) {
   return (
     <>
@@ -40,6 +43,7 @@ export function WorkspaceDrawers({
           onReviewProposal={() => {
             // The diff-review surface (spec 47) opens inside the panel via documentBridge.
           }}
+          side={side}
         />
       )}
       {openDoc?.type === "doc" && (

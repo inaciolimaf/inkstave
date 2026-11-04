@@ -3,6 +3,10 @@ const dict = {
   ariaLabel: "AI agent",
   minimize: "Minimize the agent",
   launcher: "Agent",
+  sideSwitch: {
+    label: "Agent or chat",
+    agent: "Agent",
+  },
   working: "working",
   window: {
     resize: "Resize the agent window",

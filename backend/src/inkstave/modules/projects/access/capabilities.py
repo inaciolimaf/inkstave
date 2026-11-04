@@ -30,6 +30,7 @@ class Capability(enum.StrEnum):
     COLLAB_WRITE = "collab_write"  # send Yjs updates
     COMPILE = "compile"
     PROJECT_DOWNLOAD = "project_download"  # export the whole project as a .zip (spec 102)
+    DISCUSSION_WRITE = "discussion_write"  # post and delete own chat messages (spec 117)
 
 
 # Editor: everything except project-level admin (write/delete/share).
@@ -44,6 +45,7 @@ _EDITOR: frozenset[Capability] = frozenset(
         Capability.COLLAB_WRITE,
         Capability.COMPILE,
         Capability.PROJECT_DOWNLOAD,
+        Capability.DISCUSSION_WRITE,
     }
 )
 
@@ -56,6 +58,7 @@ _VIEWER: frozenset[Capability] = frozenset(
         Capability.COLLAB_READ,
         Capability.COMPILE,
         Capability.PROJECT_DOWNLOAD,
+        Capability.DISCUSSION_WRITE,
     }
 )
 
