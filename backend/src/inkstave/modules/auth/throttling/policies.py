@@ -105,6 +105,7 @@ _NAMED_POLICIES: dict[str, tuple[str, str]] = {
     "compile_daily": ("rate_limit_compile_daily", "user"),
     "agent": ("rate_limit_agent", "user"),
     "upload": ("rate_limit_upload", "user"),
+    "share_link": ("rate_limit_share_link", "user"),
 }
 
 

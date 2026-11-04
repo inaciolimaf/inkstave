@@ -45,11 +45,29 @@ class ProjectMembership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=MembershipStatus.active.value
     )
+    # Set when a share link created or upgraded this membership (spec 116). Cleared when the owner
+    # changes the role by hand or the member accepts an e-mail invite.
+    via_link_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("project_share_links.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # The role held before a link upgraded the member; null when the link created the membership.
+    role_before_link: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("project_id", "user_id", name="uq_membership_project_user"),
         CheckConstraint("role IN ('owner','editor','viewer')", name="membership_role_valid"),
         CheckConstraint("status IN ('active','pending','left')", name="membership_status_valid"),
+        CheckConstraint(
+            "role_before_link IS NULL OR role_before_link IN ('viewer','editor')",
+            name="membership_role_before_link_valid",
+        ),
+        Index(
+            "ix_project_memberships_via_link_id",
+            "via_link_id",
+            postgresql_where=text("via_link_id IS NOT NULL"),
+        ),
         Index("ix_project_memberships_project_id", "project_id"),
         Index("ix_project_memberships_user_id", "user_id"),
         # "Projects I actively belong to" (spec 109): the listing joins on this partial index.

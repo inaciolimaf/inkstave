@@ -7,6 +7,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { InviteForm } from "./InviteForm";
 import { MembersList } from "./MembersList";
 import { PendingInvites } from "./PendingInvites";
+import { ShareLinksSection } from "./ShareLinksSection";
 import { useSharing } from "./useSharing";
 
 export function ShareDialog({
@@ -73,6 +74,8 @@ export function ShareDialog({
           onTransfer={(userId) => transfer.mutate(userId)}
           onRemove={(userId) => remove.mutate(userId)}
         />
+
+        {isOwner && <ShareLinksSection projectId={projectId} enabled={open} onConfirm={setConfirm} />}
 
         {isOwner && (
           <PendingInvites

@@ -16,6 +16,9 @@ vi.mock("@/modules/auth/auth-context", () => ({ useAuth: () => ({ user: authUser
 const api = vi.hoisted(() => ({
   listMembers: vi.fn(),
   listInvites: vi.fn(),
+  listShareLinks: vi.fn(),
+  createShareLink: vi.fn(),
+  revokeShareLink: vi.fn(),
   createInvite: vi.fn(),
   changeMemberRole: vi.fn(),
   removeMember: vi.fn(),
@@ -25,6 +28,9 @@ const api = vi.hoisted(() => ({
 vi.mock("./api", () => ({
   listMembers: (...a: unknown[]) => api.listMembers(...a),
   listInvites: (...a: unknown[]) => api.listInvites(...a),
+  listShareLinks: (...a: unknown[]) => api.listShareLinks(...a),
+  createShareLink: (...a: unknown[]) => api.createShareLink(...a),
+  revokeShareLink: (...a: unknown[]) => api.revokeShareLink(...a),
   createInvite: (...a: unknown[]) => api.createInvite(...a),
   changeMemberRole: (...a: unknown[]) => api.changeMemberRole(...a),
   removeMember: (...a: unknown[]) => api.removeMember(...a),
@@ -38,6 +44,7 @@ const OWNER: Member = {
   email: "owner@x.com",
   role: "owner",
   status: "active",
+  viaLink: false,
 };
 const BOB: Member = {
   userId: "bob-1",
@@ -45,6 +52,7 @@ const BOB: Member = {
   email: "bob@x.com",
   role: "editor",
   status: "active",
+  viaLink: false,
 };
 const INVITE: Invite = {
   id: "inv-1",
@@ -60,6 +68,7 @@ beforeEach(() => {
   authUser.value = { id: "owner-1", display_name: "Owner" };
   api.listMembers.mockResolvedValue([OWNER, BOB]);
   api.listInvites.mockResolvedValue([INVITE]);
+  api.listShareLinks.mockResolvedValue([]);
 });
 afterEach(() => vi.clearAllMocks());
 

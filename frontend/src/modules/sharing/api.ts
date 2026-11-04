@@ -2,14 +2,38 @@
 import type { Schemas } from "@/api/models";
 import { apiClient } from "@/lib/api-client";
 
-import type { AcceptResult, Invite, InviteCreated, InvitePreview, InviteRole, Member, Role } from "./types";
+import type {
+  AcceptResult,
+  Invite,
+  InviteCreated,
+  InvitePreview,
+  InviteRole,
+  JoinResult,
+  LinkRole,
+  Member,
+  Role,
+  ShareLink,
+  ShareLinkCreated,
+  SharePreview,
+} from "./types";
 
 type MemberWire = Schemas["MemberRead"];
 
 type InviteWire = Schemas["InviteRead"];
 
 function toMember(w: MemberWire): Member {
-  return { userId: w.user_id, name: w.name, email: w.email, role: w.role as Role, status: w.status };
+  return {
+    userId: w.user_id,
+    name: w.name,
+    email: w.email,
+    role: w.role as Role,
+    status: w.status,
+    viaLink: w.via_link,
+  };
+}
+
+function toShareLink(w: Schemas["ShareLinkRead"]): ShareLink {
+  return { id: w.id, role: w.role as LinkRole, createdAt: w.created_at };
 }
 
 function toInvite(w: InviteWire): Invite {
@@ -83,6 +107,35 @@ export async function acceptInvite(token: string): Promise<AcceptResult> {
 
 export async function declineInvite(token: string): Promise<void> {
   await apiClient.post(`/api/v1/invites/${token}/decline`);
+}
+
+export async function listShareLinks(projectId: string): Promise<ShareLink[]> {
+  return (await apiClient.get<Schemas["ShareLinkRead"][]>(`${base(projectId)}/share-links`)).map(toShareLink);
+}
+
+export async function createShareLink(projectId: string, role: LinkRole): Promise<ShareLinkCreated> {
+  const wire = await apiClient.post<Schemas["ShareLinkCreated"]>(`${base(projectId)}/share-links`, { role });
+  return { ...toShareLink(wire), token: wire.token, url: wire.url };
+}
+
+export async function revokeShareLink(projectId: string, linkId: string): Promise<void> {
+  await apiClient.delete(`${base(projectId)}/share-links/${linkId}`);
+}
+
+export async function getSharePreview(token: string): Promise<SharePreview> {
+  const w = await apiClient.get<Schemas["SharePreview"]>(`/api/v1/share-links/${token}`);
+  return {
+    projectId: w.project_id,
+    projectName: w.project_name,
+    ownerName: w.owner_name,
+    role: w.role as LinkRole,
+    alreadyMemberRole: (w.already_member_role ?? null) as Role | null,
+  };
+}
+
+export async function joinShareLink(token: string): Promise<JoinResult> {
+  const w = await apiClient.post<Schemas["ShareLinkJoined"]>(`/api/v1/share-links/${token}/join`);
+  return { projectId: w.project_id, role: w.role as Role };
 }
 
 export interface Permissions {

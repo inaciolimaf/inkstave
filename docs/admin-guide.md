@@ -144,6 +144,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `RATE_LIMIT_COMPILE_DAILY` | No | `30/86400` | per-user daily compile quota (anti-DoS, spec 105) | backend |
 | `RATE_LIMIT_AGENT` | No | `30/60` | per-user agent cap | backend |
 | `RATE_LIMIT_UPLOAD` | No | `60/60` | per-user upload cap | backend |
+| `RATE_LIMIT_SHARE_LINK` | No | `30/60` | per-user cap on previewing and joining a share link (spec 116) | backend |
 | `ARGON2_TIME_COST` | No | `3` | iterations | backend |
 | `ARGON2_MEMORY_COST` | No | `65536` | KiB of memory | backend |
 | `ARGON2_PARALLELISM` | No | `4` | lanes | backend |
@@ -210,7 +211,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `COLLAB_WS_PING_INTERVAL_SECONDS` | No | `25` | idle ping interval (delegated to the ASGI server) | collab/websocket |
 | `COLLAB_WS_PONG_TIMEOUT_SECONDS` | No | `10` | pong timeout before close (delegated to the ASGI server) | collab/websocket |
 | `COLLAB_REDIS_CHANNEL_PREFIX` | No | `collab:doc:` | Redis pub/sub channel prefix (one per document) | collab/websocket |
-| `FRONTEND_URL` | No | `http://localhost:5173` | base for invite accept links (/invite/{token}) | backend |
+| `FRONTEND_URL` | No | `http://localhost:5173` | base for invite (/invite/{token}) and share-link (/join/{token}) URLs | backend |
 | `INVITE_TTL_DAYS` | No | `14` | pending invite lifetime | backend |
 | `EMAIL_CHANGE_TOKEN_TTL` | No | `86400` | email-change confirmation token lifetime (spec 59) | backend |
 | `COMPILE_ALLOWED_FOR_VIEWERS` | No | `true` | viewers may trigger/read compiles | backend |

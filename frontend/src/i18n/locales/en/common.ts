@@ -46,6 +46,7 @@ export default {
     editor: "Editor",
     settings: "Settings",
     invite: "Project invitation",
+    join: "Join project",
   },
   errorBoundary: {
     title: "Something went wrong",

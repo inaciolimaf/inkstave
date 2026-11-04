@@ -46,6 +46,7 @@ const common = {
     editor: "Editor",
     settings: "Configurações",
     invite: "Convite para projeto",
+    join: "Entrar no projeto",
   },
   errorBoundary: {
     title: "Algo deu errado",

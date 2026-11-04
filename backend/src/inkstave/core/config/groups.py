@@ -127,6 +127,8 @@ class AuthSettingsMixin:
     rate_limit_compile: str = "20/60"
     rate_limit_agent: str = "30/60"
     rate_limit_upload: str = "60/60"
+    # Share-link preview and join, per user (spec 116).
+    rate_limit_share_link: str = "30/60"
     # Daily anti-DoS compile quota for public multi-tenant operation (spec 105):
     # 30 compiles per user per 24h. Layered on top of the per-minute compile cap.
     rate_limit_compile_daily: str = "30/86400"

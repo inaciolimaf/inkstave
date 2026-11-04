@@ -1,9 +1,9 @@
 # Sharing and authorization
 
-Who can open a project and what they can do in it. An owner shares a project by e-mail invite; the
-invitee accepts and becomes a member with the role `editor` or `viewer`. Every project route then checks
-the caller's role against one capability matrix. Specs 33 (collaborators), 34 (access control) and 35
-(the guard audit).
+Who can open a project and what they can do in it. An owner shares a project by e-mail invite, or by a
+share link (spec 116); the invitee or the link's opener becomes a member with the role `editor` or
+`viewer`. Every project route then checks the caller's role against one capability matrix. Specs 33
+(collaborators), 34 (access control), 35 (the guard audit) and 116 (share links).
 
 ## Where it is
 
@@ -16,21 +16,33 @@ the caller's role against one capability matrix. Specs 33 (collaborators), 34 (a
 | `backend/src/inkstave/modules/projects/sharing` | Package: the sharing service, public surface in `__init__.py` |
 | `backend/src/inkstave/modules/projects/sharing/members.py` | List, change role, remove, leave, transfer ownership |
 | `backend/src/inkstave/modules/projects/sharing/invites.py` | Create, list, revoke, preview, accept, decline |
-| `backend/src/inkstave/modules/projects/sharing/common.py` | `require_member`, `require_owner`, `membership_of`, `MemberInfo` |
+| `backend/src/inkstave/modules/projects/sharing/links.py` | Share links, owner side: list, create or rotate, turn off, and the takeback |
+| `backend/src/inkstave/modules/projects/sharing/link_join.py` | Share links, opener side: preview, join or upgrade |
+| `backend/src/inkstave/modules/projects/sharing/common.py` | `require_member`, `require_owner`, `membership_of`, `detach_from_link`, `MemberInfo` |
 | `backend/src/inkstave/modules/projects/sharing/errors.py` | Typed domain errors |
 | `backend/src/inkstave/modules/projects/routes/sharing.py` | Member and invite routes |
+| `backend/src/inkstave/modules/projects/routes/share_links.py` | Share-link routes: `/projects/{id}/share-links` and `/share-links/{token}` |
 | `backend/src/inkstave/modules/projects/schemas/sharing.py` | Request and response models |
 | `backend/src/inkstave/modules/projects/models/membership.py` | `ProjectMembership`, `MembershipRole`, `MembershipStatus` |
 | `backend/src/inkstave/modules/projects/models/invite.py` | `ProjectInvite`, `InviteRole`, `InviteStatus` |
+| `backend/src/inkstave/modules/projects/models/share_link.py` | `ProjectShareLink`, `ShareLinkRole` |
 | `frontend/src/modules/sharing` | Share dialog, accept page, `usePermissions`, `isReadOnly` |
+| `frontend/src/modules/sharing/ShareLinksSection.tsx` | "Share with a link" section of the dialog; state in `useShareLinks.ts` |
+| `frontend/src/modules/sharing/JoinLinkPage.tsx` | Preview and Join for `/join/:token`; `alreadyHasAccess` in `access.ts` |
 | `frontend/src/routes/invite.tsx` | Route `/invite/:token`, behind `RequireAuth` |
+| `frontend/src/routes/join.tsx` | Route `/join/:token`, behind `RequireAuth` |
 | `backend/tests/unit/test_authz_matrix.py` | Exhaustive matrix test |
+| `backend/tests/unit/test_share_link_log_redaction.py` | Tokens in URLs masked in access log lines |
 | `backend/tests/integration/test_authz_guard_coverage.py` | Guard audit over every `{project_id}` route |
 | `backend/tests/integration/test_access_control_api.py` | Role behaviour over HTTP |
 | `backend/tests/integration/test_sharing_api.py` | Invite flows over HTTP |
 | `backend/tests/integration/test_sharing_api_members.py` | Member flows over HTTP |
 | `backend/tests/integration/test_sharing_api_authz.py` | 403 and 404 on sharing routes |
 | `backend/tests/integration/test_sharing_service.py` | Service-level rules |
+| `backend/tests/integration/test_share_links_api.py` | Share-link routes over HTTP, rotation, rate limit, token never logged |
+| `backend/tests/integration/test_share_links_takeback.py` | What turning a link off or rotating it takes back |
+| `frontend/src/modules/sharing/ShareLinks.test.tsx` | Share-link section in the dialog |
+| `frontend/src/modules/sharing/JoinLinkPage.test.tsx` | Join page states |
 
 ## Data
 
@@ -52,6 +64,28 @@ owner per project at the database level. `ix_project_memberships_user_active` is
 `backend/migrations/versions/20261104_1200_f6a2b8c4d1e9_spec109_membership_active_index.py`). `create_project` in
 `backend/src/inkstave/modules/projects/catalog/service.py` adds the creator's owner membership.
 `projects.owner_id` is kept in step with it by `transfer_ownership`.
+
+`project_memberships` also has, from spec 116 (migration
+`backend/migrations/versions/20261104_1400_a8d3c5e1f7b2_spec116_share_links.py`):
+
+| Column | Notes |
+|---|---|
+| `via_link_id` | Nullable FK to `project_share_links`, `ON DELETE SET NULL`. Set when a link created or upgraded the membership. Cleared by any hand-set role, removal, leave, transfer and e-mail invite acceptance |
+| `role_before_link` | `viewer` or `editor` (check constraint), null when the link created the membership. The role the takeback restores |
+
+`project_share_links`
+
+| Column | Notes |
+|---|---|
+| `id`, `created_at`, `updated_at` | Standard mixins |
+| `project_id` | FK with `ON DELETE CASCADE` |
+| `role` | `viewer` or `editor` (check constraint): a link never grants `owner` |
+| `token_hash` | SHA-256 hex of the opaque token (`hash_token`), unique. The raw token is returned once, at creation |
+| `created_by` | FK to `users`, `ON DELETE SET NULL` |
+| `revoked_at` | Set when the link is turned off or rotated. A row with `revoked_at` is history |
+
+`uq_share_link_one_active` is a partial unique index on `(project_id, role)` where `revoked_at` is null: at
+most one active link per role. `ix_project_memberships_via_link_id` is a partial index on `via_link_id`.
 
 `project_invites`
 
@@ -84,6 +118,11 @@ All routes require a bearer token. Errors use the standard envelope `{"error": {
 | `GET /api/v1/invites/{token}` | Preview for the accept screen | 404 `invite_not_found`; 410 `invite_gone` |
 | `POST /api/v1/invites/{token}/accept` | Join the project | 403 `invite_email_mismatch`; 404 `invite_not_found`; 410 `invite_gone` |
 | `POST /api/v1/invites/{token}/decline` | Decline | 404 `invite_not_found`; 410 `invite_gone` |
+| `GET /api/v1/projects/{project_id}/share-links` | Active links, without tokens. Owner only | 403 `not_project_owner`; 404 `project_not_found` |
+| `POST /api/v1/projects/{project_id}/share-links` `{role}` | Turn a link on, or rotate it when one is active. 201 with the raw `token` and `url`. Owner only | 403 `not_project_owner`; 404 `project_not_found`; 422 `validation_error` |
+| `DELETE /api/v1/projects/{project_id}/share-links/{link_id}` | Turn a link off. Owner only | 403 `not_project_owner`; 404 `project_not_found`, `share_link_not_found` |
+| `GET /api/v1/share-links/{token}` | Preview: project name, owner name, role, `already_member_role`. Rate limited (`RATE_LIMIT_SHARE_LINK`) | 404 `share_link_not_found` |
+| `POST /api/v1/share-links/{token}/join` | Join, or upgrade. Returns `project_id` and the resulting `role`. Rate limited | 404 `share_link_not_found` |
 | `GET /api/v1/projects/{project_id}/permissions` | Caller's `role` and sorted `capabilities`. Lives in `backend/src/inkstave/modules/projects/routes/projects.py` | 404 `project_not_found` |
 
 ## How it works
@@ -194,6 +233,39 @@ and returns the raw token to the owner.
 on a pending invite and does nothing on any other status. `get_invite_preview` answers 410 for a
 non-pending invite, an expired one, or one whose project is soft-deleted.
 
+### Share links
+
+An owner keeps at most one active link per role, `viewer` and `editor`. The link is a bearer token: anyone
+signed in who opens `/join/{token}` joins with that role. Only the SHA-256 hash is stored.
+
+- **Turn on:** `create_share_link` with no active link for the role. The raw token and URL come back once.
+- **Rotate:** the same call while a link is active. It takes back the old link (below), revokes its row, and
+  creates a new one. Members who joined through the old token lose access, and the old URL answers 404.
+- **Turn off:** `revoke_share_link`. It takes back the same way.
+
+The takeback runs in one transaction (`_take_back` in `sharing/links.py`): set `revoked_at`; then for every
+membership with `via_link_id` = the link and role other than `owner`, restore `role_before_link` if set,
+otherwise set `status = 'left'`; then clear `via_link_id` and `role_before_link` on those rows. Memberships the
+owner set by hand, accepted by an e-mail invite, or that were never attributed to the link are not in that set.
+
+Opening a link (`link_join.py`) never lowers a role:
+
+| The opener is | The link is | Result |
+|---|---|---|
+| no member, or `left` | any | Active member with the link's role; `via_link_id` set, `role_before_link` null |
+| active `viewer` | `editor` | Upgraded: `role_before_link` = `viewer`, `role` = `editor`, `via_link_id` set |
+| active `editor` | `viewer` | Unchanged; nothing is attributed to the link |
+| active, equal role | same | Unchanged |
+| owner | any | Unchanged |
+
+A link whose project is soft-deleted, a revoked link and an unknown token all answer
+`share_link_not_found` with the same message, so a token cannot be probed. The preview's
+`already_member_role` is the caller's active role, or null; the frontend shows "You already have access" and
+Open when it covers the link's role.
+
+The owner sees "via link" next to a member whose `via_link_id` is set. The dashboard lists a link member like
+any other member (spec 109), because the listing reads memberships only.
+
 ### Members and ownership transfer
 
 `remove_member` with the caller's own id is a leave: the owner gets 400, anyone else moves to `left`. The
@@ -205,7 +277,10 @@ re-activates it.
 `transfer_ownership` requires the owner and an active target that is not the caller. It demotes the old
 owner to `editor`, flushes, promotes the target, flushes, then sets `projects.owner_id`. The two flushes
 keep `uq_membership_one_owner` satisfied at each step. The old owner stays as an editor, and there is no
-undo route.
+undo route. Both rows drop their link attribution (spec 116), so turning a link off later does not touch them.
+
+A hand-set role change, a removal and a leave also drop the attribution (`detach_from_link`). The e-mail invite
+acceptance does the same in `_grant_membership`.
 
 ## Rules and guarantees
 
@@ -246,6 +321,14 @@ undo route.
 | The compile job re-checks access at pickup | no dedicated test |
 | `COMPILE_ALLOWED_FOR_VIEWERS=false` at route level | no dedicated test; only the matrix function is tested |
 | The request-scoped role cache does one lookup | no dedicated test |
+| Only a token hash is stored | `backend/tests/integration/test_share_links_api.py::test_share_link_stores_hash_only` |
+| Revoking a link removes only what the link granted | `backend/tests/integration/test_share_links_takeback.py::test_revoke_restores_previous_role`, `backend/tests/integration/test_share_links_takeback.py::test_revoke_removes_link_only_members` |
+| A link never lowers a role | `backend/tests/integration/test_share_links_takeback.py::test_view_link_does_not_downgrade_editor` |
+| A revoked or unknown token looks the same | `backend/tests/integration/test_share_links_api.py::test_revoked_and_unknown_token_both_404` |
+| Rotating a link revokes the members it let in | `backend/tests/integration/test_share_links_api.py::test_create_on_active_role_rotates_and_old_token_stops` |
+| A hand-set role survives a later takeback | `backend/tests/integration/test_share_links_takeback.py::test_hand_set_role_is_not_taken_back` |
+| The raw token is never logged | `backend/tests/integration/test_share_links_api.py::test_raw_token_is_never_logged`, `backend/tests/unit/test_share_link_log_redaction.py` |
+| Share-link routes are on the guard audit | `backend/tests/integration/test_authz_guard_coverage.py::test_every_project_scoped_route_is_guarded` |
 
 ## Settings
 
@@ -255,7 +338,8 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 |---|---|---|
 | `COMPILE_ALLOWED_FOR_VIEWERS` | `true` | Viewers hold `compile` |
 | `INVITE_TTL_DAYS` | `14` | Pending invite lifetime, reset on refresh |
-| `FRONTEND_URL` | `http://localhost:5173` | Base of the accept link |
+| `FRONTEND_URL` | `http://localhost:5173` | Base of the invite accept link and of the share-link URL (`/join/{token}`) |
+| `RATE_LIMIT_SHARE_LINK` | `30/60` | Per user, on share-link preview and join (spec 116) |
 
 ## Points of attention
 
@@ -275,7 +359,15 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
   any member, so a viewer can still follow the SSE stream.
 - **Open WebSockets are not re-authorized.** `role_for` runs at join and `can_write` is fixed for the
   connection. A removed member keeps receiving updates, and a demoted editor can keep writing, until the
-  socket closes. The sharing service has no link to the collab module.
+  socket closes. The sharing service has no link to the collab module. This holds for a member a link
+  turned off or rotated out, too: their socket lives on until it closes.
+- **One column remembers the link.** `via_link_id` names one link. A member who joined through the view link
+  and then upgraded through the edit link returns to `viewer` when the edit link goes, and the view link's later
+  takeback no longer finds them. They keep viewer access until removed by hand. Fixing it needs a second
+  attribution column or a row per grant.
+- **Tokens in access logs.** `redact_path` (in `core/observability/log.py`) masks the token segment of
+  `/share-links/` and `/invites/` paths, and any `token=` value, in uvicorn's access lines and the app's access
+  log. nginx logs `$request` as sent, so its access log still holds the token (`docs/known-gaps.md`).
 - **Accept skips the live-project check.** `accept_invite` does not test `deleted_at`. On a soft-deleted
   project it returns 200 and the next request gets 404.
 - **Decline has no e-mail check.** Any authenticated holder of the token can decline. The owner receives
@@ -283,7 +375,7 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 - **Check order on accept.** An expired invite answers 410 even to the wrong user. The already-accepted
   branch skips the e-mail check, but it only reports the caller's own membership.
 - **No rate limit.** The invite routes carry no `rate_limit_named` dependency, so an owner can trigger
-  invite e-mail without a cap.
+  invite e-mail without a cap. The share-link preview and join are capped by `RATE_LIMIT_SHARE_LINK`.
 - **Two 404 types.** `ProjectAccessNotFoundError` in the facade uses `not_found`, while the production gate
   raises `project_not_found`. The facade has no production caller, so clients see only the second.
 - **Stale references.** Docstrings in `backend/src/inkstave/modules/projects/access/capabilities.py` and

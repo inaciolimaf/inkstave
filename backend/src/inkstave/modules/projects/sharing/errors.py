@@ -77,3 +77,12 @@ class InviteEmailMismatchError(ForbiddenError):
 
     def __init__(self) -> None:
         super().__init__("This invite was addressed to a different email.")
+
+
+class ShareLinkNotFoundError(NotFoundError):
+    """Unknown, revoked or dead-project link: all three answer the same, so a token cannot be probed."""
+
+    error_type = "share_link_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("This link is no longer valid.")

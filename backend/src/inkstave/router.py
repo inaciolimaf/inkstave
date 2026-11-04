@@ -17,7 +17,15 @@ from inkstave.modules.compile.routes import compile as compile_routes
 from inkstave.modules.compile.routes import logparse, synctex
 from inkstave.modules.history import routes as history
 from inkstave.modules.notifications import routes as notifications
-from inkstave.modules.projects.routes import documents, files, project_import, projects, sharing, tree
+from inkstave.modules.projects.routes import (
+    documents,
+    files,
+    project_import,
+    projects,
+    share_links,
+    sharing,
+    tree,
+)
 
 api_v1 = APIRouter(prefix="/api/v1")
 api_v1.include_router(auth.router)
@@ -27,6 +35,8 @@ api_v1.include_router(projects.router)
 api_v1.include_router(project_import.router)
 api_v1.include_router(sharing.router)
 api_v1.include_router(sharing.invites_router)
+api_v1.include_router(share_links.router)
+api_v1.include_router(share_links.links_router)
 api_v1.include_router(tree.router)
 api_v1.include_router(documents.router)
 api_v1.include_router(files.router)

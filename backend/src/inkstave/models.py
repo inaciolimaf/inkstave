@@ -29,6 +29,7 @@ from inkstave.modules.projects.models.invite import InviteRole, InviteStatus, Pr
 from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
 from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.models.project_import import ProjectImport, ProjectImportStatus
+from inkstave.modules.projects.models.share_link import ProjectShareLink, ShareLinkRole
 from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 
 __all__ = [
@@ -63,11 +64,13 @@ __all__ = [
     "ProjectImportStatus",
     "ProjectInvite",
     "ProjectMembership",
+    "ProjectShareLink",
     "ProposedDiff",
     "ProposedDiffStatus",
     "ProposedFileOp",
     "ProposedFileOpStatus",
     "RevokedSession",
+    "ShareLinkRole",
     "TreeEntity",
     "TreeEntityType",
     "User",

@@ -20,6 +20,7 @@ from inkstave.modules.projects.models.membership import MembershipRole, Membersh
 from inkstave.modules.projects.sharing.common import (
     MemberInfo,
     _active_project,
+    detach_from_link,
     membership_of,
     require_member,
     require_owner,
@@ -56,6 +57,7 @@ async def list_members(session: AsyncSession, project_id: UUID, actor_id: UUID) 
             email=u.email,
             role=m.role,
             status=m.status,
+            via_link=m.via_link_id is not None,
         )
         for m, u in rows
     ]
@@ -77,6 +79,7 @@ async def change_role(
     if target.role == MembershipRole.owner:
         raise CannotChangeOwnerRoleError()
     target.role = new_role
+    detach_from_link(target)  # set by hand: the link's takeback must not undo it (spec 116)
     await session.flush()
     user = (await session.execute(select(User).where(User.id == target_user_id))).scalar_one()
     return MemberInfo(
@@ -97,6 +100,7 @@ async def remove_member(
         if membership.role == MembershipRole.owner:
             raise OwnerCannotLeaveError()
         membership.status = MembershipStatus.left
+        detach_from_link(membership)
         await session.flush()
         return
 
@@ -107,6 +111,7 @@ async def remove_member(
     if target.role == MembershipRole.owner:  # defensive; only the actor can be owner here
         raise OwnerCannotLeaveError()
     target.status = MembershipStatus.left
+    detach_from_link(target)
     await session.flush()
 
 
@@ -123,8 +128,10 @@ async def transfer_ownership(
     # Demote the previous owner to editor first, then promote the target — two
     # flushes keep the "one owner" partial unique index satisfied at all times.
     owner.role = MembershipRole.editor
+    detach_from_link(owner)
     await session.flush()
     target.role = MembershipRole.owner
+    detach_from_link(target)
     await session.flush()
 
     project = await _active_project(session, project_id)

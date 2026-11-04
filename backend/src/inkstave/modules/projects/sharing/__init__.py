@@ -34,6 +34,7 @@ from inkstave.modules.projects.sharing.errors import (
     NotAMemberError,
     NotProjectOwnerError,
     OwnerCannotLeaveError,
+    ShareLinkNotFoundError,
 )
 from inkstave.modules.projects.sharing.invites import (
     accept_invite,
@@ -42,6 +43,12 @@ from inkstave.modules.projects.sharing.invites import (
     get_invite_preview,
     list_invites,
     revoke_invite,
+)
+from inkstave.modules.projects.sharing.link_join import SharePreview, get_share_link_preview, join_share_link
+from inkstave.modules.projects.sharing.links import (
+    create_share_link,
+    list_share_links,
+    revoke_share_link,
 )
 from inkstave.modules.projects.sharing.members import (
     change_role,
@@ -62,19 +69,26 @@ __all__ = [
     "NotAMemberError",
     "NotProjectOwnerError",
     "OwnerCannotLeaveError",
+    "ShareLinkNotFoundError",
+    "SharePreview",
     "accept_invite",
     "change_role",
     "create_invite",
+    "create_share_link",
     "decline_invite",
     "generate_token",
     "get_invite_preview",
+    "get_share_link_preview",
     "hash_token",
+    "join_share_link",
     "list_invites",
     "list_members",
+    "list_share_links",
     "membership_of",
     "remove_member",
     "require_member",
     "require_owner",
     "revoke_invite",
+    "revoke_share_link",
     "transfer_ownership",
 ]
