@@ -29,6 +29,7 @@ from inkstave.modules.projects.schemas.project import (
     ProjectOwner,
     ProjectRead,
     ProjectRename,
+    ProjectSettingsUpdate,
 )
 from inkstave.modules.projects.transfer import export as export_service
 
@@ -49,6 +50,7 @@ read_access = require_capability(Capability.PROJECT_READ)
 write_access = require_capability(Capability.PROJECT_WRITE)
 delete_access = require_capability(Capability.PROJECT_DELETE)
 download_access = require_capability(Capability.PROJECT_DOWNLOAD)
+doc_write_access = require_capability(Capability.DOC_WRITE)
 
 _EXPORT_ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
@@ -67,7 +69,7 @@ async def create_project(
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> ProjectRead:
-    project = await project_service.create_project(session, user.id, data.name)
+    project = await project_service.create_project(session, user.id, data.name, data.spellcheck_language)
     return ProjectRead.model_validate(project)
 
 
@@ -150,6 +152,26 @@ async def rename_project(
     project = await project_service.rename_project(session, user.id, project_id, data.name)
     await RedisCache(redis, settings).invalidate(project_meta_key(project_id))
     return ProjectRead.model_validate(project)
+
+
+@router.patch(
+    "/{project_id}/settings",
+    response_model=ProjectRead,
+    summary="Change the project's spell-check language",
+    responses=_NOT_FOUND,
+)
+async def update_project_settings(
+    project_id: UUID,
+    data: ProjectSettingsUpdate,
+    project: Project = Depends(doc_write_access),
+    session: AsyncSession = UNIT_OF_WORK,
+    redis: Redis = Depends(get_redis),
+    settings: Settings = Depends(get_settings_dep),
+) -> ProjectRead:
+    # Any document writer may pick the language (spec 113); rename stays owner-only.
+    updated = await project_service.set_spellcheck_language(session, project, data.spellcheck_language)
+    await RedisCache(redis, settings).invalidate(project_meta_key(project_id))
+    return ProjectRead.model_validate(updated)
 
 
 @router.delete(

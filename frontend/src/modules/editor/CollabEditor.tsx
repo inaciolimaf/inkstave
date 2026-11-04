@@ -13,6 +13,7 @@ import type { EditorSettings } from "./types";
 
 import { ConnectionStatusBadge, OnlineUsers, usePresence } from "@/modules/collab";
 import type { CollabDocSession } from "@/modules/collab";
+import type { SpellcheckBinding } from "@/modules/spellcheck";
 
 function LoadingOverlay() {
   const { t } = useTranslation("editor");
@@ -34,6 +35,7 @@ export function CollabEditor({
   onView,
   currentUser = null,
   statusSlot,
+  spellcheck = null,
 }: {
   session: CollabDocSession;
   settings: EditorSettings;
@@ -43,6 +45,8 @@ export function CollabEditor({
   currentUser?: { id: string; name: string } | null;
   /** The status line these indicators live in (spec 107); `undefined` keeps them in a row of their own. */
   statusSlot?: HTMLElement | null;
+  /** Spell check for the open document (spec 113). */
+  spellcheck?: SpellcheckBinding | null;
 }) {
   const { t } = useTranslation("editor");
   const editable = session.synced && !session.readOnly;
@@ -81,6 +85,7 @@ export function CollabEditor({
           editable={editable}
           onView={onView}
           collabExtension={session.cmExtension}
+          spellcheck={spellcheck}
         />
       </div>
     </div>

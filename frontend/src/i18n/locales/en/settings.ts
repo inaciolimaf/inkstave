@@ -62,6 +62,14 @@ const dict = {
   error: {
     generic: "Something went wrong.",
   },
+  dictionary: {
+    title: "Personal dictionary",
+    description:
+      "Words you add are not underlined in any project. They are saved to your account, up to 5000 words.",
+    empty: "No words yet. Right-click an underlined word in the editor to add it.",
+    removeWord: "Remove {{word}}",
+    remove: "Remove",
+  },
 };
 
 export default dict;

@@ -44,6 +44,7 @@ export function AgentComposer({
         onKeyDown={onKeyDown}
         disabled={disabled}
         rows={2}
+        spellCheck
         placeholder={t("composer.placeholder")}
         aria-label={t("composer.messageLabel")}
         className="resize-none"

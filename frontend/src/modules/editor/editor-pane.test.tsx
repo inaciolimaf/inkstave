@@ -123,7 +123,10 @@ describe("EditorPane", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { container } = renderPane(entity({ id: "d1" }));
     await waitFor(() => expect(cmText(container)).toContain("hi"));
-    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/v1/projects/p/documents/d1");
+    // The pane also asks for the project (its spell-check language), so look for the document call.
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(
+      "http://localhost:8000/api/v1/projects/p/documents/d1",
+    );
   });
 
   it("swaps content when switching documents", async () => {

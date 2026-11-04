@@ -59,6 +59,7 @@ export function WorkspaceBar({
         onOpenFiles={onOpenFiles}
         compileSlotRef={compileSlotRef}
         historyDisabled={sync.openDoc?.type !== "doc"}
+        readOnly={readOnly}
         onOpenHistory={() => dialogs.setHistoryOpen(true)}
         onOpenShare={() => dialogs.setShareOpen(true)}
         insert={<WorkspaceInsert projectId={projectId} view={sync.editorView} readOnly={readOnly} />}

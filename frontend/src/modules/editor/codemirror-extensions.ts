@@ -81,6 +81,7 @@ export interface EditorCompartments {
   keys: Compartment;
   editable: Compartment;
   completion: Compartment;
+  spell: Compartment;
 }
 
 export function createCompartments(): EditorCompartments {
@@ -91,6 +92,7 @@ export function createCompartments(): EditorCompartments {
     keys: new Compartment(),
     editable: new Compartment(),
     completion: new Compartment(),
+    spell: new Compartment(),
   };
 }
 
@@ -109,6 +111,7 @@ export function editorExtensions(options: {
   compartments: EditorCompartments;
   callbacks: RefObject<ViewCallbacks>;
   collabExtension?: Extension;
+  spellcheck?: Extension;
   settings: EditorSettings;
   dark: boolean;
   editable: boolean;
@@ -119,6 +122,7 @@ export function editorExtensions(options: {
     compartments: c,
     callbacks,
     collabExtension,
+    spellcheck,
     settings,
     dark,
     editable,
@@ -154,5 +158,6 @@ export function editorExtensions(options: {
     c.wrap.of(wrapExtension(settings.lineWrapping)),
     c.theme.of(colourTheme(dark)),
     c.completion.of(autocompleteExtension(settings.autocomplete, completion)),
+    c.spell.of(spellcheck ?? []),
   ];
 }

@@ -34,8 +34,10 @@ class ProjectNotFoundError(NotFoundError):
         super().__init__("Project not found.")
 
 
-async def create_project(session: AsyncSession, owner_id: UUID, name: str) -> Project:
-    project = Project(owner_id=owner_id, name=name)
+async def create_project(
+    session: AsyncSession, owner_id: UUID, name: str, spellcheck_language: str = "en-US"
+) -> Project:
+    project = Project(owner_id=owner_id, name=name, spellcheck_language=spellcheck_language)
     session.add(project)
     await session.flush()
     # Every project gets a file-tree root folder in the same transaction (spec 12).
@@ -158,3 +160,11 @@ async def soft_delete_project(session: AsyncSession, owner_id: UUID, project_id:
     project = await get_owned_project(session, owner_id, project_id)
     project.deleted_at = func.now()
     await session.flush()
+
+
+async def set_spellcheck_language(session: AsyncSession, project: Project, language: str) -> Project:
+    """Set the project's spell-check language (spec 113). The caller has checked the capability."""
+    project.spellcheck_language = language
+    await session.flush()
+    await session.refresh(project)
+    return project

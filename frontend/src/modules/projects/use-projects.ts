@@ -5,6 +5,11 @@ import i18n from "@/i18n/config";
 import * as api from "./api";
 import type { ListedProject, ProjectScope, SortKey } from "./types";
 
+/** A new project checks spelling in the creator's interface language (spec 113). */
+function defaultSpellcheckLanguage(): "en-US" | "pt-BR" {
+  return i18n.language?.startsWith("pt") ? "pt-BR" : "en-US";
+}
+
 export const PROJECTS_KEY = ["projects"] as const;
 
 export function useProjects() {
@@ -14,7 +19,7 @@ export function useProjects() {
 export function useCreateProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => api.createProject(name),
+    mutationFn: (name: string) => api.createProject(name, defaultSpellcheckLanguage()),
     // The create answer has no role or owner name, so the list is refetched instead of patched.
     onSuccess: () => {
       toast.success(i18n.t("projects:toast.created"));

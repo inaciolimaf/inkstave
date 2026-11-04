@@ -18,6 +18,7 @@ from inkstave.modules.agent.safety.models import AgentAuditAction, AgentAuditLog
 from inkstave.modules.auth.models.auth_token import AuthToken
 from inkstave.modules.auth.models.revoked_session import RevokedSession
 from inkstave.modules.auth.models.user import User
+from inkstave.modules.auth.models.user_dictionary_word import user_dictionary_words
 from inkstave.modules.collab.models import CrdtDocumentState, CrdtUpdate
 from inkstave.modules.compile.models.compile import Compile, CompileJobStatus
 from inkstave.modules.compile.models.compile_output import CompileOutput, OutputKind
@@ -77,4 +78,5 @@ __all__ = [
     "TreeEntity",
     "TreeEntityType",
     "User",
+    "user_dictionary_words",
 ]

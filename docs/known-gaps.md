@@ -101,6 +101,10 @@ preference, and invites to non-users have no recipient record at all.
 
 ### Frontend
 
+**The spell-check menu has no arrow-key navigation.** Tab moves through its items, but the arrow keys do not. *Why:* it is a popover of buttons, not a full menu; a roving-focus menu is a follow-up of spec 113.
+
+**Spell check on iOS does not open its menu on a long press.** iOS Safari sends no `contextmenu` event for a long press on text, so the suggestions are reachable only where the browser sends one. *Why:* the only workaround takes over every long press of the editor, and the native menu must stay for other words.
+
 **Type narrowing is still manual.** 10 casts cover API data, and `apiClient<T>` is an unchecked cast at 72
 call sites, with no type predicates. *Why:* OpenAPI types are generated, but not yet threaded through the
 modules' own API files.

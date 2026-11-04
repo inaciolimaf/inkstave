@@ -317,6 +317,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/dictionary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the personal dictionary */
+        get: operations["list_dictionary_api_v1_me_dictionary_get"];
+        put?: never;
+        /** Add a word to the personal dictionary (idempotent) */
+        post: operations["add_dictionary_word_api_v1_me_dictionary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/dictionary/{word}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a word from the personal dictionary */
+        delete: operations["remove_dictionary_word_api_v1_me_dictionary__word__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications": {
         parameters: {
             query?: never;
@@ -1286,6 +1321,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change the project's spell-check language */
+        patch: operations["update_project_settings_api_v1_projects__project_id__settings_patch"];
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/share-links": {
         parameters: {
             query?: never;
@@ -1937,6 +1989,21 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** DictionaryList */
+        DictionaryList: {
+            /** Words */
+            words: string[];
+        };
+        /** DictionaryWordCreate */
+        DictionaryWordCreate: {
+            /** Word */
+            word: string;
+        };
+        /** DictionaryWordRead */
+        DictionaryWordRead: {
+            /** Word */
+            word: string;
+        };
         /** DiffHunk */
         DiffHunk: {
             /** New Lines */
@@ -2510,6 +2577,12 @@ export interface components {
         ProjectCreate: {
             /** Name */
             name: string;
+            /**
+             * Spellcheck Language
+             * @default en-US
+             * @enum {string}
+             */
+            spellcheck_language: "off" | "en-US" | "pt-BR";
         };
         /** ProjectImportRead */
         ProjectImportRead: {
@@ -2590,6 +2663,12 @@ export interface components {
             /** Root Doc Id */
             root_doc_id: string | null;
             /**
+             * Spellcheck Language
+             * @default en-US
+             * @enum {string}
+             */
+            spellcheck_language: "off" | "en-US" | "pt-BR";
+            /**
              * Updated At
              * Format: date-time
              */
@@ -2630,6 +2709,12 @@ export interface components {
             /** Root Doc Id */
             root_doc_id: string | null;
             /**
+             * Spellcheck Language
+             * @default en-US
+             * @enum {string}
+             */
+            spellcheck_language: "off" | "en-US" | "pt-BR";
+            /**
              * Updated At
              * Format: date-time
              */
@@ -2659,6 +2744,17 @@ export interface components {
          * @enum {string}
          */
         ProjectScope: "all" | "owned" | "shared";
+        /**
+         * ProjectSettingsUpdate
+         * @description Project settings a document writer may change (spec 113).
+         */
+        ProjectSettingsUpdate: {
+            /**
+             * Spellcheck Language
+             * @enum {string}
+             */
+            spellcheck_language: "off" | "en-US" | "pt-BR";
+        };
         /** ProposedDiffSummary */
         ProposedDiffSummary: {
             /** Base Version */
@@ -3782,6 +3878,124 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dictionary_api_v1_me_dictionary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DictionaryList"];
+                };
+            };
+        };
+    };
+    add_dictionary_word_api_v1_me_dictionary_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DictionaryWordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DictionaryWordRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_dictionary_word_api_v1_me_dictionary__word__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                word: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7147,6 +7361,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PermissionsRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_settings_api_v1_projects__project_id__settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
                 };
             };
             /** @description Not Found */

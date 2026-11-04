@@ -55,7 +55,7 @@ describe("CreateProjectDialog", () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     const [, init] = fetchMock.mock.calls[0];
     expect(init?.method).toBe("POST");
-    expect(JSON.parse(init?.body as string)).toEqual({ name: "Hello" });
+    expect(JSON.parse(init?.body as string)).toEqual({ name: "Hello", spellcheck_language: "en-US" });
     expect(toast.success).toHaveBeenCalledWith("Project created");
   });
 });

@@ -4,6 +4,8 @@ export interface Project {
   name: string;
   ownerId: string;
   rootDocId: string | null;
+  /** off | en-US | pt-BR (spec 113). */
+  spellcheckLanguage?: "off" | "en-US" | "pt-BR";
   createdAt: string;
   updatedAt: string;
 }

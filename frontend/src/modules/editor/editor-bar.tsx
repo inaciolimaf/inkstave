@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationsBell } from "@/modules/notifications";
 import { useDownloadProject } from "@/modules/projects";
+import { SpellingMenuItems } from "@/modules/spellcheck";
 
 /** The tools a person reaches for now and then wait in one menu, so the bar stays one quiet row. */
 function MoreMenu({
   projectId,
   projectName,
   historyDisabled,
+  readOnly,
   onOpenHistory,
   onOpenShare,
   onOpenCompatReport,
@@ -26,6 +28,7 @@ function MoreMenu({
   projectId: string;
   projectName: string | undefined;
   historyDisabled: boolean;
+  readOnly: boolean;
   onOpenHistory: () => void;
   onOpenShare: () => void;
   onOpenCompatReport?: () => void;
@@ -40,6 +43,7 @@ function MoreMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <SpellingMenuItems projectId={projectId} readOnly={readOnly} />
         <DropdownMenuItem disabled={historyDisabled} onSelect={onOpenHistory}>
           <History aria-hidden="true" className="size-4" />
           {t("toolbar.history")}
@@ -83,6 +87,7 @@ export function EditorBar({
   onOpenFiles,
   compileSlotRef,
   historyDisabled,
+  readOnly = false,
   onOpenHistory,
   onOpenShare,
   insert,
@@ -95,6 +100,8 @@ export function EditorBar({
   onOpenFiles: () => void;
   compileSlotRef: (element: HTMLDivElement | null) => void;
   historyDisabled: boolean;
+  /** Viewers may not change the spell-check language (spec 113). */
+  readOnly?: boolean;
   onOpenHistory: () => void;
   onOpenShare: () => void;
   /** The Insert menu (spec 114); it needs the open document, so the workspace renders it. */
@@ -136,6 +143,7 @@ export function EditorBar({
           projectId={projectId}
           projectName={projectName}
           historyDisabled={historyDisabled}
+          readOnly={readOnly}
           onOpenHistory={onOpenHistory}
           onOpenShare={onOpenShare}
           onOpenCompatReport={onOpenCompatReport}
