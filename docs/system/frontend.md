@@ -213,9 +213,11 @@ on screen with a notice.
   The switch is `EditorPreferences.autocomplete` (account, default on). `codemirror-extensions.ts` holds it in the
   `completion` compartment, so toggling it reconfigures the live view and removes the popup. Enter and Tab accept
   only in insert mode with the Vim keymap; Ctrl+Space opens the list. The popup takes the sheet tokens in both themes.
-- Live editing: `useCollabDoc` creates one `Y.Doc`, `Y.Text("content")`, `Awareness`, `Y.UndoManager` and
-  `InkstaveWsProvider` per document, and tears them down on unmount. `CollabEditor` binds them to CodeMirror
-  with `yCollab`. Editing stays off until the first sync, and stays off for a viewer (`isReadOnly`).
+- Live editing: `useCollabDoc` creates one `Y.Doc`, `Y.Text("content")`, `Awareness`, `Y.UndoManager` (scoped to the
+  text and the suggestions map) and `InkstaveWsProvider` per document, and tears them down on unmount. `CollabEditor`
+  binds them to CodeMirror with `yCollab`, minus its `ySync` plugin, which Suggesting mode replaces (spec 119,
+  `frontend/src/modules/collab/suggestions/`; see `docs/system/collab.md`). Editing stays off until the first sync, and stays off for a
+  viewer (`isReadOnly`).
 - Provider: it reconnects with backoff from 500 ms to 15 s. Close codes 4401, 4403 and 4404 are terminal.
 - Before a compile or an agent message, `flushBeforeCompile` should await the session's `flush`, but nothing
   assigns its `flushRef`, so it does nothing today (`docs/known-gaps.md`).

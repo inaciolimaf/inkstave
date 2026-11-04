@@ -18,7 +18,7 @@ from inkstave.modules.collab import flush_open_project_docs
 from inkstave.modules.compile import OutputRepository, OutputStore
 from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
 from inkstave.modules.projects.access.deps import require_capability
-from inkstave.modules.projects.access.service import role_for
+from inkstave.modules.projects.access.service import role_for, set_suggest_mode, suggest_mode_for
 from inkstave.modules.projects.catalog import service as project_service
 from inkstave.modules.projects.catalog.service import ListedProject, ProjectNotFoundError, ProjectScope
 from inkstave.modules.projects.schemas.project import (
@@ -30,6 +30,8 @@ from inkstave.modules.projects.schemas.project import (
     ProjectRead,
     ProjectRename,
     ProjectSettingsUpdate,
+    SuggestModeRead,
+    SuggestModeUpdate,
 )
 from inkstave.modules.projects.transfer import export as export_service
 
@@ -51,6 +53,7 @@ write_access = require_capability(Capability.PROJECT_WRITE)
 delete_access = require_capability(Capability.PROJECT_DELETE)
 download_access = require_capability(Capability.PROJECT_DOWNLOAD)
 doc_write_access = require_capability(Capability.DOC_WRITE)
+collab_write_access = require_capability(Capability.COLLAB_WRITE)
 
 _EXPORT_ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
@@ -131,7 +134,26 @@ async def get_permissions(
     if role is None:
         raise ProjectNotFoundError()  # 404 — non-member / missing
     caps = capabilities_for(role, compile_for_viewers=settings.compile_allowed_for_viewers)
-    return PermissionsRead(role=role, capabilities=sorted(c.value for c in caps))
+    suggest = await suggest_mode_for(session, user.id, project_id)
+    return PermissionsRead(role=role, capabilities=sorted(c.value for c in caps), suggest_mode=suggest)
+
+
+@router.patch(
+    "/{project_id}/me",
+    response_model=SuggestModeRead,
+    summary="Switch the caller's Suggesting mode in a project",
+    responses=_NOT_FOUND,
+)
+async def update_my_suggest_mode(
+    project_id: UUID,
+    data: SuggestModeUpdate,
+    _project: Project = Depends(collab_write_access),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = UNIT_OF_WORK,
+) -> SuggestModeRead:
+    # Only members who can write the text may suggest changes (spec 119); viewers get 403 here.
+    enabled = await set_suggest_mode(session, user.id, project_id, data.suggest_mode)
+    return SuggestModeRead(suggest_mode=enabled)
 
 
 @router.patch(

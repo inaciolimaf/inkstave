@@ -133,3 +133,35 @@ async def active_member_ids(session: AsyncSession, project_id: UUID, user_ids: I
         )
     )
     return set(rows.scalars())
+
+
+async def suggest_mode_for(session: AsyncSession, user_id: UUID, project_id: UUID) -> bool:
+    """The caller's "Suggesting" preference in the project (spec 119); false without an active membership."""
+    value = (
+        await session.execute(
+            select(ProjectMembership.suggest_mode).where(
+                ProjectMembership.project_id == project_id,
+                ProjectMembership.user_id == user_id,
+                ProjectMembership.status == MembershipStatus.active,
+            )
+        )
+    ).scalar_one_or_none()
+    return bool(value)
+
+
+async def set_suggest_mode(session: AsyncSession, user_id: UUID, project_id: UUID, enabled: bool) -> bool:
+    """Store the caller's "Suggesting" preference (spec 119). Only the caller's own row changes."""
+    membership = (
+        await session.execute(
+            select(ProjectMembership).where(
+                ProjectMembership.project_id == project_id,
+                ProjectMembership.user_id == user_id,
+                ProjectMembership.status == MembershipStatus.active,
+            )
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise ProjectAccessNotFoundError()
+    membership.suggest_mode = enabled
+    await session.flush()
+    return enabled

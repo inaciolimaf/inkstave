@@ -141,6 +141,8 @@ export async function joinShareLink(token: string): Promise<JoinResult> {
 export interface Permissions {
   role: Role;
   capabilities: string[];
+  /** The caller's Suggesting preference in the project (spec 119); absent from older servers. */
+  suggest_mode?: boolean;
 }
 
 export async function getPermissions(projectId: string): Promise<Permissions> {

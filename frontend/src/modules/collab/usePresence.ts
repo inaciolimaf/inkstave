@@ -20,6 +20,8 @@ export interface PresenceUser {
   name: string;
   color: string;
   idle: boolean;
+  /** The member has Suggesting mode on (spec 119). */
+  suggesting: boolean;
   isLocal: boolean;
 }
 
@@ -41,6 +43,7 @@ export function collectPresence(awareness: Awareness): PresenceUser[] {
       name: user.name ?? "Anonymous",
       color: user.color ?? PRESENCE_FALLBACK_COLOR,
       idle: Boolean((state as { idle?: boolean }).idle),
+      suggesting: Boolean((state as { suggesting?: boolean }).suggesting),
       isLocal: clientId === localClientId,
     };
     const existing = byUserId.get(user.id);

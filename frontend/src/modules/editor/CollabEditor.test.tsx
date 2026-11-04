@@ -1,10 +1,13 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 
+import { SuggestController } from "@/modules/collab/suggestions";
 import type { CollabDocSession, CollabStatus } from "@/modules/collab/useCollabDoc";
+
+import { renderWithProviders } from "@/test/utils";
 
 import { CollabEditor } from "./CollabEditor";
 import type { EditorSettings } from "./types";
@@ -16,6 +19,7 @@ function makeSession(over: Partial<CollabDocSession> = {}): CollabDocSession {
   const text = ydoc.getText("content");
   const awareness = new Awareness(ydoc);
   return {
+    projectId: "p1",
     ydoc,
     text,
     provider: {} as CollabDocSession["provider"],
@@ -24,6 +28,7 @@ function makeSession(over: Partial<CollabDocSession> = {}): CollabDocSession {
     synced: false,
     cmExtension: yCollab(text, awareness),
     readOnly: false,
+    suggest: new SuggestController(() => null, awareness),
     flush: () => Promise.resolve(),
     ...over,
   };
@@ -42,7 +47,9 @@ function track(session: CollabDocSession): CollabDocSession {
 
 describe("CollabEditor", () => {
   it("shows a loading state and is not editable until synced (AC6)", () => {
-    render(<CollabEditor session={track(makeSession({ synced: false }))} settings={SETTINGS} dark={false} />);
+    renderWithProviders(
+      <CollabEditor session={track(makeSession({ synced: false }))} settings={SETTINGS} dark={false} />,
+    );
     expect(screen.getByLabelText("Loading document…")).toBeInTheDocument();
     const content = document.querySelector(".cm-content");
     expect(content?.getAttribute("contenteditable")).toBe("false");
@@ -51,7 +58,9 @@ describe("CollabEditor", () => {
   it("shows the new document when the session changes", () => {
     const first = track(makeSession({ synced: true }));
     const second = track(makeSession({ synced: true }));
-    const { rerender } = render(<CollabEditor session={first} settings={SETTINGS} dark={false} />);
+    const { rerender } = renderWithProviders(
+      <CollabEditor session={first} settings={SETTINGS} dark={false} />,
+    );
     first.text.insert(0, "first document");
     expect(document.querySelector(".cm-content")).toHaveTextContent("first document");
 
@@ -62,7 +71,7 @@ describe("CollabEditor", () => {
   });
 
   it("becomes editable and shows the Live badge after sync (AC1)", () => {
-    render(
+    renderWithProviders(
       <CollabEditor
         session={track(makeSession({ synced: true, status: "connected" }))}
         settings={SETTINGS}
@@ -76,7 +85,7 @@ describe("CollabEditor", () => {
   });
 
   it("is non-editable with a 'View only' banner when readOnly (spec 34 AC10)", () => {
-    render(
+    renderWithProviders(
       <CollabEditor
         session={track(makeSession({ synced: true, status: "connected", readOnly: true }))}
         settings={SETTINGS}

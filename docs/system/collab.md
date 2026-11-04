@@ -29,7 +29,15 @@ never stored. It came from specs 28 (CRDT model), 29 (transport), 30 and 34 (rol
 | `backend/src/inkstave/modules/collab/ws/components.py` | `CollabComponents`, `CollabWsSettings`, `build_collab_components` |
 | `backend/src/inkstave/app.py` | Builds the components onto `app.state.collab`, closes them on shutdown |
 | `frontend/src/modules/collab/InkstaveWsProvider.ts` | Browser provider: sync, awareness, reconnect, terminal close codes |
-| `frontend/src/modules/collab/useCollabDoc.ts` | React lifecycle of one collaborative document |
+| `frontend/src/modules/collab/useCollabDoc.ts` | React lifecycle of one collaborative document. Builds the `Y.UndoManager([text, suggestions])` and the editor extensions, and returns the `SuggestController` |
+| `frontend/src/modules/collab/suggestions/model.ts` | Suggestion records, relative positions (`encodePosition`, `resolvePosition`), `readSuggestions`, `ownInsertions`, `newSuggestionId` (spec 119) |
+| `frontend/src/modules/collab/suggestions/record.ts` | `planEdit`: the rules of spec 119 §5.2 as a pure planner over one edit |
+| `frontend/src/modules/collab/suggestions/suggest-extension.ts` | `suggestExtension`: the Inkstave sync plugin that replaces `ySync`, the refusal of an oversize deletion, `SuggestController` |
+| `frontend/src/modules/collab/suggestions/review.ts` | `decideSuggestion`, `decideAllSuggestions`: accept and reject, origin `review-decision` |
+| `frontend/src/modules/collab/suggestions/decorations.ts` | The underline, the folded deletion widget and their theme |
+| `frontend/src/modules/collab/suggestions/popover.ts` | The hover popover of a suggestion: author, time, Accept and Reject |
+| `frontend/src/modules/collab/suggestions/use-suggestion-list.ts` | `useSuggestionList`: the rows of the Suggestions tab, kept in step with the text |
+| `frontend/src/modules/collab/suggestions/api.ts` | `setSuggestMode`: `PATCH /api/v1/projects/{id}/me` |
 | `frontend/src/modules/collab/usePresence.ts` | Presence state for the UI |
 | `backend/tests/collab_ws_harness.py` | In-process ASGI WebSocket client and `install_collab` |
 | `frontend/e2e/flows/collab.spec.ts` | End-to-end co-editing |
@@ -53,6 +61,21 @@ Migration: `backend/migrations/versions/20260609_2310_b7c4e9d21f08_create_crdt_t
 
 Redis holds only pub/sub traffic, one channel per document, `COLLAB_REDIS_CHANNEL_PREFIX` plus the document
 id. Nothing is stored there. Awareness, rooms, `YDocument` copies and send queues are process memory.
+
+### Suggestions (spec 119)
+
+The `Y.Doc` has a second root type besides the text: `Y.Map("suggestions")`, keyed by a UUIDv7 suggestion id.
+An insertion stores `{kind: "insert", author_id, author_name, created_at, start, end}` and a deletion stores
+`{kind: "delete", author_id, author_name, created_at, at, text}`. The positions are base64 Yjs relative
+positions. The server stores and relays it inside the same state as the text, so snapshots, the log and reloads
+keep it with no server code; `YDocument.suggestions()` reads it, for the tests only. `documents.content` is written
+from the text alone, so nothing outside the editor sees a suggestion: compile and the agent read the suggested
+text.
+
+The text change and its record are one Yjs transaction, with the editor's sync origin, so one undo reverts
+both. `y-codemirror.next`'s own sync plugin cannot do that, so Suggesting mode replaces it (ADR 0119 has the
+spike). The library's undo plugin, remote cursors and undo keymap stay. Accept and reject run in their own
+transaction with the origin `review-decision`, which no undo manager tracks.
 
 ## Routes
 
@@ -198,6 +221,13 @@ retrying and goes to `closed`.
 | Awareness reaches a late joiner and goes offline on disconnect | `backend/tests/integration/test_collab_ws_api.py::test_handshake_sends_awareness_snapshot`, `backend/tests/integration/test_collab_ws_api.py::test_awareness_relay_and_offline` |
 | Disconnect tears down the room and subscription | `backend/tests/integration/test_collab_ws_api.py::test_disconnect_tears_down_room`, `backend/tests/integration/test_collab_ws_refactor.py::test_connect_disconnect_cycles_leave_no_leak` |
 | Shutdown cancels background tasks | `backend/tests/integration/test_collab_manager.py::test_aclose_cancels_pending_background_tasks` |
+| Suggestions survive snapshot, compaction and reload (spec 119) | `backend/tests/integration/test_collab_store.py::test_suggestions_map_survives_compaction` |
+| A suggested deletion's text and record are one undo step | `frontend/src/modules/collab/suggestions/suggest-extension.test.ts` (`one undo reverts a suggested deletion`) |
+| One undo reverts a suggested insertion and its record together | `frontend/src/modules/collab/suggestions/suggest-extension.test.ts` (`one undo reverts a suggested insertion`) |
+| The text always holds the suggested version; the recording rules of spec 119 §5.2 | `frontend/src/modules/collab/suggestions/record.test.ts` |
+| Rejecting a deletion restores exactly the removed text; accept and reject are one transaction with origin `review-decision` | `frontend/src/modules/collab/suggestions/review.test.ts` |
+| Positions of suggestions follow the text across two peers' concurrent edits | `frontend/src/modules/collab/suggestions/model.test.ts` |
+| A deletion of more than 100 000 characters is refused in Suggesting mode only | `frontend/src/modules/collab/suggestions/record.test.ts`, `frontend/src/modules/collab/suggestions/suggest-extension.test.ts` (`a deletion too large to record is refused`) |
 | Malformed frames never raise | `backend/tests/unit/test_collab_protocol.py::test_malformed_does_not_raise` |
 | Open sockets are closed when access is lost | no dedicated test, and they are not (see Points of attention) |
 

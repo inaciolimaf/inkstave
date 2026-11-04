@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+import { SuggestionsTab, type SuggestionsTabProps } from "../suggestions-tab";
 import { type ResolvedRange, resolveAnchor } from "./anchors";
 import type { CommentThread } from "./api";
 import { CommentComposer } from "./composer";
@@ -42,7 +43,12 @@ export interface CommentsPanelProps {
   creating: boolean;
   onCreate: (body: string, mentions: string[]) => void;
   onDraftCancel: () => void;
+  /** The Suggestions tab (spec 119); null where the document has no collaborative text. */
+  suggestions?: SuggestionsTabProps | null;
 }
+
+/** The two tabs of the review column (spec 119). */
+export type ReviewTab = "comments" | "suggestions";
 
 /** The current range of each thread of the open document, kept in step with the text. */
 function useThreadRanges(
@@ -67,6 +73,47 @@ function useThreadRanges(
     // `revision` is the signal that the text changed; the ranges are read from `ytext` below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ytext, threads, documentId, revision]);
+}
+
+function ReviewTabs({ tab, onChange }: { tab: ReviewTab; onChange: (tab: ReviewTab) => void }) {
+  const { t } = useTranslation("discussion");
+  const tabs: ReviewTab[] = ["comments", "suggestions"];
+  return (
+    <div role="group" aria-label={t("comments.tabs.label")} className="flex gap-1 border-b p-2 text-small">
+      {tabs.map((value) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={tab === value}
+          onClick={() => onChange(value)}
+          className={cn(
+            "rounded px-2 py-1",
+            tab === value ? "bg-accent font-medium" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {t(`comments.tabs.${value}`)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The panel's content: the comment threads, or the Suggestions tab where the document has suggestions. */
+function PanelContent(props: CommentsPanelProps & { ranges: Map<string, ResolvedRange | null> }) {
+  const [tab, setTab] = useState<ReviewTab>("comments");
+  if (!props.suggestions) return <PanelBody {...props} />;
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <ReviewTabs tab={tab} onChange={setTab} />
+      {tab === "suggestions" ? (
+        <div className="min-h-0 flex-1 overflow-auto p-3">
+          <SuggestionsTab {...props.suggestions} />
+        </div>
+      ) : (
+        <PanelBody {...props} />
+      )}
+    </div>
+  );
 }
 
 const FILTERS: ThreadStatusFilter[] = ["open", "resolved", "all"];
@@ -165,7 +212,7 @@ export function CommentsPanel(props: CommentsPanelProps) {
             <SheetTitle>{t("comments.title")}</SheetTitle>
             <SheetDescription className="sr-only">{t("comments.description")}</SheetDescription>
           </SheetHeader>
-          <PanelBody {...props} ranges={ranges} />
+          <PanelContent {...props} ranges={ranges} />
         </SheetContent>
       </Sheet>
     );
@@ -186,7 +233,7 @@ export function CommentsPanel(props: CommentsPanelProps) {
           <X aria-hidden="true" className="size-4" />
         </Button>
       </div>
-      <PanelBody {...props} ranges={ranges} />
+      <PanelContent {...props} ranges={ranges} />
     </aside>
   );
 }

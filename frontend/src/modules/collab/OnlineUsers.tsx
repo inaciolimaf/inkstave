@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import i18n from "@/i18n/config";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { inkOn } from "@/lib/palettes";
@@ -15,7 +16,8 @@ const DEFAULT_MAX = 5;
 
 function describe(user: PresenceUser, t: TFunction<"editor">): string {
   const who = user.isLocal ? t("presence.you", { name: user.name }) : user.name;
-  return user.idle ? t("presence.idle", { who }) : t("presence.online", { who });
+  const status = user.idle ? t("presence.idle", { who }) : t("presence.online", { who });
+  return user.suggesting ? `${status}, ${i18n.t("presence.suggesting", { ns: "suggest" })}` : status;
 }
 
 function PresenceAvatar({ user, withTooltip = true }: { user: PresenceUser; withTooltip?: boolean }) {

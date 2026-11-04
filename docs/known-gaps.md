@@ -113,6 +113,11 @@ preference, and invites to non-users have no recipient record at all.
 call sites, with no type predicates. *Why:* OpenAPI types are generated, but not yet threaded through the
 modules' own API files.
 
+- The suggestion popover (spec 119) opens on hover only. A keyboard user decides a suggestion on the Suggestions
+  tab, not in the text, and the popover is not reachable by focus. Read, not run.
+- The two-browser flow of spec 119 (B suggests, A accepts) has no Playwright test: the e2e tier was not run for
+  this change, by agreement.
+
 ### Tests and supply chain
 
 **`a viewer cannot edit or compile` fails in the `@full` tier.** `frontend/e2e/flows/full.spec.ts` expects no Compile

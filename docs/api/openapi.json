@@ -2299,6 +2299,11 @@
           },
           "role": {
             "$ref": "#/components/schemas/MembershipRole"
+          },
+          "suggest_mode": {
+            "default": false,
+            "title": "Suggest Mode",
+            "type": "boolean"
           }
         },
         "required": [
@@ -3347,6 +3352,34 @@
           "already_member_role"
         ],
         "title": "SharePreview",
+        "type": "object"
+      },
+      "SuggestModeRead": {
+        "properties": {
+          "suggest_mode": {
+            "title": "Suggest Mode",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "suggest_mode"
+        ],
+        "title": "SuggestModeRead",
+        "type": "object"
+      },
+      "SuggestModeUpdate": {
+        "additionalProperties": false,
+        "description": "The caller's own \"Suggesting\" preference for a project (spec 119).",
+        "properties": {
+          "suggest_mode": {
+            "title": "Suggest Mode",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "suggest_mode"
+        ],
+        "title": "SuggestModeUpdate",
         "type": "object"
       },
       "SyncTexBox": {
@@ -10700,6 +10733,74 @@
         "summary": "Revoke Invite",
         "tags": [
           "sharing"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/me": {
+      "patch": {
+        "operationId": "update_my_suggest_mode_api_v1_projects__project_id__me_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestModeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestModeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Switch the caller's Suggesting mode in a project",
+        "tags": [
+          "projects"
         ]
       }
     },

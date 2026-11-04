@@ -78,3 +78,15 @@ class PermissionsRead(BaseModel):
 
     role: MembershipRole
     capabilities: list[str]
+    # The caller's "Suggesting" preference in this project (spec 119); the editor starts in that mode.
+    suggest_mode: bool = False
+
+
+class SuggestModeUpdate(StrictModel):
+    """The caller's own "Suggesting" preference for a project (spec 119)."""
+
+    suggest_mode: bool
+
+
+class SuggestModeRead(BaseModel):
+    suggest_mode: bool

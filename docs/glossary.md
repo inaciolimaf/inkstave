@@ -168,6 +168,11 @@ are English-only today ([known gaps](known-gaps.md)).
 | Detached comment | `detached` (client side) | "Comentário solto" |
 | Mention | `mentions`, `comment_mention` | "Menção" |
 | Comments panel | `CommentsPanel` | "Comentários" |
+| Suggesting mode | `suggest_mode`, `SuggestController` | "Sugerindo" |
+| Suggestion | `Suggestion`, `suggestions` (Yjs map), `SUGGESTIONS_KEY` | "Sugestão" |
+| Suggested insertion / deletion | `kind` `insert` / `delete`, `InsertionFields`, `DeletionFields` | "Inserção sugerida" / "Exclusão sugerida" |
+| Accept / Reject | `decideSuggestion`, `REVIEW_ORIGIN` | "Aceitar" / "Rejeitar" |
+| Suggestions tab | `SuggestionsTab`, `useSuggestionList` | "Sugestões" |
 
 ## Notifications and e-mail
 

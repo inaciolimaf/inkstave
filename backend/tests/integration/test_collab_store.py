@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from pycrdt import Doc, Map, Text
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -134,3 +135,60 @@ async def test_append_is_constant_cost(db_session: AsyncSession, query_counter: 
     later = query_counter["count"] - before2
 
     assert first == later == 1  # one INSERT, never reading the existing log
+
+
+def _suggesting_client_updates() -> list[bytes]:
+    """Updates from a client that typed a suggested insertion and a suggested deletion (spec 119)."""
+    client = Doc()
+    client_text = client.get(YDocument.TEXT_KEY, type=Text)
+    client_map = client.get(YDocument.SUGGESTIONS_KEY, type=Map)
+    collected: list[bytes] = []
+    client.observe(lambda event: collected.append(event.update))
+    with client.transaction():
+        client_text.insert(0, "very important")
+        client_map["s-insert"] = {
+            "kind": "insert",
+            "author_id": "u1",
+            "author_name": "B",
+            "created_at": "2026-11-04T10:00:00Z",
+            "start": "AAE=",
+            "end": "AAE=",
+        }
+    with client.transaction():
+        client_map["s-delete"] = {
+            "kind": "delete",
+            "author_id": "u1",
+            "author_name": "B",
+            "created_at": "2026-11-04T10:01:00Z",
+            "at": "AAE=",
+            "text": "old",
+        }
+    return collected
+
+
+async def test_suggestions_map_survives_compaction(db_session: AsyncSession) -> None:
+    """The suggestions map (spec 119) is a second root type of the same Y.Doc: snapshot and reload keep it."""
+    doc_id = await _make_doc(db_session)
+    store = CrdtStore(_factory(db_session))
+    collected = _suggesting_client_updates()
+    last_id = 0
+    for update in collected:
+        last_id = await store.append_update(doc_id, update, None)
+
+    server = YDocument()
+    for update in collected:
+        server.apply_update(update)
+    await store.snapshot(
+        document_id=doc_id,
+        state=server.get_state(),
+        state_vector=server.get_state_vector(),
+        upto_update_id=last_id,
+    )
+
+    state, _seq = await store.load(doc_id)
+    assert state is not None
+    reloaded = YDocument()
+    reloaded.apply_update(state)
+    assert reloaded.text == "very important"
+    assert set(reloaded.suggestions()) == {"s-insert", "s-delete"}
+    assert reloaded.suggestions()["s-delete"]["text"] == "old"

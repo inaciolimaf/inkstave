@@ -18,6 +18,7 @@ import enProjects from "./locales/en/projects";
 import enReview from "./locales/en/review";
 import enSettings from "./locales/en/settings";
 import enSharing from "./locales/en/sharing";
+import enSuggest from "./locales/en/suggest";
 import ptAgent from "./locales/pt/agent";
 import ptAuth from "./locales/pt/auth";
 import ptCommon from "./locales/pt/common";
@@ -32,6 +33,7 @@ import ptProjects from "./locales/pt/projects";
 import ptReview from "./locales/pt/review";
 import ptSettings from "./locales/pt/settings";
 import ptSharing from "./locales/pt/sharing";
+import ptSuggest from "./locales/pt/suggest";
 
 /*
  * Global i18n for the whole app. English is the default; a Portuguese-language
@@ -56,6 +58,7 @@ export const NAMESPACES = [
   "sharing",
   "notifications",
   "discussion",
+  "suggest",
 ] as const;
 
 const resources = {
@@ -75,6 +78,7 @@ const resources = {
     sharing: enSharing,
     notifications: enNotifications,
     discussion: enDiscussion,
+    suggest: enSuggest,
   },
   pt: {
     common: ptCommon,
@@ -92,6 +96,7 @@ const resources = {
     sharing: ptSharing,
     notifications: ptNotifications,
     discussion: ptDiscussion,
+    suggest: ptSuggest,
   },
 };
 

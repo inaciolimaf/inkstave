@@ -31,6 +31,12 @@ const dict = {
     title: "Comments",
     description: "Comment threads on the text of this project.",
     close: "Close comments",
+    /** The review column's tabs: the comment threads and the suggested changes (spec 119). */
+    tabs: {
+      label: "Review",
+      comments: "Comments",
+      suggestions: "Suggestions",
+    },
     button: {
       label: "Comments",
       openAria: "Comments, {{count}} open",

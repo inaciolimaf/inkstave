@@ -1442,6 +1442,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Switch the caller's Suggesting mode in a project */
+        patch: operations["update_my_suggest_mode_api_v1_projects__project_id__me_patch"];
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/members": {
         parameters: {
             query?: never;
@@ -2900,6 +2917,11 @@ export interface components {
             /** Capabilities */
             capabilities: string[];
             role: components["schemas"]["MembershipRole"];
+            /**
+             * Suggest Mode
+             * @default false
+             */
+            suggest_mode: boolean;
         };
         /** PostMessageIn */
         PostMessageIn: {
@@ -3337,6 +3359,19 @@ export interface components {
             /** Project Name */
             project_name: string;
             role: components["schemas"]["ShareLinkRole"];
+        };
+        /** SuggestModeRead */
+        SuggestModeRead: {
+            /** Suggest Mode */
+            suggest_mode: boolean;
+        };
+        /**
+         * SuggestModeUpdate
+         * @description The caller's own "Suggesting" preference for a project (spec 119).
+         */
+        SuggestModeUpdate: {
+            /** Suggest Mode */
+            suggest_mode: boolean;
         };
         /** SyncTexBox */
         SyncTexBox: {
@@ -8023,6 +8058,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_my_suggest_mode_api_v1_projects__project_id__me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestModeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestModeRead"];
+                };
             };
             /** @description Not Found */
             404: {

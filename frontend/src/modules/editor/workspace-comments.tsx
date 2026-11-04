@@ -31,6 +31,7 @@ import { type Member, listMembers } from "@/modules/sharing";
 
 import { CommentSelectionButton } from "./comment-selection-button";
 import { useEditorSelection } from "./use-editor-selection";
+import { useSuggestionReview } from "./use-suggestion-review";
 
 const NO_THREADS: CommentThread[] = [];
 
@@ -208,6 +209,7 @@ export function useWorkspaceComments(
   useCommentEffects(state, view, handlers);
 
   const { draft, setDraft, setSelectedId, setOpen, text } = state;
+  const suggestions = useSuggestionReview(projectId, text);
   const openCount = state.list.filter((t) => t.resolved_at === null).length;
   const hasComments = text !== null;
   const button = hasComments ? (
@@ -259,6 +261,7 @@ export function useWorkspaceComments(
         );
       }}
       onDraftCancel={() => setDraft(null)}
+      suggestions={suggestions}
     />
   ) : null;
 

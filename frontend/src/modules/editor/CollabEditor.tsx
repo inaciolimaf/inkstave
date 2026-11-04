@@ -5,10 +5,12 @@
  * local user's presence (identity + cursor + idle) through Yjs awareness.
  */
 import type { EditorView } from "@codemirror/view";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { CodeMirrorEditor } from "./codemirror-editor";
+import { SuggestSwitch } from "./suggest-switch";
 import type { EditorSettings } from "./types";
 
 import { ConnectionStatusBadge, OnlineUsers, usePresence } from "@/modules/collab";
@@ -51,10 +53,13 @@ export function CollabEditor({
   const { t } = useTranslation("editor");
   const editable = session.synced && !session.readOnly;
   const { users, markActivity } = usePresence(session, currentUser);
+  const { suggest } = session;
+  useEffect(() => suggest.setEnabled(editable), [suggest, editable]);
 
   const indicators = (
     <>
       <ConnectionStatusBadge status={session.status} />
+      {editable && <SuggestSwitch session={session} />}
       {!session.synced && <span className="text-muted-foreground">{t("collab.syncing")}</span>}
       {session.readOnly && (
         <span className="font-medium text-warning-text" aria-live="polite">

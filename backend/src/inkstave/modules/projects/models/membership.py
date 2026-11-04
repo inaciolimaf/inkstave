@@ -6,7 +6,7 @@ import enum
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint, text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -54,6 +54,10 @@ class ProjectMembership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     # The role held before a link upgraded the member; null when the link created the membership.
     role_before_link: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # "Suggesting" mode of the member in this project (spec 119): their edits become suggestions.
+    suggest_mode: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     __table_args__ = (
         UniqueConstraint("project_id", "user_id", name="uq_membership_project_user"),

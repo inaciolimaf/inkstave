@@ -32,6 +32,11 @@ const dict: Dict = {
     title: "Comentários",
     description: "Comentários sobre o texto deste projeto.",
     close: "Fechar comentários",
+    tabs: {
+      label: "Revisão",
+      comments: "Comentários",
+      suggestions: "Sugestões",
+    },
     button: {
       label: "Comentários",
       openAria: "Comentários, {{count}} abertos",

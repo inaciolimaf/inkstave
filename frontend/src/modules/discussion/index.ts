@@ -18,5 +18,8 @@ export type { CommentMark, CommentMarkHandlers } from "./comments/comment-marks"
 export { CommentsButton } from "./comments/comments-button";
 export { CommentsPanel } from "./comments/comments-panel";
 export type { CommentDraft, CommentsPanelProps } from "./comments/comments-panel";
+/** The Suggestions tab of the review column (spec 119). */
+export { SuggestionsTab } from "./suggestions-tab";
+export type { SuggestionDecision, SuggestionRow, SuggestionsTabProps } from "./suggestions-tab";
 export { useCommentMutations, useCommentThreads } from "./comments/use-comments";
 export { QUOTE_MAX_CHARS, quoteOf } from "./comments/quote";

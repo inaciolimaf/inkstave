@@ -72,6 +72,7 @@ owner per project at the database level. `ix_project_memberships_user_active` is
 |---|---|
 | `via_link_id` | Nullable FK to `project_share_links`, `ON DELETE SET NULL`. Set when a link created or upgraded the membership. Cleared by any hand-set role, removal, leave, transfer and e-mail invite acceptance |
 | `role_before_link` | `viewer` or `editor` (check constraint), null when the link created the membership. The role the takeback restores |
+| `suggest_mode` | Boolean, default false, from spec 119 (migration `backend/migrations/versions/20261104_1900_c3d5f7a9b1e2_spec119_suggest_mode.py`). The member's Suggesting preference in this project; the editor starts in that mode. Set through `PATCH /me`; never by the owner for someone else |
 
 `project_share_links`
 
@@ -123,7 +124,8 @@ All routes require a bearer token. Errors use the standard envelope `{"error": {
 | `DELETE /api/v1/projects/{project_id}/share-links/{link_id}` | Turn a link off. Owner only | 403 `not_project_owner`; 404 `project_not_found`, `share_link_not_found` |
 | `GET /api/v1/share-links/{token}` | Preview: project name, owner name, role, `already_member_role`. Rate limited (`RATE_LIMIT_SHARE_LINK`) | 404 `share_link_not_found` |
 | `POST /api/v1/share-links/{token}/join` | Join, or upgrade. Returns `project_id` and the resulting `role`. Rate limited | 404 `share_link_not_found` |
-| `GET /api/v1/projects/{project_id}/permissions` | Caller's `role` and sorted `capabilities`. Lives in `backend/src/inkstave/modules/projects/routes/projects.py` | 404 `project_not_found` |
+| `GET /api/v1/projects/{project_id}/permissions` | Caller's `role`, sorted `capabilities` and `suggest_mode` (spec 119). Lives in `backend/src/inkstave/modules/projects/routes/projects.py` | 404 `project_not_found` |
+| `PATCH /api/v1/projects/{project_id}/me` | Body `{"suggest_mode": bool}`: the caller's own Suggesting preference (spec 119). Returns `{suggest_mode}`. Needs `COLLAB_WRITE`, so owner and editor; the caller's own row only | 403 `insufficient_role` (viewer); 404 `project_not_found`; 422 on a non-boolean |
 
 ## How it works
 

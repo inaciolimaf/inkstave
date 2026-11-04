@@ -5,3 +5,15 @@ export { OnlineUsers } from "./OnlineUsers";
 export { collabDocUrl, useCollabDoc } from "./useCollabDoc";
 export type { CollabDocSession } from "./useCollabDoc";
 export { usePresence } from "./usePresence";
+export type { PresenceUser } from "./usePresence";
+/** Suggested changes, Suggesting mode (spec 119). */
+export {
+  REVIEW_ORIGIN,
+  SuggestController,
+  decideAllSuggestions,
+  decideSuggestion,
+  suggestionsOf,
+  useSuggestionList,
+} from "./suggestions";
+export type { Decision, SuggestionListItem } from "./suggestions";
+export { setSuggestMode } from "./suggestions/api";

@@ -88,7 +88,8 @@ function useOpenDocument({
   collabEnabled,
   getToken,
   readOnly,
-}: Pick<EditorPaneProps, "projectId" | "selected" | "onClearSelection" | "getToken"> & {
+  currentUser,
+}: Pick<EditorPaneProps, "projectId" | "selected" | "onClearSelection" | "getToken" | "currentUser"> & {
   collabEnabled: boolean;
   readOnly: boolean;
 }) {
@@ -114,6 +115,7 @@ function useOpenDocument({
     getToken: getToken ?? (() => ""),
     enabled: collabActive,
     readOnly,
+    author: currentUser,
   });
 
   const notFound = query.error instanceof ApiError && query.error.status === 404;
@@ -212,6 +214,7 @@ export function EditorPane({
     collabEnabled,
     getToken,
     readOnly,
+    currentUser,
   });
   const { openEntity, isDoc, collabActive, loaded } = openDocument;
   const spell = useSpellcheck(projectId, openEntity?.type === "doc" ? openEntity.id : null);

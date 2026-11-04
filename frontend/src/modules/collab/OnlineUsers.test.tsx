@@ -6,7 +6,7 @@ import { OnlineUsers } from "./OnlineUsers";
 import type { PresenceUser } from "./usePresence";
 
 function user(over: Partial<PresenceUser>): PresenceUser {
-  return { id: "u", name: "User", color: "#2563eb", idle: false, isLocal: false, ...over };
+  return { id: "u", name: "User", color: "#2563eb", idle: false, suggesting: false, isLocal: false, ...over };
 }
 
 describe("OnlineUsers", () => {

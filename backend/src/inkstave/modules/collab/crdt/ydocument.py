@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from pycrdt import Doc, Text
+from pycrdt import Doc, Map, Text
 
 
 class YDocument:
@@ -14,9 +14,13 @@ class YDocument:
     Mutations and applied updates emit ``(update_bytes, origin)`` to registered
     observers so the manager can persist + relay them. The ``origin`` of the most
     recent mutation is captured around ``apply_update``/``replace_text``.
+
+    The document also carries the suggestions map (spec 119, root key ``"suggestions"``). The server
+    never writes it: it stores and relays it with the rest of the state, and only reads it in tests.
     """
 
     TEXT_KEY = "content"
+    SUGGESTIONS_KEY = "suggestions"
 
     def __init__(self, doc: Doc[Any] | None = None) -> None:
         self._doc: Doc[Any] = doc or Doc()
@@ -35,6 +39,10 @@ class YDocument:
     @property
     def text(self) -> str:
         return str(self._text)
+
+    def suggestions(self) -> dict[str, Any]:
+        """The suggestions map as plain data, keyed by suggestion id (spec 119)."""
+        return self._doc.get(self.SUGGESTIONS_KEY, type=Map).to_py() or {}
 
     def get_state(self) -> bytes:
         """Full state update encoding the whole document (snapshot)."""

@@ -189,6 +189,7 @@ panel reads the Y.Text and the thread API stores the anchors. A viewer may comme
 | The `discussion_write` capability is held by all three roles | `backend/tests/unit/test_authz_matrix.py` |
 | An anchor follows its text through concurrent edits | `frontend/src/modules/discussion/comments/anchors.test.ts`, "keeps the highlight on its text when the other peer inserts before it" |
 | A fully deleted range detaches, never jumps elsewhere | `frontend/src/modules/discussion/comments/anchors.test.ts`, "detaches when the whole commented text is deleted…" |
+| The review column's Suggestions tab lists suggested changes in text order; a viewer sees them without Accept or Reject; a dismissed stale one is dropped | `frontend/src/modules/discussion/suggestions-tab.test.tsx` |
 | Text typed at either edge of a range stays out of it | `frontend/src/modules/discussion/comments/anchors.test.ts`, "does not pull text typed at the very end…" and "…very start…"; `comment-marks.test.ts` |
 | Commenting never writes to the document | `backend/tests/integration/test_comments_api.py::test_comment_does_not_touch_crdt` |
 | Mentions reach only active members | `backend/tests/integration/test_comments_api.py::test_mentions_filtered_to_members` |
