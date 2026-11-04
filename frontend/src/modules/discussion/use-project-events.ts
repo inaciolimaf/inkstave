@@ -11,7 +11,16 @@ import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
 
 /** Every event type the server sends. A spec that adds one (118's `comment.*`) adds it here. */
-export const PROJECT_EVENT_TYPES = ["chat.message_created", "chat.message_deleted"] as const;
+export const PROJECT_EVENT_TYPES = [
+  "chat.message_created",
+  "chat.message_deleted",
+  "comment.thread_created",
+  "comment.message_created",
+  "comment.message_updated",
+  "comment.message_deleted",
+  "comment.thread_resolved",
+  "comment.thread_reopened",
+] as const;
 
 export interface ProjectEvent {
   id: number;

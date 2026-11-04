@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import i18n from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
+import { commentLink, isCommentNotification } from "./comment-link";
 import type { AppNotification } from "./types";
 import { useNotificationMutations, useNotifications, useUnreadCount } from "./useNotifications";
 
@@ -30,6 +31,13 @@ function relativeTime(iso: string): string {
 }
 
 function describe(n: AppNotification): ReactNode {
+  if (isCommentNotification(n)) {
+    const author = String(n.payload.author_name ?? i18n.t("notifications:comment.defaultAuthor"));
+    const project = String(n.payload.project_name ?? i18n.t("notifications:comment.defaultProject"));
+    const key =
+      n.type === "comment_mention" ? "notifications:comment.mention" : "notifications:comment.reply";
+    return i18n.t(key, { author, project });
+  }
   if (n.type === "project_invite") {
     const p = n.payload;
     const inviter = String(p.inviter_name ?? i18n.t("notifications:invite.defaultInviter"));
@@ -51,21 +59,24 @@ function NotificationRow({
   onRead,
   onDismiss,
   onAccept,
+  onOpenComment,
 }: {
   notification: AppNotification;
   onRead: (id: string) => void;
   onDismiss: (id: string) => void;
   onAccept: (n: AppNotification) => void;
+  onOpenComment: (n: AppNotification) => void;
 }) {
   const { t } = useTranslation("notifications");
   const unread = notification.readAt === null;
+  const comment = isCommentNotification(notification);
   return (
     <div role="listitem" className={cn("flex gap-2 rounded-md p-2 text-body", unread && "bg-primary/5")}>
       <button
         type="button"
         className="min-w-0 flex-1 text-left"
         aria-label={unread ? t("markRead") : t("notification")}
-        onClick={() => unread && onRead(notification.id)}
+        onClick={() => (comment ? onOpenComment(notification) : unread && onRead(notification.id))}
       >
         <span className="block break-words">{describe(notification)}</span>
         <span className="mt-0.5 block text-small text-muted-foreground">
@@ -110,6 +121,14 @@ export function NotificationsBell() {
         navigate(acceptUrl);
       }
     }
+    setOpen(false);
+  };
+
+  /** A comment row marks itself read and opens its thread in the editor (spec 118). */
+  const onOpenComment = (n: AppNotification) => {
+    const link = commentLink(n);
+    if (n.readAt === null) read.mutate(n.id);
+    if (link) navigate(link);
     setOpen(false);
   };
 
@@ -162,6 +181,7 @@ export function NotificationsBell() {
                     onRead={(id) => read.mutate(id)}
                     onDismiss={(id) => dismiss.mutate(id)}
                     onAccept={onAccept}
+                    onOpenComment={onOpenComment}
                   />
                 ))}
               </div>

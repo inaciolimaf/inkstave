@@ -145,6 +145,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `RATE_LIMIT_AGENT` | No | `30/60` | per-user agent cap | backend |
 | `RATE_LIMIT_UPLOAD` | No | `60/60` | per-user upload cap | backend |
 | `RATE_LIMIT_CHAT` | No | `30/60` | project chat posts, per user per project (spec 117) | backend |
+| `RATE_LIMIT_COMMENTS` | No | `60/60` | comment threads and replies, per user per project (spec 118) | backend |
 | `RATE_LIMIT_SHARE_LINK` | No | `30/60` | per-user cap on previewing and joining a share link (spec 116) | backend |
 | `ARGON2_TIME_COST` | No | `3` | iterations | backend |
 | `ARGON2_MEMORY_COST` | No | `65536` | KiB of memory | backend |

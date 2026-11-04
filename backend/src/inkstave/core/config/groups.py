@@ -129,6 +129,8 @@ class AuthSettingsMixin:
     rate_limit_upload: str = "60/60"
     # Project chat posts, per user per project (spec 117).
     rate_limit_chat: str = "30/60"
+    # Comment threads and replies, per user per project (spec 118).
+    rate_limit_comments: str = "60/60"
     # Share-link preview and join, per user (spec 116).
     rate_limit_share_link: str = "30/60"
     # Daily anti-DoS compile quota for public multi-tenant operation (spec 105):

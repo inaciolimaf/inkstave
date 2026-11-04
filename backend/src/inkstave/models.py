@@ -21,6 +21,7 @@ from inkstave.modules.auth.models.user import User
 from inkstave.modules.collab.models import CrdtDocumentState, CrdtUpdate
 from inkstave.modules.compile.models.compile import Compile, CompileJobStatus
 from inkstave.modules.compile.models.compile_output import CompileOutput, OutputKind
+from inkstave.modules.discussion.comments.models import CommentMessage, CommentThread
 from inkstave.modules.discussion.models import ProjectChatMessage, ProjectChatRead
 from inkstave.modules.history.models import HistoryChunk, HistoryLabel, HistoryUpdate
 from inkstave.modules.notifications.models import Notification, NotificationType
@@ -42,6 +43,8 @@ __all__ = [
     "AgentSession",
     "AgentSessionStatus",
     "AuthToken",
+    "CommentMessage",
+    "CommentThread",
     "Compile",
     "CompileJobStatus",
     "CompileOutput",

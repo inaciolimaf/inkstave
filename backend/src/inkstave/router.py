@@ -16,6 +16,7 @@ from inkstave.modules.auth.routes import auth, users
 from inkstave.modules.compile.routes import compile as compile_routes
 from inkstave.modules.compile.routes import logparse, synctex
 from inkstave.modules.discussion.routes import chat as chat_routes
+from inkstave.modules.discussion.routes import comments as comment_thread_routes
 from inkstave.modules.discussion.routes import events as event_routes
 from inkstave.modules.history import routes as history
 from inkstave.modules.notifications import routes as notifications
@@ -46,6 +47,7 @@ api_v1.include_router(compile_routes.router)
 api_v1.include_router(synctex.router)
 api_v1.include_router(logparse.router)
 api_v1.include_router(chat_routes.router)
+api_v1.include_router(comment_thread_routes.router)
 api_v1.include_router(event_routes.router)
 api_v1.include_router(history.router)
 api_v1.include_router(notifications.router)

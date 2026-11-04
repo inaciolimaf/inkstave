@@ -148,6 +148,13 @@ are English-only today ([known gaps](known-gaps.md)).
 | Project chat | `ProjectChatMessage`, `ProjectChatRead` | "Chat do projeto" |
 | Project event stream | `project:events`, `project_events_stream` | — |
 | Unread count | `unread_count`, `ChatService.unread_count` | "não lidas" |
+| Comment thread | `CommentThread`, `comment_threads` | "Comentário" |
+| Comment message | `CommentMessage`, `comment_messages` | "Mensagem" |
+| Anchor | `anchor_start`, `anchor_end`, `encodeAnchor` | — |
+| Resolve | `resolved_at`, `resolve` | "Resolver" |
+| Detached comment | `detached` (client side) | "Comentário solto" |
+| Mention | `mentions`, `comment_mention` | "Menção" |
+| Comments panel | `CommentsPanel` | "Comentários" |
 
 ## Notifications and e-mail
 

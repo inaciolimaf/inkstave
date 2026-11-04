@@ -6,7 +6,7 @@ from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.models.invite import ProjectInvite
 from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
-from inkstave.modules.projects.access.service import role_for
+from inkstave.modules.projects.access.service import active_member_ids, role_for
 from inkstave.modules.projects.catalog.service import ProjectNotFoundError, create_project
 from inkstave.modules.projects.tree.safe_path import InvalidNameError, validate_name_segment
 from inkstave.modules.projects.tree.service import (
@@ -43,6 +43,7 @@ __all__ = [
     "ProjectNotFoundError",
     "TreeEntity",
     "TreeEntityType",
+    "active_member_ids",
     "capabilities_for",
     "compute_path",
     "create_entity",

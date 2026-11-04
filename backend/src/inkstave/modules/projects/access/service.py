@@ -8,6 +8,7 @@ role → 403 ``insufficient_role``.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -117,3 +118,18 @@ class AuthorizationService:
     async def can(self, user_id: UUID, project_id: UUID, cap: Capability) -> bool:
         """Whether the user holds ``cap`` on the project (never raises)."""
         return cap in await self.get_capabilities(user_id, project_id)
+
+
+async def active_member_ids(session: AsyncSession, project_id: UUID, user_ids: Iterable[UUID]) -> set[UUID]:
+    """The subset of ``user_ids`` that are active members of the project (spec 118 mentions)."""
+    wanted = set(user_ids)
+    if not wanted:
+        return set()
+    rows = await session.execute(
+        select(ProjectMembership.user_id).where(
+            ProjectMembership.project_id == project_id,
+            ProjectMembership.user_id.in_(wanted),
+            ProjectMembership.status == MembershipStatus.active,
+        )
+    )
+    return set(rows.scalars())

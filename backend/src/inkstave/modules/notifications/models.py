@@ -18,6 +18,9 @@ from inkstave.core.db.base import Base, UUIDPrimaryKeyMixin
 class NotificationType(enum.StrEnum):
     project_invite = "project_invite"
     generic = "generic"
+    # Comment threads (spec 118): a mention, and a reply to a thread the user took part in.
+    comment_mention = "comment_mention"
+    comment_reply = "comment_reply"
 
 
 class Notification(UUIDPrimaryKeyMixin, Base):

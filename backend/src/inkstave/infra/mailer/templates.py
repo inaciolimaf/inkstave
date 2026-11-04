@@ -104,12 +104,33 @@ def _magic_login(ctx: dict[str, Any]) -> tuple[str, str, str]:
     return subject, text, html
 
 
+def _comment_mention(ctx: dict[str, Any]) -> tuple[str, str, str]:
+    author = ctx["author_name"]
+    project = ctx["project_name"]
+    excerpt = ctx["excerpt"]
+    comment_url = ctx["comment_url"]
+    subject = f"{author} mentioned you in {project} on Inkstave"
+    text = (
+        f"{author} mentioned you in a comment on “{project}”:\n\n“{excerpt}”\n\n"
+        f"Open the comment:\n{comment_url}\n"
+    )
+    # Escape user-controlled values (author, project, comment text) in the HTML body (spec 118).
+    html = (
+        f"<p>{escape(str(author))} mentioned you in a comment on "
+        f"<strong>{escape(str(project))}</strong>:</p>"
+        f"<blockquote>{escape(str(excerpt))}</blockquote>"
+        f'<p><a href="{escape(str(comment_url), quote=True)}">Open the comment</a></p>'
+    )
+    return subject, text, html
+
+
 _TEMPLATES = {
     "project_invite": _project_invite,
     "password_reset": _password_reset,
     "email_change_confirmation": _email_change_confirmation,
     "email_verification": _email_verification,
     "magic_login": _magic_login,
+    "comment_mention": _comment_mention,
 }
 
 

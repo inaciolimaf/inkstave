@@ -176,6 +176,8 @@ run; the rest were read, not run.
 - `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 1000000 soft cap stops
   first.
 - `gzip.decompress` on SyncTeX data has no output bound.
+- Comment threads are not paged. `GET /api/v1/projects/{id}/comments` returns every thread of the project with
+  all its messages, and the panel renders them all (spec 118).
 
 ### Settings with no effect
 

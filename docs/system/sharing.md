@@ -146,7 +146,7 @@ an empty set.
 | `collab_write` | yes | yes | no |
 | `compile` | yes | yes | yes, unless `COMPILE_ALLOWED_FOR_VIEWERS=false` |
 | `project_download` | yes | yes | yes |
-| `discussion_write` (post and delete own chat messages, spec 117) | yes | yes | yes |
+| `discussion_write` (post and delete own chat messages, spec 117; start and reply to comment threads, edit and delete own comments, resolve, spec 118) | yes | yes | yes |
 
 `project_share` is defined but no route checks it. Sharing routes use `require_member` and
 `require_owner` from the service, which compare the role directly.
@@ -181,6 +181,7 @@ instantiates it.
 | Compile REST | `backend/src/inkstave/modules/compile/routes/compile.py` | `COMPILE` on trigger, latest, status, cancel, outputs, PDF and log | 404, 403 |
 | Compile SSE | `compile_events` in the same file | `role_for` is not `None`: any member. Token in the query string | 404 |
 | Project chat | `backend/src/inkstave/modules/discussion/routes/chat.py` | `PROJECT_READ` to read, `DISCUSSION_WRITE` to post and delete own | 404, 403, 429 |
+| Comment threads | `backend/src/inkstave/modules/discussion/routes/comments.py` | `PROJECT_READ` to list, `DISCUSSION_WRITE` to start, reply, resolve and reopen (all three roles), author only to edit and delete | 404, 403, 429 |
 | Project event stream | `backend/src/inkstave/modules/discussion/routes/events.py` | `role_for` is not `None`, re-checked at each keep-alive. Token in the query string | 404 |
 | Compile job | `_settle_if_unauthorized` in `backend/src/inkstave/modules/compile/queue/jobs.py` | Re-checks `COMPILE` for `requested_by` at pickup | Compile fails with a stored reason |
 | SyncTeX, problems | `backend/src/inkstave/modules/compile/routes/synctex.py`, `backend/src/inkstave/modules/compile/routes/logparse.py` | `PROJECT_READ` | 404 |
