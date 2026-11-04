@@ -45,7 +45,9 @@ export class DashboardPage {
   }
 
   async createProject(name: string): Promise<void> {
+    // "New project" is a menu: a blank project or an Overleaf template (spec 120).
     await this.page.getByRole("button", { name: /new project/i }).click();
+    await this.page.getByRole("menuitem", { name: "Blank project" }).click();
     await this.page.getByLabel("Project name").fill(name);
     await this.page.getByRole("button", { name: "Create" }).click();
   }
@@ -237,7 +239,10 @@ export class AgentPanel {
   constructor(private readonly page: Page) {}
 
   async open(): Promise<void> {
-    await this.page.getByRole("button", { name: "Agent" }).click();
+    // The panel remembers it was open (per project, in localStorage), so after a reload it may already be.
+    if (await this.composer().isVisible()) return;
+    // Exact: the open panel has its own "Agent" tab and "… the agent window" buttons (spec 117).
+    await this.page.getByRole("button", { name: "Agent", exact: true }).click();
     // Radix names the dialog after its title, so wait on the composer instead.
     await expect(this.composer()).toBeVisible();
   }
