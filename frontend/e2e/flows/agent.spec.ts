@@ -66,6 +66,7 @@ test("agent streams, shows tool activity, and applies a change reviewed in the t
   await editor.openFile("main.tex");
   await editor.waitEditable();
   await agent.open();
+  await agent.openPreviousSession();
   await expect(page.getByText("Applied", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(agent.reviewButton()).toHaveCount(0);
 });

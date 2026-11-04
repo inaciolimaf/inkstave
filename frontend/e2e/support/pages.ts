@@ -256,6 +256,12 @@ export class AgentPanel {
     await this.page.getByLabel("Send message").click();
   }
 
+  /** A reload starts a new conversation; this reopens the previous one from the Sessions menu. */
+  async openPreviousSession(): Promise<void> {
+    await this.page.getByRole("button", { name: "Sessions" }).click();
+    await this.page.getByRole("menuitem").filter({ hasNotText: "New chat" }).first().click();
+  }
+
   reviewButton(): Locator {
     return this.page.getByRole("button", { name: /Review changes/ });
   }
