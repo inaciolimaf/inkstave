@@ -1,0 +1,80 @@
+/** Strings for the insert tools (the `insert` namespace, spec 114): the Insert menu, symbols, tables, equations. */
+const dict = {
+  menu: {
+    trigger: "Insert",
+    symbol: "Symbol…",
+    table: "Table…",
+    equation: "Equation…",
+  },
+  packageHint: {
+    needs: "Needs {{line}}",
+    add: "Add it",
+    noMainDocument: "Add {{line}} before \\begin{document} in the main document.",
+  },
+  symbols: {
+    title: "Symbols",
+    description: "Search by name or command, then choose a symbol to insert it at the cursor.",
+    search: "Search symbols",
+    placeholder: "Search, for example alpha",
+    tabs: "Symbol categories",
+    all: "All",
+    recent: "Recent",
+    categories: {
+      greek: "Greek",
+      relations: "Relations",
+      operators: "Operators",
+      arrows: "Arrows",
+      sets: "Sets and logic",
+      delimiters: "Delimiters",
+      accents: "Accents",
+      misc: "Misc",
+    },
+    empty: "No symbol matches “{{query}}”.",
+    packageTip: "Needs the {{name}} package",
+  },
+  table: {
+    title: "Table",
+    description:
+      "Fill the grid, then insert the table code at the cursor. Paste from a spreadsheet to fill it.",
+    style: "Rules",
+    styles: {
+      booktabs: "Booktabs",
+      grid: "Grid",
+    },
+    placement: "Float placement",
+    caption: "Caption",
+    label: "Label",
+    header: "Header row",
+    cellsAreLatex: "Cells contain LaTeX",
+    preview: "LaTeX code",
+    columnAlign: "Alignment of column {{column}}",
+    columnWidth: "Width of column {{column}}",
+    align: {
+      l: "Left",
+      c: "Centre",
+      r: "Right",
+      p: "Paragraph",
+    },
+    removeColumn: "Remove column {{column}}",
+    removeRow: "Remove row {{row}}",
+    cellLabel: "Row {{row}}, column {{column}}",
+    rows: "Rows",
+    addRow: "Add row",
+    addColumn: "Add column",
+    cancel: "Cancel",
+    insert: "Insert table",
+  },
+  equation: {
+    title: "Equation",
+    description: "Edit the formula, then save it back to the document.",
+    loading: "Loading the equation editor…",
+    fallbackLabel: "LaTeX of the equation",
+    display: "Display (centred)",
+    keyboard: "Virtual keyboard",
+    cancel: "Cancel",
+    save: "Save",
+  },
+};
+
+export type Dict = typeof dict;
+export default dict;

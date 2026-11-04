@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 
-/** Key → handler. `mod+s` means Ctrl or Cmd plus S; a bare key is ignored while typing. */
+/**
+ * Key → handler. `mod+s` means Ctrl or Cmd plus S; `mod+shift+s` means the same with Shift and falls back to
+ * `mod+s` when it is not mapped. A bare key is ignored while typing.
+ */
 export type ShortcutMap = Record<string, (event: KeyboardEvent) => void>;
 
 const MOD_PREFIX = "mod+";
@@ -12,7 +15,10 @@ function isTextField(target: EventTarget | null): boolean {
 
 function handlerFor(shortcuts: ShortcutMap, event: KeyboardEvent) {
   const key = event.key.toLowerCase();
-  if (event.metaKey || event.ctrlKey) return shortcuts[`${MOD_PREFIX}${key}`];
+  if (event.metaKey || event.ctrlKey) {
+    const withShift = event.shiftKey ? shortcuts[`${MOD_PREFIX}shift+${key}`] : undefined;
+    return withShift ?? shortcuts[`${MOD_PREFIX}${key}`];
+  }
   return isTextField(event.target) ? undefined : shortcuts[key];
 }
 

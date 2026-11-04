@@ -16,6 +16,12 @@ Those were not fixed, because the documentation pass changed no code.
 modules, and no domain-event mechanism exists yet. `backend/tests/unit/test_architecture.py` only lets the
 count go down.
 
+### Editor tools
+
+**The package hint reads the saved main document.** `PackageHint` checks the main document as the server has it, so a
+`\usepackage` typed but not yet saved is not seen, and the hint can ask for a package already loaded. *Why:* the open
+document's live text is in the collaboration session, which the workspace does not expose to the insert tools.
+
 ### Frontend standard
 
 **`flushBeforeCompile` does nothing.** `EditorWorkspace` never assigns `flushRef`, so a compile or agent message

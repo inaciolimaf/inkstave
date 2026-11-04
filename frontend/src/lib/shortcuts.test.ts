@@ -16,6 +16,19 @@ describe("useShortcuts", () => {
     expect(notPrevented).toBe(false);
   });
 
+  it("tells mod+shift+key from mod+key and falls back to mod+key without a shift binding", () => {
+    const plain = vi.fn();
+    const shifted = vi.fn();
+    renderHook(() => useShortcuts({ "mod+y": plain, "mod+shift+y": shifted, "mod+s": plain }));
+    fireEvent.keyDown(window, { key: "Y", ctrlKey: true, shiftKey: true });
+    expect(shifted).toHaveBeenCalledOnce();
+    expect(plain).not.toHaveBeenCalled();
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true });
+    expect(plain).toHaveBeenCalledOnce();
+    fireEvent.keyDown(window, { key: "S", ctrlKey: true, shiftKey: true });
+    expect(plain).toHaveBeenCalledTimes(2);
+  });
+
   it("fires a mod shortcut from inside a text field", () => {
     const save = vi.fn();
     renderHook(() => useShortcuts({ "mod+s": save }));
