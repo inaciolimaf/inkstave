@@ -165,7 +165,8 @@ writes state, bumps `seq` and deletes log rows up to `last_update_id` in one tra
 - `release` at refcount zero (forced);
 - `flush_open_project_docs`, from the compile route, the agent run route and the zip export route, which calls
   `DocumentManager.flush` for this project's in-memory documents and swallows errors;
-- the debounced `_delayed_flush`, which does not work today (see Points of attention).
+- the debounced `_delayed_flush`, `COLLAB_TEXT_FLUSH_DEBOUNCE_MS` after an update. It runs inside `flush_task`, so
+  `_do_flush_text` cancels a pending `flush_task` only when it is not the current task.
 
 `flush_open_project_docs` only sees rooms in its own process.
 
@@ -213,7 +214,7 @@ retrying and goes to `closed`.
 | Appending does not read the log | `backend/tests/integration/test_collab_store.py::test_append_is_constant_cost` |
 | The last release persists the final edit | `backend/tests/integration/test_collab_refactor.py::test_flush_on_release_persists_final_edit` |
 | A forced flush writes content and emits no CRDT update | `backend/tests/integration/test_collab_manager.py::test_flush_bridges_text_to_spec13`, `backend/tests/integration/test_collab_manager.py::test_bridge_write_does_not_create_crdt_update` |
-| The debounced flush writes content | no dedicated test, and it does not (see Points of attention) |
+| The debounced flush writes content while the room stays open | `backend/tests/unit/test_collab_debounced_flush.py::test_the_debounced_flush_writes_the_text_while_the_room_stays_open` |
 | An empty CRDT seeds from existing content | `backend/tests/integration/test_collab_manager.py::test_seeds_crdt_from_spec13_content` |
 | Text frame or oversize frame closes 4400; oversize update closes 4400 | `backend/tests/integration/test_collab_ws_api.py::test_text_frame_closes_4400`, `backend/tests/integration/test_collab_ws_api.py::test_oversize_frame_closes_4400`, `backend/tests/unit/test_collab_ws_dispatch.py::test_oversize_update_closes_4400` |
 | Message flood closes 4429 | `backend/tests/integration/test_collab_ws_api.py::test_rate_limit_closes_4429` |
@@ -276,14 +277,6 @@ installed uvicorn and `websockets`: "server rejected WebSocket connection: HTTP 
 so `TERMINAL_CLOSE_CODES` in the provider never matches these and it keeps reconnecting with backoff, up to its
 cap, forever. The tests use `backend/tests/collab_ws_harness.py`, which surfaces the ASGI close code directly and
 hides this. Only 4400, 4408 and 4429 are sent after accept.
-
-**The debounced text flush never writes.** `_do_flush_text` cancels `entry.flush_task` when it is not done, and on
-the debounced path that task is the current one. The cancellation lands at the first real suspension inside
-`ContentBridge.flush_text`, after `dirty_text` was already cleared. Reproduced with a fake bridge that suspends:
-no write, task cancelled, `dirty_text` false. So `COLLAB_TEXT_FLUSH_DEBOUNCE_MS` has no useful effect, and
-`documents.content` stays stale while a room is open until the last client leaves or a `flush_open_project_docs`
-caller runs. Every test flushes explicitly or uses a debounce of 100000 ms, so none notices. The CRDT log is
-unaffected.
 
 **Multiple instances are not safe for the document state, despite ADR 0029 and the admin guide.** Redis
 relays messages to browsers only: `_make_forwarder` calls `local_broadcast` and never applies the update to the

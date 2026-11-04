@@ -272,8 +272,10 @@ class DocumentManager:
             text = entry.ydoc.text
             seq = entry.seq
             entry.dirty_text = False
-            if entry.flush_task is not None and not entry.flush_task.done():
-                entry.flush_task.cancel()
+            pending = entry.flush_task
+            # The timer calls this from inside its own task: cancelling it here would abort the write below.
+            if pending is not None and pending is not asyncio.current_task() and not pending.done():
+                pending.cancel()
             entry.flush_task = None
         await self._bridge.flush_text(document_id, text)
         # Record that spec-13 content is current as of this seq, so a recovered
