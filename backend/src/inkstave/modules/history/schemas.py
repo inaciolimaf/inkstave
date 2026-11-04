@@ -27,6 +27,7 @@ class VersionEntry(BaseModel):
     op_count: int
     size: int
     labels: list[LabelBrief]
+    origin: str | None = None  # "git-push" for a change that came in through Git (spec 121)
 
 
 class VersionsResponse(BaseModel):

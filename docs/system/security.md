@@ -18,6 +18,8 @@ in [compile.md](compile.md); agent safety is in [agent.md](agent.md). Specs 52, 
 | `backend/src/inkstave/modules/auth/throttling/limiter.py` | `client_ip`, scope limiter, `hit_window` |
 | `backend/src/inkstave/modules/auth/throttling/policies.py` | Named-policy limiter with `X-RateLimit-*` |
 | `backend/src/inkstave/modules/auth/throttling/login_attempts.py` | `LoginThrottle` |
+| `backend/src/inkstave/modules/git/auth/access.py` | Git token authentication and its failure limiter (spec 121) |
+| `backend/src/inkstave/modules/git/auth/tokens.py` | Git access tokens: format, SHA-256 storage, `authenticate` |
 | `backend/src/inkstave/modules/admin/provisioning/config_check.py` | `validate_config` for `check-config` and `doctor` |
 | `backend/src/inkstave/modules/projects/content/files.py` | Upload validation |
 | `scripts/audit.sh`, `scripts/audit-allowlist.txt` | Dependency audit |
@@ -66,7 +68,8 @@ Several layers, outermost first.
 | Layer | Limit | Default | Response |
 |---|---|---|---|
 | nginx, `location /api/` | `client_max_body_size` | 50 MiB | nginx 413 |
-| `BodySizeLimitMiddleware`, path ending `/files` or `/import` | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `{"error":{"code":"payload_too_large",...}}` |
+| `BodySizeLimitMiddleware`, path ending `/files`, `/import` or `/git-upload-pack` | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `{"error":{"code":"payload_too_large",...}}` |
+| `BodySizeLimitMiddleware`, path ending `/git-receive-pack` | `GIT_MAX_PUSH_BYTES` | 50 MiB | same (spec 121; nginx's `client_max_body_size` must be at least this) |
 | `BodySizeLimitMiddleware`, any other path | `MAX_REQUEST_BODY_BYTES` | 1 MiB | same |
 | File upload, streaming | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `file_too_large` |
 | Project import, streaming | `IMPORT_MAX_ZIP_BYTES` | 50 MiB | see [projects.md](projects.md) |
@@ -91,12 +94,23 @@ All fail open: a limiter outage allows the request.
 | `limiter.rate_limit(scope)` | `ratelimit:<scope>:<id>` | IP, or IP plus e-mail for `register`, `verify_email`, `magic_link` | Auth routes | warning |
 | `policies.rate_limit_named(name)` | `rl:<name>:<id>` | user, else IP | `compile`, `compile_daily`, `agent`, `upload` | warning and `inkstave_rate_limit_errors` |
 | `LoginThrottle` | `ratelimit:login:ip:<ip>`, `ratelimit:login:email:<email>` | IP and e-mail, wrong passwords only | Login | warning and metric |
+| `git.access` | `rl:git_auth:<ip>` | IP, failed Git token attempts only | Git Smart HTTP routes (spec 121) | none: see below |
 
 The change-password limit is a fourth call site in `backend/src/inkstave/modules/auth/routes/users.py`.
 It uses `check_rate_limit` directly. Details of the auth limits are in [auth.md](auth.md). The agent
 has further per-user and per-project budgets in [agent.md](agent.md).
 
 A blocked request gets 429 `rate_limited` with `Retry-After`.
+
+The Git token limiter is the exception to fail-open: it does not catch Redis errors, so a Redis outage
+answers Git requests with 500. The check runs before anything is written, so nothing changes.
+
+### Git access tokens
+
+A personal access token (`ink_` plus URL-safe random characters, spec 121) authenticates Git's HTTP Basic
+password on the `/api/v1/git/projects/{id}.git` routes only. The database keeps its SHA-256 hash; the raw value
+is shown once. Revocation and expiry take effect at the next request. Session JWTs are refused on the Git routes,
+and Git tokens are refused everywhere else. Each user holds at most 20 active tokens. Details: [git.md](git.md).
 
 ### Client IP resolution
 
@@ -229,6 +243,8 @@ as Coolify. A standalone run needs a `ports:` entry added.
 | `RATE_LIMIT_ENABLED` | `true` | Master switch for all limiters |
 | `RATE_LIMIT_COMPILE`, `RATE_LIMIT_COMPILE_DAILY` | `20/60`, `30/86400` | Per user |
 | `RATE_LIMIT_AGENT`, `RATE_LIMIT_UPLOAD` | `30/60`, `60/60` | Per user |
+| `RATE_LIMIT_GIT_AUTH` | `20/300` | Failed Git token attempts per IP ([git.md](git.md)) |
+| `GIT_ENABLED`, `GIT_MAX_PUSH_BYTES` | `false`, `52428800` | Git access, its push cap ([git.md](git.md)) |
 | `TRUST_PROXY_HEADERS` | `false` | Honour the proxy header |
 | `TRUSTED_PROXY_HEADER` | `X-Forwarded-For` | Which header |
 | `METRICS_PUBLIC` | `true` | See [observability.md](observability.md) |

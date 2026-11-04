@@ -1014,6 +1014,171 @@
         "title": "ForwardResult",
         "type": "object"
       },
+      "GitTokenCreate": {
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional expiry, in the future.",
+            "title": "Expires At"
+          },
+          "name": {
+            "description": "A label for the token, such as the machine.",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "GitTokenCreate",
+        "type": "object"
+      },
+      "GitTokenCreated": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "The first characters of the token, to tell tokens apart.",
+            "title": "Prefix",
+            "type": "string"
+          },
+          "token": {
+            "description": "The token itself. It is shown once and cannot be retrieved again.",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "token"
+        ],
+        "title": "GitTokenCreated",
+        "type": "object"
+      },
+      "GitTokenList": {
+        "properties": {
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/GitTokenRead"
+            },
+            "title": "Tokens",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tokens"
+        ],
+        "title": "GitTokenList",
+        "type": "object"
+      },
+      "GitTokenRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "The first characters of the token, to tell tokens apart.",
+            "title": "Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "created_at",
+          "last_used_at",
+          "expires_at"
+        ],
+        "title": "GitTokenRead",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2181,6 +2346,19 @@
         "title": "ProposedFileOpOut",
         "type": "object"
       },
+      "PublicConfig": {
+        "properties": {
+          "git_enabled": {
+            "title": "Git Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "git_enabled"
+        ],
+        "title": "PublicConfig",
+        "type": "object"
+      },
       "RefreshRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2948,6 +3126,17 @@
             "title": "Op Count",
             "type": "integer"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
           "size": {
             "title": "Size",
             "type": "integer"
@@ -3661,6 +3850,277 @@
         "summary": "Resend the account-verification email",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "operationId": "public_config_api_v1_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Optional features this server runs",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/git/projects/{project_id}.git/git-receive-pack": {
+      "post": {
+        "operationId": "receive_pack_route_api_v1_git_projects__project_id__git_git_receive_pack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Git push: apply a pushed main branch",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/api/v1/git/projects/{project_id}.git/git-upload-pack": {
+      "post": {
+        "operationId": "upload_pack_route_api_v1_git_projects__project_id__git_git_upload_pack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Git fetch: pack negotiation and transfer",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/api/v1/git/projects/{project_id}.git/info/refs": {
+      "get": {
+        "operationId": "info_refs_api_v1_git_projects__project_id__git_info_refs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "service",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Git discovery: the refs for a service",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/api/v1/git/tokens": {
+      "get": {
+        "operationId": "list_all_api_v1_git_tokens_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitTokenList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the caller's Git access tokens",
+        "tags": [
+          "git"
+        ]
+      },
+      "post": {
+        "operationId": "create_api_v1_git_tokens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitTokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitTokenCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a Git access token",
+        "tags": [
+          "git"
+        ]
+      }
+    },
+    "/api/v1/git/tokens/{token_id}": {
+      "delete": {
+        "operationId": "revoke_api_v1_git_tokens__token_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Token Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke a Git access token",
+        "tags": [
+          "git"
         ]
       }
     },

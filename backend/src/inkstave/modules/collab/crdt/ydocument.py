@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from pycrdt import Doc, Text
@@ -68,6 +68,25 @@ class YDocument:
                     self._text.clear()
                 if new_text:
                     self._text.insert(0, new_text)
+        return self._doc.get_update(before)
+
+    def apply_edits(self, edits: Sequence[tuple[int, int, str]]) -> bytes:
+        """Apply ``(start, end, text)`` character edits to the shared text in one transaction (spec 121).
+
+        Offsets are character positions in the text as it is before the call. pycrdt counts UTF-8
+        bytes, so each position is converted against that text, and the edits run from the end so
+        an earlier position is not shifted by a later one. Returns the produced update.
+        """
+        before = self._doc.get_state()
+        current = str(self._text)
+        with self._doc.transaction():
+            for start, end, replacement in sorted(edits, key=lambda edit: edit[0], reverse=True):
+                byte_start = len(current[:start].encode("utf-8"))
+                byte_end = len(current[:end].encode("utf-8"))
+                if byte_end > byte_start:
+                    del self._text[byte_start:byte_end]
+                if replacement:
+                    self._text.insert(byte_start, replacement)
         return self._doc.get_update(before)
 
     def observe(self, callback: Callable[[bytes, str | None], None]) -> None:

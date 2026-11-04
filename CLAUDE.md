@@ -118,7 +118,7 @@ backend/
   src/inkstave/
     core/           settings, database, HTTP middleware, errors, logging, observability
     infra/          Redis, cache, object storage, mailer
-    modules/        admin, agent, auth, collab, compile, history, notifications, projects
+    modules/        admin, agent, auth, collab, compile, git, history, notifications, projects
     app.py router.py worker.py cli.py main.py models.py    composition root
   migrations/       Alembic
   tests/            unit/, integration/, golden/, smoke/, agent_evals/, fixtures/, factories/

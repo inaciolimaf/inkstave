@@ -56,14 +56,14 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/auth` | Session context, guards, theme application, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, `useApplyTheme`, the 8 page components | none |
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
 | `frontend/src/modules/diff-review` | Hunk review dialog, rebase, CRDT apply | `DiffReviewDialog`, `createEditorBridge`, type `DocumentBridge` | collab |
-| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences | `EditorWorkspace` | every other module except landing |
+| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, the Git clone dialog (spec 121) | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |
 | `frontend/src/modules/landing` | Public marketing page | `LandingPage` | auth |
 | `frontend/src/modules/notifications` | Bell, inbox list | `NotificationsBell` | none |
 | `frontend/src/modules/pdf-preview` | Compile button, PDF viewer, log, problems, SyncTeX | `PreviewPane`, `useProblems`, `useSyncTex`, types `Problem`, `ProblemSeverity` | none |
 | `frontend/src/modules/projects` | Project list, dialogs, zip import, download | `ProjectsPage`, `getProject`, `useDownloadProject` | auth, notifications |
-| `frontend/src/modules/settings` | Settings sections, e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth |
+| `frontend/src/modules/settings` | Settings sections, Git access tokens (spec 121), e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth |
 | `frontend/src/modules/sharing` | Share dialog, invites, permissions | `ShareDialog`, `AcceptInvitePage`, `usePermissions`, `hasCapability`, `isReadOnly` | auth |
 
 `editor` is the hub: it depends on 11 modules and nothing depends on it except `frontend/src/App.tsx` and

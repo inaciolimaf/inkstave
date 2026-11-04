@@ -92,6 +92,8 @@ class HistoryUpdate(UUIDPrimaryKeyMixin, Base):
     payload_blob_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload_size: Mapped[int] = mapped_column(Integer, nullable=False)
     op_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    # Where the change came from when it was not an editor's keystrokes: "git-push" (spec 121), or NULL.
+    origin: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         Index("uq_history_updates_doc_version", "doc_id", "version", unique=True),

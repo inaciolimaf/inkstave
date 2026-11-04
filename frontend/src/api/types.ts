@@ -266,6 +266,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Optional features this server runs */
+        get: operations["public_config_api_v1_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/git/projects/{project_id}.git/git-receive-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Git push: apply a pushed main branch */
+        post: operations["receive_pack_route_api_v1_git_projects__project_id__git_git_receive_pack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/git/projects/{project_id}.git/git-upload-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Git fetch: pack negotiation and transfer */
+        post: operations["upload_pack_route_api_v1_git_projects__project_id__git_git_upload_pack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/git/projects/{project_id}.git/info/refs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Git discovery: the refs for a service */
+        get: operations["info_refs_api_v1_git_projects__project_id__git_info_refs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/git/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's Git access tokens */
+        get: operations["list_all_api_v1_git_tokens_get"];
+        put?: never;
+        /** Create a Git access token */
+        post: operations["create_api_v1_git_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/git/tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a Git access token */
+        delete: operations["revoke_api_v1_git_tokens__token_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invites/{token}": {
         parameters: {
             query?: never;
@@ -1879,6 +1982,77 @@ export interface components {
             /** Boxes */
             boxes: components["schemas"]["SyncTexBox"][];
         };
+        /** GitTokenCreate */
+        GitTokenCreate: {
+            /**
+             * Expires At
+             * @description Optional expiry, in the future.
+             */
+            expires_at?: string | null;
+            /**
+             * Name
+             * @description A label for the token, such as the machine.
+             */
+            name: string;
+        };
+        /** GitTokenCreated */
+        GitTokenCreated: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Prefix
+             * @description The first characters of the token, to tell tokens apart.
+             */
+            prefix: string;
+            /**
+             * Token
+             * @description The token itself. It is shown once and cannot be retrieved again.
+             */
+            token: string;
+        };
+        /** GitTokenList */
+        GitTokenList: {
+            /** Tokens */
+            tokens: components["schemas"]["GitTokenRead"][];
+        };
+        /** GitTokenRead */
+        GitTokenRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Used At */
+            last_used_at: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Prefix
+             * @description The first characters of the token, to tell tokens apart.
+             */
+            prefix: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2380,6 +2554,11 @@ export interface components {
              */
             status: "proposed" | "applied" | "rejected" | "superseded";
         };
+        /** PublicConfig */
+        PublicConfig: {
+            /** Git Enabled */
+            git_enabled: boolean;
+        };
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
@@ -2710,6 +2889,8 @@ export interface components {
             labels: components["schemas"]["LabelBrief"][];
             /** Op Count */
             op_count: number;
+            /** Origin */
+            origin?: string | null;
             /** Size */
             size: number;
             /**
@@ -3246,6 +3427,203 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MessageResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_config_api_v1_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicConfig"];
+                };
+            };
+        };
+    };
+    receive_pack_route_api_v1_git_projects__project_id__git_git_receive_pack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_pack_route_api_v1_git_projects__project_id__git_git_upload_pack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    info_refs_api_v1_git_projects__project_id__git_info_refs_get: {
+        parameters: {
+            query?: {
+                service?: string | null;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_all_api_v1_git_tokens_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitTokenList"];
+                };
+            };
+        };
+    };
+    create_api_v1_git_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GitTokenCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitTokenCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_api_v1_git_tokens__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

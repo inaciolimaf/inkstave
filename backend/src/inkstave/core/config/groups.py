@@ -320,6 +320,18 @@ class ExportSettingsMixin:
     export_async_enabled: bool = False  # over-threshold → ARQ artifact instead of 413 (optional)
 
 
+class GitSettingsMixin:
+    """Git access to projects over Smart HTTP (spec 121). Off unless ``GIT_ENABLED`` is set."""
+
+    git_enabled: bool = False  # serve the Git routes and show the UI
+    # Bare repositories live here, one per project. Must be a persistent volume shared by all replicas.
+    git_repos_root: str = "/data/git"
+    git_max_push_bytes: int = 52_428_800  # largest accepted pack (50 MiB)
+    git_operation_timeout_s: int = Field(default=60, gt=0)  # deadline per Git operation and lock timeout
+    # Failed token attempts per IP ("<limit>/<window_seconds>").
+    rate_limit_git_auth: str = "20/300"
+
+
 class CollabSettingsMixin:
     """SyncTeX, log parsing, CRDT document model and the collab WebSocket (specs 26–29)."""
 

@@ -46,6 +46,11 @@ _HANDLER_GUARDED: frozenset[str] = frozenset(
         f"{_AGENT}/sessions/{{session_id}}/file-ops",
         f"{_AGENT}/sessions/{{session_id}}/file-ops/{{op_id}}/apply",
         f"{_AGENT}/sessions/{{session_id}}/file-ops/{{op_id}}/reject",
+        # Git Smart HTTP (spec 121): authorized by a personal access token in HTTP Basic, in the handler.
+        # The receive route checks DOC_WRITE and FILE_WRITE; the two read routes check DOC_READ.
+        "/api/v1/git/projects/{project_id}.git/info/refs",
+        "/api/v1/git/projects/{project_id}.git/git-upload-pack",
+        "/api/v1/git/projects/{project_id}.git/git-receive-pack",
     }
 )
 

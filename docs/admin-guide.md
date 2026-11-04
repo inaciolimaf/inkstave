@@ -162,6 +162,11 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `RATE_LIMIT_VERIFY_EMAIL` | No | `5/3600` | email verification (re)send cap, per email+IP | backend |
 | `RATE_LIMIT_MAGIC_LINK` | No | `5/3600` | magic-link request cap, per email+IP | backend |
 | `RATE_LIMIT_RESET_PASSWORD` | No | `10/3600` | reset-password callback cap, per IP | backend |
+| `GIT_ENABLED` | No | `false` | serve Git Smart HTTP (`/api/v1/git/projects/{id}.git`) and show the Git UI (spec 121); off keeps the routes at 404 | backend |
+| `GIT_REPOS_ROOT` | No | `/data/git` | directory of the bare Git repositories, one per project; a persistent volume shared by every backend replica | backend |
+| `GIT_MAX_PUSH_BYTES` | No | `52428800` | largest accepted push, in bytes (50 MiB); nginx `client_max_body_size` for `/api/` must be at least this | backend |
+| `GIT_OPERATION_TIMEOUT_S` | No | `60` | deadline per Git operation and the per-project lock timeout (seconds) | backend |
+| `RATE_LIMIT_GIT_AUTH` | No | `20/300` | failed Git access-token attempts per client IP, `<limit>/<window_seconds>` | backend |
 | `TRUSTED_PROXY_HEADER` | No | `X-Forwarded-For` | source of the real client IP | backend, collab/websocket |
 | `WS_AUTH_CLOSE_CODE` | No | `4401` | WS unauthorized close code (contract, spec 29) | collab/websocket |
 | `MAX_DOCUMENT_BYTES` | No | `2000000` | max UTF-8 bytes of a single document | backend, collab/websocket |
@@ -358,6 +363,28 @@ collaboration (see [known gaps](known-gaps.md#data-correctness)). The compile co
 (`COMPILE_MAX_CONCURRENT_PER_*`) and agent limits are per-user/project, not
 per-replica.
 
+## Git access (spec 121)
+
+Writers can clone a project with Git and push changes back (`git clone https://<host>/api/v1/git/projects/<project_id>.git`).
+The password is a personal access token created in Settings; the user name is ignored. It is off by default.
+
+To turn it on:
+
+1. Add a persistent volume for the bare repositories and mount it at `GIT_REPOS_ROOT`
+   (`/data/git`) in the backend and worker services. The shipped compose files do not
+   mount it (Docker files are not changed by spec 121), so add it in your own override file.
+   Every backend replica must mount the same volume.
+2. Set `GIT_ENABLED=true`.
+3. Make sure nginx accepts pushes as large as `GIT_MAX_PUSH_BYTES`: `client_max_body_size`
+   on `/api/` in `infra/nginx/default.conf` is 50 MB, which matches the default cap. Raise both
+   together if you raise the cap.
+
+The repositories are derived data. If the directory is lost, the next Git request recreates it
+from the project as a single commit: the Git history is lost, the project is not. Pushes are
+checked before anything is written and refused whole when a file breaks a rule (name, type,
+size, UTF-8, node count). A push must build on the current project: a web edit that was not pulled
+makes the push a refused non-fast-forward ("Pull first").
+
 ## Backups & restore
 
 - **Postgres** (`pgdata` volume) — the source of truth. Back up with
@@ -366,8 +393,9 @@ per-replica.
 - **Uploaded files** (`uploads` volume, local backend) — back up the volume (or
   use the S3 backend and rely on its durability).
 - **Safe to lose** — the `tectonic-cache` volume (re-downloads on demand), Redis
-  (broker/cache; queued jobs are best-effort), and the ephemeral per-compile
-  workdirs (never put these on a shared volume).
+  (broker/cache; queued jobs are best-effort), the ephemeral per-compile
+  workdirs (never put these on a shared volume), and `GIT_REPOS_ROOT` (rebuilt from the
+  projects on the next Git request; see [Git access](#git-access-spec-121)).
 
 ## LaTeX package management
 
