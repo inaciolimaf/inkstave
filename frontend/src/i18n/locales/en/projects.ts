@@ -62,6 +62,12 @@ const dict = {
     title: "Create project",
     description: "Give your new project a name.",
     placeholder: "My Paper",
+    spelling: {
+      label: "Spell check",
+      enUS: "English",
+      ptBR: "Portuguese (Brazil)",
+      hint: "You can change this later in the editor menu (… → Spelling).",
+    },
   },
   rename: {
     title: "Rename project",

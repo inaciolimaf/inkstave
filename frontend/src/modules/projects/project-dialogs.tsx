@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -29,7 +29,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+import { SpellcheckLanguageField } from "./spellcheck-language-field";
 import type { Project } from "./types";
+import { defaultSpellcheckLanguage } from "./use-projects";
 import { useCreateProject, useDeleteProject, useLeaveProject, useRenameProject } from "./use-projects";
 
 function makeNameSchema(t: TFunction<"projects">) {
@@ -48,6 +50,7 @@ export function CreateProjectDialog({
 }) {
   const { t } = useTranslation("projects");
   const create = useCreateProject();
+  const [spelling, setSpelling] = useState(defaultSpellcheckLanguage);
   const nameSchema = useMemo(() => makeNameSchema(t), [t]);
   const form = useForm<NameValues>({
     resolver: zodResolver(nameSchema),
@@ -56,12 +59,15 @@ export function CreateProjectDialog({
   });
 
   useEffect(() => {
-    if (open) form.reset({ name: "" });
+    if (open) {
+      form.reset({ name: "" });
+      setSpelling(defaultSpellcheckLanguage());
+    }
   }, [open, form]);
 
   const onSubmit = async ({ name }: NameValues) => {
     try {
-      await create.mutateAsync(name);
+      await create.mutateAsync({ name, spellcheckLanguage: spelling });
       onOpenChange(false);
     } catch {
       // Error toast surfaced by the mutation; keep the dialog open.
@@ -90,6 +96,7 @@ export function CreateProjectDialog({
                 </FormItem>
               )}
             />
+            <SpellcheckLanguageField value={spelling} onChange={setSpelling} />
             <DialogFooter>
               <Button
                 type="submit"

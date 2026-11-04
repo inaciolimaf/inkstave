@@ -58,6 +58,26 @@ describe("CreateProjectDialog", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Hello", spellcheck_language: "en-US" });
     expect(toast.success).toHaveBeenCalledWith("Project created");
   });
+
+  it("sends the spell-check language the user picks and says it can change later", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "new", name: "Artigo", owner_id: "u", root_doc_id: null }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    renderWithProviders(<CreateProjectDialog open onOpenChange={vi.fn()} />);
+
+    expect(screen.getByRole("radio", { name: "English" })).toBeChecked();
+    expect(screen.getByText(/change this later/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "Portuguese (Brazil)" }));
+    await userEvent.type(screen.getByLabelText("Project name"), "Artigo");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init?.body as string)).toEqual({ name: "Artigo", spellcheck_language: "pt-BR" });
+  });
 });
 
 describe("RenameProjectDialog", () => {

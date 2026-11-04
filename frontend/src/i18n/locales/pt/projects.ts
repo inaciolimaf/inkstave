@@ -65,6 +65,12 @@ const dict: Dict = {
     title: "Criar projeto",
     description: "Dê um nome ao seu novo projeto.",
     placeholder: "Meu Artigo",
+    spelling: {
+      label: "Ortografia",
+      enUS: "Inglês",
+      ptBR: "Português (Brasil)",
+      hint: "Você pode mudar isso depois no menu do editor (… → Ortografia).",
+    },
   },
   rename: {
     title: "Renomear projeto",

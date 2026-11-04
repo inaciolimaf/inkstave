@@ -306,8 +306,10 @@ or sends audio, and it never calls `getUserMedia`. The button is absent where th
 
 Spec 113. The spelling language belongs to the project: `projects.spellcheck_language` is `off`, `en-US` or
 `pt-BR`, and any member who may write documents changes it with `PATCH /api/v1/projects/{id}/settings`.
-`useSpellLanguage` reads it from the project query, which the editor bar and the editor share. A new project
-takes the creator's interface language (`createProject` in `frontend/src/modules/projects/use-projects.ts`).
+`useSpellLanguage` reads it from the project query, which the editor bar and the editor share. The "Create
+project" dialog asks for it (English or Portuguese, `spellcheck-language-field.tsx`), preselects the creator's interface
+language (`defaultSpellcheckLanguage` in `frontend/src/modules/projects/use-projects.ts`) and says the editor menu
+changes it later.
 
 1. `useSpellcheck(projectId, documentId)` builds a `SpellcheckBinding` for the open document. It is null while the
    language is `off` or the personal dictionary has not loaded, and the dictionary is fetched only while a language is

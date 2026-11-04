@@ -284,8 +284,8 @@ pattern marks a file reference, which `missing_file` checks against the project'
 ## Spell-check language
 
 Spec 113. `projects.spellcheck_language` is `off`, `en-US` or `pt-BR`, with a check constraint, and
-existing rows get `en-US`. `ProjectRead` returns it; `ProjectCreate` accepts it, so the client sends the creator's
-interface language. The check itself runs in the browser (see `docs/system/frontend.md`, Spell check); the server
+existing rows get `en-US`. `ProjectRead` returns it; `ProjectCreate` accepts it, so the client sends the language picked
+in the "Create project" dialog (the creator's interface language unless changed). The check itself runs in the browser (see `docs/system/frontend.md`, Spell check); the server
 only stores the choice and never sees the text.
 
 ## Settings
