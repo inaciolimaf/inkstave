@@ -15,6 +15,8 @@ export interface WorkspaceOutline {
   panel: ReactNode;
   /** The panel pinned left of the text, on a wide desktop when the writer pinned it. */
   pinnedColumn: ReactNode;
+  /** The project index, which the LaTeX completion reads too (spec 112). */
+  index: ProjectIndex;
 }
 
 /**
@@ -69,5 +71,5 @@ export function useWorkspaceOutline({
     pinned && wideDesk ? (
       <div className="h-full w-56 shrink-0 border-r border-control-edge">{panel}</div>
     ) : null;
-  return { panel, pinnedColumn };
+  return { panel, pinnedColumn, index };
 }

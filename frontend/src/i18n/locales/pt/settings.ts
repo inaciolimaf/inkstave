@@ -24,6 +24,7 @@ const dict: Dict = {
     keymapDefault: "Padrão",
     keymapVim: "Vim",
     keymapEmacs: "Emacs",
+    autocomplete: "Autocompletar",
   },
   email: {
     title: "E-mail",

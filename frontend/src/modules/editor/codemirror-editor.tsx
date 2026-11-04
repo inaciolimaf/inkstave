@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { createCompartments, editorExtensions, type ViewCallbacks } from "./codemirror-extensions";
+import { useCompletionData } from "./completion/completion-context";
 import type { EditorSettings } from "./types";
 import { useLiveExtensions } from "./use-live-extensions";
 
@@ -41,6 +42,7 @@ export function CodeMirrorEditor({
   const labelRef = useRef(editorLabel);
   labelRef.current = editorLabel;
   const compartments = useRef(createCompartments());
+  const completion = useCompletionData();
 
   // Create the view exactly once; later changes go through compartments/dispatch.
   useEffect(() => {
@@ -55,6 +57,7 @@ export function CodeMirrorEditor({
         dark,
         editable,
         label: labelRef.current,
+        completion,
       }),
     });
     const view = new EditorView({ state, parent: hostRef.current! });
@@ -83,7 +86,13 @@ export function CodeMirrorEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc]);
 
-  useLiveExtensions(viewRef, compartments.current, { settings, dark, editable, label: editorLabel });
+  useLiveExtensions(viewRef, compartments.current, {
+    settings,
+    dark,
+    editable,
+    label: editorLabel,
+    completion,
+  });
 
   return <div ref={hostRef} className="h-full overflow-auto text-body" data-testid="cm-host" />;
 }

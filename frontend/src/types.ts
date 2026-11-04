@@ -10,6 +10,7 @@ export const DEFAULT_EDITOR_PREFERENCES: EditorPreferences = {
   theme: "system",
   font_size: 14,
   keymap: "default",
+  autocomplete: true,
 };
 
 export type UserPublic = Schemas["UserMe"];

@@ -12,6 +12,8 @@ import {
 } from "@codemirror/view";
 import type { RefObject } from "react";
 
+import { autocompleteExtension, completionTheme } from "./completion/extension";
+import type { CompletionData } from "./completion/types";
 import { lintGutterExtension } from "./diagnostics";
 import { keymapExtension } from "./keymap-extension";
 import { latex } from "./latex-language";
@@ -41,9 +43,12 @@ const sheetTheme = EditorView.theme({
   [SELECTION_SELECTORS]: { backgroundColor: SELECTION },
 });
 
-/** Listed first: an earlier extension's theme wins, so the sheet overrides One Dark's surfaces. */
+/**
+ * Listed first: an earlier extension's theme wins, so the sheet overrides One Dark's surfaces, and the completion
+ * popup (spec 112) keeps its own tokens over One Dark's tooltip.
+ */
 export function colourTheme(dark: boolean): Extension {
-  return dark ? [sheetTheme, oneDark] : sheetTheme;
+  return dark ? [completionTheme, sheetTheme, oneDark] : [completionTheme, sheetTheme];
 }
 
 export function fontTheme(size: number): Extension {
@@ -73,6 +78,7 @@ export interface EditorCompartments {
   wrap: Compartment;
   keys: Compartment;
   editable: Compartment;
+  completion: Compartment;
 }
 
 export function createCompartments(): EditorCompartments {
@@ -82,6 +88,7 @@ export function createCompartments(): EditorCompartments {
     wrap: new Compartment(),
     keys: new Compartment(),
     editable: new Compartment(),
+    completion: new Compartment(),
   };
 }
 
@@ -104,8 +111,18 @@ export function editorExtensions(options: {
   dark: boolean;
   editable: boolean;
   label: string;
+  completion: RefObject<CompletionData>;
 }): Extension[] {
-  const { compartments: c, callbacks, collabExtension, settings, dark, editable, label } = options;
+  const {
+    compartments: c,
+    callbacks,
+    collabExtension,
+    settings,
+    dark,
+    editable,
+    label,
+    completion,
+  } = options;
   return [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -133,5 +150,6 @@ export function editorExtensions(options: {
     c.font.of(fontTheme(settings.fontSize)),
     c.wrap.of(wrapExtension(settings.lineWrapping)),
     c.theme.of(colourTheme(dark)),
+    c.completion.of(autocompleteExtension(settings.autocomplete, completion)),
   ];
 }

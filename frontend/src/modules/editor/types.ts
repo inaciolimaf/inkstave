@@ -18,4 +18,6 @@ export interface EditorSettings {
   /** default | vim | emacs (spec 59; persisted server-side). */
   keymap: EditorKeymap;
   lineWrapping: boolean;
+  /** The LaTeX completion popup (spec 112; persisted server-side). */
+  autocomplete: boolean;
 }

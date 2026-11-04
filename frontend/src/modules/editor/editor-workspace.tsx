@@ -23,6 +23,7 @@ import { useAgentAsks, useFlushBeforeCompile, useSourceJumps, useWorkspaceTree }
 import { Panes } from "./workspace-panes";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useSourceSync } from "./use-source-sync";
+import { CompletionDataProvider } from "./completion/completion-data";
 import { type WorkspaceOutline, useWorkspaceOutline } from "./workspace-outline";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
@@ -130,42 +131,44 @@ function WorkspaceContent({
     if (entity.type !== "folder") setFilesOpen(false);
   };
   return (
-    <div className="flex h-full min-w-0">
-      {outline.pinnedColumn}
-      <div className="min-w-0 flex-1">
-        <ContentPane
-          editor={{
-            projectId,
-            selected,
-            onClearSelection: () => onSelect(null),
-            onDirtyChange,
-            onEditorView: sync.handleEditorView,
-            onSyncToPdf,
-            onDocumentLoaded: sync.handleDocumentLoaded,
-            syncEnabled: sync.syncCompileId !== null,
-            collabEnabled: COLLAB_ENABLED,
-            getToken: getCollabToken,
-            currentUser: user ? { id: user.id, name: user.display_name } : null,
-            readOnly,
-            statusSlot: slots.status,
-          }}
-          filesOpen={filesOpen}
-          onOpenFiles={() => setFilesOpen(true)}
-          onCloseFiles={() => setFilesOpen(false)}
-          fileTree={
-            <FileTreePanel
-              projectId={projectId}
-              selectedId={selected?.id ?? null}
-              onSelectEntity={pickFile}
-              readOnly={readOnly}
-            />
-          }
-          statusSlotRef={slots.setStatus}
-          outputSlotRef={slots.setOutput}
-          outline={outline.panel}
-        />
+    <CompletionDataProvider value={outline.index}>
+      <div className="flex h-full min-w-0">
+        {outline.pinnedColumn}
+        <div className="min-w-0 flex-1">
+          <ContentPane
+            editor={{
+              projectId,
+              selected,
+              onClearSelection: () => onSelect(null),
+              onDirtyChange,
+              onEditorView: sync.handleEditorView,
+              onSyncToPdf,
+              onDocumentLoaded: sync.handleDocumentLoaded,
+              syncEnabled: sync.syncCompileId !== null,
+              collabEnabled: COLLAB_ENABLED,
+              getToken: getCollabToken,
+              currentUser: user ? { id: user.id, name: user.display_name } : null,
+              readOnly,
+              statusSlot: slots.status,
+            }}
+            filesOpen={filesOpen}
+            onOpenFiles={() => setFilesOpen(true)}
+            onCloseFiles={() => setFilesOpen(false)}
+            fileTree={
+              <FileTreePanel
+                projectId={projectId}
+                selectedId={selected?.id ?? null}
+                onSelectEntity={pickFile}
+                readOnly={readOnly}
+              />
+            }
+            statusSlotRef={slots.setStatus}
+            outputSlotRef={slots.setOutput}
+            outline={outline.panel}
+          />
+        </div>
       </div>
-    </div>
+    </CompletionDataProvider>
   );
 }
 

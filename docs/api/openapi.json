@@ -809,6 +809,11 @@
         "additionalProperties": false,
         "description": "Per-user editor settings; server clamps font size and enums the rest.",
         "properties": {
+          "autocomplete": {
+            "default": true,
+            "title": "Autocomplete",
+            "type": "boolean"
+          },
           "font_size": {
             "default": 14,
             "title": "Font Size",
@@ -2887,6 +2892,7 @@
           "editor_preferences": {
             "$ref": "#/components/schemas/EditorPreferences",
             "default": {
+              "autocomplete": true,
               "font_size": 14,
               "keymap": "default",
               "theme": "system"

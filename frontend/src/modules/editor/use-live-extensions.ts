@@ -8,6 +8,8 @@ import {
   wrapExtension,
   type EditorCompartments,
 } from "./codemirror-extensions";
+import { autocompleteExtension } from "./completion/extension";
+import type { CompletionData } from "./completion/types";
 import { keymapExtension } from "./keymap-extension";
 import type { EditorSettings } from "./types";
 
@@ -20,7 +22,14 @@ export function useLiveExtensions(
     dark,
     editable,
     label,
-  }: { settings: EditorSettings; dark: boolean; editable: boolean; label: string },
+    completion,
+  }: {
+    settings: EditorSettings;
+    dark: boolean;
+    editable: boolean;
+    label: string;
+    completion: RefObject<CompletionData>;
+  },
 ) {
   useEffect(() => {
     viewRef.current?.dispatch({ effects: c.editable.reconfigure(editableExtension(editable, label)) });
@@ -41,4 +50,9 @@ export function useLiveExtensions(
   useEffect(() => {
     viewRef.current?.dispatch({ effects: c.theme.reconfigure(colourTheme(dark)) });
   }, [viewRef, c, dark]);
+
+  useEffect(() => {
+    const extension = autocompleteExtension(settings.autocomplete, completion);
+    viewRef.current?.dispatch({ effects: c.completion.reconfigure(extension) });
+  }, [viewRef, c, settings.autocomplete, completion]);
 }

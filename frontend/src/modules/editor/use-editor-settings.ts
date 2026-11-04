@@ -2,14 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { EditorSettings } from "./types";
 
-const STORAGE_KEY = "inkstave:editor-settings";
-const DEFAULTS: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true };
+/** Only the line wrapping is kept here (spec 59 moved the rest to the account, spec 112 added autocomplete). */
+type LocalSettings = Omit<EditorSettings, "autocomplete">;
 
-function load(): EditorSettings {
+const STORAGE_KEY = "inkstave:editor-settings";
+const DEFAULTS: LocalSettings = { fontSize: 14, keymap: "default", lineWrapping: true };
+
+function load(): LocalSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULTS;
-    const parsed = JSON.parse(raw) as Partial<EditorSettings>;
+    const parsed = JSON.parse(raw) as Partial<LocalSettings>;
     return { ...DEFAULTS, ...parsed };
   } catch {
     return DEFAULTS;
@@ -17,7 +20,7 @@ function load(): EditorSettings {
 }
 
 export function useEditorSettings() {
-  const [settings, setSettings] = useState<EditorSettings>(load);
+  const [settings, setSettings] = useState<LocalSettings>(load);
 
   useEffect(() => {
     try {
@@ -27,7 +30,7 @@ export function useEditorSettings() {
     }
   }, [settings]);
 
-  const update = useCallback((patch: Partial<EditorSettings>) => {
+  const update = useCallback((patch: Partial<LocalSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
 

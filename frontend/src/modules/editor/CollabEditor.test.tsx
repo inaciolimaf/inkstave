@@ -9,7 +9,7 @@ import type { CollabDocSession, CollabStatus } from "@/modules/collab/useCollabD
 import { CollabEditor } from "./CollabEditor";
 import type { EditorSettings } from "./types";
 
-const SETTINGS: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true };
+const SETTINGS: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true, autocomplete: true };
 
 function makeSession(over: Partial<CollabDocSession> = {}): CollabDocSession {
   const ydoc = new Y.Doc();

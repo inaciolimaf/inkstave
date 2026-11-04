@@ -64,7 +64,12 @@ async def test_get_and_patch_profile(async_client: AsyncClient, db_session: Asyn
     assert me.status_code == 200
     body = me.json()
     assert body["email"] == "owner@example.com" and body["avatar_url"] is None
-    assert body["editor_preferences"] == {"theme": "system", "font_size": 14, "keymap": "default"}
+    assert body["editor_preferences"] == {
+        "theme": "system",
+        "font_size": 14,
+        "keymap": "default",
+        "autocomplete": True,
+    }
 
     patched = await async_client.patch(f"{USERS}/me", json={"display_name": "  New Name  "}, headers=h)
     assert patched.status_code == 200 and patched.json()["display_name"] == "New Name"
@@ -77,13 +82,21 @@ async def test_editor_preferences_round_trip_and_clamp(
     h = _headers(await _user(db_session))
     r = await async_client.put(
         f"{USERS}/me/editor-preferences",
-        json={"theme": "dark", "font_size": 99, "keymap": "vim"},
+        json={"theme": "dark", "font_size": 99, "keymap": "vim", "autocomplete": False},
         headers=h,
     )
     assert r.status_code == 200
-    assert r.json() == {"theme": "dark", "font_size": 28, "keymap": "vim"}  # font clamped to 28
+    assert r.json() == {
+        "theme": "dark",
+        "font_size": 28,
+        "keymap": "vim",
+        "autocomplete": False,
+    }  # font clamped to 28
     # Persisted + returned on the next read.
     assert (await async_client.get(f"{USERS}/me", headers=h)).json()["editor_preferences"]["theme"] == "dark"
+    # The autocomplete switch is persisted too, so it survives a reload.
+    stored = (await async_client.get(f"{USERS}/me", headers=h)).json()["editor_preferences"]
+    assert stored["autocomplete"] is False
     # Bad enum → 422.
     bad = await async_client.put(f"{USERS}/me/editor-preferences", json={"keymap": "nano"}, headers=h)
     assert bad.status_code == 422

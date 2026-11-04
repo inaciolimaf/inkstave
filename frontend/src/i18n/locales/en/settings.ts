@@ -22,6 +22,7 @@ const dict = {
     keymapDefault: "Default",
     keymapVim: "Vim",
     keymapEmacs: "Emacs",
+    autocomplete: "Autocomplete",
   },
   email: {
     title: "Email",
