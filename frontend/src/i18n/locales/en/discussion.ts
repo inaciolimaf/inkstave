@@ -26,6 +26,64 @@ const dict = {
     failed: "Not sent.",
     retry: "Retry",
   },
+  /** Comment threads on the text (spec 118). */
+  comments: {
+    title: "Comments",
+    description: "Comment threads on the text of this project.",
+    close: "Close comments",
+    button: {
+      label: "Comments",
+      openAria: "Comments, {{count}} open",
+    },
+    selection: {
+      comment: "Comment",
+    },
+    filter: {
+      label: "Filter comments",
+      open: "Open",
+      resolved: "Resolved",
+      all: "All",
+    },
+    scope: {
+      label: "Which comments",
+      file: "This file",
+      all: "All files",
+    },
+    empty: "No comments here.",
+    thread: {
+      label: "Comment thread",
+      messages: "Messages",
+    },
+    detached: "Detached comment",
+    detachedNotice: "The text this comment was on was removed",
+    messageDeleted: "Message deleted",
+    edited: "edited",
+    formerMember: "Former member",
+    you: "You",
+    edit: "Edit",
+    delete: "Delete",
+    save: "Save",
+    cancel: "Cancel",
+    resolve: "Resolve",
+    reopen: "Reopen",
+    reply: {
+      label: "Reply",
+      placeholder: "Reply…",
+      send: "Send",
+    },
+    composer: {
+      label: "New comment",
+      placeholder: "Add a comment on the selected text…",
+      submit: "Comment",
+    },
+    mentions: {
+      label: "Members",
+      hint: "Type @ to mention a member. Ctrl/Cmd+Enter sends.",
+    },
+    error: {
+      save: "Couldn’t save the comment. Try again.",
+    },
+  },
 };
 
 export default dict;

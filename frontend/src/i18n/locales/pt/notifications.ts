@@ -17,6 +17,12 @@ const dict: Dict = {
     defaultProject: "um projeto",
     defaultRole: "colaborador",
   },
+  comment: {
+    mention: "{{author}} mencionou você em um comentário em {{project}}",
+    reply: "{{author}} respondeu a um comentário em que você participou, em {{project}}",
+    defaultAuthor: "Alguém",
+    defaultProject: "um projeto",
+  },
   fallbackMessage: "Você tem uma nova notificação.",
 };
 

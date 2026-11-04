@@ -155,6 +155,9 @@ def _test_email_context(base_url: str) -> dict[str, str]:
         "project_name": "Test Project",
         "inviter_name": "Test User",
         "role": "editor",
+        "author_name": "Test User",
+        "excerpt": "Please check this paragraph.",
+        "comment_url": f"{base_url}/projects/test?thread=test-thread",
     }
 
 

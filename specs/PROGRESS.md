@@ -14,7 +14,7 @@ order, then tick it. Specs 01–108 are already implemented.
 - [x] 115-voice-to-agent
 - [x] 116-link-sharing
 - [x] 117-project-chat
-- [ ] 118-comments
+- [x] 118-comments
 - [ ] 119-track-changes
 - [x] 120-overleaf-template-import
 - [x] 121-git-bridge

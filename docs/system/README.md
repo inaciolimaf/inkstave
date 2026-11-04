@@ -18,7 +18,7 @@ Domain names come from [`docs/glossary.md`](../glossary.md). What is knowingly u
 | [compile.md](compile.md) | Compile queue, runners and sandbox, outputs, SyncTeX, log parsing | 21–23, 25–27, 105 |
 | [collab.md](collab.md) | CRDT documents, rooms, the collaboration WebSocket, presence | 28–30, 65, 66, 74 |
 | [sharing.md](sharing.md) | Collaborators, invites, roles, authorization | 33–35 |
-| [discussion.md](discussion.md) | Project chat, the project event stream | 117 |
+| [discussion.md](discussion.md) | Project chat, the project event stream, comment threads on the text | 117, 118 |
 | [history.md](history.md) | Version capture, compaction, diffs, labels, restore | 36–38, 40 |
 | [notifications.md](notifications.md) | Inbox, e-mail rendering and delivery | 39, 103 |
 | [agent.md](agent.md) | AI agent: graph, tools, diffs, streaming, safety | 41–50, 67, 108 |

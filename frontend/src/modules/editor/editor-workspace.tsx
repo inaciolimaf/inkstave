@@ -14,22 +14,16 @@ import { AskAgentButton } from "./ask-agent-button";
 import { ContentPane } from "./content-pane";
 import { MobileTabs, type MobileView } from "./mobile-tabs";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
-import { useAgentOpen } from "./use-agent-open";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
-import {
-  useAgentAsks,
-  useFlushBeforeCompile,
-  useSourceJumps,
-  useWorkspaceDialogs,
-  useWorkspaceTree,
-} from "./workspace-hooks";
+import { useWorkspaceSide } from "./workspace-side";
+import { useAgentAsks, useFlushBeforeCompile, useSourceJumps, useWorkspaceTree } from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useProposalReview } from "./use-proposal-review";
 import { useSourceSync } from "./use-source-sync";
 import { CompletionDataProvider } from "./completion/completion-data";
 import { type WorkspaceOutline, useWorkspaceOutline } from "./workspace-outline";
-import { useWorkspaceChat } from "./workspace-chat";
+import { type WorkspaceComments, useWorkspaceComments } from "./workspace-comments";
 import { WorkspaceBar } from "./workspace-bar";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
@@ -119,6 +113,7 @@ function WorkspaceContent({
   slots,
   outline,
   reviewBar,
+  comments,
 }: {
   projectId: string;
   selected: TreeEntity | null;
@@ -132,6 +127,8 @@ function WorkspaceContent({
   slots: ReturnType<typeof useSlots>;
   outline: WorkspaceOutline;
   reviewBar: ReactNode;
+  /** The comments panel (a column beside the text on a wide screen) and the selection's Comment button. */
+  comments: WorkspaceComments;
 }) {
   const { user } = useAuth();
   const pickFile = (entity: TreeEntity) => {
@@ -176,6 +173,8 @@ function WorkspaceContent({
             reviewBar={reviewBar}
           />
         </div>
+        {comments.panel}
+        {comments.selectionButton}
       </div>
     </CompletionDataProvider>
   );
@@ -193,13 +192,12 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const { treeRoot, project } = useWorkspaceTree(projectId, selected, setSelected);
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
   const readOnly = isReadOnly(usePermissions(projectId).data);
-  const dialogs = useWorkspaceDialogs();
-  const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
-  const chat = useWorkspaceChat(projectId, agentOpen, setAgentOpen);
+  const { dialogs, agentOpen, setAgentOpen, chat } = useWorkspaceSide(projectId);
   const proposals = useProposalReview({ projectId, sync, treeRoot, readOnly, wide, setSelected, setView });
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
   const jumps = useSourceJumps(sync, setView);
+  const comments = useWorkspaceComments(projectId, sync.editorView, selected, setSelected, chat.button);
 
   const flushBeforeCompile = useFlushBeforeCompile();
   const outline = useWorkspaceOutline({
@@ -225,6 +223,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       slots={slots}
       outline={outline}
       reviewBar={proposals.reviewBar}
+      comments={comments}
     />
   );
 
@@ -237,7 +236,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           sync={sync}
           compileSlotRef={slots.setCompile}
           readOnly={readOnly}
-          chatButton={chat.button}
+          chatButton={comments.button}
           dialogs={dialogs}
           compat={{ statusSlot: slots.status, onOpenLine: jumps.onProblemJump }}
           onOpenFiles={() => setFilesOpen((v) => !v)}

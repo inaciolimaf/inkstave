@@ -20,14 +20,17 @@ built both; spec 103 hardened the transport and added the Resend backend and `se
 | `backend/src/inkstave/infra/mailer/sender.py` | `EmailSender` protocol, four backends, `get_email_sender` |
 | `backend/src/inkstave/infra/mailer/enqueuer.py` | `EmailEnqueuer` |
 | `backend/src/inkstave/infra/mailer/jobs.py` | `send_email_job` |
+| `backend/src/inkstave/modules/notifications/inbox/comment_hook.py` | `notify_comment_users`: the bell rows of comment mentions and replies (spec 118) |
 | `backend/src/inkstave/infra/deps.py` | `get_email_enqueuer` dependency |
 | `backend/src/inkstave/worker.py` | Registers both jobs and the cron |
 | `backend/src/inkstave/cli.py` | `send-test-email` |
 | `frontend/src/modules/notifications` | `NotificationsBell`, polling hooks, API client |
+| `frontend/src/modules/notifications/comment-link.ts` | Which rows are comments, and the link each opens |
 | `frontend/src/i18n/locales/pt/notifications.ts` | Portuguese bell strings |
 | `backend/tests/integration/test_notifications_service.py` | Service rules |
 | `backend/tests/integration/test_notifications_api.py` | Routes |
 | `backend/tests/integration/test_invite_notification_hook.py` | Invite hook |
+| `backend/tests/integration/test_comments_api.py` | Comment rows and the mention e-mail (spec 118) |
 | `backend/tests/integration/test_email_triggers_103.py` | Enqueue triggers in the auth routes |
 | `backend/tests/unit/test_email_job.py` | The job |
 | `backend/tests/unit/test_email_sender.py` | Factory, file and console senders, templates |
@@ -41,7 +44,7 @@ built both; spec 103 hardened the transport and added the Resend backend and `se
 |---|---|
 | `id` | UUID primary key |
 | `user_id` | FK to `users`, `ON DELETE CASCADE` |
-| `type` | Free `Text`. `NotificationType` lists `project_invite` and `generic`; there is no check constraint |
+| `type` | Free `Text`. `NotificationType` lists `project_invite`, `generic`, `comment_mention` and `comment_reply`; there is no check constraint |
 | `payload` | JSONB, default `{}` |
 | `read_at`, `dismissed_at`, `expires_at` | Nullable timestamps |
 | `created_at` | Set by the server; moved forward when a deduped row is refreshed |
@@ -52,6 +55,11 @@ Indexes: `ix_notifications_user_active` on `(user_id, created_at DESC)` where `d
 A `project_invite` payload holds `project_id`, `project_name`, `inviter_name`, `role`, `invite_id` and
 `accept_url`. The only production writer is `notify_invite`. No code creates `generic` rows; the bell
 renders them from `payload.message`.
+
+A `comment_mention` or `comment_reply` payload (spec 118) holds `project_id`, `project_name`, `thread_id`,
+`document_id`, `author_name` and `excerpt` (at most 140 characters). The writer is `notify_comment_users`, called
+from the comment service. The bell opens `/projects/{project_id}?thread={thread_id}` and marks the row read.
+These rows never expire.
 
 E-mail has no table. A queued job lives in Redis. The `file` backend writes one JSON file per message
 to `EMAIL_FILE_DIR`.
@@ -120,6 +128,7 @@ Handlers never send inline.
 | `email_change_confirmation` | e-mail change | `user_name`, `confirm_url` | `Confirm your new Inkstave email` |
 | `email_verification` | register, resend | `user_name`, `verify_url` | `Verify your Inkstave email` |
 | `magic_login` | magic link | `user_name`, `magic_url` | `Your Inkstave sign-in link` |
+| `comment_mention` | comment mention (spec 118) | `author_name`, `project_name`, `excerpt`, `comment_url` | `{author} mentioned you in {project} on Inkstave` |
 
 Each template returns `(subject, text_body, html_body)`. They are plain Python functions in `_TEMPLATES`,
 with no template engine. The HTML body escapes interpolated values with `html.escape`. An unknown name
@@ -162,6 +171,8 @@ any exception.
 | The factory selects each backend | `backend/tests/unit/test_email_sender.py::test_factory_selects_backend`, `backend/tests/unit/test_resend_sender.py::test_factory_selects_resend_and_keeps_others` |
 | Resend errors raise and never expose the key | `backend/tests/unit/test_resend_sender.py::test_resend_raises_on_non_2xx_and_hides_key` |
 | Forgot password does not reveal whether an account exists | `backend/tests/integration/test_email_triggers_103.py::test_forgot_password_same_response_known_or_unknown` |
+| A mention e-mail is escaped and names the thread | `backend/tests/unit/test_comment_anchors.py::test_mention_e_mail_escapes_the_comment_text` |
+| A mention e-mail goes to the mentioned member only, never to the author | `backend/tests/integration/test_comments_api.py::test_mention_notifies_in_the_bell_and_by_email` |
 | `send-test-email` passes and fails with the right exit code | `backend/tests/unit/test_resend_sender.py::test_cli_send_test_email_pass`, `backend/tests/unit/test_resend_sender.py::test_cli_send_test_email_fail_nonzero` |
 | A missing Resend key is reported | `backend/tests/unit/test_resend_sender.py::test_validator_flags_missing_resend_key` |
 | SMTP sending | no dedicated test |
@@ -214,6 +225,9 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 - **Enqueue runs before commit.** `notify_invite` enqueues inside the unit of work. If the commit then
   fails, an e-mail goes out with a dead token. If Redis is down, the enqueue error fails the request and the
   invite rolls back.
+- **Comment e-mails wait for the commit.** The mention e-mail goes out as a background task after the
+  commit, through `CommentPublisher` (`comments/publish.py`). That is the opposite of the invite, so a rolled-back
+  mention sends nothing. The bell row is in the same transaction as the comment.
 - **`NOTIFICATION_SWEEP_INTERVAL_S` has no effect.** The cron is fixed to hourly. A comment in
   `backend/src/inkstave/worker.py` says the setting only documents intent.
 - **`APP_BASE_URL` is misdescribed.** `.env.example` calls it the base for e-mail URLs. All real links

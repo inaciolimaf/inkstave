@@ -417,6 +417,250 @@
         "title": "ChatMessageRead",
         "type": "object"
       },
+      "CommentMessageRead": {
+        "description": "One message. A deleted message keeps its place with ``deleted`` set and no body.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatAuthor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mentions": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Mentions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "body",
+          "author",
+          "mentions",
+          "created_at",
+          "edited_at",
+          "deleted"
+        ],
+        "title": "CommentMessageRead",
+        "type": "object"
+      },
+      "CommentMessageWrite": {
+        "description": "A reply, or the new text of an edited message.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "mentions": {
+            "description": "Ids the body mentions",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Mentions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "CommentMessageWrite",
+        "type": "object"
+      },
+      "CommentThreadCreate": {
+        "properties": {
+          "anchor_end": {
+            "maxLength": 344,
+            "title": "Anchor End",
+            "type": "string"
+          },
+          "anchor_start": {
+            "maxLength": 344,
+            "title": "Anchor Start",
+            "type": "string"
+          },
+          "body": {
+            "description": "Plain text, trimmed; up to 4000 characters after trimming",
+            "title": "Body",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "mentions": {
+            "description": "Ids the body mentions",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Mentions",
+            "type": "array"
+          },
+          "quoted_text": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Quoted Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "anchor_start",
+          "anchor_end",
+          "quoted_text",
+          "body"
+        ],
+        "title": "CommentThreadCreate",
+        "type": "object"
+      },
+      "CommentThreadList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommentThreadRead"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CommentThreadList",
+        "type": "object"
+      },
+      "CommentThreadRead": {
+        "properties": {
+          "anchor_end": {
+            "description": "Base64 of the Yjs relative position of the end",
+            "title": "Anchor End",
+            "type": "string"
+          },
+          "anchor_start": {
+            "description": "Base64 of the Yjs relative position of the start",
+            "title": "Anchor Start",
+            "type": "string"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatAuthor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/CommentMessageRead"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "quoted_text": {
+            "title": "Quoted Text",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatAuthor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "anchor_start",
+          "anchor_end",
+          "quoted_text",
+          "author",
+          "created_at",
+          "resolved_at",
+          "resolved_by",
+          "messages"
+        ],
+        "title": "CommentThreadRead",
+        "type": "object"
+      },
       "CompatFindingRead": {
         "description": "One line of the compatibility report (spec 120).",
         "properties": {
@@ -6941,6 +7185,535 @@
         "summary": "Messages from others since the chat was last opened",
         "tags": [
           "chat"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/comments": {
+      "get": {
+        "operationId": "list_threads_api_v1_projects__project_id__comments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only the threads of this document",
+            "in": "query",
+            "name": "document_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the threads of this document",
+              "title": "Document Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "open",
+                "resolved",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Comment threads of a project, or of one document",
+        "tags": [
+          "comments"
+        ]
+      },
+      "post": {
+        "operationId": "create_thread_api_v1_projects__project_id__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentThreadCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start a comment thread on a passage",
+        "tags": [
+          "comments"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/comments/{thread_id}/messages": {
+      "post": {
+        "operationId": "add_reply_api_v1_projects__project_id__comments__thread_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentMessageWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentMessageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reply in a thread",
+        "tags": [
+          "comments"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/comments/{thread_id}/messages/{message_id}": {
+      "delete": {
+        "operationId": "delete_message_api_v1_projects__project_id__comments__thread_id__messages__message_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete your own message; the last one deletes the thread",
+        "tags": [
+          "comments"
+        ]
+      },
+      "patch": {
+        "operationId": "edit_message_api_v1_projects__project_id__comments__thread_id__messages__message_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentMessageWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentMessageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit your own message",
+        "tags": [
+          "comments"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/comments/{thread_id}/reopen": {
+      "post": {
+        "operationId": "reopen_thread_api_v1_projects__project_id__comments__thread_id__reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reopen a resolved thread",
+        "tags": [
+          "comments"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/comments/{thread_id}/resolve": {
+      "post": {
+        "operationId": "resolve_thread_api_v1_projects__project_id__comments__thread_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve a thread",
+        "tags": [
+          "comments"
         ]
       }
     },
