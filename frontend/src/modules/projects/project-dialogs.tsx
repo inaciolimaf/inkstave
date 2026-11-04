@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 import type { Project } from "./types";
-import { useCreateProject, useDeleteProject, useRenameProject } from "./use-projects";
+import { useCreateProject, useDeleteProject, useLeaveProject, useRenameProject } from "./use-projects";
 
 function makeNameSchema(t: TFunction<"projects">) {
   return z.object({
@@ -214,6 +214,50 @@ export function DeleteProjectDialog({
             disabled={del.isPending}
           >
             {t("common:action.delete")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/** Confirms a non-owner removing their own membership; the row leaves the list (spec 109). */
+export function LeaveProjectDialog({
+  open,
+  onOpenChange,
+  project,
+  userId,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  project: Project | null;
+  userId: string | null;
+}) {
+  const { t } = useTranslation("projects");
+  const leave = useLeaveProject();
+
+  const onConfirm = async () => {
+    if (!project || !userId) return;
+    try {
+      await leave.mutateAsync({ id: project.id, userId });
+    } catch {
+      // error toast surfaced by the mutation
+    } finally {
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("leave.title", { name: project?.name })}</AlertDialogTitle>
+          <AlertDialogDescription>{t("leave.description")}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t("common:action.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={leave.isPending}>
+            {t("leave.submit")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

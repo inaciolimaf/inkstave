@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils";
 
 import { ProjectListView } from "./project-list-view";
-import type { Project } from "./types";
+import type { ListedProject } from "./types";
 
-const sample: Project[] = [
+const sample: ListedProject[] = [
   {
     id: "1",
     name: "My Paper",
@@ -15,6 +15,8 @@ const sample: Project[] = [
     rootDocId: null,
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-02T00:00:00Z",
+    role: "owner",
+    owner: { id: "u", displayName: "Me" },
   },
 ];
 
@@ -28,12 +30,14 @@ function renderView(props: Partial<Props> = {}) {
   const base: Props = {
     query: queryWith(),
     searchTerm: "",
+    scope: "all",
     visible: sample,
     onCreate: vi.fn(),
     onClearSearch: vi.fn(),
     onOpen: vi.fn(),
     onRename: vi.fn(),
     onDelete: vi.fn(),
+    onLeave: vi.fn(),
   };
   return renderWithProviders(<ProjectListView {...base} {...props} />);
 }

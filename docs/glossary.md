@@ -51,6 +51,8 @@ are English-only today ([known gaps](known-gaps.md)).
 | Term | Code | Portuguese |
 |---|---|---|
 | Project | `Project` | "Projeto" |
+| Shared with me | `scope=shared`, `ProjectScope.shared` | "Compartilhados comigo" |
+| Owned by me | `scope=owned`, `ProjectScope.owned` | "Meus" |
 | File tree | `TreeEntity` | "Arquivos" |
 | Folder | `TreeEntityType.folder` | "Pasta" |
 | File | `TreeEntity`, type `file` | "Arquivo" |

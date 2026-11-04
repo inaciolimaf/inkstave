@@ -15,6 +15,19 @@ const dict = {
   nav: {
     settings: "Settings",
   },
+  scope: {
+    label: "Show projects",
+    all: "All",
+    owned: "Owned by me",
+    shared: "Shared with me",
+  },
+  owner: {
+    you: "You",
+  },
+  role: {
+    editor: "Can edit",
+    viewer: "Can view",
+  },
   table: {
     caption: "Your projects",
     lastModified: "Last modified",
@@ -23,6 +36,7 @@ const dict = {
     label: "Project actions",
     open: "Open",
     download: "Download as .zip",
+    leave: "Leave project",
   },
   download: {
     error: "Could not download the project",
@@ -35,6 +49,8 @@ const dict = {
     noResults: "No projects match “{{term}}”.",
     clearSearch: "Clear search",
     loadError: "We couldn’t load your projects.",
+    sharedEmpty: "Nothing shared with you yet. Projects others invite you to appear here.",
+    ownedEmpty: "You haven’t created a project yet.",
   },
   form: {
     nameLabel: "Project name",
@@ -54,6 +70,11 @@ const dict = {
     title: "Delete “{{name}}”?",
     description: "This cannot be undone.",
   },
+  leave: {
+    title: "Leave “{{name}}”?",
+    description: "You will lose access until someone invites you again.",
+    submit: "Leave project",
+  },
   toast: {
     created: "Project created",
     createError: "Could not create project",
@@ -61,6 +82,8 @@ const dict = {
     renameError: "Could not rename project",
     deleted: "Project deleted",
     deleteError: "Could not delete project",
+    left: "You left the project",
+    leaveError: "Could not leave the project",
   },
   import: {
     cta: "Import (.zip)",

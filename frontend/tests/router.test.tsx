@@ -9,7 +9,14 @@ const SESSION = {
   "POST /auth/refresh": { access_token: "a", refresh_token: "r", token_type: "bearer" },
   "GET /users/me": FAKE_USER,
 };
-const PROJECT = { id: "p1", name: "Thesis", owner_id: "user-1", root_doc_id: null };
+const PROJECT = {
+  id: "p1",
+  name: "Thesis",
+  owner_id: "user-1",
+  root_doc_id: null,
+  role: "owner",
+  owner: { id: "user-1", display_name: "Me" },
+};
 const TIMES = { created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
 // Sorting by the missing `updated_at` crashes the screen while rendering.
 const MALFORMED = { total: 2, items: [PROJECT, { ...PROJECT, id: "p2" }] };

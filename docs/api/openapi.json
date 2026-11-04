@@ -1898,7 +1898,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/ProjectRead"
+              "$ref": "#/components/schemas/ProjectListItem"
             },
             "title": "Items",
             "type": "array"
@@ -1913,6 +1913,84 @@
           "total"
         ],
         "title": "ProjectList",
+        "type": "object"
+      },
+      "ProjectListItem": {
+        "description": "A project in the caller's listing: their role in it and who owns it (spec 109).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ProjectOwner"
+          },
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MembershipRole"
+          },
+          "root_doc_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Doc Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "name",
+          "root_doc_id",
+          "created_at",
+          "updated_at",
+          "role",
+          "owner"
+        ],
+        "title": "ProjectListItem",
+        "type": "object"
+      },
+      "ProjectOwner": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "ProjectOwner",
         "type": "object"
       },
       "ProjectRead": {
@@ -2012,6 +2090,16 @@
         ],
         "title": "ProjectRestoreResponse",
         "type": "object"
+      },
+      "ProjectScope": {
+        "description": "Which memberships a listing covers: all of them, the caller's own, or the ones shared with them.",
+        "enum": [
+          "all",
+          "owned",
+          "shared"
+        ],
+        "title": "ProjectScope",
+        "type": "string"
       },
       "ProposedDiffSummary": {
         "properties": {
@@ -4060,6 +4148,15 @@
       "get": {
         "operationId": "list_projects_api_v1_projects_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectScope",
+              "default": "all"
+            }
+          },
           {
             "in": "query",
             "name": "limit",

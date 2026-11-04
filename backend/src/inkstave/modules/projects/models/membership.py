@@ -52,6 +52,13 @@ class ProjectMembership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("status IN ('active','pending','left')", name="membership_status_valid"),
         Index("ix_project_memberships_project_id", "project_id"),
         Index("ix_project_memberships_user_id", "user_id"),
+        # "Projects I actively belong to" (spec 109): the listing joins on this partial index.
+        Index(
+            "ix_project_memberships_user_active",
+            "user_id",
+            "project_id",
+            postgresql_where=text("status = 'active'"),
+        ),
         # At most one owner per project (enforced at the DB layer, belt-and-braces
         # with the service-level invariant).
         Index(

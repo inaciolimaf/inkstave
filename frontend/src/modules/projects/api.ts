@@ -5,11 +5,13 @@ import { apiClient } from "@/lib/api-client";
 import { sanitizeDownloadName, triggerBrowserDownload } from "@/lib/download";
 import { tokenStore } from "@/lib/token-store";
 
-import type { Project } from "./types";
+import type { ListedProject, Project } from "./types";
 
 type ProjectWire = Schemas["ProjectRead"];
 
 type ProjectListWire = Schemas["ProjectList"];
+
+type ProjectListItemWire = Schemas["ProjectListItem"];
 
 function toProject(wire: ProjectWire): Project {
   return {
@@ -22,9 +24,23 @@ function toProject(wire: ProjectWire): Project {
   };
 }
 
-export async function listProjects(): Promise<Project[]> {
+function toListedProject(wire: ProjectListItemWire): ListedProject {
+  return {
+    ...toProject(wire),
+    role: wire.role,
+    owner: { id: wire.owner.id, displayName: wire.owner.display_name },
+  };
+}
+
+/** Every project the caller is an active member of; the dashboard filters by role itself. */
+export async function listProjects(): Promise<ListedProject[]> {
   const data = await apiClient.get<ProjectListWire>("/api/v1/projects?limit=100");
-  return data.items.map(toProject);
+  return data.items.map(toListedProject);
+}
+
+/** A non-owner removes their own membership (spec 33), which takes the project off their list. */
+export async function leaveProject(id: string, userId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/projects/${id}/members/${userId}`);
 }
 
 export async function getProject(id: string): Promise<Project> {

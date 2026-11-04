@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from inkstave.modules.auth.models.user import User
 from inkstave.modules.projects.catalog.service import (
     ProjectNotFoundError,
+    ProjectScope,
     create_project,
     get_owned_project,
     list_projects,
@@ -67,14 +68,16 @@ async def test_list_excludes_deleted_and_orders_by_recency(db_session: AsyncSess
     # Bump `first` so it becomes the most recently updated.
     await rename_project(db_session, user.id, first.id, "First renamed")
 
-    items, total = await list_projects(db_session, user.id, limit=50, offset=0)
+    listed, total = await list_projects(db_session, user.id, ProjectScope.all, limit=50, offset=0)
     assert total == 2
-    assert items[0].id == first.id  # newest updated_at first
+    assert listed[0].project.id == first.id  # newest updated_at first
+    assert listed[0].role == "owner"
+    assert listed[0].owner_name == user.display_name
 
     await soft_delete_project(db_session, user.id, first.id)
-    items, total = await list_projects(db_session, user.id, limit=50, offset=0)
+    listed, total = await list_projects(db_session, user.id, ProjectScope.all, limit=50, offset=0)
     assert total == 1
-    assert all(p.id != first.id for p in items)
+    assert all(row.project.id != first.id for row in listed)
 
 
 async def test_rename_bumps_updated_at(db_session: AsyncSession) -> None:

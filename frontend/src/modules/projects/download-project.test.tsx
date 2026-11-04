@@ -6,7 +6,7 @@ import { renderWithProviders } from "@/test/utils";
 
 import { downloadProjectZip } from "./api";
 import { ProjectIndex } from "./project-index";
-import type { Project } from "./types";
+import type { ListedProject } from "./types";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -20,13 +20,15 @@ vi.mock("@/lib/download", async (orig) => ({
   triggerBrowserDownload: trigger,
 }));
 
-const project: Project = {
+const project: ListedProject = {
   id: "p1",
   name: "My Paper",
   ownerId: "u",
   rootDocId: null,
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
+  role: "owner",
+  owner: { id: "u", displayName: "Me" },
 };
 
 afterEach(() => vi.clearAllMocks());
@@ -45,7 +47,13 @@ describe("downloadProjectZip", () => {
 describe("RowActionsMenu download item", () => {
   function setup() {
     return renderWithProviders(
-      <ProjectIndex projects={[project]} onOpen={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />,
+      <ProjectIndex
+        projects={[project]}
+        onOpen={vi.fn()}
+        onRename={vi.fn()}
+        onDelete={vi.fn()}
+        onLeave={vi.fn()}
+      />,
     );
   }
 

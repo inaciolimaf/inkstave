@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/utils";
 
 import { ProjectIndex } from "./project-index";
-import type { Project } from "./types";
+import type { ListedProject } from "./types";
 
-const projects: Project[] = [
+const projects: ListedProject[] = [
   {
     id: "abc",
     name: "Thesis",
@@ -15,11 +15,13 @@ const projects: Project[] = [
     rootDocId: null,
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-02-01T00:00:00Z",
+    role: "owner",
+    owner: { id: "u", displayName: "Me" },
   },
 ];
 
 function setup() {
-  const handlers = { onOpen: vi.fn(), onRename: vi.fn(), onDelete: vi.fn() };
+  const handlers = { onOpen: vi.fn(), onRename: vi.fn(), onDelete: vi.fn(), onLeave: vi.fn() };
   renderWithProviders(<ProjectIndex projects={projects} {...handlers} />);
   return handlers;
 }

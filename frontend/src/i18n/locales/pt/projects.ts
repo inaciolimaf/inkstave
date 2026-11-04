@@ -17,6 +17,19 @@ const dict: Dict = {
   nav: {
     settings: "Configurações",
   },
+  scope: {
+    label: "Mostrar projetos",
+    all: "Todos",
+    owned: "Meus",
+    shared: "Compartilhados comigo",
+  },
+  owner: {
+    you: "Você",
+  },
+  role: {
+    editor: "Pode editar",
+    viewer: "Pode visualizar",
+  },
   table: {
     caption: "Seus projetos",
     lastModified: "Última modificação",
@@ -25,6 +38,7 @@ const dict: Dict = {
     label: "Ações do projeto",
     open: "Abrir",
     download: "Baixar como .zip",
+    leave: "Sair do projeto",
   },
   download: {
     error: "Não foi possível baixar o projeto",
@@ -37,6 +51,9 @@ const dict: Dict = {
     noResults: "Nenhum projeto corresponde a “{{term}}”.",
     clearSearch: "Limpar busca",
     loadError: "Não foi possível carregar seus projetos.",
+    sharedEmpty:
+      "Nada compartilhado com você ainda. Os projetos para os quais alguém convidar você aparecem aqui.",
+    ownedEmpty: "Você ainda não criou nenhum projeto.",
   },
   form: {
     nameLabel: "Nome do projeto",
@@ -56,6 +73,11 @@ const dict: Dict = {
     title: "Excluir “{{name}}”?",
     description: "Isso não pode ser desfeito.",
   },
+  leave: {
+    title: "Sair de “{{name}}”?",
+    description: "Você perderá o acesso até que alguém convide você de novo.",
+    submit: "Sair do projeto",
+  },
   toast: {
     created: "Projeto criado",
     createError: "Não foi possível criar o projeto",
@@ -63,6 +85,8 @@ const dict: Dict = {
     renameError: "Não foi possível renomear o projeto",
     deleted: "Projeto excluído",
     deleteError: "Não foi possível excluir o projeto",
+    left: "Você saiu do projeto",
+    leaveError: "Não foi possível sair do projeto",
   },
   import: {
     cta: "Importar (.zip)",

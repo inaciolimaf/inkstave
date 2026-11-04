@@ -5,12 +5,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import { fakeApi } from "../../../tests/helpers/screen";
 import { ProjectIndex } from "./project-index";
-import type { Project } from "./types";
+import type { ListedProject } from "./types";
 
 vi.mock("@/lib/route-chunks", () => ({ loadEditorRoute: vi.fn(async () => undefined) }));
 
-const PROJECT = { id: "p1", name: "Thesis", updatedAt: "2026-01-01T00:00:00Z" } as Project;
-const ACTIONS = { onOpen: vi.fn(), onRename: vi.fn(), onDelete: vi.fn() };
+const PROJECT = {
+  id: "p1",
+  name: "Thesis",
+  updatedAt: "2026-01-01T00:00:00Z",
+  role: "owner",
+  owner: { id: "u", displayName: "Me" },
+} as ListedProject;
+const ACTIONS = { onOpen: vi.fn(), onRename: vi.fn(), onDelete: vi.fn(), onLeave: vi.fn() };
 
 describe("ProjectIndex", () => {
   it("fetches the project once when a pointer and then focus land on its link", async () => {
