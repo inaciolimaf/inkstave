@@ -1,0 +1,2270 @@
+[
+  {
+    "name": "Big",
+    "hint": "Delimiter, bigger size",
+    "snippet": "\\Big"
+  },
+  {
+    "name": "Bigg",
+    "hint": "Delimiter, largest size",
+    "snippet": "\\Bigg"
+  },
+  {
+    "name": "Box",
+    "hint": "Empty box"
+  },
+  {
+    "name": "Cref",
+    "hint": "Capitalised reference with its type name",
+    "snippet": "\\Cref{${}}",
+    "package": "cleveref"
+  },
+  {
+    "name": "DeclareMathOperator",
+    "hint": "Declare a named operator",
+    "snippet": "\\DeclareMathOperator{${}}{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "DeclarePairedDelimiter",
+    "hint": "Declare a paired delimiter",
+    "snippet": "\\DeclarePairedDelimiter{${}}{${}}{${}}",
+    "package": "mathtools"
+  },
+  {
+    "name": "Delta",
+    "hint": "Greek capital delta"
+  },
+  {
+    "name": "FloatBarrier",
+    "hint": "Keep floats in their sections",
+    "snippet": "\\FloatBarrier",
+    "package": "placeins"
+  },
+  {
+    "name": "Gamma",
+    "hint": "Greek capital gamma"
+  },
+  {
+    "name": "IfFileExists",
+    "hint": "Test whether a file exists",
+    "snippet": "\\IfFileExists{${}}{${}}{${}}"
+  },
+  {
+    "name": "Im",
+    "hint": "Imaginary part"
+  },
+  {
+    "name": "LaTeX",
+    "hint": "The LaTeX logo"
+  },
+  {
+    "name": "LaTeXe",
+    "hint": "The LaTeX2e logo"
+  },
+  {
+    "name": "Lambda",
+    "hint": "Greek capital lambda"
+  },
+  {
+    "name": "Leftarrow",
+    "hint": "Double left arrow"
+  },
+  {
+    "name": "Leftrightarrow",
+    "hint": "Double left-right arrow (iff)"
+  },
+  {
+    "name": "Omega",
+    "hint": "Greek capital omega"
+  },
+  {
+    "name": "P",
+    "hint": "Pilcrow sign"
+  },
+  {
+    "name": "Phi",
+    "hint": "Greek capital phi"
+  },
+  {
+    "name": "Pi",
+    "hint": "Greek capital pi"
+  },
+  {
+    "name": "Pr",
+    "hint": "Probability operator"
+  },
+  {
+    "name": "Psi",
+    "hint": "Greek capital psi"
+  },
+  {
+    "name": "Re",
+    "hint": "Real part"
+  },
+  {
+    "name": "RequirePackage",
+    "hint": "Load a package from a package or class file",
+    "snippet": "\\RequirePackage{${}}"
+  },
+  {
+    "name": "Rightarrow",
+    "hint": "Double right arrow (implies)"
+  },
+  {
+    "name": "S",
+    "hint": "Section sign"
+  },
+  {
+    "name": "SI",
+    "hint": "Number with a unit (siunitx)",
+    "snippet": "\\SI{${}}{${}}",
+    "package": "siunitx"
+  },
+  {
+    "name": "Sigma",
+    "hint": "Greek capital sigma"
+  },
+  {
+    "name": "TeX",
+    "hint": "The TeX logo"
+  },
+  {
+    "name": "Theta",
+    "hint": "Greek capital theta"
+  },
+  {
+    "name": "Upsilon",
+    "hint": "Greek capital upsilon"
+  },
+  {
+    "name": "Vert",
+    "hint": "Double vertical bar"
+  },
+  {
+    "name": "Xi",
+    "hint": "Greek capital xi"
+  },
+  {
+    "name": "addlinespace",
+    "hint": "Extra space between table rows",
+    "snippet": "\\addlinespace",
+    "package": "booktabs"
+  },
+  {
+    "name": "addtocounter",
+    "hint": "Add to a counter",
+    "snippet": "\\addtocounter{${}}{${}}"
+  },
+  {
+    "name": "addtolength",
+    "hint": "Add to a length",
+    "snippet": "\\addtolength{${}}{${}}"
+  },
+  {
+    "name": "ae",
+    "hint": "Latin ae ligature"
+  },
+  {
+    "name": "aleph",
+    "hint": "Aleph"
+  },
+  {
+    "name": "allowbreak",
+    "hint": "Allow a line break here"
+  },
+  {
+    "name": "alpha",
+    "hint": "Greek small letter alpha"
+  },
+  {
+    "name": "ang",
+    "hint": "Angle with a unit (siunitx)",
+    "snippet": "\\ang{${}}",
+    "package": "siunitx"
+  },
+  {
+    "name": "angle",
+    "hint": "Angle"
+  },
+  {
+    "name": "appendix",
+    "hint": "Switch to appendix numbering"
+  },
+  {
+    "name": "approx",
+    "hint": "Approximately equal"
+  },
+  {
+    "name": "arccos",
+    "hint": "Inverse cosine"
+  },
+  {
+    "name": "arcsin",
+    "hint": "Inverse sine"
+  },
+  {
+    "name": "arctan",
+    "hint": "Inverse tangent"
+  },
+  {
+    "name": "arg",
+    "hint": "Argument"
+  },
+  {
+    "name": "ast",
+    "hint": "Asterisk operator"
+  },
+  {
+    "name": "author",
+    "hint": "Document author",
+    "snippet": "\\author{${}}"
+  },
+  {
+    "name": "autoref",
+    "hint": "Reference with its type name (hyperref)",
+    "snippet": "\\autoref{${}}"
+  },
+  {
+    "name": "bar",
+    "hint": "Bar accent",
+    "snippet": "\\bar{${}}"
+  },
+  {
+    "name": "begingroup",
+    "hint": "Start a group",
+    "snippet": "\\begingroup"
+  },
+  {
+    "name": "beta",
+    "hint": "Greek small letter beta"
+  },
+  {
+    "name": "bibitem",
+    "hint": "Bibliography entry",
+    "snippet": "\\bibitem{${}}"
+  },
+  {
+    "name": "bibliography",
+    "hint": "Bibliography file and style",
+    "snippet": "\\bibliography{${}}"
+  },
+  {
+    "name": "bibliographystyle",
+    "hint": "Bibliography style",
+    "snippet": "\\bibliographystyle{${}}"
+  },
+  {
+    "name": "big",
+    "hint": "Delimiter, big size",
+    "snippet": "\\big"
+  },
+  {
+    "name": "bigcap",
+    "hint": "Big intersection"
+  },
+  {
+    "name": "bigcup",
+    "hint": "Big union"
+  },
+  {
+    "name": "bigg",
+    "hint": "Delimiter, very big",
+    "snippet": "\\bigg"
+  },
+  {
+    "name": "bigskip",
+    "hint": "Large vertical space"
+  },
+  {
+    "name": "binom",
+    "hint": "Binomial coefficient",
+    "snippet": "\\binom{${n}}{${k}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "blacksquare",
+    "hint": "Filled square"
+  },
+  {
+    "name": "bm",
+    "hint": "Bold math symbols",
+    "snippet": "\\bm{${}}",
+    "package": "bm"
+  },
+  {
+    "name": "boldsymbol",
+    "hint": "Bold math symbols",
+    "snippet": "\\boldsymbol{${}}",
+    "package": "bm"
+  },
+  {
+    "name": "bot",
+    "hint": "Bottom element"
+  },
+  {
+    "name": "bottomrule",
+    "hint": "Bottom rule of a table",
+    "snippet": "\\bottomrule",
+    "package": "booktabs"
+  },
+  {
+    "name": "bullet",
+    "hint": "Bullet"
+  },
+  {
+    "name": "cancel",
+    "hint": "Strike out in math",
+    "snippet": "\\cancel{${}}",
+    "package": "cancel"
+  },
+  {
+    "name": "cap",
+    "hint": "Intersection"
+  },
+  {
+    "name": "caption",
+    "hint": "Caption of a float",
+    "snippet": "\\caption{${}}"
+  },
+  {
+    "name": "captionof",
+    "hint": "Caption of a float outside it",
+    "snippet": "\\captionof{${}}{${}}",
+    "package": "capt-of"
+  },
+  {
+    "name": "captionsetup",
+    "hint": "Set caption options",
+    "snippet": "\\captionsetup{${}}",
+    "package": "caption"
+  },
+  {
+    "name": "cdot",
+    "hint": "Centred dot"
+  },
+  {
+    "name": "cdots",
+    "hint": "Centred dots"
+  },
+  {
+    "name": "centering",
+    "hint": "Centre the following float or box"
+  },
+  {
+    "name": "cfoot",
+    "hint": "Centre footer",
+    "snippet": "\\cfoot{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "chapter",
+    "hint": "Chapter heading (book and report)",
+    "snippet": "\\chapter{${}}"
+  },
+  {
+    "name": "chead",
+    "hint": "Centre header",
+    "snippet": "\\chead{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "checkmark",
+    "hint": "Check mark"
+  },
+  {
+    "name": "chi",
+    "hint": "Greek small letter chi"
+  },
+  {
+    "name": "circ",
+    "hint": "Composition circle"
+  },
+  {
+    "name": "cite",
+    "hint": "Citation",
+    "snippet": "\\cite{${}}"
+  },
+  {
+    "name": "cleardoublepage",
+    "hint": "Start a new right-hand page"
+  },
+  {
+    "name": "clearpage",
+    "hint": "Flush floats and start a page"
+  },
+  {
+    "name": "cline",
+    "hint": "Rule across some columns",
+    "snippet": "\\cline{${}}"
+  },
+  {
+    "name": "cmidrule",
+    "hint": "Partial rule across columns",
+    "snippet": "\\cmidrule{${}}",
+    "package": "booktabs"
+  },
+  {
+    "name": "coloneqq",
+    "hint": "Colon equals",
+    "snippet": "\\coloneqq",
+    "package": "mathtools"
+  },
+  {
+    "name": "color",
+    "hint": "Set the text colour",
+    "snippet": "\\color{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "colorbox",
+    "hint": "Box with a background colour",
+    "snippet": "\\colorbox{${}}{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "colorlet",
+    "hint": "Define a colour from another",
+    "snippet": "\\colorlet{${}}{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "cong",
+    "hint": "Congruent"
+  },
+  {
+    "name": "coordinate",
+    "hint": "TikZ named coordinate",
+    "snippet": "\\coordinate (${}) at (${});",
+    "package": "tikz"
+  },
+  {
+    "name": "coprod",
+    "hint": "Coproduct",
+    "snippet": "\\coprod_{${}}^{${}}"
+  },
+  {
+    "name": "copyright",
+    "hint": "Copyright sign"
+  },
+  {
+    "name": "cos",
+    "hint": "Cosine"
+  },
+  {
+    "name": "cosh",
+    "hint": "Hyperbolic cosine"
+  },
+  {
+    "name": "cot",
+    "hint": "Cotangent"
+  },
+  {
+    "name": "cref",
+    "hint": "Reference with its type name (cleveref)",
+    "snippet": "\\cref{${}}",
+    "package": "cleveref"
+  },
+  {
+    "name": "crefrange",
+    "hint": "Reference a range (cleveref)",
+    "snippet": "\\crefrange{${}}{${}}",
+    "package": "cleveref"
+  },
+  {
+    "name": "csc",
+    "hint": "Cosecant"
+  },
+  {
+    "name": "csname",
+    "hint": "Build a control sequence name",
+    "snippet": "\\csname ${}\\endcsname"
+  },
+  {
+    "name": "cup",
+    "hint": "Union"
+  },
+  {
+    "name": "dag",
+    "hint": "Dagger"
+  },
+  {
+    "name": "dashrightarrow",
+    "hint": "Dashed right arrow"
+  },
+  {
+    "name": "dashv",
+    "hint": "Reversed turnstile"
+  },
+  {
+    "name": "date",
+    "hint": "Document date",
+    "snippet": "\\date{${}}"
+  },
+  {
+    "name": "ddag",
+    "hint": "Double dagger"
+  },
+  {
+    "name": "ddot",
+    "hint": "Double dot accent",
+    "snippet": "\\ddot{${}}"
+  },
+  {
+    "name": "ddots",
+    "hint": "Diagonal dots"
+  },
+  {
+    "name": "definecolor",
+    "hint": "Define a colour from a model",
+    "snippet": "\\definecolor{${}}{${}}{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "deg",
+    "hint": "Degree of a polynomial"
+  },
+  {
+    "name": "degree",
+    "hint": "Degree symbol"
+  },
+  {
+    "name": "delta",
+    "hint": "Greek small letter delta"
+  },
+  {
+    "name": "det",
+    "hint": "Determinant"
+  },
+  {
+    "name": "dfrac",
+    "hint": "Display-size fraction",
+    "snippet": "\\dfrac{${num}}{${den}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "dim",
+    "hint": "Dimension"
+  },
+  {
+    "name": "displaystyle",
+    "hint": "Display style inside math"
+  },
+  {
+    "name": "div",
+    "hint": "Division sign"
+  },
+  {
+    "name": "documentclass",
+    "hint": "Document class and options",
+    "snippet": "\\documentclass[${}]{${}}"
+  },
+  {
+    "name": "dot",
+    "hint": "Dot accent (time derivative)",
+    "snippet": "\\dot{${}}"
+  },
+  {
+    "name": "dots",
+    "hint": "Dots, context-sensitive"
+  },
+  {
+    "name": "doublespacing",
+    "hint": "Double line spacing",
+    "snippet": "\\doublespacing",
+    "package": "setspace"
+  },
+  {
+    "name": "downarrow",
+    "hint": "Down arrow"
+  },
+  {
+    "name": "draw",
+    "hint": "TikZ path drawn as a line",
+    "snippet": "\\draw ${} -- ${};",
+    "package": "tikz"
+  },
+  {
+    "name": "ell",
+    "hint": "Script l"
+  },
+  {
+    "name": "emph",
+    "hint": "Emphasis",
+    "snippet": "\\emph{${}}"
+  },
+  {
+    "name": "emptyset",
+    "hint": "Empty set"
+  },
+  {
+    "name": "endcsname",
+    "hint": "End a control sequence name",
+    "snippet": "\\endcsname"
+  },
+  {
+    "name": "endgroup",
+    "hint": "End a group",
+    "snippet": "\\endgroup"
+  },
+  {
+    "name": "enquote",
+    "hint": "Quotation marks for the language (csquotes)",
+    "snippet": "\\enquote{${}}",
+    "package": "csquotes"
+  },
+  {
+    "name": "ensuremath",
+    "hint": "Force math mode",
+    "snippet": "\\ensuremath{${}}"
+  },
+  {
+    "name": "epsilon",
+    "hint": "Greek small letter epsilon"
+  },
+  {
+    "name": "eqqcolon",
+    "hint": "Equals colon",
+    "snippet": "\\eqqcolon",
+    "package": "mathtools"
+  },
+  {
+    "name": "eqref",
+    "hint": "Reference an equation number in parentheses",
+    "snippet": "\\eqref{${}}"
+  },
+  {
+    "name": "equiv",
+    "hint": "Equivalent"
+  },
+  {
+    "name": "eta",
+    "hint": "Greek small letter eta"
+  },
+  {
+    "name": "exists",
+    "hint": "There exists"
+  },
+  {
+    "name": "exp",
+    "hint": "Exponential"
+  },
+  {
+    "name": "expandafter",
+    "hint": "Expand a token first",
+    "snippet": "\\expandafter"
+  },
+  {
+    "name": "fancyfoot",
+    "hint": "Fancy footer",
+    "snippet": "\\fancyfoot[${}]{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "fancyhead",
+    "hint": "Fancy header",
+    "snippet": "\\fancyhead[${}]{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "fancyhf",
+    "hint": "Clear and set the fancy header and footer",
+    "snippet": "\\fancyhf{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "fbox",
+    "hint": "Framed box",
+    "snippet": "\\fbox{${}}"
+  },
+  {
+    "name": "fcolorbox",
+    "hint": "Framed box with a background colour",
+    "snippet": "\\fcolorbox{${}}{${}}{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "fill",
+    "hint": "TikZ path filled",
+    "snippet": "\\fill ${};",
+    "package": "tikz"
+  },
+  {
+    "name": "filldraw",
+    "hint": "TikZ path filled and drawn",
+    "snippet": "\\filldraw ${};",
+    "package": "tikz"
+  },
+  {
+    "name": "footnote",
+    "hint": "Footnote",
+    "snippet": "\\footnote{${}}"
+  },
+  {
+    "name": "footnotetext",
+    "hint": "Footnote text on another page",
+    "snippet": "\\footnotetext{${}}"
+  },
+  {
+    "name": "forall",
+    "hint": "For all"
+  },
+  {
+    "name": "foreignlanguage",
+    "hint": "Text in another language",
+    "snippet": "\\foreignlanguage{${}}{${}}",
+    "package": "babel"
+  },
+  {
+    "name": "frac",
+    "hint": "Fraction",
+    "snippet": "\\frac{${num}}{${den}}"
+  },
+  {
+    "name": "framebox",
+    "hint": "Framed box with options",
+    "snippet": "\\framebox{${}}"
+  },
+  {
+    "name": "gamma",
+    "hint": "Greek small letter gamma"
+  },
+  {
+    "name": "gcd",
+    "hint": "Greatest common divisor"
+  },
+  {
+    "name": "ge",
+    "hint": "Greater than or equal (short)"
+  },
+  {
+    "name": "geometry",
+    "hint": "Page geometry options",
+    "snippet": "\\geometry{${}}",
+    "package": "geometry"
+  },
+  {
+    "name": "geq",
+    "hint": "Greater than or equal"
+  },
+  {
+    "name": "geqslant",
+    "hint": "Greater than or slanted equal"
+  },
+  {
+    "name": "gg",
+    "hint": "Much greater than"
+  },
+  {
+    "name": "hat",
+    "hint": "Hat accent",
+    "snippet": "\\hat{${}}"
+  },
+  {
+    "name": "hbar",
+    "hint": "Planck constant over two pi"
+  },
+  {
+    "name": "hbox",
+    "hint": "Horizontal box",
+    "snippet": "\\hbox{${}}"
+  },
+  {
+    "name": "headheight",
+    "hint": "Set the header height"
+  },
+  {
+    "name": "hfill",
+    "hint": "Stretchable horizontal space"
+  },
+  {
+    "name": "hline",
+    "hint": "Horizontal rule of a table",
+    "snippet": "\\hline"
+  },
+  {
+    "name": "hom",
+    "hint": "Homomorphisms"
+  },
+  {
+    "name": "hookrightarrow",
+    "hint": "Hooked right arrow"
+  },
+  {
+    "name": "hphantom",
+    "hint": "Invisible text, width only",
+    "snippet": "\\hphantom{${}}"
+  },
+  {
+    "name": "href",
+    "hint": "Hyperlink with text",
+    "snippet": "\\href{${}}{${}}",
+    "package": "hyperref"
+  },
+  {
+    "name": "hrule",
+    "hint": "Horizontal rule"
+  },
+  {
+    "name": "hspace",
+    "hint": "Horizontal space",
+    "snippet": "\\hspace{${}}"
+  },
+  {
+    "name": "hyperlink",
+    "hint": "Link to a named anchor",
+    "snippet": "\\hyperlink{${}}{${}}",
+    "package": "hyperref"
+  },
+  {
+    "name": "hyperref",
+    "hint": "Hyperlink with options",
+    "snippet": "\\hyperref[${}]{${}}",
+    "package": "hyperref"
+  },
+  {
+    "name": "hypertarget",
+    "hint": "Named anchor",
+    "snippet": "\\hypertarget{${}}{${}}",
+    "package": "hyperref"
+  },
+  {
+    "name": "ifthenelse",
+    "hint": "Conditional on a test",
+    "snippet": "\\ifthenelse{${}}{${}}{${}}",
+    "package": "ifthen"
+  },
+  {
+    "name": "ifx",
+    "hint": "Test if two tokens match",
+    "snippet": "\\ifx${}"
+  },
+  {
+    "name": "ignorespaces",
+    "hint": "Skip spaces that follow"
+  },
+  {
+    "name": "iiint",
+    "hint": "Triple integral",
+    "snippet": "\\iiint"
+  },
+  {
+    "name": "iint",
+    "hint": "Double integral",
+    "snippet": "\\iint_{${}}^{${}}|"
+  },
+  {
+    "name": "import",
+    "hint": "Include a file from a directory",
+    "snippet": "\\import{${}}{${}}",
+    "package": "import"
+  },
+  {
+    "name": "in",
+    "hint": "Element of"
+  },
+  {
+    "name": "include",
+    "hint": "Include a file on a new page",
+    "snippet": "\\include{${}}|"
+  },
+  {
+    "name": "includegraphics",
+    "hint": "Include an image file",
+    "snippet": "\\includegraphics[width=${\\linewidth}]{${}}",
+    "package": "graphicx"
+  },
+  {
+    "name": "includeonly",
+    "hint": "Include only the listed files",
+    "snippet": "\\includeonly{${}}|"
+  },
+  {
+    "name": "indent",
+    "hint": "Indent this paragraph"
+  },
+  {
+    "name": "index",
+    "hint": "Index entry",
+    "snippet": "\\index{${}}"
+  },
+  {
+    "name": "inf",
+    "hint": "Infimum"
+  },
+  {
+    "name": "infty",
+    "hint": "Infinity"
+  },
+  {
+    "name": "input",
+    "hint": "Include another file",
+    "snippet": "\\input{${}}|"
+  },
+  {
+    "name": "inputencoding",
+    "hint": "Input encoding for the rest of the file",
+    "snippet": "\\inputencoding{${}}|"
+  },
+  {
+    "name": "int",
+    "hint": "Integral",
+    "snippet": "\\int_{${}}^{${}}"
+  },
+  {
+    "name": "intertext",
+    "hint": "Text between aligned lines",
+    "snippet": "\\intertext{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "iota",
+    "hint": "Greek small letter iota"
+  },
+  {
+    "name": "item",
+    "hint": "List item",
+    "snippet": "\\item ${}"
+  },
+  {
+    "name": "jobname",
+    "hint": "Name of the job",
+    "snippet": "\\jobname"
+  },
+  {
+    "name": "kappa",
+    "hint": "Greek small letter kappa"
+  },
+  {
+    "name": "ker",
+    "hint": "Kernel"
+  },
+  {
+    "name": "lVert",
+    "hint": "Left norm bar",
+    "snippet": "\\lVert${}\\rVert",
+    "package": "amsmath"
+  },
+  {
+    "name": "label",
+    "hint": "Label a number for \\ref",
+    "snippet": "\\label{${}}"
+  },
+  {
+    "name": "lambda",
+    "hint": "Greek small letter lambda"
+  },
+  {
+    "name": "land",
+    "hint": "Logical and"
+  },
+  {
+    "name": "langle",
+    "hint": "Left angle bracket"
+  },
+  {
+    "name": "lbrace",
+    "hint": "Left brace"
+  },
+  {
+    "name": "lceil",
+    "hint": "Left ceiling"
+  },
+  {
+    "name": "ldots",
+    "hint": "Three dots on the baseline"
+  },
+  {
+    "name": "le",
+    "hint": "Less than or equal (short)"
+  },
+  {
+    "name": "left",
+    "hint": "Stretchy left delimiter",
+    "snippet": "\\left(${}\\right)"
+  },
+  {
+    "name": "leftarrow",
+    "hint": "Left arrow"
+  },
+  {
+    "name": "leftrightarrow",
+    "hint": "Left-right arrow"
+  },
+  {
+    "name": "leq",
+    "hint": "Less than or equal"
+  },
+  {
+    "name": "leqslant",
+    "hint": "Less than or slanted equal"
+  },
+  {
+    "name": "lfloor",
+    "hint": "Left floor"
+  },
+  {
+    "name": "lfoot",
+    "hint": "Left footer",
+    "snippet": "\\lfoot{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "lhead",
+    "hint": "Left header",
+    "snippet": "\\lhead{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "lim",
+    "hint": "Limit",
+    "snippet": "\\lim_{${}\\to ${}}"
+  },
+  {
+    "name": "liminf",
+    "hint": "Limit inferior",
+    "snippet": "\\liminf_{${}}"
+  },
+  {
+    "name": "limits",
+    "hint": "Limits above and below"
+  },
+  {
+    "name": "limsup",
+    "hint": "Limit superior",
+    "snippet": "\\limsup_{${}}"
+  },
+  {
+    "name": "linebreak",
+    "hint": "Line break, justified",
+    "snippet": "\\linebreak"
+  },
+  {
+    "name": "linespread",
+    "hint": "Scale the line spacing",
+    "snippet": "\\linespread{${}}"
+  },
+  {
+    "name": "lipsum",
+    "hint": "Dummy text",
+    "snippet": "\\lipsum[${}]",
+    "package": "lipsum"
+  },
+  {
+    "name": "listoffigures",
+    "hint": "List of figures"
+  },
+  {
+    "name": "listoftables",
+    "hint": "List of tables"
+  },
+  {
+    "name": "ll",
+    "hint": "Much less than"
+  },
+  {
+    "name": "llap",
+    "hint": "Overprint to the left, no width",
+    "snippet": "\\llap{${}}"
+  },
+  {
+    "name": "ln",
+    "hint": "Natural logarithm"
+  },
+  {
+    "name": "log",
+    "hint": "Logarithm"
+  },
+  {
+    "name": "lor",
+    "hint": "Logical or"
+  },
+  {
+    "name": "lozenge",
+    "hint": "Lozenge"
+  },
+  {
+    "name": "lstinline",
+    "hint": "Inline code (listings)",
+    "snippet": "\\lstinline|${}|",
+    "package": "listings"
+  },
+  {
+    "name": "lstset",
+    "hint": "Set listings options",
+    "snippet": "\\lstset{${}}",
+    "package": "listings"
+  },
+  {
+    "name": "lvert",
+    "hint": "Left absolute value bar",
+    "snippet": "\\lvert${}\\rvert",
+    "package": "amsmath"
+  },
+  {
+    "name": "makebox",
+    "hint": "Box of a given width",
+    "snippet": "\\makebox{${}}"
+  },
+  {
+    "name": "maketitle",
+    "hint": "Print the title block"
+  },
+  {
+    "name": "mapsto",
+    "hint": "Maps to"
+  },
+  {
+    "name": "mathbb",
+    "hint": "Blackboard bold, for sets like R",
+    "snippet": "\\mathbb{${}}",
+    "package": "amssymb"
+  },
+  {
+    "name": "mathbf",
+    "hint": "Bold math",
+    "snippet": "\\mathbf{${}}"
+  },
+  {
+    "name": "mathbin",
+    "hint": "Math binary operator class",
+    "snippet": "\\mathbin{${}}"
+  },
+  {
+    "name": "mathcal",
+    "hint": "Calligraphic math",
+    "snippet": "\\mathcal{${}}"
+  },
+  {
+    "name": "mathclap",
+    "hint": "Centred zero-width math",
+    "snippet": "\\mathclap{${}}",
+    "package": "mathtools"
+  },
+  {
+    "name": "mathfrak",
+    "hint": "Fraktur math",
+    "snippet": "\\mathfrak{${}}",
+    "package": "amssymb"
+  },
+  {
+    "name": "mathit",
+    "hint": "Italic math",
+    "snippet": "\\mathit{${}}"
+  },
+  {
+    "name": "mathop",
+    "hint": "Math operator class",
+    "snippet": "\\mathop{${}}"
+  },
+  {
+    "name": "mathpunct",
+    "hint": "Math punctuation class",
+    "snippet": "\\mathpunct{${}}"
+  },
+  {
+    "name": "mathrel",
+    "hint": "Math relation class",
+    "snippet": "\\mathrel{${}}"
+  },
+  {
+    "name": "mathrm",
+    "hint": "Roman math",
+    "snippet": "\\mathrm{${}}"
+  },
+  {
+    "name": "mathscr",
+    "hint": "Script math",
+    "snippet": "\\mathscr{${}}",
+    "package": "mathrsfs"
+  },
+  {
+    "name": "mathsf",
+    "hint": "Sans-serif math",
+    "snippet": "\\mathsf{${}}"
+  },
+  {
+    "name": "mathtt",
+    "hint": "Monospace math",
+    "snippet": "\\mathtt{${}}"
+  },
+  {
+    "name": "max",
+    "hint": "Maximum"
+  },
+  {
+    "name": "mbox",
+    "hint": "Box that does not break lines",
+    "snippet": "\\mbox{${}}"
+  },
+  {
+    "name": "medskip",
+    "hint": "Medium vertical space"
+  },
+  {
+    "name": "mid",
+    "hint": "Vertical bar with spacing in a set"
+  },
+  {
+    "name": "midrule",
+    "hint": "Middle rule of a table",
+    "snippet": "\\midrule",
+    "package": "booktabs"
+  },
+  {
+    "name": "min",
+    "hint": "Minimum"
+  },
+  {
+    "name": "models",
+    "hint": "Models relation"
+  },
+  {
+    "name": "mp",
+    "hint": "Minus or plus"
+  },
+  {
+    "name": "mu",
+    "hint": "Greek small letter mu"
+  },
+  {
+    "name": "multicolumn",
+    "hint": "Span several columns",
+    "snippet": "\\multicolumn{${}}{${}}{${}}"
+  },
+  {
+    "name": "multirow",
+    "hint": "Span several rows",
+    "snippet": "\\multirow{${}}{*}{${}}",
+    "package": "multirow"
+  },
+  {
+    "name": "nabla",
+    "hint": "Nabla operator"
+  },
+  {
+    "name": "nameref",
+    "hint": "Reference with the section title",
+    "snippet": "\\nameref{${}}"
+  },
+  {
+    "name": "ne",
+    "hint": "Not equal (short)"
+  },
+  {
+    "name": "neg",
+    "hint": "Logical not"
+  },
+  {
+    "name": "neq",
+    "hint": "Not equal"
+  },
+  {
+    "name": "newboolean",
+    "hint": "Declare a boolean",
+    "snippet": "\\newboolean{${}}|"
+  },
+  {
+    "name": "newcommand",
+    "hint": "Define a new command",
+    "snippet": "\\newcommand{\\${}}[${0}]{${}}"
+  },
+  {
+    "name": "newcounter",
+    "hint": "Declare a counter",
+    "snippet": "\\newcounter{${}}"
+  },
+  {
+    "name": "newenvironment",
+    "hint": "Define a new environment",
+    "snippet": "\\newenvironment{${}}{${}}{${}}"
+  },
+  {
+    "name": "newif",
+    "hint": "Declare a conditional",
+    "snippet": "\\newif\\if${}"
+  },
+  {
+    "name": "newline",
+    "hint": "Line break"
+  },
+  {
+    "name": "newpage",
+    "hint": "Start a new page"
+  },
+  {
+    "name": "newtheorem",
+    "hint": "Declare a theorem-like environment",
+    "snippet": "\\newtheorem{${}}{${}}"
+  },
+  {
+    "name": "nexists",
+    "hint": "There is no"
+  },
+  {
+    "name": "ngtr",
+    "hint": "Not greater than"
+  },
+  {
+    "name": "ni",
+    "hint": "Contains as element"
+  },
+  {
+    "name": "nless",
+    "hint": "Not less than"
+  },
+  {
+    "name": "nobreak",
+    "hint": "Forbid a break at this point"
+  },
+  {
+    "name": "nocite",
+    "hint": "Add to the bibliography without citing",
+    "snippet": "\\nocite{${}}"
+  },
+  {
+    "name": "node",
+    "hint": "TikZ node with text",
+    "snippet": "\\node ${};",
+    "package": "tikz"
+  },
+  {
+    "name": "noexpand",
+    "hint": "Stop expansion of a token",
+    "snippet": "\\noexpand"
+  },
+  {
+    "name": "noindent",
+    "hint": "No indent for this paragraph"
+  },
+  {
+    "name": "nolimits",
+    "hint": "Limits beside the operator"
+  },
+  {
+    "name": "nolinebreak",
+    "hint": "Forbid a line break here"
+  },
+  {
+    "name": "nonumber",
+    "hint": "Suppress the equation number",
+    "snippet": "\\nonumber"
+  },
+  {
+    "name": "not",
+    "hint": "Negate the next symbol",
+    "snippet": "\\not"
+  },
+  {
+    "name": "notag",
+    "hint": "Suppress the equation number",
+    "snippet": "\\notag",
+    "package": "amsmath"
+  },
+  {
+    "name": "notin",
+    "hint": "Not an element of"
+  },
+  {
+    "name": "nu",
+    "hint": "Greek small letter nu"
+  },
+  {
+    "name": "num",
+    "hint": "Number (siunitx)",
+    "snippet": "\\num{${}}",
+    "package": "siunitx"
+  },
+  {
+    "name": "numberwithin",
+    "hint": "Number a counter within another",
+    "snippet": "\\numberwithin{${}}{${}}"
+  },
+  {
+    "name": "oe",
+    "hint": "Latin oe ligature"
+  },
+  {
+    "name": "oint",
+    "hint": "Contour integral",
+    "snippet": "\\oint_{${}}"
+  },
+  {
+    "name": "omega",
+    "hint": "Greek small letter omega"
+  },
+  {
+    "name": "onehalfspacing",
+    "hint": "One and a half line spacing",
+    "snippet": "\\onehalfspacing",
+    "package": "setspace"
+  },
+  {
+    "name": "operatorname",
+    "hint": "Named operator",
+    "snippet": "\\operatorname{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "oplus",
+    "hint": "Circled plus"
+  },
+  {
+    "name": "otimes",
+    "hint": "Circled times"
+  },
+  {
+    "name": "overbrace",
+    "hint": "Brace above",
+    "snippet": "\\overbrace{${}}^{${}}"
+  },
+  {
+    "name": "overline",
+    "hint": "Overline",
+    "snippet": "\\overline{${}}"
+  },
+  {
+    "name": "overset",
+    "hint": "Symbol over another",
+    "snippet": "\\overset{${}}{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "pagebreak",
+    "hint": "Page break"
+  },
+  {
+    "name": "pagecolor",
+    "hint": "Page background colour",
+    "snippet": "\\pagecolor{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "pagenumbering",
+    "hint": "Page number style",
+    "snippet": "\\pagenumbering{${}}"
+  },
+  {
+    "name": "pageref",
+    "hint": "Page number of a label",
+    "snippet": "\\pageref{${}}"
+  },
+  {
+    "name": "pagestyle",
+    "hint": "Page style",
+    "snippet": "\\pagestyle{${}}"
+  },
+  {
+    "name": "par",
+    "hint": "Paragraph break"
+  },
+  {
+    "name": "paragraph",
+    "hint": "Run-in paragraph heading",
+    "snippet": "\\paragraph{${}}"
+  },
+  {
+    "name": "parallel",
+    "hint": "Parallel"
+  },
+  {
+    "name": "parbox",
+    "hint": "Paragraph-sized box",
+    "snippet": "\\parbox{${}}{${}}"
+  },
+  {
+    "name": "part",
+    "hint": "Top-level division",
+    "snippet": "\\part{${}}"
+  },
+  {
+    "name": "partial",
+    "hint": "Partial derivative sign"
+  },
+  {
+    "name": "path",
+    "hint": "TikZ path, not drawn",
+    "snippet": "\\path ${};",
+    "package": "tikz"
+  },
+  {
+    "name": "pdfbookmark",
+    "hint": "Bookmark with a given level",
+    "snippet": "\\pdfbookmark[${}]{${}}{${}}",
+    "package": "hyperref"
+  },
+  {
+    "name": "perp",
+    "hint": "Perpendicular"
+  },
+  {
+    "name": "phantom",
+    "hint": "Invisible text that takes space",
+    "snippet": "\\phantom{${}}"
+  },
+  {
+    "name": "phantomsection",
+    "hint": "Anchor for a bookmark",
+    "snippet": "\\phantomsection",
+    "package": "hyperref"
+  },
+  {
+    "name": "phi",
+    "hint": "Greek small letter phi"
+  },
+  {
+    "name": "pi",
+    "hint": "Greek small letter pi"
+  },
+  {
+    "name": "pm",
+    "hint": "Plus or minus"
+  },
+  {
+    "name": "pounds",
+    "hint": "Pound sign"
+  },
+  {
+    "name": "preceq",
+    "hint": "Precedes or equal"
+  },
+  {
+    "name": "prime",
+    "hint": "Prime"
+  },
+  {
+    "name": "prod",
+    "hint": "Product",
+    "snippet": "\\prod_{${}}^{${}}"
+  },
+  {
+    "name": "propto",
+    "hint": "Proportional to"
+  },
+  {
+    "name": "providecommand",
+    "hint": "Define a command unless it exists",
+    "snippet": "\\providecommand{\\${}}[${0}]{${}}"
+  },
+  {
+    "name": "psi",
+    "hint": "Greek small letter psi"
+  },
+  {
+    "name": "qquad",
+    "hint": "Double em space"
+  },
+  {
+    "name": "quad",
+    "hint": "Em space"
+  },
+  {
+    "name": "rVert",
+    "hint": "Right norm bar",
+    "snippet": "\\rVert",
+    "package": "amsmath"
+  },
+  {
+    "name": "raggedleft",
+    "hint": "Ragged left text"
+  },
+  {
+    "name": "raggedright",
+    "hint": "Ragged right text"
+  },
+  {
+    "name": "raisebox",
+    "hint": "Raise or lower material",
+    "snippet": "\\raisebox{${}}{${}}"
+  },
+  {
+    "name": "rangle",
+    "hint": "Right angle bracket"
+  },
+  {
+    "name": "rbrace",
+    "hint": "Right brace"
+  },
+  {
+    "name": "rceil",
+    "hint": "Right ceiling"
+  },
+  {
+    "name": "ref",
+    "hint": "Reference a label, number only",
+    "snippet": "\\ref{${}}"
+  },
+  {
+    "name": "reflectbox",
+    "hint": "Mirror material",
+    "snippet": "\\reflectbox{${}}",
+    "package": "graphicx"
+  },
+  {
+    "name": "refstepcounter",
+    "hint": "Advance a counter and make it referable",
+    "snippet": "\\refstepcounter{${}}"
+  },
+  {
+    "name": "relax",
+    "hint": "Do nothing, stop expansion",
+    "snippet": "\\relax"
+  },
+  {
+    "name": "renewcommand",
+    "hint": "Redefine an existing command",
+    "snippet": "\\renewcommand{\\${}}[${0}]{${}}"
+  },
+  {
+    "name": "renewenvironment",
+    "hint": "Redefine an environment",
+    "snippet": "\\renewenvironment{${}}{${}}{${}}"
+  },
+  {
+    "name": "resizebox",
+    "hint": "Resize material to a width and height",
+    "snippet": "\\resizebox{${}}{!}{${}}",
+    "package": "graphicx"
+  },
+  {
+    "name": "rfloor",
+    "hint": "Right floor"
+  },
+  {
+    "name": "rfoot",
+    "hint": "Right footer",
+    "snippet": "\\rfoot{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "rhead",
+    "hint": "Right header",
+    "snippet": "\\rhead{${}}",
+    "package": "fancyhdr"
+  },
+  {
+    "name": "rho",
+    "hint": "Greek small letter rho"
+  },
+  {
+    "name": "right",
+    "hint": "Stretchy right delimiter",
+    "snippet": "\\right${}"
+  },
+  {
+    "name": "rightarrow",
+    "hint": "Right arrow"
+  },
+  {
+    "name": "rlap",
+    "hint": "Overprint to the right, no width",
+    "snippet": "\\rlap{${}}"
+  },
+  {
+    "name": "rotatebox",
+    "hint": "Rotate material",
+    "snippet": "\\rotatebox{${}}{${}}",
+    "package": "graphicx"
+  },
+  {
+    "name": "rule",
+    "hint": "Rule of a given size",
+    "snippet": "\\rule{${}}{${}}"
+  },
+  {
+    "name": "rvert",
+    "hint": "Right absolute value bar",
+    "snippet": "\\rvert",
+    "package": "amsmath"
+  },
+  {
+    "name": "scalebox",
+    "hint": "Scale material",
+    "snippet": "\\scalebox{${}}{${}}",
+    "package": "graphicx"
+  },
+  {
+    "name": "scriptstyle",
+    "hint": "Script style inside math"
+  },
+  {
+    "name": "sec",
+    "hint": "Secant"
+  },
+  {
+    "name": "section",
+    "hint": "Section heading",
+    "snippet": "\\section{${}}"
+  },
+  {
+    "name": "selectlanguage",
+    "hint": "Switch the language",
+    "snippet": "\\selectlanguage{${}}",
+    "package": "babel"
+  },
+  {
+    "name": "setboolean",
+    "hint": "Set a boolean",
+    "snippet": "\\setboolean{${}}{${}}|"
+  },
+  {
+    "name": "setcounter",
+    "hint": "Set a counter",
+    "snippet": "\\setcounter{${}}{${}}"
+  },
+  {
+    "name": "setlength",
+    "hint": "Set a length",
+    "snippet": "\\setlength{${}}{${}}"
+  },
+  {
+    "name": "setminus",
+    "hint": "Set difference"
+  },
+  {
+    "name": "setstretch",
+    "hint": "Scale line spacing",
+    "snippet": "\\setstretch{${}}",
+    "package": "setspace"
+  },
+  {
+    "name": "shortintertext",
+    "hint": "Short text between aligned lines",
+    "snippet": "\\shortintertext{${}}",
+    "package": "mathtools"
+  },
+  {
+    "name": "si",
+    "hint": "Unit (siunitx)",
+    "snippet": "\\si{${}}",
+    "package": "siunitx"
+  },
+  {
+    "name": "sigma",
+    "hint": "Greek small letter sigma"
+  },
+  {
+    "name": "sim",
+    "hint": "Similar"
+  },
+  {
+    "name": "simeq",
+    "hint": "Similar or equal"
+  },
+  {
+    "name": "sin",
+    "hint": "Sine"
+  },
+  {
+    "name": "singlespacing",
+    "hint": "Single line spacing",
+    "snippet": "\\singlespacing",
+    "package": "setspace"
+  },
+  {
+    "name": "sinh",
+    "hint": "Hyperbolic sine"
+  },
+  {
+    "name": "smallskip",
+    "hint": "Small vertical space"
+  },
+  {
+    "name": "smash",
+    "hint": "Zero height and depth",
+    "snippet": "\\smash{${}}"
+  },
+  {
+    "name": "sout",
+    "hint": "Strike out in text",
+    "snippet": "\\sout{${}}",
+    "package": "ulem"
+  },
+  {
+    "name": "sqrt",
+    "hint": "Square root",
+    "snippet": "\\sqrt{${}}"
+  },
+  {
+    "name": "square",
+    "hint": "Empty square"
+  },
+  {
+    "name": "ss",
+    "hint": "German sharp s"
+  },
+  {
+    "name": "stackrel",
+    "hint": "Symbol stacked over another",
+    "snippet": "\\stackrel{${}}{${}}"
+  },
+  {
+    "name": "star",
+    "hint": "Star operator"
+  },
+  {
+    "name": "stepcounter",
+    "hint": "Advance a counter",
+    "snippet": "\\stepcounter{${}}"
+  },
+  {
+    "name": "strut",
+    "hint": "Invisible strut"
+  },
+  {
+    "name": "subcaption",
+    "hint": "Caption of a subfigure",
+    "snippet": "\\subcaption{${}}",
+    "package": "subcaption"
+  },
+  {
+    "name": "subcaptionbox",
+    "hint": "Subfigure with its caption",
+    "snippet": "\\subcaptionbox{${}}{${}}",
+    "package": "subcaption"
+  },
+  {
+    "name": "subfile",
+    "hint": "Include a subdocument",
+    "snippet": "\\subfile{${}}",
+    "package": "subfiles"
+  },
+  {
+    "name": "subimport",
+    "hint": "Include a file from a relative directory",
+    "snippet": "\\subimport{${}}{${}}",
+    "package": "import"
+  },
+  {
+    "name": "subparagraph",
+    "hint": "Run-in subparagraph heading",
+    "snippet": "\\subparagraph{${}}"
+  },
+  {
+    "name": "subsection",
+    "hint": "Subsection heading",
+    "snippet": "\\subsection{${}}"
+  },
+  {
+    "name": "subset",
+    "hint": "Subset"
+  },
+  {
+    "name": "subseteq",
+    "hint": "Subset or equal"
+  },
+  {
+    "name": "subsubsection",
+    "hint": "Sub-subsection heading",
+    "snippet": "\\subsubsection{${}}"
+  },
+  {
+    "name": "succeq",
+    "hint": "Succeeds or equal"
+  },
+  {
+    "name": "sum",
+    "hint": "Summation",
+    "snippet": "\\sum_{${}}^{${}}"
+  },
+  {
+    "name": "sup",
+    "hint": "Supremum"
+  },
+  {
+    "name": "supset",
+    "hint": "Superset"
+  },
+  {
+    "name": "supseteq",
+    "hint": "Superset or equal"
+  },
+  {
+    "name": "tableofcontents",
+    "hint": "Table of contents"
+  },
+  {
+    "name": "tag",
+    "hint": "Custom equation tag",
+    "snippet": "\\tag{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "tan",
+    "hint": "Tangent"
+  },
+  {
+    "name": "tanh",
+    "hint": "Hyperbolic tangent"
+  },
+  {
+    "name": "tau",
+    "hint": "Greek small letter tau"
+  },
+  {
+    "name": "texorpdfstring",
+    "hint": "Different text for PDF bookmarks",
+    "snippet": "\\texorpdfstring{${}}{${}}",
+    "package": "hyperref"
+  },
+  {
+    "name": "text",
+    "hint": "Text inside math",
+    "snippet": "\\text{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "textasciitilde",
+    "hint": "Tilde in text"
+  },
+  {
+    "name": "textbackslash",
+    "hint": "Backslash in text"
+  },
+  {
+    "name": "textbar",
+    "hint": "Vertical bar in text"
+  },
+  {
+    "name": "textbf",
+    "hint": "Bold text",
+    "snippet": "\\textbf{${}}"
+  },
+  {
+    "name": "textcircumflex",
+    "hint": "Caret in text"
+  },
+  {
+    "name": "textcolor",
+    "hint": "Coloured text",
+    "snippet": "\\textcolor{${}}{${}}",
+    "package": "xcolor"
+  },
+  {
+    "name": "textdegree",
+    "hint": "Degree sign"
+  },
+  {
+    "name": "textemdash",
+    "hint": "Em dash"
+  },
+  {
+    "name": "textendash",
+    "hint": "En dash"
+  },
+  {
+    "name": "textgreater",
+    "hint": "Greater-than sign in text"
+  },
+  {
+    "name": "textit",
+    "hint": "Italic text",
+    "snippet": "\\textit{${}}"
+  },
+  {
+    "name": "textless",
+    "hint": "Less-than sign in text"
+  },
+  {
+    "name": "textmd",
+    "hint": "Medium weight text",
+    "snippet": "\\textmd{${}}"
+  },
+  {
+    "name": "textmu",
+    "hint": "Micro sign in text"
+  },
+  {
+    "name": "textnormal",
+    "hint": "Normal text inside math or a heading",
+    "snippet": "\\textnormal{${}}"
+  },
+  {
+    "name": "textregistered",
+    "hint": "Registered sign"
+  },
+  {
+    "name": "textrm",
+    "hint": "Roman text",
+    "snippet": "\\textrm{${}}"
+  },
+  {
+    "name": "textsc",
+    "hint": "Small capitals",
+    "snippet": "\\textsc{${}}"
+  },
+  {
+    "name": "textsf",
+    "hint": "Sans-serif text",
+    "snippet": "\\textsf{${}}"
+  },
+  {
+    "name": "textsl",
+    "hint": "Slanted text",
+    "snippet": "\\textsl{${}}"
+  },
+  {
+    "name": "textstyle",
+    "hint": "Text style inside math"
+  },
+  {
+    "name": "textsubscript",
+    "hint": "Subscript text",
+    "snippet": "\\textsubscript{${}}"
+  },
+  {
+    "name": "textsuperscript",
+    "hint": "Superscript text",
+    "snippet": "\\textsuperscript{${}}"
+  },
+  {
+    "name": "texttrademark",
+    "hint": "Trademark sign"
+  },
+  {
+    "name": "texttt",
+    "hint": "Monospace text",
+    "snippet": "\\texttt{${}}"
+  },
+  {
+    "name": "textup",
+    "hint": "Upright text",
+    "snippet": "\\textup{${}}"
+  },
+  {
+    "name": "tfrac",
+    "hint": "Text-size fraction",
+    "snippet": "\\tfrac{${num}}{${den}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "thanks",
+    "hint": "Footnote on the title block",
+    "snippet": "\\thanks{${}}"
+  },
+  {
+    "name": "theta",
+    "hint": "Greek small letter theta"
+  },
+  {
+    "name": "thispagestyle",
+    "hint": "Page style for this page",
+    "snippet": "\\thispagestyle{${}}"
+  },
+  {
+    "name": "tikz",
+    "hint": "Draw with TikZ",
+    "snippet": "\\tikz{${}}",
+    "package": "tikz"
+  },
+  {
+    "name": "tikzset",
+    "hint": "Set TikZ styles",
+    "snippet": "\\tikzset{${}}",
+    "package": "tikz"
+  },
+  {
+    "name": "tilde",
+    "hint": "Tilde accent",
+    "snippet": "\\tilde{${}}"
+  },
+  {
+    "name": "times",
+    "hint": "Times sign"
+  },
+  {
+    "name": "title",
+    "hint": "Document title",
+    "snippet": "\\title{${}}"
+  },
+  {
+    "name": "to",
+    "hint": "Right arrow"
+  },
+  {
+    "name": "today",
+    "hint": "Today's date"
+  },
+  {
+    "name": "todo",
+    "hint": "Todo note in the margin",
+    "snippet": "\\todo{${}}",
+    "package": "todonotes"
+  },
+  {
+    "name": "top",
+    "hint": "Top element"
+  },
+  {
+    "name": "toprule",
+    "hint": "Top rule of a table",
+    "snippet": "\\toprule",
+    "package": "booktabs"
+  },
+  {
+    "name": "triangle",
+    "hint": "Triangle"
+  },
+  {
+    "name": "twoheadrightarrow",
+    "hint": "Two-headed right arrow"
+  },
+  {
+    "name": "uline",
+    "hint": "Underline in text, breakable",
+    "snippet": "\\uline{${}}",
+    "package": "ulem"
+  },
+  {
+    "name": "underbrace",
+    "hint": "Brace below",
+    "snippet": "\\underbrace{${}}_{${}}"
+  },
+  {
+    "name": "underline",
+    "hint": "Underlined text",
+    "snippet": "\\underline{${}}"
+  },
+  {
+    "name": "underset",
+    "hint": "Symbol under another",
+    "snippet": "\\underset{${}}{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "unskip",
+    "hint": "Remove the last space"
+  },
+  {
+    "name": "uparrow",
+    "hint": "Up arrow"
+  },
+  {
+    "name": "upsilon",
+    "hint": "Greek small letter upsilon"
+  },
+  {
+    "name": "url",
+    "hint": "Print a URL",
+    "snippet": "\\url{${}}",
+    "package": "url"
+  },
+  {
+    "name": "usepackage",
+    "hint": "Load a package",
+    "snippet": "\\usepackage{${}}"
+  },
+  {
+    "name": "usetikzlibrary",
+    "hint": "Load TikZ libraries",
+    "snippet": "\\usetikzlibrary{${}}",
+    "package": "tikz"
+  },
+  {
+    "name": "varepsilon",
+    "hint": "Greek small letter epsilon, variant"
+  },
+  {
+    "name": "varnothing",
+    "hint": "Empty set, slashed"
+  },
+  {
+    "name": "varphi",
+    "hint": "Greek small letter phi, variant"
+  },
+  {
+    "name": "varpi",
+    "hint": "Greek small letter pi, variant"
+  },
+  {
+    "name": "varrho",
+    "hint": "Greek small letter rho, variant"
+  },
+  {
+    "name": "varsigma",
+    "hint": "Greek small letter final sigma"
+  },
+  {
+    "name": "vartheta",
+    "hint": "Greek small letter theta, variant"
+  },
+  {
+    "name": "vbox",
+    "hint": "Vertical box",
+    "snippet": "\\vbox{${}}"
+  },
+  {
+    "name": "vdash",
+    "hint": "Turnstile"
+  },
+  {
+    "name": "vdots",
+    "hint": "Vertical dots"
+  },
+  {
+    "name": "vec",
+    "hint": "Vector arrow",
+    "snippet": "\\vec{${}}"
+  },
+  {
+    "name": "verb",
+    "hint": "Verbatim inline text",
+    "snippet": "\\verb|${}|"
+  },
+  {
+    "name": "vert",
+    "hint": "Vertical bar"
+  },
+  {
+    "name": "vfill",
+    "hint": "Stretchable vertical space"
+  },
+  {
+    "name": "vphantom",
+    "hint": "Invisible text, height only",
+    "snippet": "\\vphantom{${}}"
+  },
+  {
+    "name": "vrule",
+    "hint": "Vertical rule"
+  },
+  {
+    "name": "vspace",
+    "hint": "Vertical space",
+    "snippet": "\\vspace{${}}"
+  },
+  {
+    "name": "widehat",
+    "hint": "Wide hat accent",
+    "snippet": "\\widehat{${}}"
+  },
+  {
+    "name": "widetilde",
+    "hint": "Wide tilde accent",
+    "snippet": "\\widetilde{${}}"
+  },
+  {
+    "name": "wp",
+    "hint": "Weierstrass p"
+  },
+  {
+    "name": "xi",
+    "hint": "Greek small letter xi"
+  },
+  {
+    "name": "xleftarrow",
+    "hint": "Long left arrow with a label",
+    "snippet": "\\xleftarrow{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "xrightarrow",
+    "hint": "Long right arrow with a label",
+    "snippet": "\\xrightarrow{${}}",
+    "package": "amsmath"
+  },
+  {
+    "name": "zeta",
+    "hint": "Greek small letter zeta"
+  }
+]

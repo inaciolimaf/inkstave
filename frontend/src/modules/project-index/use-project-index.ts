@@ -5,7 +5,18 @@ import { useEffect, useMemo, useRef } from "react";
 import type { TreeNode } from "@/modules/file-tree";
 
 import { fetchDocumentText } from "./api";
-import { MAX_INDEXED_DOCUMENTS, buildIndex, listDocuments, withLiveText } from "./build-index";
+import {
+  type BibRef,
+  type LabelRef,
+  type ProjectFile,
+  MAX_INDEXED_DOCUMENTS,
+  buildIndex,
+  collectBib,
+  collectLabels,
+  listDocuments,
+  listFiles,
+  withLiveText,
+} from "./build-index";
 import { type ResolvedItem, resolveIncludes } from "./resolve-includes";
 import { useLiveSource } from "./use-live-source";
 
@@ -21,6 +32,12 @@ export interface ProjectIndex {
   status: IndexStatus;
   /** Live 1-based cursor line in the open file. */
   cursorLine: number;
+  /** Every label of the indexed files (spec 112: `\ref` targets). */
+  labels: LabelRef[];
+  /** Every `.bib` entry of the project (spec 112: `\cite` keys). */
+  bib: BibRef[];
+  /** Every document and file of the tree (spec 112: `\input` and `\includegraphics` paths). */
+  files: ProjectFile[];
 }
 
 /**
@@ -82,6 +99,12 @@ export function useProjectIndex({
     [base, docs, openDocId, live.text],
   );
   const entries = useMemo(() => resolveIncludes(mainDocId, index), [mainDocId, index]);
+  const labels = useMemo(() => collectLabels(index), [index]);
+  const bib = useMemo(
+    () => collectBib(docs, texts, openDocId, live.text),
+    [docs, texts, openDocId, live.text],
+  );
+  const files = useMemo(() => listFiles(root), [root]);
 
   const previous = useRef(openDocId);
   useEffect(() => {
@@ -97,5 +120,5 @@ export function useProjectIndex({
     : pending && entries.length === 0
       ? "loading"
       : "ready";
-  return { entries, status, cursorLine: live.line };
+  return { entries, status, cursorLine: live.line, labels, bib, files };
 }

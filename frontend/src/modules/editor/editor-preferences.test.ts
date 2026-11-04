@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EditorPreferences, UserPublic } from "@/types";
+import { putEditorPreferences } from "@/modules/settings/api";
 
 import { keymapExtension } from "./keymap-extension";
 import { resolveDark } from "@/lib/resolve-theme";
@@ -59,7 +60,7 @@ describe("useEditorPreferences", () => {
   });
 
   it("maps stored server prefs → CodeMirror EditorSettings (theme/font/keymap)", () => {
-    mockUser = userWith({ theme: "dark", font_size: 18, keymap: "vim" });
+    mockUser = userWith({ theme: "dark", font_size: 18, keymap: "vim", autocomplete: true });
     const { result } = renderHook(() => useEditorPreferences());
     expect(result.current.settings.fontSize).toBe(18);
     expect(result.current.settings.keymap).toBe("vim");
@@ -67,7 +68,7 @@ describe("useEditorPreferences", () => {
   });
 
   it("resolves the 'system' theme from the host dark mode", () => {
-    mockUser = userWith({ theme: "system", font_size: 12, keymap: "emacs" });
+    mockUser = userWith({ theme: "system", font_size: 12, keymap: "emacs", autocomplete: true });
     mockSystemDark = true;
     const { result } = renderHook(() => useEditorPreferences());
     expect(result.current.settings.keymap).toBe("emacs");
@@ -80,5 +81,28 @@ describe("useEditorPreferences", () => {
     expect(result.current.settings.fontSize).toBe(14);
     expect(result.current.settings.keymap).toBe("default");
     expect(result.current.dark).toBe(false); // 'system' theme, light host
+    expect(result.current.settings.autocomplete).toBe(true);
+  });
+
+  it("maps the autocomplete switch of the account (spec 112)", () => {
+    mockUser = userWith({ theme: "system", font_size: 14, keymap: "default", autocomplete: false });
+    const { result } = renderHook(() => useEditorPreferences());
+    expect(result.current.settings.autocomplete).toBe(false);
+  });
+
+  it("saves the autocomplete switch with the other preferences, keeping them", async () => {
+    mockUser = userWith({ theme: "dark", font_size: 18, keymap: "vim", autocomplete: true });
+    vi.mocked(putEditorPreferences).mockResolvedValueOnce({
+      ...mockUser.editor_preferences,
+      autocomplete: false,
+    });
+    const { result } = renderHook(() => useEditorPreferences());
+    result.current.update({ autocomplete: false });
+    expect(putEditorPreferences).toHaveBeenCalledWith({
+      theme: "dark",
+      font_size: 18,
+      keymap: "vim",
+      autocomplete: false,
+    });
   });
 });

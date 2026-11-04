@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { EditorSettings } from "./types";
 import { EditorSettingsPopover } from "./editor-settings-popover";
 
-const SETTINGS: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true };
+const SETTINGS: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true, autocomplete: true };
 
 describe("EditorSettingsPopover", () => {
   it("renders a keymap selector and fires onUpdate with the chosen keymap (#62/AC1)", async () => {

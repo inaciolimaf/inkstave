@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { CodeMirrorEditor } from "./codemirror-editor";
 import type { EditorSettings } from "./types";
 
-const settings: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true };
+const settings: EditorSettings = { fontSize: 14, keymap: "default", lineWrapping: true, autocomplete: true };
 
 describe("CodeMirrorEditor", () => {
   it("mounts a read-only view with the given content", () => {

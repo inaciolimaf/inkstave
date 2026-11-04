@@ -86,6 +86,9 @@ const dict = {
   cm: {
     label: "LaTeX editor",
   },
+  completion: {
+    alsoIn: "also in {{file}}",
+  },
   collab: {
     connected: "Live",
     connecting: "Connecting…",

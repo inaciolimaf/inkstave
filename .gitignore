@@ -26,6 +26,8 @@ build/
 
 # --- Local object storage (spec 14 default backend) ---
 data/
+# Source data checked in on purpose (spec 112): the autocomplete lists.
+!frontend/src/modules/editor/completion/data/
 
 # --- Test/coverage artifacts ---
 coverage.xml

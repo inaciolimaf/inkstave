@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/modules/auth";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   DEFAULT_EDITOR_PREFERENCES,
   type EditorKeymap,
@@ -74,6 +75,14 @@ export function EditorPreferencesSection() {
               <SelectItem value="emacs">{t("editor.keymapEmacs")}</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex items-center justify-between gap-2 py-2">
+          <Label htmlFor="pref-autocomplete">{t("editor.autocomplete")}</Label>
+          <Switch
+            id="pref-autocomplete"
+            checked={prefs.autocomplete}
+            onCheckedChange={(v) => set({ autocomplete: v })}
+          />
         </div>
       </div>
     </SettingsSection>

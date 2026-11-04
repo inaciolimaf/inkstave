@@ -89,6 +89,9 @@ const dict: Dict = {
   cm: {
     label: "Editor LaTeX",
   },
+  completion: {
+    alsoIn: "também em {{file}}",
+  },
   collab: {
     connected: "Ao vivo",
     connecting: "Conectando…",

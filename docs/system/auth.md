@@ -80,7 +80,7 @@ Every 401 is `unauthorized` with `WWW-Authenticate: Bearer`.
 | GET `/api/v1/users/me` | Own profile (`UserMe`) | 401 `unauthorized` |
 | PATCH `/api/v1/users/me` | Update `display_name`, `avatar_url` | 401 `unauthorized` |
 | DELETE `/api/v1/users/me` | Hard delete after password and `confirm: true` | 401 `unauthorized`, 422 |
-| PUT `/api/v1/users/me/editor-preferences` | Replace `theme`, `font_size`, `keymap` | 401 `unauthorized` |
+| PUT `/api/v1/users/me/editor-preferences` | Replace `theme`, `font_size`, `keymap`, `autocomplete` (boolean, default `true`: the LaTeX completion popup) | 401 `unauthorized` |
 | POST `/api/v1/users/me/change-password` | New password, end every session | 400 `bad_request`, 401 `unauthorized`, 429 `rate_limited` |
 | POST `/api/v1/users/me/change-email` | Stage an e-mail change, 202 | 400 `bad_request`, 401 `unauthorized`, 409 `conflict` |
 | POST `/api/v1/users/confirm-email-change` | Unauthenticated; apply the change | 400 `bad_request`, 409 `conflict`, 410 `gone` |

@@ -4,6 +4,7 @@
  */
 import type { TreeNode } from "@/modules/file-tree";
 
+import { type BibEntry, parseBib } from "./parse-bib";
 import { type IndexedDoc } from "./resolve-includes";
 import { parseStructure } from "./parse-structure";
 
@@ -61,4 +62,79 @@ export function withLiveText(
   const open = docs.find((doc) => doc.id === openDocId);
   if (open && liveText !== null) index.set(open.id, { ...open, items: parseStructure(liveText) });
   return index;
+}
+
+/** A project file as completion sees it: a text document or a binary file (images, PDFs). */
+export interface ProjectFile {
+  path: string;
+  type: "doc" | "file";
+}
+
+/** Every document and file of the tree, folders and the root left out. */
+export function listFiles(root: TreeNode | undefined): ProjectFile[] {
+  if (!root) return [];
+  const files: ProjectFile[] = [];
+  const queue = [root];
+  for (const node of queue) {
+    if (node.type !== "folder" && !node.isRoot) files.push({ path: node.path, type: node.type });
+    queue.push(...node.children);
+  }
+  return files;
+}
+
+/** A bibliography entry with the `.bib` file it comes from; `alsoIn` lists the other files that define the key. */
+export interface BibRef extends BibEntry {
+  path: string;
+  alsoIn?: string[];
+}
+
+/** Every `.bib` entry of the project. A key appears once: the first file that defines it wins (spec 112). */
+export function collectBib(
+  docs: readonly DocRef[],
+  texts: readonly (string | undefined)[],
+  openDocId: string | null,
+  liveText: string | null,
+): BibRef[] {
+  const refs = new Map<string, BibRef>();
+  docs.forEach((doc, i) => {
+    if (!doc.path.toLowerCase().endsWith(".bib")) return;
+    const text = doc.id === openDocId && liveText !== null ? liveText : texts[i];
+    if (text === undefined) return;
+    for (const entry of parseBib(text)) addBibEntry(refs, entry, doc.path);
+  });
+  return [...refs.values()];
+}
+
+function addBibEntry(refs: Map<string, BibRef>, entry: BibEntry, path: string): void {
+  const first = refs.get(entry.key);
+  if (!first) {
+    refs.set(entry.key, { ...entry, path });
+  } else if (first.path !== path && !first.alsoIn?.includes(path)) {
+    first.alsoIn = [...(first.alsoIn ?? []), path];
+  }
+}
+
+/** A `\label` of the project, with the file it is in and the section it falls under. */
+export interface LabelRef {
+  name: string;
+  docId: string;
+  path: string;
+  /** The title of the last sectioning command before the label in its file. */
+  section?: string;
+  line: number;
+}
+
+/** Every label of every indexed file, in file order within each file. */
+export function collectLabels(docs: ReadonlyMap<string, IndexedDoc>): LabelRef[] {
+  const labels: LabelRef[] = [];
+  for (const doc of docs.values()) {
+    let section: string | undefined;
+    for (const item of doc.items) {
+      if (item.kind === "section") section = item.title;
+      else if (item.kind === "label" && item.title) {
+        labels.push({ name: item.title, docId: doc.id, path: doc.path, section, line: item.line });
+      }
+    }
+  }
+  return labels;
 }

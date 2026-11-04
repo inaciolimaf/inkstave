@@ -65,6 +65,8 @@ class EditorPreferences(StrictModel):
     theme: EditorTheme = "system"
     font_size: int = 14
     keymap: EditorKeymap = "default"
+    # Spec 112: the completion popup. Old accounts without the field read it as on.
+    autocomplete: bool = True
 
     @field_validator("font_size")
     @classmethod

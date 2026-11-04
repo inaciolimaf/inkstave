@@ -1,0 +1,310 @@
+[
+  {
+    "name": "abstract",
+    "hint": "Abstract of the document",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "align",
+    "hint": "Aligned equations, numbered",
+    "snippet": "\\begin{@NAME@}\n  ${} &= ${} \\\\\\\\\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "align*",
+    "hint": "Aligned equations, unnumbered",
+    "snippet": "\\begin{@NAME@}\n  ${} &= ${} \\\\\\\\\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "aligned",
+    "hint": "Aligned block inside an equation",
+    "snippet": "\\begin{@NAME@}\n  ${} &= ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "block",
+    "hint": "Beamer block with a title",
+    "snippet": "\\begin{@NAME@}{${title}}\n  ${}\n\\end{@NAME@}",
+    "package": "beamer"
+  },
+  {
+    "name": "bmatrix",
+    "hint": "Matrix in square brackets",
+    "snippet": "\\begin{@NAME@}\n  ${} & ${} \\\\\\\\\n  ${} & ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "cases",
+    "hint": "Piecewise definition",
+    "snippet": "\\begin{@NAME@}\n  ${} & ${} \\\\\\\\\n  ${} & ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "center",
+    "hint": "Centred lines",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "columns",
+    "hint": "Beamer columns",
+    "snippet": "\\begin{@NAME@}[T]\n  \\begin{column}{${0.5\\textwidth}}\n    ${}\n  \\end{column}\n\\end{@NAME@}",
+    "package": "beamer"
+  },
+  {
+    "name": "comment",
+    "hint": "Commented-out block",
+    "snippet": "\\begin{@NAME@}\n${}\n\\end{@NAME@}",
+    "package": "comment"
+  },
+  {
+    "name": "corollary",
+    "hint": "Numbered corollary",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "definition",
+    "hint": "Numbered definition",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "description",
+    "hint": "List with terms",
+    "snippet": "\\begin{@NAME@}\n  \\item[${}] ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "displaymath",
+    "hint": "Unnumbered display math",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "document",
+    "hint": "Document body",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "enumerate",
+    "hint": "Numbered list",
+    "snippet": "\\begin{@NAME@}\n  \\item ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "eqnarray*",
+    "hint": "Old unnumbered equation array",
+    "snippet": "\\begin{@NAME@}\n  ${} &=& ${} \\\\\\\\\n\\end{@NAME@}"
+  },
+  {
+    "name": "equation",
+    "hint": "Numbered display equation",
+    "snippet": "\\begin{@NAME@}\n  ${}\n  \\label{eq:${label}}\n\\end{@NAME@}"
+  },
+  {
+    "name": "equation*",
+    "hint": "Unnumbered display equation",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "example",
+    "hint": "Numbered example",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "figure",
+    "hint": "Figure with image, caption and label",
+    "snippet": "\\begin{@NAME@}[htbp]\n  \\centering\n  \\includegraphics[width=\\linewidth]{${image}}\n  \\caption{${caption}}\n  \\label{fig:${label}}\n\\end{@NAME@}"
+  },
+  {
+    "name": "figure*",
+    "hint": "Figure spanning two columns",
+    "snippet": "\\begin{@NAME@}[htbp]\n  \\centering\n  \\includegraphics[width=\\textwidth]{${image}}\n  \\caption{${caption}}\n  \\label{fig:${label}}\n\\end{@NAME@}"
+  },
+  {
+    "name": "filecontents",
+    "hint": "Embed a file in the source",
+    "snippet": "\\begin{@NAME@}{${file.txt}}\n${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "flushleft",
+    "hint": "Left-aligned lines",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "flushright",
+    "hint": "Right-aligned lines",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "frame",
+    "hint": "Beamer slide",
+    "snippet": "\\begin{@NAME@}{${title}}\n  ${}\n\\end{@NAME@}",
+    "package": "beamer"
+  },
+  {
+    "name": "gather",
+    "hint": "Centred equations, numbered",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "gather*",
+    "hint": "Centred equations, unnumbered",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "itemize",
+    "hint": "Bulleted list",
+    "snippet": "\\begin{@NAME@}\n  \\item ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "lemma",
+    "hint": "Numbered lemma",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "longtable",
+    "hint": "Table that breaks across pages",
+    "snippet": "\\begin{@NAME@}{${columns}}\n  ${} \\\\\\\\\n\\end{@NAME@}"
+  },
+  {
+    "name": "lstlisting",
+    "hint": "Source code with syntax options",
+    "snippet": "\\begin{@NAME@}[language=${}]\n${}\n\\end{@NAME@}",
+    "package": "listings"
+  },
+  {
+    "name": "matrix",
+    "hint": "Matrix without brackets",
+    "snippet": "\\begin{@NAME@}\n  ${} & ${} \\\\\\\\\n  ${} & ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "minipage",
+    "hint": "Box with a width for its text",
+    "snippet": "\\begin{@NAME@}{${0.5\\linewidth}}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "multicols",
+    "hint": "Text in several columns",
+    "snippet": "\\begin{@NAME@}{${2}}\n  ${}\n\\end{@NAME@}",
+    "package": "multicol"
+  },
+  {
+    "name": "multline",
+    "hint": "Long equation split over lines",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "multline*",
+    "hint": "Long unnumbered equation split over lines",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "pmatrix",
+    "hint": "Matrix in parentheses",
+    "snippet": "\\begin{@NAME@}\n  ${} & ${} \\\\\\\\\n  ${} & ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "proof",
+    "hint": "Proof, ending with a square",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "proposition",
+    "hint": "Numbered proposition",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "quotation",
+    "hint": "Longer quotation, indented",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "quote",
+    "hint": "Short quotation, indented",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "remark",
+    "hint": "Numbered remark",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "spacing",
+    "hint": "Custom line spacing",
+    "snippet": "\\begin{@NAME@}{${1.5}}\n  ${}\n\\end{@NAME@}",
+    "package": "setspace"
+  },
+  {
+    "name": "split",
+    "hint": "Split equation inside an equation",
+    "snippet": "\\begin{@NAME@}\n  ${} &= ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "subfigure",
+    "hint": "Subfigure inside a figure",
+    "snippet": "\\begin{@NAME@}{${0.45\\textwidth}}\n  \\centering\n  \\includegraphics[width=\\linewidth]{${image}}\n  \\caption{${caption}}\n\\end{@NAME@}",
+    "package": "subcaption"
+  },
+  {
+    "name": "table",
+    "hint": "Floating table with caption and label",
+    "snippet": "\\begin{@NAME@}[htbp]\n  \\centering\n  \\caption{${caption}}\n  \\label{tab:${label}}\n  \\begin{tabular}{${columns}}\n    ${} \\\\\\\\\n  \\end{tabular}\n\\end{@NAME@}"
+  },
+  {
+    "name": "table*",
+    "hint": "Table spanning two columns",
+    "snippet": "\\begin{@NAME@}[htbp]\n  \\centering\n  \\caption{${caption}}\n  \\label{tab:${label}}\n  \\begin{tabular}{${columns}}\n    ${} \\\\\\\\\n  \\end{tabular}\n\\end{@NAME@}"
+  },
+  {
+    "name": "tabular",
+    "hint": "Table with a column specification",
+    "snippet": "\\begin{@NAME@}{${columns}}\n  ${} \\\\\\\\\n\\end{@NAME@}"
+  },
+  {
+    "name": "tabularx",
+    "hint": "Table that fills the line width",
+    "snippet": "\\begin{@NAME@}{\\linewidth}{${columns}}\n  ${} \\\\\\\\\n\\end{@NAME@}"
+  },
+  {
+    "name": "thebibliography",
+    "hint": "Bibliography written by hand",
+    "snippet": "\\begin{@NAME@}{${99}}\n  \\bibitem{${key}} ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "theorem",
+    "hint": "Numbered theorem",
+    "snippet": "\\begin{@NAME@}[${}]\n  ${}\n\\end{@NAME@}",
+    "package": "amsthm"
+  },
+  {
+    "name": "tikzpicture",
+    "hint": "TikZ drawing",
+    "snippet": "\\begin{@NAME@}\n  \\draw ${};\n\\end{@NAME@}",
+    "package": "tikz"
+  },
+  {
+    "name": "titlepage",
+    "hint": "Page with a custom title",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "verbatim",
+    "hint": "Text printed as typed",
+    "snippet": "\\begin{@NAME@}\n${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "verse",
+    "hint": "Poetry with line breaks",
+    "snippet": "\\begin{@NAME@}\n  ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "vmatrix",
+    "hint": "Determinant-style matrix",
+    "snippet": "\\begin{@NAME@}\n  ${} & ${} \\\\\\\\\n  ${} & ${}\n\\end{@NAME@}"
+  },
+  {
+    "name": "wrapfigure",
+    "hint": "Figure with text wrapped around it",
+    "snippet": "\\begin{@NAME@}{${r}}{${0.5\\textwidth}}\n  \\centering\n  \\includegraphics[width=\\linewidth]{${image}}\n  \\caption{${caption}}\n\\end{@NAME@}",
+    "package": "wrapfig"
+  }
+]

@@ -2042,6 +2042,11 @@ export interface components {
          */
         EditorPreferences: {
             /**
+             * Autocomplete
+             * @default true
+             */
+            autocomplete: boolean;
+            /**
              * Font Size
              * @default 14
              */
@@ -3064,6 +3069,7 @@ export interface components {
             display_name: string;
             /**
              * @default {
+             *       "autocomplete": true,
              *       "font_size": 14,
              *       "keymap": "default",
              *       "theme": "system"

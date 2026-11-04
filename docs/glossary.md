@@ -56,6 +56,7 @@ are English-only today ([known gaps](known-gaps.md)).
 | File tree | `TreeEntity` | "Arquivos" |
 | Outline | `OutlinePanel` | "Estrutura" |
 | Project index | `project-index` | — |
+| Autocomplete | `completion` (`frontend/src/modules/editor/completion/`) | "Autocompletar" |
 | Folder | `TreeEntityType.folder` | "Pasta" |
 | File | `TreeEntity`, type `file` | "Arquivo" |
 | Document (editable text) | `doc`, `DocumentContent` | "documento" |

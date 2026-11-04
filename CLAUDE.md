@@ -178,6 +178,8 @@ Tests for one area: `cd backend && uv run pytest tests/unit/test_x.py`,
   from `backend/`, and on 3.13+ the HTTP status phrases change `docs/api/openapi.json`.
 - No test reads the machine's `.env`: `backend/tests/fixtures/env.py` isolates the
   environment before collection.
+- The root `.gitignore` ignores every folder named `data/` (local object storage). A source folder with
+  that name needs a `!path/` exception there, or its files never reach a commit.
 - Never run the real LLM or real Tectonic from the fast tiers. `LLM_STUB=true` and
   `COMPILE_MODE=mock` are the deterministic paths.
 

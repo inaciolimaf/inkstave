@@ -1,5 +1,8 @@
 /** The module's public interface: the editor, and the autocomplete of spec 112, import only from here. */
 export { findCurrentEntry } from "./current-entry";
+export type { BibRef, LabelRef, ProjectFile } from "./build-index";
+export { parseBib } from "./parse-bib";
+export type { BibEntry } from "./parse-bib";
 export { SECTION_LEVELS, parseStructure } from "./parse-structure";
 export type { StructureItem, StructureKind } from "./parse-structure";
 export { resolveIncludes } from "./resolve-includes";

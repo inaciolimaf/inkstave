@@ -29,17 +29,20 @@ export function useEditorPreferences(): {
     fontSize: prefs.font_size,
     keymap: prefs.keymap,
     lineWrapping: local.settings.lineWrapping,
+    autocomplete: prefs.autocomplete,
   };
   const dark = resolveDark(prefs.theme, systemDark);
 
   const update = useCallback(
     (patch: Partial<EditorSettings>) => {
       if (patch.lineWrapping !== undefined) local.update({ lineWrapping: patch.lineWrapping });
-      if (patch.fontSize === undefined && patch.keymap === undefined) return;
+      if (patch.fontSize === undefined && patch.keymap === undefined && patch.autocomplete === undefined)
+        return;
       const next: EditorPreferences = {
         theme: prefs.theme,
         font_size: patch.fontSize ?? prefs.font_size,
         keymap: patch.keymap ?? prefs.keymap,
+        autocomplete: patch.autocomplete ?? prefs.autocomplete,
       };
       if (user) applyUser({ ...user, editor_preferences: next }); // optimistic
       void putEditorPreferences(next)
