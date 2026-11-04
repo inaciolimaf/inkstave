@@ -186,8 +186,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
 
   const { treeRoot, project } = useWorkspaceTree(projectId, selected, setSelected);
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
-  const permissions = usePermissions(projectId);
-  const readOnly = isReadOnly(permissions.data);
+  const readOnly = isReadOnly(usePermissions(projectId).data);
   const dialogs = useWorkspaceDialogs();
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
   const chat = useWorkspaceChat(projectId, agentOpen, setAgentOpen);
@@ -233,6 +232,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           readOnly={readOnly}
           chatButton={chat.button}
           dialogs={dialogs}
+          compat={{ statusSlot: slots.status, onOpenLine: jumps.onProblemJump }}
           onOpenFiles={() => setFilesOpen((v) => !v)}
         />
       }

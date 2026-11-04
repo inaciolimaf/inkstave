@@ -7,11 +7,12 @@ and a stubbed compile service.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from arq import cron
+from arq import create_pool, cron
 from arq.connections import RedisSettings
 from arq.worker import func
 
@@ -27,7 +28,10 @@ from inkstave.modules.agent.runs.jobs import agent_audit_cleanup, run_agent_turn
 from inkstave.modules.compile.assembly.sources import DbDocumentSource, StorageFileSource
 from inkstave.modules.compile.outputs.repository import OutputRepository
 from inkstave.modules.compile.outputs.store import OutputStore
+from inkstave.modules.compile.queue.coordinator import CompileCoordinator
+from inkstave.modules.compile.queue.enqueuer import ArqEnqueuer
 from inkstave.modules.compile.queue.jobs import run_compile
+from inkstave.modules.compile.queue.repository import CompileRepository
 from inkstave.modules.compile.queue.retention import cleanup_compile_outputs
 from inkstave.modules.compile.running.packages import load_package_config
 from inkstave.modules.compile.running.result import CompileResult
@@ -36,6 +40,7 @@ from inkstave.modules.compile.running.sandbox import SandboxCaps, SandboxedTecto
 from inkstave.modules.compile.running.service import CompileService
 from inkstave.modules.history.versions.jobs import compact_history
 from inkstave.modules.notifications.inbox.jobs import sweep_notifications
+from inkstave.modules.projects.transfer.compat import COMPAT_RULES_PATH, load_compat_rules
 from inkstave.modules.projects.transfer.jobs import import_project_zip
 
 _settings = get_settings()
@@ -116,6 +121,32 @@ def _register_compile(ctx: dict[str, Any], settings: Any, store: Any, packages: 
     ctx["make_output_store"] = make_output_store
 
 
+async def _start_template_compile(
+    settings: Any, pool: Any, session: Any, project_id: UUID, user_id: UUID, main_file: str
+) -> None:
+    """The first compile of an imported template, as its requester (spec 120).
+
+    The import job calls this after its own commit; the compile commits here.
+    """
+    coordinator = CompileCoordinator(
+        settings=settings,
+        repo=CompileRepository(session),
+        enqueuer=ArqEnqueuer(pool, settings.compile_queue_name),
+    )
+    await coordinator.request_compile(
+        project_id=project_id, user_id=user_id, main_file=main_file, force=False
+    )
+    await session.commit()
+
+
+async def _register_template_import(ctx: dict[str, Any], settings: Any) -> None:
+    """Load the compat rules (a bad file stops the worker here) and wire the first-compile hook."""
+    ctx["compat_rules"] = load_compat_rules(COMPAT_RULES_PATH)
+    pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+    ctx["arq_pool"] = pool
+    ctx["start_template_compile"] = partial(_start_template_compile, settings, pool)
+
+
 async def startup(ctx: dict[str, Any]) -> None:
     settings = get_settings()
     # Route inkstave.* logs (incl. the agent run progress) to stdout at the configured
@@ -135,6 +166,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     ctx["object_store"] = store  # used by the history compaction job (spec 36)
     ctx["email_sender"] = get_email_sender(settings)  # used by the email job (spec 39)
     _register_compile(ctx, settings, store, load_package_config(_PACKAGES_TOML, settings))
+    await _register_template_import(ctx, settings)
 
     # The agent turn (run_agent_turn) needs AgentSettings, not the compile Settings
     # under ctx["settings"]; provide them so the worker can run agent jobs.
@@ -150,6 +182,9 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     redis = ctx.get("redis")
     if redis is not None:
         await redis.aclose()
+    pool = ctx.get("arq_pool")
+    if pool is not None:
+        await pool.aclose()
     engine = ctx.get("engine")
     if engine is not None:
         await engine.dispose()

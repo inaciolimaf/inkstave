@@ -2,6 +2,7 @@ const dict = {
   header: {
     title: "Your projects",
     newProject: "New project",
+    blankProject: "Blank project",
     searchLabel: "Search projects",
     searchPlaceholder: "Search projects…",
     sortLabel: "Sort projects",
@@ -108,6 +109,19 @@ const dict = {
       upload_failed: "The upload failed. Please try again.",
       generic: "The import failed. Please try again.",
     },
+  },
+  template: {
+    menuItem: "From an Overleaf template…",
+    title: "New project from an Overleaf template",
+    description:
+      "Start from a template you downloaded from Overleaf. Inkstave does not contact Overleaf: you bring the .zip.",
+    step1: "Find a template on Overleaf and open it.",
+    browse: "Browse Overleaf templates",
+    step2: "In the template, choose Menu, then Download, then Source. This saves a .zip.",
+    step3: "Drop that .zip here, or choose it.",
+    dropHint: "Drop the .zip here, or choose a file",
+    imported: "Template imported. Open the project to see what may need attention.",
+    openProject: "Open project",
   },
 };
 

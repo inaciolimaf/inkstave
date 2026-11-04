@@ -25,11 +25,20 @@ from inkstave.core.observability.context import bind_context, clear_context
 from inkstave.core.observability.metrics import track_job
 from inkstave.modules.projects.catalog.service import ProjectNotFoundError, get_owned_project
 from inkstave.modules.projects.models.project import Project
-from inkstave.modules.projects.models.project_import import ProjectImport, ProjectImportStatus, is_terminal
+from inkstave.modules.projects.models.project_import import (
+    ImportSource,
+    ProjectImport,
+    ProjectImportStatus,
+    is_terminal,
+)
 from inkstave.modules.projects.schemas.project_import import ProjectImportRead
+from inkstave.modules.projects.transfer.compat import CompatRule, CompatScanner, load_compat_rules
+from inkstave.modules.projects.transfer.names import default_import_name
 from inkstave.modules.projects.transfer.repository import ProjectImportRepository
 from inkstave.modules.projects.transfer.stream import publish_status
 from inkstave.modules.projects.transfer.zip_import import (
+    ImportOutcome,
+    ImportPlan,
     InvalidZipError,
     ZipImportError,
     limits_from_settings,
@@ -82,12 +91,30 @@ async def _still_owned(session: Any, row: Any) -> bool:
     return True
 
 
-async def _import_archive(session: Any, store: Any, row: Any, settings: Any, iid: UUID) -> dict[str, Any]:
+# A template whose import kept its root document gets a first compile (spec 120).
+_COMPILABLE = (ProjectImportStatus.SUCCESS.value, ProjectImportStatus.PARTIAL.value)
+
+
+def _compat_rules(ctx: dict[str, Any], source: str) -> tuple[CompatRule, ...] | None:
+    """The compatibility rules for a template import; a plain zip is not scanned (spec 120)."""
+    if source != ImportSource.OVERLEAF_TEMPLATE.value:
+        return None
+    return ctx.get("compat_rules") or load_compat_rules()
+
+
+async def _import_archive(
+    session: Any,
+    store: Any,
+    row: Any,
+    settings: Any,
+    iid: UUID,
+    rules: tuple[CompatRule, ...] | None,
+) -> dict[str, Any]:
     """Stage + process the archive, turning every failure into terminal row fields."""
     tmp_path = Path(settings.import_workdir_root) / f"{iid}.zip"
     try:
         await _stage_to_temp(store, row.source_key, tmp_path, settings.import_max_zip_bytes)
-        return await _process_archive(session, store, row, tmp_path, settings)
+        return await _process_archive(session, store, row, tmp_path, settings, rules)
     except ZipImportError as exc:
         await session.rollback()
         return {
@@ -144,16 +171,44 @@ async def _import_once(ctx: dict[str, Any], session: Any, iid: UUID, import_id: 
         return _summary(row)
 
     await job.settle(status=ProjectImportStatus.RUNNING.value, started_at=_now())
-    terminal = await _import_archive(session, ctx["object_store"], row, ctx["settings"], iid)
+    return await _run_archive(ctx, job, import_id)
+
+
+async def _run_archive(ctx: dict[str, Any], job: _Import, import_id: str) -> dict[str, Any]:
+    """Process the staged archive, settle the row, then start a template's first compile."""
+    rules = _compat_rules(ctx, job.row.source)
+    terminal = await _import_archive(
+        job.session, ctx["object_store"], job.row, ctx["settings"], job.iid, rules
+    )
+    main_file = terminal.pop("main_file", None)
 
     # Reload (a rollback above may have expired the row) and write the result.
-    job.row = await repo.get_by_id(iid)
+    job.row = await job.repo.get_by_id(job.iid)
     if job.row is None:  # pragma: no cover - defensive
         return {"import_id": import_id, "status": "error", "error": "import vanished"}
     await job.settle(finished_at=_now(), **terminal)
+    summary = _summary(job.row)
     if job.row.status != ProjectImportStatus.SUCCESS.value:
-        logger.info("project import %s ended status=%s", iid, job.row.status)
-    return _summary(job.row)
+        logger.info("project import %s ended status=%s", job.iid, job.row.status)
+    if main_file is not None and _starts_first_compile(job.row):
+        await _start_first_compile(ctx, job.session, job.row, main_file)
+    return summary
+
+
+def _starts_first_compile(row: Any) -> bool:
+    """Only a template whose root document was kept gets a first compile (spec 120)."""
+    return row.source == ImportSource.OVERLEAF_TEMPLATE.value and row.status in _COMPILABLE
+
+
+async def _start_first_compile(ctx: dict[str, Any], session: Any, row: Any, main_file: str) -> None:
+    """Enqueue the first compile as the requester. A failure here leaves the import status alone."""
+    start = ctx.get("start_template_compile")
+    if start is None:
+        return
+    try:
+        await start(session, row.project_id, row.requested_by, main_file)
+    except Exception:
+        logger.exception("first compile of template import %s could not be started", row.id)
 
 
 async def _run_import_body(ctx: dict[str, Any], import_id: str) -> dict[str, Any]:
@@ -182,15 +237,25 @@ async def _stage_to_temp(store: Any, source_key: str, tmp_path: Path, max_bytes:
 
 
 async def _process_archive(
-    session: Any, store: Any, row: ProjectImport, tmp_path: Path, settings: Any
+    session: Any,
+    store: Any,
+    row: ProjectImport,
+    tmp_path: Path,
+    settings: Any,
+    rules: tuple[CompatRule, ...] | None = None,
 ) -> dict[str, Any]:
     try:
         zf = await asyncio.to_thread(zipfile.ZipFile, tmp_path)
     except zipfile.BadZipFile as exc:
         raise InvalidZipError("The uploaded file is not a valid zip archive.") from exc
+    scanner = CompatScanner(rules) if rules is not None else None
     try:
-        plan = await asyncio.to_thread(plan_entries, zf, limits_from_settings(settings))
-        outcome = await reconstruct_tree(session, store, row.project_id, zf, plan, settings=settings)
+        limits = limits_from_settings(settings, template=scanner is not None)
+        plan = await asyncio.to_thread(plan_entries, zf, limits)
+        observer = scanner.feed if scanner is not None else None
+        outcome = await reconstruct_tree(
+            session, store, row.project_id, zf, plan, settings=settings, observer=observer
+        )
     finally:
         await asyncio.to_thread(zf.close)
 
@@ -198,6 +263,13 @@ async def _process_archive(
         update(Project).where(Project.id == row.project_id).values(root_doc_id=outcome.root_doc_entity_id)
     )
 
+    fields = _result_fields(plan, outcome)
+    if scanner is not None:
+        fields.update(await _template_fields(session, row, scanner, outcome))
+    return fields
+
+
+def _result_fields(plan: ImportPlan, outcome: ImportOutcome) -> dict[str, Any]:
     entries_total = len(plan.entries) + plan.skipped
     entries_imported = outcome.docs_created + outcome.files_created
     status = (
@@ -211,6 +283,23 @@ async def _process_archive(
         "entries_imported": entries_imported,
         "error_type": None,
         "error_message": None,
+    }
+
+
+async def _template_fields(
+    session: Any, row: ProjectImport, scanner: CompatScanner, outcome: ImportOutcome
+) -> dict[str, Any]:
+    """The compatibility report, the first compile's main file and, when unnamed, the title (spec 120)."""
+    findings = scanner.finish()
+    root = "/".join(outcome.root_doc_path) if outcome.root_doc_path else None
+    title = scanner.title_for(root)
+    if title is not None:
+        project = await session.get(Project, row.project_id)
+        if project is not None and project.name == default_import_name(row.original_filename):
+            project.name = title
+    return {
+        "compat_report": [finding.as_dict() for finding in findings],
+        "main_file": root,
     }
 
 

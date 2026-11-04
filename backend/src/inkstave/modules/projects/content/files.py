@@ -76,6 +76,9 @@ _SIGNATURES: tuple[tuple[bytes, str], ...] = (
     (b"GIF87a", "image/gif"),
     (b"GIF89a", "image/gif"),
     (b"%PDF-", "application/pdf"),
+    # EPS: PostScript text, or the DOS binary header (spec 120: Overleaf templates ship EPS figures).
+    (b"%!PS", "application/postscript"),
+    (b"\xc5\xd0\xd3\xc6", "application/postscript"),
 )
 
 

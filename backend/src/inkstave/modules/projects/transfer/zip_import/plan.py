@@ -10,7 +10,8 @@ from uuid import UUID
 
 from inkstave.core.errors import AppError
 from inkstave.modules.projects.content.uploads import extension_of
-from inkstave.modules.projects.tree.safe_path import InvalidNameError, validate_name_segment
+from inkstave.modules.projects.transfer.names import reserved_safe_name
+from inkstave.modules.projects.tree.safe_path import InvalidNameError, is_reserved_name, validate_name_segment
 
 if TYPE_CHECKING:
     from inkstave.core.config.settings import Settings
@@ -47,6 +48,10 @@ TEXT_EXTENSIONS: frozenset[str] = frozenset(
 )
 
 
+# Text files that carry no extension, kept as documents only for an Overleaf template (spec 120).
+_TEMPLATE_TEXT_NAMES = frozenset({"latexmkrc", ".latexmkrc"})
+
+
 @dataclass(frozen=True)
 class ImportLimits:
     max_zip_bytes: int
@@ -54,15 +59,18 @@ class ImportLimits:
     max_file_bytes: int
     max_entries: int
     allowed_extensions: frozenset[str]  # lower-cased, incl. dot
+    # Overleaf template import (spec 120): reserved names are renamed, not rejected, and latexmkrc is text.
+    template: bool = False
 
 
-def limits_from_settings(settings: Settings) -> ImportLimits:
+def limits_from_settings(settings: Settings, *, template: bool = False) -> ImportLimits:
     return ImportLimits(
         max_zip_bytes=settings.import_max_zip_bytes,
         max_uncompressed_bytes=settings.import_max_uncompressed_bytes,
         max_file_bytes=settings.import_max_file_bytes,
         max_entries=settings.import_max_entries,
         allowed_extensions=frozenset(e.lower() for e in settings.import_allowed_extensions),
+        template=template,
     )
 
 
@@ -79,6 +87,7 @@ class PlannedEntry:
 class ImportPlan:
     entries: list[PlannedEntry]  # importable (kept) leaf entries
     skipped: int  # disallowed-extension entries (counted toward total, not imported)
+    template: bool = False  # the archive is an Overleaf template (spec 120)
 
 
 @dataclass
@@ -133,18 +142,40 @@ def _classify(name: str, limits: ImportLimits) -> Literal["text", "binary"] | No
     ext = extension_of(name)
     if ext in TEXT_EXTENSIONS or base in TEXT_EXTENSIONS:
         return "text"
+    if limits.template and base in _TEMPLATE_TEXT_NAMES:
+        return "text"
     if ext in limits.allowed_extensions:
         return "binary"
     return None
 
 
-def _safe_parts(raw: str) -> tuple[str, ...]:
+def _checked_segment(seg: str, template: bool) -> str:
+    """One path segment as stored. A reserved device name is renamed for a template (spec 120)."""
+    if seg in (".", ".."):
+        raise ZipSlipError("Archive entry contains a path-traversal segment.")
+    try:
+        return validate_name_segment(seg)
+    except InvalidNameError as exc:
+        if template and is_reserved_name(seg):
+            return _renamed_segment(seg)
+        raise ZipSlipError(f"Archive entry has an unsafe path segment: {seg!r}") from exc
+
+
+def _renamed_segment(seg: str) -> str:
+    try:
+        return validate_name_segment(reserved_safe_name(seg))
+    except InvalidNameError as exc:
+        raise ZipSlipError(f"Archive entry has an unsafe path segment: {seg!r}") from exc
+
+
+def _safe_parts(raw: str, template: bool = False) -> tuple[str, ...]:
     """Validate a zip member name into traversal-free segments, or raise.
 
     Backslashes are normalised to '/'. Absolute paths and any '.'/'..' segment
     are rejected (:class:`ZipSlipError`); every remaining segment must pass the
     spec-12 ``validate_name_segment`` rules (control chars / reserved names /
-    separators).
+    separators). For an Overleaf template a reserved device name is renamed
+    (``con.tex`` becomes ``con_.tex``) instead, since it is not a traversal.
     """
     normalised = raw.replace("\\", "/")
     if normalised.startswith("/"):
@@ -152,14 +183,7 @@ def _safe_parts(raw: str) -> tuple[str, ...]:
     segments = [s for s in normalised.split("/") if s != ""]
     if not segments:
         raise ZipSlipError("Archive entry has an empty path.")
-    for seg in segments:
-        if seg in (".", ".."):
-            raise ZipSlipError("Archive entry contains a path-traversal segment.")
-        try:
-            validate_name_segment(seg)
-        except InvalidNameError as exc:
-            raise ZipSlipError(f"Archive entry has an unsafe path segment: {seg!r}") from exc
-    return tuple(segments)
+    return tuple(_checked_segment(seg, template) for seg in segments)
 
 
 def _is_symlink(info: zipfile.ZipInfo) -> bool:
@@ -193,7 +217,7 @@ def _plan_entry(info: zipfile.ZipInfo, limits: ImportLimits) -> _Planned:
     if _is_symlink(info):
         raise SymlinkEntryError("Archive contains a symlink entry.")
 
-    parts = _safe_parts(info.filename)
+    parts = _safe_parts(info.filename, limits.template)
     # Folders are reconstructed from leaf parents; explicit dir entries only need
     # to pass the safety checks above.
     if _is_ignored(parts) or info.is_dir():
@@ -243,4 +267,4 @@ def plan_entries(zf: zipfile.ZipFile, limits: ImportLimits) -> ImportPlan:
 
     if not entries:
         raise EmptyArchiveError("The archive contains no importable files.")
-    return ImportPlan(entries=entries, skipped=skipped)
+    return ImportPlan(entries=entries, skipped=skipped, template=limits.template)

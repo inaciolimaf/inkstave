@@ -12,6 +12,7 @@ const dict = {
   toolbar: {
     agent: "Agent",
     history: "History",
+    compatReport: "Compatibility report",
     share: "Share",
     download: "Download",
     notInProject: "This part does not come from a file in the project",
@@ -101,6 +102,17 @@ const dict = {
     online: "{{who}} — online",
     peopleOnline: "People online",
     moreOnline: "{{count}} more online",
+  },
+  compat: {
+    notice_one: "{{count}} thing may not work in Inkstave",
+    notice_other: "{{count}} things may not work in Inkstave",
+    review: "Review",
+    dismiss: "Dismiss",
+    dialogTitle: "Compatibility report",
+    dialogDescription: "Parts of the template that may not compile in Inkstave. Choose one to open its line.",
+    groupWarning: "Warnings",
+    groupInfo: "Notes",
+    close: "Close",
   },
 };
 

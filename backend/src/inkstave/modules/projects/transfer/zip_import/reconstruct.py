@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -20,7 +21,9 @@ if TYPE_CHECKING:
 
     from inkstave.core.config.settings import Settings
     from inkstave.infra.storage.base import ObjectStore
+    from inkstave.modules.projects.models.tree_entity import TreeEntity
 
+from inkstave.modules.projects.transfer.names import MAX_CLASH_RENAMES, numbered_name
 from inkstave.modules.projects.transfer.zip_import.content import decode_text, detect_root_doc
 from inkstave.modules.projects.transfer.zip_import.plan import (
     ImportOutcome,
@@ -90,6 +93,11 @@ async def _find_child_folder(
     return (await session.execute(stmt)).scalars().first()
 
 
+# Called with each kept file's project path and decoded text (``None`` for a binary), so a
+# caller can scan the project without holding it in memory (spec 120).
+FileObserver = Callable[[str, str | None], None]
+
+
 @dataclass
 class _Reconstruction:
     """Running state while materialising a plan into the project tree."""
@@ -98,6 +106,27 @@ class _Reconstruction:
     cache: _FolderCache = field(default_factory=_FolderCache)
     text_blobs: dict[tuple[str, ...], bytes] = field(default_factory=dict)
     doc_ids: dict[tuple[str, ...], UUID] = field(default_factory=dict)
+    # The project path of each kept entry, which differs from the archive path after a rename.
+    final_paths: dict[tuple[str, ...], tuple[str, ...]] = field(default_factory=dict)
+    template: bool = False
+    observer: FileObserver | None = None
+
+
+async def _create_doc(
+    session: AsyncSession, project_id: UUID, parent_id: UUID | None, name: str, template: bool
+) -> TreeEntity:
+    """Create a document; for a template a case clash keeps the first name and numbers the next (spec 120)."""
+    names = [name]
+    if template:
+        names += [numbered_name(name, number) for number in range(2, MAX_CLASH_RENAMES + 2)]
+    for candidate in names[:-1]:
+        try:
+            return await tree_service.create_entity(
+                session, project_id, TreeEntityType.doc, candidate, parent_id
+            )
+        except tree_service.NameConflictError:
+            continue
+    return await tree_service.create_entity(session, project_id, TreeEntityType.doc, names[-1], parent_id)
 
 
 async def _import_text(
@@ -115,13 +144,19 @@ async def _import_text(
     if len(content.encode("utf-8")) > settings.max_document_bytes:
         state.outcome.skipped += 1
         return
-    entity = await tree_service.create_entity(
-        session, project_id, TreeEntityType.doc, entry.parts[-1], parent_id
-    )
+    entity = await _create_doc(session, project_id, parent_id, entry.parts[-1], state.template)
     await document_service.set_content_from_collab(session, entity.id, content)
     state.outcome.docs_created += 1
     state.text_blobs[entry.parts] = raw
     state.doc_ids[entry.parts] = entity.id
+    final = (*entry.parts[:-1], entity.name)
+    state.final_paths[entry.parts] = final
+    _observe(state, final, content)
+
+
+def _observe(state: _Reconstruction, final: tuple[str, ...], content: str | None) -> None:
+    if state.observer is not None:
+        state.observer("/".join(final), content)
 
 
 async def reconstruct_tree(
@@ -132,9 +167,10 @@ async def reconstruct_tree(
     plan: ImportPlan,
     *,
     settings: Settings,
+    observer: FileObserver | None = None,
 ) -> ImportOutcome:
     """Create folders/docs/files for the planned entries, reusing the services."""
-    state = _Reconstruction(ImportOutcome(skipped=plan.skipped))
+    state = _Reconstruction(ImportOutcome(skipped=plan.skipped), template=plan.template, observer=observer)
 
     for entry in plan.entries:
         parent_id = await _ensure_folder(session, project_id, entry.parts[:-1], state.cache, state.outcome)
@@ -144,13 +180,15 @@ async def reconstruct_tree(
         try:
             await _import_binary(session, store, (project_id, parent_id), zf, entry, settings)
             state.outcome.files_created += 1
+            state.final_paths[entry.parts] = entry.parts
+            _observe(state, entry.parts, None)
         except _SkipEntryError:
             state.outcome.skipped += 1
 
     root = detect_root_doc(plan.entries, state.text_blobs)
     if root is not None and root in state.doc_ids:
         state.outcome.root_doc_entity_id = state.doc_ids[root]
-        state.outcome.root_doc_path = root
+        state.outcome.root_doc_path = state.final_paths[root]
     return state.outcome
 
 

@@ -104,6 +104,8 @@ COPY --chown=inkstave:inkstave backend/alembic.ini ./alembic.ini
 COPY --chown=inkstave:inkstave backend/migrations ./migrations
 COPY --chown=inkstave:inkstave backend/src ./src
 COPY --chown=inkstave:inkstave infra/tectonic/packages.toml ./infra/tectonic/packages.toml
+# The compatibility rules of an imported Overleaf template (spec 120), read at worker startup.
+COPY --chown=inkstave:inkstave infra/tectonic/compat-rules.toml ./infra/tectonic/compat-rules.toml
 
 # Writable dirs owned by the non-root user: local upload storage and ephemeral
 # per-compile workdirs (the latter must stay container-local — never a shared named

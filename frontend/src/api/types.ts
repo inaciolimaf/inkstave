@@ -1142,6 +1142,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/import/{import_id}/report-seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an import's compatibility report as seen
+         * @description Idempotent: the first call stamps ``report_seen_at``; later calls keep the first stamp.
+         */
+        post: operations["mark_report_seen_api_v1_projects__project_id__import__import_id__report_seen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/invites": {
         parameters: {
             query?: never;
@@ -1632,6 +1652,8 @@ export interface components {
             file: string;
             /** Name */
             name?: string | null;
+            /** @default zip */
+            source: components["schemas"]["ImportSource"];
         };
         /** Body_upload_file_api_v1_projects__project_id__files_post */
         Body_upload_file_api_v1_projects__project_id__files_post: {
@@ -1707,6 +1729,25 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /**
+         * CompatFindingRead
+         * @description One line of the compatibility report (spec 120).
+         */
+        CompatFindingRead: {
+            /** Line */
+            line: number;
+            /** Message */
+            message: string;
+            /** Path */
+            path: string;
+            /** Rule Id */
+            rule_id: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "info" | "warning";
         };
         /**
          * CompileJobStatus
@@ -2051,6 +2092,11 @@ export interface components {
             text: string;
         };
         /**
+         * ImportSource
+         * @enum {string}
+         */
+        ImportSource: "zip" | "overleaf_template";
+        /**
          * InverseResult
          * @description pdf -> code: the best source location for a PDF point.
          */
@@ -2356,6 +2402,8 @@ export interface components {
         };
         /** ProjectImportRead */
         ProjectImportRead: {
+            /** Compat Report */
+            compat_report?: components["schemas"]["CompatFindingRead"][] | null;
             /**
              * Created At
              * Format: date-time
@@ -2381,6 +2429,10 @@ export interface components {
              * Format: uuid
              */
             project_id: string;
+            /** Report Seen At */
+            report_seen_at?: string | null;
+            /** @default zip */
+            source: components["schemas"]["ImportSource"];
             status: components["schemas"]["ProjectImportStatus"];
         };
         /**
@@ -6437,6 +6489,63 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_report_seen_api_v1_projects__project_id__import__import_id__report_seen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {

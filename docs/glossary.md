@@ -63,6 +63,8 @@ are English-only today ([known gaps](known-gaps.md)).
 | Root (of the tree) | `root` | "raiz" |
 | Import | `import_project_zip` | "Importar um projeto" |
 | Export | `export_project_zip` | "Baixar como .zip" |
+| Overleaf template import | `source=overleaf_template` | "Template do Overleaf" |
+| Compatibility report | `compat_report` | "Relatório de compatibilidade" |
 | Delete (soft) | `soft_delete_project` | "Excluir" |
 | Version conflict | `VersionConflictError` | "Conflito" |
 | Keep mine | `resolveKeepMine` | "Manter minha versão" |

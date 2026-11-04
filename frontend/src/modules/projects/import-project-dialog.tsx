@@ -70,7 +70,13 @@ function useImportDialog(open: boolean, onOpenChange: (v: boolean) => void) {
 }
 
 /** Upload progress, the processing note, or the failure with its way out. */
-function ImportStatus({ state, onDeleteEmpty }: { state: ImportState; onDeleteEmpty: () => Promise<void> }) {
+export function ImportStatus({
+  state,
+  onDeleteEmpty,
+}: {
+  state: ImportState;
+  onDeleteEmpty: () => Promise<void>;
+}) {
   const { t } = useTranslation("projects");
   const errorText = state.errorType ? t([`import.errors.${state.errorType}`, "import.errors.generic"]) : null;
 

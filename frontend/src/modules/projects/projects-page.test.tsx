@@ -143,6 +143,7 @@ describe("ProjectsPage", () => {
     await hasLink("Alpha");
 
     await userEvent.click(screen.getByRole("button", { name: /new project/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Blank project" }));
     await userEvent.type(await screen.findByLabelText("Project name"), "Gamma");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 

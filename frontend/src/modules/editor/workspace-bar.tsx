@@ -1,4 +1,4 @@
-/** The editor bar as the workspace wires it: the Insert menu, the chat button and the dialogs it opens. */
+/** The editor bar as the workspace wires it: the Insert menu, the chat button, the dialogs it opens and the template report. */
 import type { EditorView } from "@codemirror/view";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -7,6 +7,7 @@ import { InsertMenu } from "@/modules/insert-tools";
 import { getProject, projectKey } from "@/modules/projects";
 
 import { EditorBar } from "./editor-bar";
+import { useCompatReport } from "./use-compat-report";
 import { useMainDocumentText } from "./use-main-document-text";
 import type { useSourceSync } from "./use-source-sync";
 import type { useWorkspaceDialogs } from "./workspace-hooks";
@@ -34,6 +35,7 @@ export function WorkspaceBar({
   readOnly,
   chatButton,
   dialogs,
+  compat: compatSlot,
   onOpenFiles,
 }: {
   projectId: string;
@@ -43,20 +45,27 @@ export function WorkspaceBar({
   readOnly: boolean;
   chatButton: ReactNode;
   dialogs: ReturnType<typeof useWorkspaceDialogs>;
+  /** Where the template compatibility notice shows (spec 120), and how a finding opens its line. */
+  compat: { statusSlot: HTMLElement | null; onOpenLine: (path: string, line: number) => void };
   onOpenFiles: () => void;
 }) {
+  const compat = useCompatReport(projectId, compatSlot.statusSlot, compatSlot.onOpenLine);
   return (
-    <EditorBar
-      projectId={projectId}
-      projectName={projectName}
-      fileName={sync.openDoc?.name}
-      onOpenFiles={onOpenFiles}
-      compileSlotRef={compileSlotRef}
-      historyDisabled={sync.openDoc?.type !== "doc"}
-      onOpenHistory={() => dialogs.setHistoryOpen(true)}
-      onOpenShare={() => dialogs.setShareOpen(true)}
-      insert={<WorkspaceInsert projectId={projectId} view={sync.editorView} readOnly={readOnly} />}
-      chatButton={chatButton}
-    />
+    <>
+      <EditorBar
+        projectId={projectId}
+        projectName={projectName}
+        fileName={sync.openDoc?.name}
+        onOpenFiles={onOpenFiles}
+        compileSlotRef={compileSlotRef}
+        historyDisabled={sync.openDoc?.type !== "doc"}
+        onOpenHistory={() => dialogs.setHistoryOpen(true)}
+        onOpenShare={() => dialogs.setShareOpen(true)}
+        insert={<WorkspaceInsert projectId={projectId} view={sync.editorView} readOnly={readOnly} />}
+        chatButton={chatButton}
+        onOpenCompatReport={compat.menu.onOpenCompatReport}
+      />
+      {compat.element}
+    </>
   );
 }

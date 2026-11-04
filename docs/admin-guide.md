@@ -285,7 +285,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `VITE_AGENT_ENABLED` | No | `true` | show the AI agent chat panel (spec 46; "false" hides it) | frontend build |
 | `FILE_STORAGE_BACKEND` | No | `local` | local \| s3 | backend, worker |
 | `FILE_STORAGE_LOCAL_PATH` | No | `./data/files` | base dir for the local backend | backend, worker |
-| `ALLOWED_UPLOAD_MIME` | No | `image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,text/plain,application/x-bibtex,text/x-bibtex` | comma-separated MIME allow-list for uploads | backend |
+| `ALLOWED_UPLOAD_MIME` | No | `image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,application/postscript,text/plain,application/x-bibtex,text/x-bibtex` | comma-separated MIME allow-list for uploads. `application/postscript` admits EPS figures (spec 120); if you set this variable yourself, add it, or EPS figures are skipped on import | backend |
 | `STORAGE_STREAM_CHUNK_BYTES` | No | `65536` | streaming chunk size | backend, worker |
 | `IMPORT_MAX_ZIP_BYTES` | No | `52428800` | max compressed `.zip` upload size for project import (50 MiB) | backend, worker |
 | `IMPORT_MAX_UNCOMPRESSED_BYTES` | No | `314572800` | max total uncompressed bytes across kept entries (300 MiB) | worker |
