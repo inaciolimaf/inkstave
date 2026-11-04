@@ -1266,6 +1266,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/share-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Share Links */
+        get: operations["list_share_links_api_v1_projects__project_id__share_links_get"];
+        put?: never;
+        /** Create Share Link */
+        post: operations["create_share_link_api_v1_projects__project_id__share_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/share-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Share Link */
+        delete: operations["revoke_share_link_api_v1_projects__project_id__share_links__link_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/synctex/code-to-pdf": {
         parameters: {
             query?: never;
@@ -1383,6 +1418,40 @@ export interface paths {
         head?: never;
         /** Rename a tree entity */
         patch: operations["rename_entity_api_v1_projects__project_id__tree_entities__entity_id__rename_patch"];
+        trace?: never;
+    };
+    "/api/v1/share-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview Share Link */
+        get: operations["preview_share_link_api_v1_share_links__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/share-links/{token}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Join Share Link */
+        post: operations["join_share_link_api_v1_share_links__token__join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/users/confirm-email-change": {
@@ -2283,6 +2352,11 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+            /**
+             * Via Link
+             * @default false
+             */
+            via_link: boolean;
         };
         /** MemberRoleUpdate */
         MemberRoleUpdate: {
@@ -2684,6 +2758,83 @@ export interface components {
         SetupStatus: {
             /** Needs Setup */
             needs_setup: boolean;
+        };
+        /** ShareLinkCreate */
+        ShareLinkCreate: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "viewer" | "editor";
+        };
+        /**
+         * ShareLinkCreated
+         * @description The create response: the raw token and the URL built from it, shown once.
+         */
+        ShareLinkCreated: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            role: components["schemas"]["ShareLinkRole"];
+            /** Token */
+            token: string;
+            /** Url */
+            url: string;
+        };
+        /** ShareLinkJoined */
+        ShareLinkJoined: {
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            role: components["schemas"]["MembershipRole"];
+        };
+        /**
+         * ShareLinkRead
+         * @description An active share link as listed to the owner (never the token).
+         */
+        ShareLinkRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            role: components["schemas"]["ShareLinkRole"];
+        };
+        /**
+         * ShareLinkRole
+         * @enum {string}
+         */
+        ShareLinkRole: "viewer" | "editor";
+        /**
+         * SharePreview
+         * @description What a share link opens on: the project, its owner and the role the link grants.
+         */
+        SharePreview: {
+            already_member_role: components["schemas"]["MembershipRole"] | null;
+            /** Owner Name */
+            owner_name: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            role: components["schemas"]["ShareLinkRole"];
         };
         /** SyncTexBox */
         SyncTexBox: {
@@ -6916,6 +7067,129 @@ export interface operations {
             };
         };
     };
+    list_share_links_api_v1_projects__project_id__share_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkRead"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_share_link_api_v1_projects__project_id__share_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkCreated"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_share_link_api_v1_projects__project_id__share_links__link_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     code_to_pdf_api_v1_projects__project_id__synctex_code_to_pdf_get: {
         parameters: {
             query: {
@@ -7268,6 +7542,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    preview_share_link_api_v1_share_links__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharePreview"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_share_link_api_v1_share_links__token__join_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkJoined"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

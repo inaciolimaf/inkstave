@@ -85,6 +85,11 @@ const ROUTES: RouteObject[] = [
         handle: { title: "title.invite" },
         lazy: () => import("@/routes/invite").then((m) => ({ Component: m.InviteRoute })),
       },
+      {
+        path: "/join/:token",
+        handle: { title: "title.join" },
+        lazy: () => import("@/routes/join").then((m) => ({ Component: m.JoinRoute })),
+      },
     ],
   },
   { path: "*", element: <Navigate to="/projects" replace /> },

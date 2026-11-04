@@ -107,6 +107,7 @@ _NAMED_POLICIES: dict[str, tuple[str, str]] = {
     "upload": ("rate_limit_upload", "user"),
     # Project chat posts: the cap is per user in each project (spec 117).
     "chat": ("rate_limit_chat", "user_project"),
+    "share_link": ("rate_limit_share_link", "user"),
 }
 
 

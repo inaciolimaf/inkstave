@@ -124,6 +124,8 @@ are English-only today ([known gaps](known-gaps.md)).
 | Leave project | `MembershipStatus.left` | "Sair do projeto" |
 | Revoke | `revoke_invite` | "Revogar" |
 | Accept, decline | `accept_invite`, `decline_invite` | "Aceitar", "Recusar" |
+| Share link | `ProjectShareLink` | "Link de compartilhamento" |
+| Link role | `ShareLinkRole` | "Papel do link" |
 | Capability | `Capability` | — |
 
 ## History

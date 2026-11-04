@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -59,6 +60,25 @@ _RESERVED = {
 def _is_secret(key: str) -> bool:
     lowered = key.lower()
     return any(sub in lowered for sub in _SECRET_SUBSTRINGS)
+
+
+# Bearer tokens carried in a URL: the token segment of /share-links/{token} and /invites/{token},
+# and any ``token=`` query value. Matched on raw request paths, which the access log prints.
+_TOKEN_IN_URL = re.compile(r"(/(?:share-links|invites)/)[^/?#\s\"]+|(\btoken=)[^&\s\"]+")
+
+
+def redact_path(text: str) -> str:
+    """Mask the token in a URL-like string (spec 116): the raw token never reaches a log line."""
+    return _TOKEN_IN_URL.sub(lambda m: f"{m.group(1) or m.group(2)}{_REDACTED}", text)
+
+
+class SecretPathFilter(logging.Filter):
+    """Masks tokens in the arguments of a logger that prints request paths (uvicorn's access log)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(redact_path(a) if isinstance(a, str) else a for a in record.args)
+        return True
 
 
 def redact(value: Any) -> Any:
@@ -127,3 +147,6 @@ def configure_logging(settings: Settings) -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(build_formatter(settings))
     root.addHandler(handler)
+    access = logging.getLogger("uvicorn.access")  # prints the raw request path, token included
+    if not any(isinstance(f, SecretPathFilter) for f in access.filters):
+        access.addFilter(SecretPathFilter())

@@ -1620,6 +1620,11 @@
             "format": "uuid",
             "title": "User Id",
             "type": "string"
+          },
+          "via_link": {
+            "default": false,
+            "title": "Via Link",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2647,6 +2652,150 @@
           "needs_setup"
         ],
         "title": "SetupStatus",
+        "type": "object"
+      },
+      "ShareLinkCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "enum": [
+              "viewer",
+              "editor"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "ShareLinkCreate",
+        "type": "object"
+      },
+      "ShareLinkCreated": {
+        "description": "The create response: the raw token and the URL built from it, shown once.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ShareLinkRole"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "created_at",
+          "token",
+          "url"
+        ],
+        "title": "ShareLinkCreated",
+        "type": "object"
+      },
+      "ShareLinkJoined": {
+        "properties": {
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/MembershipRole"
+          }
+        },
+        "required": [
+          "project_id",
+          "role"
+        ],
+        "title": "ShareLinkJoined",
+        "type": "object"
+      },
+      "ShareLinkRead": {
+        "description": "An active share link as listed to the owner (never the token).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ShareLinkRole"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "created_at"
+        ],
+        "title": "ShareLinkRead",
+        "type": "object"
+      },
+      "ShareLinkRole": {
+        "enum": [
+          "viewer",
+          "editor"
+        ],
+        "title": "ShareLinkRole",
+        "type": "string"
+      },
+      "SharePreview": {
+        "description": "What a share link opens on: the project, its owner and the role the link grants.",
+        "properties": {
+          "already_member_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MembershipRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner_name": {
+            "title": "Owner Name",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ShareLinkRole"
+          }
+        },
+        "required": [
+          "project_id",
+          "project_name",
+          "owner_name",
+          "role",
+          "already_member_role"
+        ],
+        "title": "SharePreview",
         "type": "object"
       },
       "SyncTexBox": {
@@ -9257,6 +9406,195 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/share-links": {
+      "get": {
+        "operationId": "list_share_links_api_v1_projects__project_id__share_links_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShareLinkRead"
+                  },
+                  "title": "Response List Share Links Api V1 Projects  Project Id  Share Links Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Share Links",
+        "tags": [
+          "sharing"
+        ]
+      },
+      "post": {
+        "operationId": "create_share_link_api_v1_projects__project_id__share_links_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareLinkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Share Link",
+        "tags": [
+          "sharing"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/share-links/{link_id}": {
+      "delete": {
+        "operationId": "revoke_share_link_api_v1_projects__project_id__share_links__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Share Link",
+        "tags": [
+          "sharing"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/synctex/code-to-pdf": {
       "get": {
         "operationId": "code_to_pdf_api_v1_projects__project_id__synctex_code_to_pdf_get",
@@ -9875,6 +10213,120 @@
         "summary": "Rename a tree entity",
         "tags": [
           "tree"
+        ]
+      }
+    },
+    "/api/v1/share-links/{token}": {
+      "get": {
+        "operationId": "preview_share_link_api_v1_share_links__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Share Link",
+        "tags": [
+          "sharing"
+        ]
+      }
+    },
+    "/api/v1/share-links/{token}/join": {
+      "post": {
+        "operationId": "join_share_link_api_v1_share_links__token__join_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkJoined"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join Share Link",
+        "tags": [
+          "sharing"
         ]
       }
     },

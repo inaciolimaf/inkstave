@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from inkstave.core.schemas import StrictModel
 from inkstave.modules.projects.models.invite import InviteRole
 from inkstave.modules.projects.models.membership import MembershipRole
+from inkstave.modules.projects.models.share_link import ShareLinkRole
 
 InviteRoleLiteral = Literal["editor", "viewer"]
 
@@ -21,6 +22,7 @@ class MemberRead(BaseModel):
     email: str
     role: MembershipRole
     status: str
+    via_link: bool = False
 
 
 class MemberRoleUpdate(StrictModel):
@@ -69,5 +71,44 @@ class InvitePreview(BaseModel):
 
 
 class AcceptResponse(BaseModel):
+    project_id: UUID
+    role: MembershipRole
+
+
+ShareLinkRoleLiteral = Literal["viewer", "editor"]
+
+
+class ShareLinkCreate(StrictModel):
+    role: ShareLinkRoleLiteral
+
+
+class ShareLinkRead(BaseModel):
+    """An active share link as listed to the owner (never the token)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    role: ShareLinkRole
+    created_at: datetime
+
+
+class ShareLinkCreated(ShareLinkRead):
+    """The create response: the raw token and the URL built from it, shown once."""
+
+    token: str
+    url: str
+
+
+class SharePreview(BaseModel):
+    """What a share link opens on: the project, its owner and the role the link grants."""
+
+    project_id: UUID
+    project_name: str
+    owner_name: str
+    role: ShareLinkRole
+    already_member_role: MembershipRole | None
+
+
+class ShareLinkJoined(BaseModel):
     project_id: UUID
     role: MembershipRole

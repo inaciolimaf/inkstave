@@ -159,6 +159,10 @@ run; the rest were read, not run.
   (403 reproduced; the browser side inferred).
 - `doctor` prints the full `DATABASE_URL`, password included.
 - `?token=` on the collab WebSocket lands in nginx access logs.
+- Share-link and invite tokens in paths (`/api/v1/share-links/{token}`, `/api/v1/invites/{token}`, the SPA's
+  `/join/{token}` and `/invite/{token}`) land in nginx access logs. The backend masks them in its own access and
+  uvicorn lines (`redact_path` in `core/observability/log.py`), but nginx logs `$request` as sent.
+  *Why:* nginx is left as is by user decision; a `map` on `$request` in `infra/nginx/nginx.conf` would close it.
 - The console e-mail backend logs tokens at INFO, and `check-config` does not flag it in production. The raw invite
   token is stored in the notification's `accept_url`.
 - nginx's `add_header` inheritance drops security headers on `index.html`, and the SPA has no CSP.

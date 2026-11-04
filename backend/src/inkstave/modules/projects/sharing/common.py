@@ -29,10 +29,17 @@ class MemberInfo:
     email: str
     role: str
     status: str
+    via_link: bool = False
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def detach_from_link(membership: ProjectMembership) -> None:
+    """Forget any share-link attribution: the access no longer depends on a link (spec 116)."""
+    membership.via_link_id = None
+    membership.role_before_link = None
 
 
 async def _active_project(session: AsyncSession, project_id: UUID) -> Project:

@@ -128,6 +128,7 @@ function MemberRow({ member, ...actions }: { member: Member } & MemberActions) {
         </p>
         <p className="truncate text-small text-muted-foreground">{member.email}</p>
       </div>
+      {member.viaLink && <span className="text-small text-muted-foreground">{t("members.viaLink")}</span>}
       {manageable ? (
         <MemberRoleSelect member={member} onChangeRole={onChangeRole} />
       ) : (

@@ -51,6 +51,7 @@ def _member_read(info: sharing_service.MemberInfo) -> MemberRead:
         email=info.email,
         role=info.role,
         status=info.status,
+        via_link=info.via_link,
     )
 
 

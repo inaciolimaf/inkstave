@@ -19,6 +19,7 @@ from inkstave.modules.projects.models.membership import MembershipRole, Membersh
 from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.sharing.common import (
     _now,
+    detach_from_link,
     membership_of,
     require_owner,
 )
@@ -179,6 +180,7 @@ async def _grant_membership(session: AsyncSession, invite: ProjectInvite, actor:
     elif member.role != MembershipRole.owner:
         member.role = invite.role
         member.status = MembershipStatus.active
+        detach_from_link(member)  # the e-mail invite now grants the role, not an earlier link (spec 116)
     return member
 
 

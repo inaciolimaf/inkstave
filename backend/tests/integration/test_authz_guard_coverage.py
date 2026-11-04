@@ -33,6 +33,9 @@ _HANDLER_GUARDED: frozenset[str] = frozenset(
         "/api/v1/projects/{project_id}/members/transfer",
         "/api/v1/projects/{project_id}/invites",
         "/api/v1/projects/{project_id}/invites/{invite_id}",
+        # Share links (spec 116): owner-only, checked by the sharing service's require_owner.
+        "/api/v1/projects/{project_id}/share-links",
+        "/api/v1/projects/{project_id}/share-links/{link_id}",
         "/api/v1/projects/{project_id}/permissions",
         "/api/v1/projects/{project_id}/compile/{compile_id}/events",
         # The project event stream (spec 117) checks membership inline, like compile events.

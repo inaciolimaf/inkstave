@@ -19,5 +19,6 @@ export const ROUTES: ReadonlyArray<{ path: string; url: string }> = [
   { path: "/projects/:projectId", url: `/projects/${FAKE_ID}` },
   { path: "/settings", url: "/settings" },
   { path: "/invite/:token", url: "/invite/fake" },
+  { path: "/join/:token", url: "/join/fake" },
   { path: "*", url: "/no-such-page" },
 ];

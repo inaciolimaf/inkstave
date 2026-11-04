@@ -114,6 +114,7 @@ These are browser routes. Every route sits under one root with `ErrorBoundary: R
 | `/projects/:projectId` | `frontend/src/routes/editor.tsx` | editor, with `getProject` from projects | `RequireAuth` |
 | `/settings` | `frontend/src/routes/settings.tsx` | settings | `RequireAuth` |
 | `/invite/:token` | `frontend/src/routes/invite.tsx` | sharing | `RequireAuth` |
+| `/join/:token` | `frontend/src/routes/join.tsx` | sharing (share links, spec 116) | `RequireAuth` |
 | `*` | none | none | Redirects to `/projects` |
 
 Token-link pages stay outside `PublicOnly` because a signed-in user may open a link in another tab.
