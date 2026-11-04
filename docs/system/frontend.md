@@ -23,7 +23,7 @@ open document. It came from spec 09 and grew through specs 16-18, 24, 31, 32, 38
 | `frontend/src/i18n/config.ts` | The global i18next instance and `NAMESPACES` |
 | `frontend/src/i18n/locales` | `en/`, `pt/` and `landing.ts` |
 | `frontend/src/routes` | 14 thin route components, one per screen, each loaded on demand by `lazy` in `router.tsx` |
-| `frontend/src/modules` | 13 feature modules |
+| `frontend/src/modules` | 14 feature modules |
 | `frontend/eslint.config.js` | Lint rules, size caps, boundaries, exceptions |
 | `frontend/playwright.config.ts` | E2e projects and stack bring-up |
 
@@ -56,17 +56,18 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/auth` | Session context, guards, theme application, login, register, setup, e-mail link pages | `AuthProvider`, `useAuth`, `RequireAuth`, `PublicOnly`, `useApplyTheme`, the 8 page components | none |
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
 | `frontend/src/modules/diff-review` | Hunk review dialog, rebase, CRDT apply | `DiffReviewDialog`, `createEditorBridge`, type `DocumentBridge` | collab |
-| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences | `EditorWorkspace` | every other module except landing |
+| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, outline | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |
 | `frontend/src/modules/landing` | Public marketing page | `LandingPage` | auth |
 | `frontend/src/modules/notifications` | Bell, inbox list | `NotificationsBell` | none |
 | `frontend/src/modules/pdf-preview` | Compile button, PDF viewer, log, problems, SyncTeX | `PreviewPane`, `useProblems`, `useSyncTex`, types `Problem`, `ProblemSeverity` | none |
+| `frontend/src/modules/project-index` | Structure parser, include resolver, the index of sections and labels | `useProjectIndex`, `parseStructure`, `resolveIncludes`, `findCurrentEntry`, types `StructureItem`, `ResolvedItem`, `IndexStatus` | none |
 | `frontend/src/modules/projects` | Project list, dialogs, zip import, download | `ProjectsPage`, `getProject`, `useDownloadProject` | auth, notifications |
 | `frontend/src/modules/settings` | Settings sections, e-mail change confirmation | `SettingsPage`, `ConfirmEmailPage`, `putEditorPreferences` | auth |
 | `frontend/src/modules/sharing` | Share dialog, invites, permissions | `ShareDialog`, `AcceptInvitePage`, `usePermissions`, `hasCapability`, `isReadOnly` | auth |
 
-`editor` is the hub: it depends on 11 modules and nothing depends on it except `frontend/src/App.tsx` and
+`editor` is the hub: it depends on 12 modules and nothing depends on it except `frontend/src/App.tsx` and
 `frontend/src/routes/editor.tsx`. The graph has no cycle.
 
 ## Data
@@ -170,6 +171,19 @@ on screen with a notice.
 
 - Opening a file: `FileTreePanel` calls `onSelectEntity`. A `doc` opens in the editor; a binary `file` shows
   `BinaryNotice`; a folder changes nothing.
+- Outline: `OutlinePanel` in `frontend/src/modules/editor/outline-panel.tsx` lists the sections of the project, from
+  `useWorkspaceOutline` (`frontend/src/modules/editor/workspace-outline.tsx`). `FileDrawer` has two tabs, Files and
+  Outline (`drawer.tabs` in the `editor` namespace), and the last tab is remembered in `localStorage` through
+  `frontend/src/modules/editor/outline-prefs.ts`, as is the pin. From 1280 px the outline can be pinned as a 14rem
+  column left of the text. Entries open through `jumpToSource`, the same path as a problem.
+- Project index: `useProjectIndex` in `frontend/src/modules/project-index/use-project-index.ts` fetches each
+  document once through `GET /api/v1/projects/{id}/documents/{doc}` (query key `["project-index", projectId, docId]`,
+  stale after 30 s). `parseStructure` (`parse-structure.ts`) blanks comments and verbatim-like environments, keeping
+  the newlines, then reads `\part` to `\subparagraph`, `\input`, `\include`, `\subfile`, `\import` and `\label`.
+  `resolveIncludes` (`resolve-includes.ts`) walks from the main document, which is `pickStartDocument`'s pick, and
+  takes each file once. Past 200 documents or 2 M characters only the open file is indexed, and the outline says so.
+  The open file is read from its CodeMirror view and debounced 300 ms by `useLiveSource`
+  (`frontend/src/modules/project-index/use-live-source.ts`), so the index never lags what was typed.
 - Live editing: `useCollabDoc` creates one `Y.Doc`, `Y.Text("content")`, `Awareness`, `Y.UndoManager` and
   `InkstaveWsProvider` per document, and tears them down on unmount. `CollabEditor` binds them to CodeMirror
   with `yCollab`. Editing stays off until the first sync, and stays off for a viewer (`isReadOnly`).
@@ -303,6 +317,10 @@ Name the projects when running Playwright. A bare `playwright test` runs the sli
 | Modules import each other only through `index.ts` | No dedicated test; `no-restricted-imports` in `frontend/eslint.config.js` |
 | Shared code does not import a module | No dedicated test; `no-restricted-imports` in `frontend/eslint.config.js` |
 | Portuguese has every key English has | No dedicated test; the `Dict` type, checked by `tsc`, except `common` |
+| Comments and verbatim never produce outline entries | `frontend/src/modules/project-index/parse-structure.test.ts`, "skips a commented-out section" and "skips verbatim-like environments" |
+| Includes are followed once, cycles cut | `frontend/src/modules/project-index/resolve-includes.test.ts`, "renders each file once and stops at a cycle" |
+| The current section is marked for assistive tech | `frontend/src/modules/editor/outline-panel.test.tsx`, "marks the section that holds the cursor for assistive tech" |
+| Past the caps only the open file is indexed | `frontend/src/modules/project-index/build-index.test.ts`, "keeps only the open file past the document cap" |
 
 ## Settings
 
@@ -319,6 +337,17 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
 
 ## Points of attention
 
+- **The outline refreshes coarsely for files it does not have open.** Spec 111 asked for a collaboration signal
+  when someone saves another file. The index has none: it refetches a document when the writer leaves it, when the
+  window regains focus after 30 s, and when a new document appears in the tree. Edits by others show up then.
+- **The outline's main document is not the compile's.** The server compiles `main.tex`, or else the shallowest
+  `.tex` that declares `\documentclass` (`backend/src/inkstave/modules/compile/running/service.py`). The outline
+  uses `pickStartDocument`, which prefers `root_doc_id`. The two differ on a project with no `main.tex` or with a
+  root document elsewhere.
+- **No "selected" colour token exists.** The current outline row uses `bg-accent` with a `border-foreground` stripe,
+  the way the file tree marks its selection.
+- **`hidden` loses to a Tailwind `flex` class.** Both selectors have the same specificity and Tailwind's utilities
+  come later, so the drawer's `aside` takes no `flex`: the tabbed layout sits in a wrapper inside it.
 - **`QueryView` shows the error over stale data.** A failed refetch replaces cached data with the error, and a
   settled query with no data, such as a paused one, counts as an error. `file-tree-body.tsx` keeps the tree on a
   background failure by rendering its alert above it. The invite 410 and the setup skeleton stay early returns.

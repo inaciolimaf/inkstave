@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Desk } from "@/components/manuscript";
@@ -6,27 +5,25 @@ import { config } from "@/config";
 import { tokenStore } from "@/lib/token-store";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useAuth } from "@/modules/auth";
-import { FileTreePanel, useProjectTree } from "@/modules/file-tree";
+import { FileTreePanel } from "@/modules/file-tree";
 import type { TreeEntity } from "@/modules/file-tree";
 import { PreviewPane } from "@/modules/pdf-preview";
 import type { Problem } from "@/modules/pdf-preview";
-import { getProject, projectKey } from "@/modules/projects";
 import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
 
 import { AskAgentButton } from "./ask-agent-button";
 import { ContentPane } from "./content-pane";
 import { EditorBar } from "./editor-bar";
 import { MobileTabs, type MobileView } from "./mobile-tabs";
-import { useStartDocument } from "./start-document";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useAgentOpen } from "./use-agent-open";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
 import { useDocumentBridge } from "./use-document-bridge";
-import { useAgentAsks, useFlushBeforeCompile, useSourceJumps } from "./workspace-hooks";
+import { useAgentAsks, useFlushBeforeCompile, useSourceJumps, useWorkspaceTree } from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
-import { useSelectionFollowsTree } from "./selection-follows-tree";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useSourceSync } from "./use-source-sync";
+import { type WorkspaceOutline, useWorkspaceOutline } from "./workspace-outline";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
@@ -112,9 +109,8 @@ function WorkspaceContent({
   readOnly,
   filesOpen,
   setFilesOpen,
-  statusSlot,
-  statusSlotRef,
-  outputSlotRef,
+  slots,
+  outline,
 }: {
   projectId: string;
   selected: TreeEntity | null;
@@ -125,9 +121,8 @@ function WorkspaceContent({
   readOnly: boolean;
   filesOpen: boolean;
   setFilesOpen: (open: boolean) => void;
-  statusSlot: HTMLElement | null;
-  statusSlotRef: (element: HTMLDivElement | null) => void;
-  outputSlotRef: (element: HTMLDivElement | null) => void;
+  slots: ReturnType<typeof useSlots>;
+  outline: WorkspaceOutline;
 }) {
   const { user } = useAuth();
   const pickFile = (entity: TreeEntity) => {
@@ -135,36 +130,42 @@ function WorkspaceContent({
     if (entity.type !== "folder") setFilesOpen(false);
   };
   return (
-    <ContentPane
-      editor={{
-        projectId,
-        selected,
-        onClearSelection: () => onSelect(null),
-        onDirtyChange,
-        onEditorView: sync.handleEditorView,
-        onSyncToPdf,
-        onDocumentLoaded: sync.handleDocumentLoaded,
-        syncEnabled: sync.syncCompileId !== null,
-        collabEnabled: COLLAB_ENABLED,
-        getToken: getCollabToken,
-        currentUser: user ? { id: user.id, name: user.display_name } : null,
-        readOnly,
-        statusSlot,
-      }}
-      filesOpen={filesOpen}
-      onOpenFiles={() => setFilesOpen(true)}
-      onCloseFiles={() => setFilesOpen(false)}
-      fileTree={
-        <FileTreePanel
-          projectId={projectId}
-          selectedId={selected?.id ?? null}
-          onSelectEntity={pickFile}
-          readOnly={readOnly}
+    <div className="flex h-full min-w-0">
+      {outline.pinnedColumn}
+      <div className="min-w-0 flex-1">
+        <ContentPane
+          editor={{
+            projectId,
+            selected,
+            onClearSelection: () => onSelect(null),
+            onDirtyChange,
+            onEditorView: sync.handleEditorView,
+            onSyncToPdf,
+            onDocumentLoaded: sync.handleDocumentLoaded,
+            syncEnabled: sync.syncCompileId !== null,
+            collabEnabled: COLLAB_ENABLED,
+            getToken: getCollabToken,
+            currentUser: user ? { id: user.id, name: user.display_name } : null,
+            readOnly,
+            statusSlot: slots.status,
+          }}
+          filesOpen={filesOpen}
+          onOpenFiles={() => setFilesOpen(true)}
+          onCloseFiles={() => setFilesOpen(false)}
+          fileTree={
+            <FileTreePanel
+              projectId={projectId}
+              selectedId={selected?.id ?? null}
+              onSelectEntity={pickFile}
+              readOnly={readOnly}
+            />
+          }
+          statusSlotRef={slots.setStatus}
+          outputSlotRef={slots.setOutput}
+          outline={outline.panel}
         />
-      }
-      statusSlotRef={statusSlotRef}
-      outputSlotRef={outputSlotRef}
-    />
+      </div>
+    </div>
   );
 }
 
@@ -177,15 +178,10 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [filesOpen, setFilesOpen] = useState(false);
   const slots = useSlots();
 
-  const tree = useProjectTree(projectId);
-  const treeRoot = tree.data;
+  const { treeRoot, project } = useWorkspaceTree(projectId, selected, setSelected);
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
-  const projectQuery = useQuery({
-    queryKey: projectKey(projectId),
-    queryFn: () => getProject(projectId),
-  });
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
@@ -193,10 +189,16 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
   const jumps = useSourceJumps(sync, setView);
-  useStartDocument(treeRoot, projectQuery.data?.rootDocId, selected, setSelected);
-  useSelectionFollowsTree(treeRoot, selected, setSelected);
 
   const flushBeforeCompile = useFlushBeforeCompile();
+  const outline = useWorkspaceOutline({
+    projectId,
+    treeRoot,
+    rootDocId: project?.rootDocId,
+    sync,
+    jumps,
+    setFilesOpen,
+  });
 
   const content = (
     <WorkspaceContent
@@ -209,9 +211,8 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       readOnly={readOnly}
       filesOpen={filesOpen}
       setFilesOpen={setFilesOpen}
-      statusSlot={slots.status}
-      statusSlotRef={slots.setStatus}
-      outputSlotRef={slots.setOutput}
+      slots={slots}
+      outline={outline}
     />
   );
 
@@ -220,7 +221,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       bar={
         <EditorBar
           projectId={projectId}
-          projectName={projectQuery.data?.name}
+          projectName={project?.name}
           fileName={sync.openDoc?.name}
           onOpenFiles={() => setFilesOpen((v) => !v)}
           compileSlotRef={slots.setCompile}
