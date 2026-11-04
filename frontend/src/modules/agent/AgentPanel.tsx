@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-import { DiffReviewDialog } from "@/modules/diff-review";
-import type { DocumentBridge } from "@/modules/diff-review";
+import type { ProposalRef } from "@/modules/diff-review";
 
 import { AgentErrorState } from "./controls";
 import { FileOpCard } from "./file-op-card";
@@ -29,12 +28,14 @@ function Conversation({
   chat,
   onPickExample,
   onReviewProposal,
+  proposalStatuses,
   projectId,
 }: {
   chat: ReturnType<typeof useAgentChat>;
   projectId: string;
   onPickExample: (text: string) => void;
-  onReviewProposal: (proposalId: string) => void;
+  onReviewProposal: (proposalId: string, path: string) => void;
+  proposalStatuses: Record<string, string>;
 }) {
   const { t } = useTranslation("agent");
   const sessionId = chat.activeSessionId;
@@ -44,6 +45,7 @@ function Conversation({
         items={chat.run.items}
         loading={chat.transcriptLoading}
         onReviewProposal={onReviewProposal}
+        proposalStatuses={proposalStatuses}
         renderFileOp={(item) =>
           sessionId && <FileOpCard projectId={projectId} sessionId={sessionId} op={item} />
         }
@@ -85,15 +87,17 @@ export function AgentPanel({
   open,
   onOpenChange,
   onReviewProposal,
-  documentBridge,
+  proposalStatuses = {},
   onBeforeSend,
   request = null,
 }: {
   projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReviewProposal: (proposalId: string) => void;
-  documentBridge?: DocumentBridge;
+  /** The user asked to review a proposal in its text (spec 110). */
+  onReviewProposal: (ref: ProposalRef) => void;
+  /** Outcomes decided in the editor, by proposal id: a decided card shows it at once. */
+  proposalStatuses?: Record<string, string>;
   /** Flush open collab docs before a run so the agent reads current text (spec 28/42). */
   onBeforeSend?: () => Promise<void>;
   /** Something the editor asked for: a selection to discuss, or a problem to fix. */
@@ -104,7 +108,6 @@ export function AgentPanel({
   const windowSize = useWindowSize();
   const [composerText, setComposerText] = useState("");
   const [quote, setQuote] = useState<AgentQuote | null>(null);
-  const [reviewId, setReviewId] = useState<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const active = ACTIVE_PHASES.includes(chat.run.phase);
 
@@ -114,9 +117,8 @@ export function AgentPanel({
 
   useEditorRequest(request, chat.send, setQuote);
 
-  const handleReview = (proposalId: string) => {
-    onReviewProposal(proposalId);
-    if (documentBridge) setReviewId(proposalId);
+  const handleReview = (proposalId: string, path: string) => {
+    if (chat.activeSessionId) onReviewProposal({ sessionId: chat.activeSessionId, proposalId, path });
   };
 
   const activeSession = chat.sessions.find((s) => s.id === chat.activeSessionId);
@@ -158,6 +160,7 @@ export function AgentPanel({
           projectId={projectId}
           onPickExample={setComposerText}
           onReviewProposal={handleReview}
+          proposalStatuses={proposalStatuses}
         />
 
         {chat.run.error && <AgentErrorState error={chat.run.error} onRetry={chat.retry} />}
@@ -172,17 +175,6 @@ export function AgentPanel({
           composerRef={composerRef}
         />
       </section>
-
-      {documentBridge && chat.activeSessionId && (
-        <DiffReviewDialog
-          projectId={projectId}
-          sessionId={chat.activeSessionId}
-          proposalId={reviewId}
-          bridge={documentBridge}
-          open={reviewId !== null}
-          onOpenChange={(o) => !o && setReviewId(null)}
-        />
-      )}
     </>
   );
 }

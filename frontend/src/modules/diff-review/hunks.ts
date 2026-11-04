@@ -26,12 +26,12 @@ export function mapWireHunk(w: WireHunk): DiffHunk {
 }
 
 /** The lines a hunk expects in the *old* (base/current) content at its location. */
-function oldLinesOf(hunk: DiffHunk): string[] {
+export function oldLinesOf(hunk: DiffHunk): string[] {
   return hunk.lines.filter((l) => l.type !== "add").map((l) => l.text);
 }
 
 /** The lines a hunk produces (context kept + additions). */
-function newLinesOf(hunk: DiffHunk): string[] {
+export function newLinesOf(hunk: DiffHunk): string[] {
   return hunk.lines.filter((l) => l.type !== "del").map((l) => l.text);
 }
 
@@ -99,17 +99,6 @@ export function rebaseHunks(content: string, hunks: DiffHunk[], accepted: Set<st
     appliedHunkIds: planned.map((p) => p.id),
     blockedHunkIds: blocked,
   };
-}
-
-/** Preview content = accepted hunks applied to the (clean) base. */
-export function previewContent(base: string, hunks: DiffHunk[], accepted: Set<string>): string {
-  return rebaseHunks(base, hunks, accepted).target;
-}
-
-/** Hunks whose old lines no longer match the live content (would be blocked at apply). */
-export function blockedAgainst(live: string, hunks: DiffHunk[]): string[] {
-  const { lines } = toLines(live);
-  return hunks.filter((h) => locate(lines, oldLinesOf(h), h.oldStart - 1) === -1).map((h) => h.id);
 }
 
 export interface MinimalEdit {

@@ -22,9 +22,10 @@ count go down.
 does not wait for pending edits to reach the server. *Why:* found while splitting the editor; a fix changes
 the compile path and needs its own test.
 
-**The agent's changes are reviewed in a dialog, not in the text.** The approved demo showed hunks in the editor,
-decided one by one. `DiffReviewDialog` is still the only review surface. *Why:* it needs a CodeMirror decoration
-layer and per-hunk apply, a change of its own after spec 107.
+**An inline review does not survive a reload.** The outcome is stored once, when the last hunk is decided
+(spec 110). Until then the decisions live in this page only: after a reload the proposal shows as pending, and a
+hunk accepted before it is drawn as blocked, since its old lines are gone. *Why:* storing each hunk decision on
+the server needs a schema and route of its own; the page-level memory covers closing and reopening the review.
 
 **Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
 
@@ -184,6 +185,5 @@ while `COMPILE_ADDRESS_SPACE_BYTES` has its default.
 ### Unused code
 
 `configure_logging` in `backend/src/inkstave/core/logging.py`, `RequestIdMiddleware`, `select_context` in the agent
-turn, `set_status` and `apply_recorded` on agent diffs (applied diffs stay `proposed` and reappear on reload),
-`ensure_snapshot`. `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
+turn, `ensure_snapshot`. `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
 unreachable.

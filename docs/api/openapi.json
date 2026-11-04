@@ -636,6 +636,35 @@
         "title": "DiffHunk",
         "type": "object"
       },
+      "DiffOutcomeIn": {
+        "additionalProperties": false,
+        "description": "The user's decision on each hunk of a proposal (spec 110). Ids are the ``hunk_id`` values.",
+        "properties": {
+          "accepted": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Accepted",
+            "type": "array"
+          },
+          "rejected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "stale": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stale",
+            "type": "array"
+          }
+        },
+        "title": "DiffOutcomeIn",
+        "type": "object"
+      },
       "DiffResponse": {
         "properties": {
           "binary": {
@@ -4765,6 +4794,115 @@
           }
         ],
         "summary": "List Diffs",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/agent/sessions/{session_id}/diffs/{diff_id}/outcome": {
+      "post": {
+        "description": "Store which hunks the user accepted, rejected or found stale; the status follows (spec 110).",
+        "operationId": "record_diff_outcome_api_v1_projects__project_id__agent_sessions__session_id__diffs__diff_id__outcome_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "diff_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Diff Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiffOutcomeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedDiffSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Diff Outcome",
         "tags": [
           "agent"
         ]

@@ -1,30 +1,30 @@
 /**
- * Journey 7 — AI agent diff (spec 54 §5.3, spec 46 §8, spec 47 §8). With
+ * Journey 7 — AI agent diff (spec 54 §5.3, spec 46 §8, spec 47 §8, spec 110). With
  * LLM_STUB=true the agent runs a deterministic search → read → propose_edit
  * sequence and proposes a per-file diff. This exercises:
  *   - streamed assistant text appearing in the transcript (spec 46 §8a),
  *   - a tool-activity row appearing (spec 46 §8b),
- *   - the diff-review flow: reject a hunk → preview updates → re-accept → apply,
- *     asserting the accepted change is present and a rejected hunk's text is
- *     absent from the preview (spec 47 §8),
- *   - the agent never auto-writes (nothing applied until confirm), and
+ *   - the inline review (spec 110): the change is drawn in the text, accepting it
+ *     writes it, and after a reload the card says it was applied and no review
+ *     is offered again,
+ *   - the agent never auto-writes (nothing changes before the accept), and
  *   - Stop on a run shows a cancelled marker (spec 46 §8c).
  * Everything is scripted (no real LLM/Tectonic), so it stays within the budget.
  */
 import { test, expect } from "../support/fixtures";
-import { AgentPanel, DiffReview, EditorPage } from "../support/pages";
+import { AgentPanel, EditorPage, InlineReview } from "../support/pages";
 
 // The stub rewrites the document to this marker text (testkit/llm_stub.py).
 const APPLIED_MARKER = "rewritten by the Inkstave AI agent";
 
-test("agent streams, shows tool activity, and applies a reviewed diff @smoke", async ({
+test("agent streams, shows tool activity, and applies a change reviewed in the text @smoke", async ({
   page,
   seedProject,
 }) => {
   const { projectId } = await seedProject();
   const editor = new EditorPage(page);
   const agent = new AgentPanel(page);
-  const review = new DiffReview(page);
+  const review = new InlineReview(page);
 
   await editor.open(projectId);
   await editor.openFile("main.tex");
@@ -51,43 +51,23 @@ test("agent streams, shows tool activity, and applies a reviewed diff @smoke", a
   // The diff proposal surfaces a Review changes button.
   await expect(agent.reviewButton()).toBeVisible({ timeout: 20_000 });
 
-  // The agent never auto-writes: the document is unchanged before apply.
+  // The agent never auto-writes: the document is unchanged before a decision.
   await expect(editor.content()).toContainText("original introduction");
   await expect(editor.content()).not.toContainText(APPLIED_MARKER);
 
-  // Open the diff-review surface.
+  // The change is drawn in the text; accepting it writes it and the open editor converges.
   await review.openFromAgent();
-  const dialog = page.getByRole("dialog");
-
-  // (198) Reject the proposed hunk, then preview the file — the preview must
-  // reflect the rejection: the rewritten marker is absent and the original line
-  // remains. This proves the preview updates as hunks are toggled.
-  const acceptSwitch = dialog.getByRole("switch").first();
-  await expect(acceptSwitch).toBeChecked();
-  await acceptSwitch.click();
-  await expect(acceptSwitch).not.toBeChecked();
-
-  await dialog.getByRole("button", { name: "Preview" }).first().click();
-  // The preview is a read-only CodeMirror editor (#192), not a <pre>; assert on
-  // its rendered content region.
-  const preview = dialog.getByTestId("preview-editor");
-  await expect(preview).toContainText("original introduction");
-  await expect(preview).not.toContainText(APPLIED_MARKER);
-
-  // (198) Re-accept the hunk; the preview now reflects the accepted change.
-  await dialog.getByRole("button", { name: "Diff" }).first().click();
-  await acceptSwitch.click();
-  await expect(acceptSwitch).toBeChecked();
-  await dialog.getByRole("button", { name: "Preview" }).first().click();
-  await expect(preview).toContainText(APPLIED_MARKER);
-  await dialog.getByRole("button", { name: "Diff" }).first().click();
-
-  // Apply the accepted hunk → confirm → the open editor converges to the rewrite.
-  await review.applyAll();
-  await expect(page.getByText("Changes applied", { exact: true })).toBeVisible();
+  await review.accept(1);
   await expect(editor.content()).toContainText(APPLIED_MARKER);
-  // (198) The previously-original paragraph text is gone (the accepted change won).
   await expect(editor.content()).not.toContainText("original introduction paragraph");
+
+  // The outcome is stored: after a reload the card says so, and no review is offered again.
+  await page.reload();
+  await editor.openFile("main.tex");
+  await editor.waitEditable();
+  await agent.open();
+  await expect(page.getByText("Applied", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(agent.reviewButton()).toHaveCount(0);
 });
 
 test("Stop cancels an in-flight run and shows a cancelled marker", async ({ page, seedProject }) => {

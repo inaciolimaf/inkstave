@@ -105,6 +105,7 @@ function applyDiffProposed(base: AgentRunState, event: AgentEvent): AgentRunStat
     kind: "diff-proposal",
     id: event.diff_id ?? `d-${event.seq}`,
     proposalId: event.diff_id ?? "",
+    status: "proposed",
     files: [{ path: event.path ?? "", hunkCount: event.stats?.hunk_count ?? 0 }],
   });
   return base;
@@ -264,6 +265,7 @@ export function historyToItems(
       kind: "diff-proposal",
       id: d.id,
       proposalId: d.id,
+      status: d.status,
       files: [{ path: d.path, hunkCount: d.stats.hunk_count ?? 0 }],
     });
   }

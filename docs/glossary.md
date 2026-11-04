@@ -12,7 +12,7 @@ product shows no term for this concept in Portuguese, because it is internal.
 | Where | Convention | Example |
 |---|---|---|
 | Python | `snake_case`, `PascalCase` for classes | `run_compile`, `TreeEntity` |
-| TypeScript | `camelCase`, `PascalCase` for components and types | `useCompile`, `DiffReviewDialog` |
+| TypeScript | `camelCase`, `PascalCase` for components and types | `useCompile`, `ReviewBar` |
 | Frontend files | module-local: new files `kebab-case`, older components `PascalCase` | `file-tree-panel.tsx`, `AgentPanel.tsx` |
 | Database tables | plural `snake_case` | `revoked_sessions`, `compile_outputs` |
 | API routes | `/api/v1/...`, plural `kebab-case` | `/api/v1/projects` |
@@ -141,7 +141,9 @@ are English-only today ([known gaps](known-gaps.md)).
 | Run | `run_agent_turn`, `AgentRunState` | "execução" |
 | Proposed changes | `ProposedDiff` | "Mudanças propostas" |
 | Stage an edit | `StagedEdit`, `propose_edit` | "Propôs uma edição" |
-| Review | `DiffReviewDialog` | "Revisar mudanças" |
+| Review | `useInlineReview`, `ReviewBar` | "Revisar mudanças" |
+| Inline review | `inline-review-extension` | "Revisão no texto" |
+| Decision (outcome) | `DiffOutcomeIn`, `record_outcome`, `recordDecision` | — |
 | File operation | `ProposedFileOp`, `StagedFileOp`, `FileOpCard` | "Criar arquivo", "Excluir", "Renomear ou mover" |
 | Selection sent to the agent | `AgentQuote`, `withQuote` | "Pedir ao agente" |
 | File drawer | `FileDrawer` | "Arquivos" |

@@ -44,6 +44,8 @@ export type TranscriptItem =
       kind: "diff-proposal";
       id: string;
       proposalId: string;
+      /** `proposed` until the user decides; then the outcome (spec 110). */
+      status: string;
       files: { path: string; hunkCount: number }[];
     }
   | ({ kind: "file-op"; id: string } & FileOp)

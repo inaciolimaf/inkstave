@@ -10,6 +10,7 @@ import { FileDrawer } from "./file-drawer";
  */
 export function ContentPane({
   editor,
+  reviewBar,
   filesOpen,
   onOpenFiles,
   onCloseFiles,
@@ -18,6 +19,8 @@ export function ContentPane({
   outputSlotRef,
 }: {
   editor: ComponentProps<typeof EditorPane>;
+  /** The bar of an inline review in progress, above the text (spec 110). */
+  reviewBar?: ReactNode;
   filesOpen: boolean;
   onOpenFiles: () => void;
   onCloseFiles: () => void;
@@ -28,8 +31,11 @@ export function ContentPane({
   const { t } = useTranslation("editor");
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
-      <div inert={filesOpen} className="min-h-0 flex-1">
-        <EditorPane {...editor} />
+      <div inert={filesOpen} className="flex min-h-0 flex-1 flex-col">
+        {reviewBar}
+        <div className="min-h-0 flex-1">
+          <EditorPane {...editor} />
+        </div>
       </div>
       <div className="flex min-h-9 items-center gap-2 border-t pl-2 text-small">
         <div ref={statusSlotRef} className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden" />

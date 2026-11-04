@@ -1,12 +1,12 @@
 # Agent
 
 The AI writing agent. A project member chats with it in the editor; it reads and searches the project,
-looks at images, then proposes per-file diffs that the user reviews hunk by hunk, and file operations
-(create, delete, rename, move) that the user applies or rejects. The turn runs server-side as a LangGraph
-graph inside an ARQ job and streams to the browser over SSE. The agent never changes a project by itself:
-a document edit is written in the browser after the user confirms, through the normal collaboration
-channel, and a file operation runs in the backend only from the user's own apply request. Specs 41–50, 67
-and 108; decision in `docs/adr/0110-agent-file-operations.md`.
+looks at images, then proposes per-file diffs that the user reviews hunk by hunk, drawn in the text itself
+(spec 110), and file operations (create, delete, rename, move) that the user applies or rejects. The turn runs
+server-side as a LangGraph graph inside an ARQ job and streams to the browser over SSE. The agent never changes
+a project by itself: a document edit is written in the browser after the user accepts a hunk, through the normal
+collaboration channel, and a file operation runs in the backend only from the user's own apply request. Specs
+41–50, 67, 108 and 110; decisions in `docs/adr/0110-agent-file-operations.md` and `docs/adr/0111-inline-diff-review.md`.
 
 ## Where it is
 
@@ -39,6 +39,7 @@ and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 | `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`; `select_context`, not wired to the turn |
 | `backend/src/inkstave/modules/agent/diffs/__init__.py`, `backend/src/inkstave/modules/agent/diffs/compute.py` | `materialize_diffs`, `is_stale`; pure diff computation |
 | `backend/src/inkstave/modules/agent/diffs/models.py`, `backend/src/inkstave/modules/agent/diffs/repository.py` | `ProposedDiff`, `ProposedDiffStatus`, queries |
+| `backend/src/inkstave/modules/agent/diffs/outcome.py`, `backend/src/inkstave/modules/agent/diffs/schemas.py` | `record_outcome`, `outcome_status`, `check_outcome`; `DiffOutcomeIn` (spec 110) |
 | `backend/src/inkstave/modules/agent/runs/jobs.py`, `backend/src/inkstave/modules/agent/runs/run_helpers.py` | `run_agent_turn`; `RunScope`, pre-checks, terminal event |
 | `backend/src/inkstave/modules/agent/runs/enqueuer.py`, `backend/src/inkstave/modules/agent/runs/events.py`, `backend/src/inkstave/modules/agent/runs/stream.py` | `AgentEnqueuer`; Redis keys and sinks; `sse_stream` |
 | `backend/src/inkstave/modules/agent/runs/live_text.py`, `backend/src/inkstave/modules/agent/llm/openrouter_stream.py` | `LiveText`: forwards a model call to the stream; `collect_stream`: rebuilds an OpenRouter response from its stream |
@@ -51,7 +52,11 @@ and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 | `frontend/src/modules/agent/use-window-size.ts`, `frontend/src/modules/agent/window-resize-handles.tsx` | The window's size on a wide screen: drag, arrow keys, one-click enlarge, kept in `localStorage`. On a phone it stays a full sheet |
 | `frontend/src/modules/agent/run-status.tsx` | What a run is doing and for how long, above the composer; after 60 s with no event it says so |
 | `frontend/src/modules/agent/file-op-card.tsx` | The card that applies or rejects a file operation |
-| `frontend/src/modules/diff-review/useDiffReview.ts`, `frontend/src/modules/diff-review/hunks.ts` | Hunk decisions, drift, `rebaseHunks` |
+| `frontend/src/modules/diff-review/inline-review-extension.ts`, `frontend/src/modules/diff-review/inline-review-widgets.ts` | The review in the editor: hunk placement, removed and added text, the toolbar, keys, live edits (spec 110) |
+| `frontend/src/modules/diff-review/inline-review-model.ts`, `frontend/src/modules/diff-review/inline-review-actions.ts` | Pure review state (`ReviewHunk`, decisions, outcome lists); what a decision writes and records |
+| `frontend/src/modules/diff-review/use-inline-review.ts`, `frontend/src/modules/diff-review/review-bar.tsx` | Opening a proposal, starting its review on the view, the bar over the text |
+| `frontend/src/modules/editor/use-proposal-review.tsx` | Wires the review into the editor workspace |
+| `frontend/src/modules/diff-review/hunks.ts` | Hunk locating, `rebaseHunks`, `minimalEdit` |
 | `frontend/src/modules/diff-review/editor-bridge.ts`, `frontend/src/modules/diff-review/crdt-apply.ts` | Writes through a short-lived collab provider |
 | `backend/tests/agent_evals/test_agent_evals.py` | Deterministic eval suite, `FakeLLM` only |
 | `backend/tests/unit/test_agent_egress_lock.py` | Static guard: tools import no network client |
@@ -64,6 +69,7 @@ and 108; decision in `docs/adr/0110-agent-file-operations.md`.
 | `agent_messages` | same | Transcript. `seq` is unique per session. System prompt is never stored |
 | `agent_sessions.run_state`, `active_run_id` | `backend/migrations/versions/20260610_2100_c9d2e6f58b71_agent_session_run_state.py` | `idle`, `queued`, `running`, `cancelling`, `done`, `error` |
 | `proposed_diffs` | `backend/migrations/versions/20260610_1900_b8c1d5f47a69_create_proposed_diffs.py` | One proposal per document: `base_version`, `base_hash`, `diff_text`, `hunks`, `stats`, `status`, `rationale` |
+| `proposed_diffs.decided_hunks`, `decided_at`, `decided_by` | `backend/migrations/versions/20261104_1000_e4a7c2d91b35_add_diff_outcome_spec_110.py` | The user's decision, set once: `decided_hunks` is `{"accepted": [...], "rejected": [...], "stale": [...]}`. `decided_by` is a user, `SET NULL` on delete. The same migration adds the audit action `proposal_decided` to `agent_audit_log` |
 | `proposed_file_ops` | `backend/migrations/versions/20261102_2000_c5e9a1b37d42_create_proposed_file_ops.py` | One proposal: `kind`, `entity_type`, `entity_id`, `path`, `new_path`, `content`, `affected_paths`, `status`, `rationale` |
 | `agent_audit_log` | `backend/migrations/versions/20260610_2300_d1e3f7a69c82_create_agent_audit_log.py` | Action rows with tokens and cost, no document bodies |
 
@@ -89,16 +95,18 @@ project, is a 404.
 |---|---|---|
 | `POST /sessions` | Create a session, 201. `model` is the current `AGENT_MODEL` | `not_project_member` |
 | `GET /sessions` | The caller's sessions, newest first. `limit` 1–100, default 50 | `not_project_member` |
-| `GET /sessions/{session_id}` | Session, messages, and `proposed` diffs without hunks | `not_project_member` |
+| `GET /sessions/{session_id}` | Session, messages, the diffs that are not superseded (a decided one keeps its status) without hunks, and file operations | `not_project_member` |
 | `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent` | 400 `message_too_long` with `details: [{max_chars}]`, 409 `run_active` |
 | `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202 | `not_project_member` |
 | `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=` | 401 when no valid token, `not_project_member` |
 | `GET /sessions/{session_id}/diffs` | All the session's diffs. `?status=` filters, `?include=hunks` adds hunks | 422 on an unknown status |
+| `POST /sessions/{session_id}/diffs/{diff_id}/outcome` | Records which hunks the user accepted, rejected or found stale (`{accepted, rejected, stale}`, each hunk id once). The status becomes `applied`, `partially_applied`, `rejected` or `stale`. Needs `DOC_WRITE`; audits `proposal_decided` | 403 `diff_forbidden`, 404 `diff_not_found` or `project_not_found`, 409 `already_decided` with the stored `status`, 422 `invalid_outcome` |
 | `GET /sessions/{session_id}/file-ops` | The session's file operations with `content`, without superseded ones | `not_project_member` |
 | `POST /sessions/{session_id}/file-ops/{op_id}/apply` | Carry out one proposal and audit `apply_recorded`. Needs `DOC_WRITE` now | 403 `file_op_forbidden`, 404 `file_op_not_found`, 409 `file_op_closed`, `file_op_stale`, and the tree's own errors |
 | `POST /sessions/{session_id}/file-ops/{op_id}/reject` | Record the refusal | same as apply, without the tree's |
 
-There is no route to apply, accept or reject a diff.
+No route applies a diff on the server: a hunk is written by the browser, as a CRDT edit, when the user accepts
+it. The outcome route only stores the decision. A reload shows a decided diff with its status.
 
 SSE events are named after their `type` and carry `run_id`, `seq`, `ts`: `token` (`text`), `tool_call`
 (`tool_call_id`, `name`, `arguments`), `tool_result` (`tool_call_id`, `name`, `ok`, `summary`),
@@ -251,12 +259,15 @@ are estimated at four characters each. It is tested but nothing in the turn call
 5. `_persist` moves earlier `proposed` rows for the same session and document to `superseded`, then inserts
    the new one with `base_version` and `base_hash`.
 6. `diff_proposed` tells the panel. Reloading uses `GET /sessions/{session_id}`.
-7. The review dialog fetches `?include=hunks`. `useDiffReview` starts with every hunk accepted and compares
-   hunks to live text. `rebaseHunks` locates each hunk by its old lines, searching outward from the original
-   position, and blocks those no longer found. Drift is judged from content, not from `base_version`.
-8. On confirmation, `bridge.applyContent` writes the result into the document's Yjs text in one transaction
-   with origin `agent-apply`, as a single minimal region, so concurrent edits elsewhere survive. The write
-   reaches the server as an ordinary collaboration update from that user.
+7. A click on the card opens the proposal's document and fetches `?include=hunks`. `useInlineReview` starts the
+   review on the editor's view: `rebaseHunks` locates each hunk by its old lines, searching outward from the
+   proposed position, and a hunk that is no longer found is blocked. Drift is judged from content, not from
+   `base_version`. Decisions made on an earlier opening of the same page are kept, and decided hunks are not drawn.
+8. Accept writes one hunk: `bridge.applyContent` writes the rebased text into the document's Yjs text in one
+   transaction with origin `agent-apply`, as a single minimal region, so concurrent edits elsewhere survive. The
+   write reaches the server as an ordinary collaboration update from that user. Reject changes nothing in the text.
+9. When the last hunk is decided, the outcome route records the lists (`accepted`, `rejected`, `stale`) and the
+   review closes. The card then shows the new status. Closing before that keeps the undecided hunks pending.
 
 ### Worker wiring
 
@@ -297,7 +308,13 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | Oversized documents and no-ops create no row | `backend/tests/integration/test_agent_diffs.py::test_oversized_doc_is_skipped`, `backend/tests/integration/test_agent_diffs.py::test_noop_edit_creates_no_row` |
 | The turn raises its idle limit first | `backend/tests/unit/test_external_timeouts.py::test_the_agent_turn_raises_its_idle_limit_first` |
 | A timed-out job settles as `timeout` | no dedicated test |
-| `?include=hunks` controls whether hunks are sent | no dedicated test |
+| `?include=hunks` controls whether hunks are sent | `backend/tests/integration/test_agent_diff_outcome.py::test_listing_draws_hunks_only_when_asked` |
+| Nothing changes in a document until a hunk is accepted | `frontend/src/modules/diff-review/inline-review-extension.test.ts`, "does not change the document" |
+| One accepted hunk is one minimal CRDT edit | `frontend/src/modules/diff-review/inline-review-actions.test.ts`, "writes that hunk as one minimal edit to the document's text" |
+| A decided proposal is never offered again | `backend/tests/integration/test_agent_diff_outcome.py::test_outcome_is_stored_and_listed`; the card has no review button once decided (`transcript.test.tsx`) |
+| An outcome cannot be recorded twice | `backend/tests/integration/test_agent_diff_outcome.py::test_outcome_conflict_409` |
+| A hunk that drifted can only be rejected | `frontend/src/modules/diff-review/inline-review-actions.test.ts`, "does not write a hunk that a collaborator already changed, and only rejects it" |
+| A collaborator's edit inside a hunk blocks it, outside it does not | `frontend/src/modules/diff-review/inline-review-extension.test.ts`, "live edits" |
 | An open SSE stream ends on revocation | not a guarantee: it does not (see below) |
 
 `backend/tests/agent_evals/test_agent_evals.py` runs in the normal fast suite with `FakeLLM` and the
@@ -324,7 +341,11 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 
 ## Points of attention
 
-**The backend does not know which diffs were applied.** Only file operations record an outcome. `set_status` is never called, so `applied`, `partially_applied` and `stale` are never set, and `apply_recorded` is never written. An applied proposal stays `proposed` until a later proposal for the same session and document supersedes it, so `GET /sessions/{session_id}` keeps returning it after a reload. `rejected` comes only from overlapping ranges. `is_stale` is used only by its test.
+**The outcome is recorded once, when the last hunk is decided.** Until then the server knows nothing of a
+partial review: a reload in the middle of one shows the proposal as pending, and the hunks accepted before it
+are drawn again as blocked, since their old lines are gone. Only the browser's memory of this page keeps them
+decided (`docs/known-gaps.md`). `rejected` also comes from overlapping ranges, which store a row with no hunks.
+`is_stale` is used only by its test.
 
 **Timeouts.** `AGENT_REQUEST_TIMEOUT_S` bounds one LLM request. `AGENT_JOB_TIMEOUT_S` is the ARQ `timeout` for the whole turn, and `run_turn` passes the same value to `allow_idle`, because the transaction stays open across model calls. Fifty plan steps at 120 s far exceed 600 s, and the SDK's default two retries are not disabled, so one call can take three times the request timeout. The job timeout is the real ceiling and a slow multi-step turn can hit it.
 
@@ -340,7 +361,7 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 
 **Events go out before the commit.** `diff_proposed` and `done` are published before the final commit. A client acting on them instantly can miss the row or get 409. A commit failure after `done` produces a second terminal event.
 
-**`hunks` and `stats` are separate.** `_diff_summary` in `backend/src/inkstave/modules/agent/routes.py` clears `hunks` unless asked. Commit b83e563 corrected it: `model_validate` already filled `hunks`, so the flag did nothing and lists always carried them. It changed what is sent, not how hunks are counted; `hunk_count` comes from `_stats` in `backend/src/inkstave/modules/agent/diffs/compute.py`. No test calls it directly or asserts on `hunks` in a response. `test_diff_proposed_event_and_listing` goes through it without looking at that field.
+**`hunks` and `stats` are separate.** `_diff_summary` in `backend/src/inkstave/modules/agent/routes.py` clears `hunks` unless asked. Commit b83e563 corrected it: `model_validate` already filled `hunks`, so the flag did nothing and lists always carried them. It changed what is sent, not how hunks are counted; `hunk_count` comes from `_stats` in `backend/src/inkstave/modules/agent/diffs/compute.py`. `test_listing_draws_hunks_only_when_asked` now asserts on `hunks` in both forms.
 
 **Edits and drift.** `StagedEdit.base_version` is recorded and never compared. `propose_edit` checks range bounds at stage time, but ranges apply to the text re-read at the end of the turn, so collaborator edits during the turn can shift them. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
 

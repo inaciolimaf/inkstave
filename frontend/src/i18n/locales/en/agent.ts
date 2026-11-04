@@ -112,6 +112,12 @@ const dict = {
     hunkLine_other: "{{path}} · {{count}} hunks",
     reviewChanges: "Review changes",
     reviewChangesCount: "Review changes ({{count}})",
+    diffStatus: {
+      applied: "Applied",
+      partlyApplied: "Partly applied",
+      rejected: "Rejected",
+      stale: "Outdated",
+    },
     fileOp: {
       createDoc: "Create file",
       createFolder: "Create folder",

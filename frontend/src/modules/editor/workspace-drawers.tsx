@@ -1,7 +1,7 @@
 import { config } from "@/config";
 import { AgentPanel } from "@/modules/agent";
 import type { AgentRequest } from "@/modules/agent";
-import type { DocumentBridge } from "@/modules/diff-review";
+import type { ProposalRef } from "@/modules/diff-review";
 import type { TreeEntity } from "@/modules/file-tree";
 import { HistoryPanel } from "@/modules/history";
 
@@ -12,7 +12,8 @@ export function WorkspaceDrawers({
   agentOpen,
   onAgentOpenChange,
   agentRequest,
-  documentBridge,
+  proposalStatuses,
+  onReviewProposal,
   onBeforeSend,
   historyOpen,
   onHistoryOpenChange,
@@ -22,7 +23,8 @@ export function WorkspaceDrawers({
   agentOpen: boolean;
   onAgentOpenChange: (open: boolean) => void;
   agentRequest: AgentRequest | null;
-  documentBridge: DocumentBridge | undefined;
+  proposalStatuses: Record<string, string>;
+  onReviewProposal: (ref: ProposalRef) => void;
   onBeforeSend: () => Promise<void>;
   historyOpen: boolean;
   onHistoryOpenChange: (open: boolean) => void;
@@ -35,11 +37,9 @@ export function WorkspaceDrawers({
           open={agentOpen}
           onOpenChange={onAgentOpenChange}
           request={agentRequest}
-          documentBridge={documentBridge}
+          proposalStatuses={proposalStatuses}
           onBeforeSend={onBeforeSend}
-          onReviewProposal={() => {
-            // The diff-review surface (spec 47) opens inside the panel via documentBridge.
-          }}
+          onReviewProposal={onReviewProposal}
         />
       )}
       {openDoc?.type === "doc" && (

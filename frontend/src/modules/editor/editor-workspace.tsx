@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Desk } from "@/components/manuscript";
 import { config } from "@/config";
@@ -10,22 +9,20 @@ import { FileTreePanel, useProjectTree } from "@/modules/file-tree";
 import type { TreeEntity } from "@/modules/file-tree";
 import { PreviewPane } from "@/modules/pdf-preview";
 import type { Problem } from "@/modules/pdf-preview";
-import { getProject, projectKey } from "@/modules/projects";
-import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
+import { ShareDialog } from "@/modules/sharing";
 
 import { AskAgentButton } from "./ask-agent-button";
 import { ContentPane } from "./content-pane";
 import { EditorBar } from "./editor-bar";
 import { MobileTabs, type MobileView } from "./mobile-tabs";
-import { useStartDocument } from "./start-document";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useAgentOpen } from "./use-agent-open";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
-import { useDocumentBridge } from "./use-document-bridge";
 import { useAgentAsks, useFlushBeforeCompile, useSourceJumps } from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
-import { useSelectionFollowsTree } from "./selection-follows-tree";
 import { WorkspaceDrawers } from "./workspace-drawers";
+import { useProposalReview } from "./use-proposal-review";
+import { useWorkspaceProject } from "./use-workspace-project";
 import { useSourceSync } from "./use-source-sync";
 
 const COLLAB_ENABLED = Boolean(config.collabWsUrl);
@@ -112,9 +109,8 @@ function WorkspaceContent({
   readOnly,
   filesOpen,
   setFilesOpen,
-  statusSlot,
-  statusSlotRef,
-  outputSlotRef,
+  slots,
+  reviewBar,
 }: {
   projectId: string;
   selected: TreeEntity | null;
@@ -125,9 +121,8 @@ function WorkspaceContent({
   readOnly: boolean;
   filesOpen: boolean;
   setFilesOpen: (open: boolean) => void;
-  statusSlot: HTMLElement | null;
-  statusSlotRef: (element: HTMLDivElement | null) => void;
-  outputSlotRef: (element: HTMLDivElement | null) => void;
+  slots: ReturnType<typeof useSlots>;
+  reviewBar: ReactNode;
 }) {
   const { user } = useAuth();
   const pickFile = (entity: TreeEntity) => {
@@ -149,8 +144,9 @@ function WorkspaceContent({
         getToken: getCollabToken,
         currentUser: user ? { id: user.id, name: user.display_name } : null,
         readOnly,
-        statusSlot,
+        statusSlot: slots.status,
       }}
+      reviewBar={reviewBar}
       filesOpen={filesOpen}
       onOpenFiles={() => setFilesOpen(true)}
       onCloseFiles={() => setFilesOpen(false)}
@@ -162,8 +158,8 @@ function WorkspaceContent({
           readOnly={readOnly}
         />
       }
-      statusSlotRef={statusSlotRef}
-      outputSlotRef={outputSlotRef}
+      statusSlotRef={slots.setStatus}
+      outputSlotRef={slots.setOutput}
     />
   );
 }
@@ -177,25 +173,25 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [filesOpen, setFilesOpen] = useState(false);
   const slots = useSlots();
 
-  const tree = useProjectTree(projectId);
-  const treeRoot = tree.data;
+  const { data: treeRoot } = useProjectTree(projectId);
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
-  const permissions = usePermissions(projectId);
-  const readOnly = isReadOnly(permissions.data);
-  const projectQuery = useQuery({
-    queryKey: projectKey(projectId),
-    queryFn: () => getProject(projectId),
-  });
+  const { projectQuery, readOnly } = useWorkspaceProject(projectId, treeRoot, selected, setSelected);
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
-  const documentBridge = useDocumentBridge(projectId, treeRoot);
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
   const jumps = useSourceJumps(sync, setView);
-  useStartDocument(treeRoot, projectQuery.data?.rootDocId, selected, setSelected);
-  useSelectionFollowsTree(treeRoot, selected, setSelected);
 
+  const proposals = useProposalReview({
+    projectId,
+    sync,
+    treeRoot,
+    readOnly,
+    wide,
+    setSelected,
+    setView,
+  });
   const flushBeforeCompile = useFlushBeforeCompile();
 
   const content = (
@@ -209,9 +205,8 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       readOnly={readOnly}
       filesOpen={filesOpen}
       setFilesOpen={setFilesOpen}
-      statusSlot={slots.status}
-      statusSlotRef={slots.setStatus}
-      outputSlotRef={slots.setOutput}
+      slots={slots}
+      reviewBar={proposals.reviewBar}
     />
   );
 
@@ -237,7 +232,8 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         agentOpen={agentOpen}
         onAgentOpenChange={setAgentOpen}
         agentRequest={asks.request}
-        documentBridge={documentBridge}
+        proposalStatuses={proposals.proposalStatuses}
+        onReviewProposal={proposals.open}
         onBeforeSend={flushBeforeCompile}
         historyOpen={historyOpen}
         onHistoryOpenChange={setHistoryOpen}

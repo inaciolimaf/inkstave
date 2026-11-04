@@ -46,6 +46,8 @@ _HANDLER_GUARDED: frozenset[str] = frozenset(
         f"{_AGENT}/sessions/{{session_id}}/file-ops",
         f"{_AGENT}/sessions/{{session_id}}/file-ops/{{op_id}}/apply",
         f"{_AGENT}/sessions/{{session_id}}/file-ops/{{op_id}}/reject",
+        # Recording a diff's outcome (spec 110) checks DOC_WRITE in the handler, like the file-op apply.
+        f"{_AGENT}/sessions/{{session_id}}/diffs/{{diff_id}}/outcome",
     }
 )
 

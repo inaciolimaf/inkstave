@@ -508,6 +508,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/agent/sessions/{session_id}/diffs/{diff_id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Diff Outcome
+         * @description Store which hunks the user accepted, rejected or found stale; the status follows (spec 110).
+         */
+        post: operations["record_diff_outcome_api_v1_projects__project_id__agent_sessions__session_id__diffs__diff_id__outcome_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/agent/sessions/{session_id}/file-ops": {
         parameters: {
             query?: never;
@@ -1684,6 +1704,18 @@ export interface components {
             old_start: number;
             /** Segments */
             segments: components["schemas"]["DiffSegment"][];
+        };
+        /**
+         * DiffOutcomeIn
+         * @description The user's decision on each hunk of a proposal (spec 110). Ids are the ``hunk_id`` values.
+         */
+        DiffOutcomeIn: {
+            /** Accepted */
+            accepted?: string[];
+            /** Rejected */
+            rejected?: string[];
+            /** Stale */
+            stale?: string[];
         };
         /** DiffResponse */
         DiffResponse: {
@@ -3962,6 +3994,70 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_diff_outcome_api_v1_projects__project_id__agent_sessions__session_id__diffs__diff_id__outcome_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                session_id: string;
+                diff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiffOutcomeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposedDiffSummary"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

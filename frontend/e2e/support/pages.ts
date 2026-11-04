@@ -256,24 +256,32 @@ export class AgentPanel {
   }
 }
 
-export class DiffReview {
+/** The agent's proposal, reviewed inside the text (spec 110): a bar over the editor and a toolbar per change. */
+export class InlineReview {
   constructor(private readonly page: Page) {}
 
-  dialog(): Locator {
-    return this.page.getByRole("dialog");
+  bar(): Locator {
+    return this.page.getByRole("region", { name: "Review in the text" });
   }
 
+  /** Opens the review from the agent's card; the bar shows once the proposal is drawn in the text. */
   async openFromAgent(): Promise<void> {
     await this.page.getByRole("button", { name: /Review changes/ }).click();
-    await expect(this.page.getByText("Review proposed changes")).toBeVisible();
+    await expect(this.bar()).toBeVisible();
   }
 
-  /** Apply all proposed hunks, confirming the alert dialog. */
-  async applyAll(): Promise<void> {
-    await this.dialog().getByRole("button", { name: "Apply" }).first().click();
-    const confirm = this.page.getByRole("alertdialog");
-    await expect(confirm.getByText("Apply changes?")).toBeVisible();
-    await confirm.getByRole("button", { name: "Apply" }).click();
+  /** Accepts the change at `index` (1-based) from its toolbar. */
+  async accept(index = 1): Promise<void> {
+    await this.page.getByRole("button", { name: `Accept change ${index}` }).click();
+  }
+
+  /** Rejects the change at `index` (1-based) from its toolbar. */
+  async reject(index = 1): Promise<void> {
+    await this.page.getByRole("button", { name: `Reject change ${index}` }).click();
+  }
+
+  async rejectAll(): Promise<void> {
+    await this.bar().getByRole("button", { name: "Reject all" }).click();
   }
 }
 

@@ -1,65 +1,31 @@
-/** Strings for the diff-review surface (the `review` namespace, spec 47). */
+/** Strings for the inline review of the agent's proposals, in the text (the `review` namespace, specs 47, 110). */
 const dict = {
-  title: "Review proposed changes",
-  description: "Review the agent’s proposed changes and accept or reject each hunk before applying.",
-  accepted: "{{accepted}}/{{total}} accepted",
-  apply: "Apply",
-  loadError: "Couldn’t load the proposal.",
-  noChanges: "This proposal has no changes.",
-  applyResult: {
-    successTitle: "Changes applied",
-    errorTitle: "Some changes could not be applied",
-    applied: "{{count}} applied",
-    skipped: ", {{count}} skipped",
-    error: " — error: {{error}}",
-  },
-  toast: {
-    applyError: "Some changes couldn’t be applied.",
-    applySuccess: "Changes applied to your document.",
-  },
-  confirmApply: {
-    title: "Apply changes?",
-    // Variants keyed by the two plural axes: `applicable` (change/changes) and
-    // `fileCount` (file/files + document/documents).
-    description:
-      "This will write {{applicable}} accepted change across {{fileCount}} file into your document.",
-    description_fileMany:
-      "This will write {{applicable}} accepted change across {{fileCount}} files into your documents.",
-    descriptionMany:
-      "This will write {{applicable}} accepted changes across {{fileCount}} file into your document.",
-    descriptionMany_fileMany:
-      "This will write {{applicable}} accepted changes across {{fileCount}} files into your documents.",
-    blocked: " {{count}} hunk no longer apply and will be skipped.",
-    blockedMany: " {{count}} hunks no longer apply and will be skipped.",
-    confirm: "Apply",
-  },
-  confirmDiscard: {
-    title: "Discard your review?",
-    description: "Your accept/reject choices will be lost.",
-    keep: "Keep reviewing",
-    discard: "Discard",
-  },
-  file: {
-    changesTo: "Changes to {{path}}",
-    newFile: "New file",
-    deleted: "Deleted",
-    hunkCount: "{{accepted}}/{{total}} hunks",
+  /** The counter, the buttons, and the toolbar on each change. */
+  bar: {
+    label: "Review in the text",
+    counter: "Change {{index}} of {{total}}",
+    previous: "Previous",
+    next: "Next",
     acceptAll: "Accept all",
     rejectAll: "Reject all",
-    diff: "Diff",
-    preview: "Preview",
-    baseChangedTitle: "This file changed since the proposal",
-    baseChangedDescription: "Hunks that no longer apply are marked and will be skipped.",
+    close: "Close",
   },
-  hunk: {
-    noLongerApplies: "No longer applies",
+  inline: {
+    counter: "Change {{index}} of {{total}}",
     accept: "Accept",
     reject: "Reject",
-    acceptChange: "Accept change: {{header}}",
-    added: "added",
-    removed: "removed",
+    acceptHunk: "Accept change {{index}}",
+    rejectHunk: "Reject change {{index}}",
+    blocked: "This part changed since the proposal",
   },
-  filePreview: "File preview",
+  toast: {
+    acceptError: "The change couldn’t be written. Try again.",
+    saveError: "The decision couldn’t be saved. Try again.",
+    drifted: "This part changed since the proposal, so it can only be rejected.",
+    alreadyDecided: "This proposal was already decided.",
+    notInProject: "This file is not in the project.",
+    loadError: "Couldn’t load the proposal.",
+  },
 };
 
 export default dict;
