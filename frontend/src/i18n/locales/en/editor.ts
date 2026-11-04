@@ -29,6 +29,17 @@ const dict = {
   },
   drawer: {
     shade: "Close the file list to go back to the text",
+    tabs: "Files and outline",
+    files: "Files",
+    outline: "Outline",
+  },
+  outline: {
+    title: "Outline",
+    pin: "Pin the outline beside the text",
+    tree: "Document outline",
+    loading: "Loading outline…",
+    empty: "No sections yet. Add <code>\\section{…}</code> to see the structure.",
+    limited: "The project is too large to outline in full, so only this file is shown.",
   },
   selection: {
     ask: "Ask the agent",

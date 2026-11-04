@@ -14,6 +14,7 @@ export function ContentPane({
   onOpenFiles,
   onCloseFiles,
   fileTree,
+  outline,
   statusSlotRef,
   outputSlotRef,
 }: {
@@ -22,6 +23,8 @@ export function ContentPane({
   onOpenFiles: () => void;
   onCloseFiles: () => void;
   fileTree: ReactNode;
+  /** The outline, the drawer's second tab (spec 111). */
+  outline?: ReactNode;
   statusSlotRef: (element: HTMLDivElement | null) => void;
   outputSlotRef: (element: HTMLDivElement | null) => void;
 }) {
@@ -42,7 +45,7 @@ export function ContentPane({
       >
         {t("toolbar.files")}
       </button>
-      <FileDrawer open={filesOpen} onClose={onCloseFiles}>
+      <FileDrawer open={filesOpen} onClose={onCloseFiles} outline={outline}>
         {fileTree}
       </FileDrawer>
     </div>

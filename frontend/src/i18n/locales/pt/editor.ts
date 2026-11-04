@@ -31,6 +31,17 @@ const dict: Dict = {
   },
   drawer: {
     shade: "Feche a lista de arquivos para voltar ao texto",
+    tabs: "Arquivos e estrutura",
+    files: "Arquivos",
+    outline: "Estrutura",
+  },
+  outline: {
+    title: "Estrutura",
+    pin: "Fixar a estrutura ao lado do texto",
+    tree: "Estrutura do documento",
+    loading: "Carregando estrutura…",
+    empty: "Ainda não há seções. Adicione <code>\\section{…}</code> para ver a estrutura.",
+    limited: "O projeto é grande demais para ter a estrutura completa; só este arquivo aparece.",
   },
   selection: {
     ask: "Pedir ao agente",

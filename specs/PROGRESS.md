@@ -7,7 +7,7 @@ order, then tick it. Specs 01–108 are already implemented.
 
 - [x] 109-shared-projects-dashboard
 - [ ] 110-inline-diff-review
-- [ ] 111-document-outline
+- [x] 111-document-outline
 - [ ] 112-latex-autocomplete
 - [ ] 113-spell-check
 - [ ] 114-math-and-table-tools

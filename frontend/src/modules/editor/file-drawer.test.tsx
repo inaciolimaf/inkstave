@@ -50,4 +50,26 @@ describe("FileDrawer", () => {
     expect(document.activeElement).toBe(opener);
     opener.remove();
   });
+
+  it("offers the outline as a second tab and remembers the one chosen", async () => {
+    window.localStorage.removeItem("inkstave:drawer-tab");
+    const { unmount } = render(
+      <FileDrawer open onClose={vi.fn()} outline={<p>outline</p>}>
+        <p>tree</p>
+      </FileDrawer>,
+    );
+    expect(screen.getByText("tree")).toBeVisible();
+    await userEvent.click(screen.getByRole("tab", { name: "Outline" }));
+    expect(screen.getByText("outline")).toBeVisible();
+    expect(screen.getByText("tree")).not.toBeVisible();
+    unmount();
+
+    render(
+      <FileDrawer open onClose={vi.fn()} outline={<p>outline</p>}>
+        <p>tree</p>
+      </FileDrawer>,
+    );
+    expect(screen.getByRole("tab", { name: "Outline" })).toHaveAttribute("aria-selected", "true");
+    window.localStorage.removeItem("inkstave:drawer-tab");
+  });
 });

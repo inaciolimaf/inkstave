@@ -54,6 +54,8 @@ are English-only today ([known gaps](known-gaps.md)).
 | Shared with me | `scope=shared`, `ProjectScope.shared` | "Compartilhados comigo" |
 | Owned by me | `scope=owned`, `ProjectScope.owned` | "Meus" |
 | File tree | `TreeEntity` | "Arquivos" |
+| Outline | `OutlinePanel` | "Estrutura" |
+| Project index | `project-index` | — |
 | Folder | `TreeEntityType.folder` | "Pasta" |
 | File | `TreeEntity`, type `file` | "Arquivo" |
 | Document (editable text) | `doc`, `DocumentContent` | "documento" |
