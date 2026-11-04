@@ -19,9 +19,17 @@ _EXTS = [
     ".tex", ".cls", ".sty", ".svg", ".eps", ".csv", ".txt",
 ]  # fmt: skip
 _MIME = [
-    "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml",
-    "application/pdf", "text/plain", "application/x-bibtex", "text/x-bibtex",
-]  # fmt: skip
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "application/pdf",
+    "application/postscript",
+    "text/plain",
+    "application/x-bibtex",
+    "text/x-bibtex",
+]  # fmt: skip  (postscript: EPS figures, spec 120)
 _COST = {
     "claude-haiku-5-5": {"input": 0.0001, "output": 0.0005},
     "openai/gpt-4o-mini": {"input": 0.00015, "output": 0.0006},

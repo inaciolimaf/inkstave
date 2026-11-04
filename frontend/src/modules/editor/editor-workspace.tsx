@@ -14,6 +14,7 @@ import { getProject, projectKey } from "@/modules/projects";
 import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
 
 import { AskAgentButton } from "./ask-agent-button";
+import { useCompatReport } from "./use-compat-report";
 import { ContentPane } from "./content-pane";
 import { EditorBar } from "./editor-bar";
 import { MobileTabs, type MobileView } from "./mobile-tabs";
@@ -182,10 +183,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const sync = useSourceSync(projectId, selected, setSelected, treeRoot);
   const permissions = usePermissions(projectId);
   const readOnly = isReadOnly(permissions.data);
-  const projectQuery = useQuery({
-    queryKey: projectKey(projectId),
-    queryFn: () => getProject(projectId),
-  });
+  const projectQuery = useQuery({ queryKey: projectKey(projectId), queryFn: () => getProject(projectId) });
   const [shareOpen, setShareOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useAgentOpen(projectId);
@@ -193,6 +191,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const { selection, clearSelection } = useEditorSelection(sync.editorView);
   const asks = useAgentAsks(sync.openDoc, setAgentOpen);
   const jumps = useSourceJumps(sync, setView);
+  const compat = useCompatReport(projectId, slots.status, jumps.onProblemJump);
   useStartDocument(treeRoot, projectQuery.data?.rootDocId, selected, setSelected);
   useSelectionFollowsTree(treeRoot, selected, setSelected);
 
@@ -227,6 +226,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
           historyDisabled={sync.openDoc?.type !== "doc"}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenShare={() => setShareOpen(true)}
+          onOpenCompatReport={compat.menu.onOpenCompatReport}
         />
       }
     >
@@ -269,6 +269,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       )}
       {!agentOpen && <SelectionAsk selection={selection} clear={clearSelection} wide={wide} asks={asks} />}
       <UnsavedChangesGuard when={dirty} />
+      {compat.element}
     </Desk>
   );
 }

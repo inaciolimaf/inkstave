@@ -10,6 +10,8 @@ Contents:
 - `postgres/` — Postgres init scripts.
 - `nginx/` — the reverse-proxy config for the production frontend image.
 - `tectonic/packages.toml` — the pinned LaTeX package set (spec 21).
+- `tectonic/compat-rules.toml` — the rules that flag constructs of imported Overleaf templates
+  which may not compile in Inkstave (spec 120).
 - `tectonic/Dockerfile` — the offline `inkstave-tectonic` compile image used by
   the sandboxed runner (spec 105; see below).
 

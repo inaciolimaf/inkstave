@@ -1,7 +1,7 @@
 /** Project API calls (spec 11). snake_case ↔ camelCase mapping lives here only. */
 import type { Schemas } from "@/api/models";
 import { config } from "@/config";
-import { apiClient } from "@/lib/api-client";
+import { ApiError, apiClient } from "@/lib/api-client";
 import { sanitizeDownloadName, triggerBrowserDownload } from "@/lib/download";
 import { tokenStore } from "@/lib/token-store";
 
@@ -49,10 +49,25 @@ export async function deleteProject(id: string): Promise<void> {
 
 export type ImportStatus = "queued" | "running" | "success" | "partial" | "failure" | "error";
 
+/** `zip` is a plain archive; `overleaf_template` adds the template fixes, the report and a first compile (spec 120). */
+export type ImportSourceKind = "zip" | "overleaf_template";
+
+/** One line of the compatibility report of a template import (spec 120). */
+export interface CompatFinding {
+  ruleId: string;
+  severity: "info" | "warning";
+  path: string;
+  line: number;
+  message: string;
+}
+
 export interface ProjectImport {
   importId: string;
   projectId: string;
   status: ImportStatus;
+  source: ImportSourceKind;
+  compatReport: CompatFinding[] | null;
+  reportSeenAt: string | null;
   entriesTotal: number | null;
   entriesImported: number | null;
   errorType: string | null;
@@ -61,11 +76,24 @@ export interface ProjectImport {
 
 type ProjectImportWire = Schemas["ProjectImportRead"];
 
+function toFinding(wire: NonNullable<ProjectImportWire["compat_report"]>[number]): CompatFinding {
+  return {
+    ruleId: wire.rule_id,
+    severity: wire.severity,
+    path: wire.path,
+    line: wire.line,
+    message: wire.message,
+  };
+}
+
 function toImport(wire: ProjectImportWire): ProjectImport {
   return {
     importId: wire.import_id,
     projectId: wire.project_id,
     status: wire.status,
+    source: wire.source,
+    compatReport: wire.compat_report?.map(toFinding) ?? null,
+    reportSeenAt: wire.report_seen_at ?? null,
     entriesTotal: wire.entries_total ?? null,
     entriesImported: wire.entries_imported ?? null,
     errorType: wire.error_type ?? null,
@@ -97,10 +125,12 @@ export function importProjectZip(
   file: File,
   name?: string,
   onProgress?: (fraction: number) => void,
+  source: ImportSourceKind = "zip",
 ): Promise<ProjectImport> {
   const form = new FormData();
   form.append("file", file);
   if (name && name.trim()) form.append("name", name.trim());
+  form.append("source", source);
 
   return new Promise<ProjectImport>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -137,6 +167,21 @@ export function importProjectZip(
 
 export async function getImportStatus(projectId: string, importId: string): Promise<ProjectImport> {
   return toImport(await apiClient.get<ProjectImportWire>(`/api/v1/projects/${projectId}/import/${importId}`));
+}
+
+/** The project's latest import, or `null` for a project made from scratch (the route answers 404). */
+export async function getLatestImport(projectId: string): Promise<ProjectImport | null> {
+  try {
+    return toImport(await apiClient.get<ProjectImportWire>(`/api/v1/projects/${projectId}/import`));
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+/** Record that the person has seen the compatibility report; the server keeps the first stamp. */
+export async function markImportReportSeen(projectId: string, importId: string): Promise<void> {
+  await apiClient.post(`/api/v1/projects/${projectId}/import/${importId}/report-seen`);
 }
 
 // --------------------------------------------------------------------------- //

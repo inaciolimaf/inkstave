@@ -5,5 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 DEFAULT_TEST_DB = "postgresql+asyncpg://inkstave:inkstave@localhost:5432/inkstave_test"

@@ -7,11 +7,12 @@ spec-22 compile status surface.
 
 from __future__ import annotations
 
-import os
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Form, UploadFile, status
+from fastapi import APIRouter, Depends, Form, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from inkstave.core.db.session import UNIT_OF_WORK, get_session_factory
@@ -27,8 +28,10 @@ from inkstave.modules.projects.catalog.service import ProjectNotFoundError
 from inkstave.modules.projects.content.files import FileTooLargeError, UnsupportedMediaTypeError
 from inkstave.modules.projects.content.uploads import extension_of, sanitize_filename
 from inkstave.modules.projects.deps import get_import_enqueuer
+from inkstave.modules.projects.models.project_import import ImportSource
 from inkstave.modules.projects.schemas.project_import import ProjectImportRead
 from inkstave.modules.projects.transfer.enqueuer import ImportEnqueuer
+from inkstave.modules.projects.transfer.names import default_import_name
 from inkstave.modules.projects.transfer.repository import ProjectImportRepository
 from inkstave.modules.projects.transfer.stream import sse_stream
 
@@ -77,11 +80,23 @@ def _effective_name(name: str | None, filename: str | None) -> str:
     candidate = (name or "").strip()
     if candidate:
         return candidate[:255]
-    if filename:
-        stem = sanitize_filename(os.path.splitext(filename)[0])
-        if stem and stem != "file":
-            return stem
-    return "Imported project"
+    return default_import_name(filename)
+
+
+@dataclass(frozen=True)
+class ImportForm:
+    """The optional form fields of an import: the project name and the archive's source (spec 120)."""
+
+    name: str | None
+    source: ImportSource
+
+
+def import_form(
+    name: Annotated[str | None, Form()] = None,
+    source: Annotated[ImportSource, Form()] = ImportSource.ZIP,
+) -> ImportForm:
+    """Unknown ``source`` values fail validation with 422, before the upload is read."""
+    return ImportForm(name=name, source=source)
 
 
 async def _stage_upload(
@@ -115,12 +130,14 @@ async def _create_import(
     enqueuer: ImportEnqueuer,
     user: User,
     file: UploadFile,
-    name: str | None,
-    source_key: str,
-    source_bytes: int,
+    form: ImportForm,
+    staged: tuple[str, int],
 ) -> ProjectImport:
     """One transaction: create the NEW project, the import row, then enqueue."""
-    project = await project_service.create_project(session, user.id, _effective_name(name, file.filename))
+    source_key, source_bytes = staged
+    project = await project_service.create_project(
+        session, user.id, _effective_name(form.name, file.filename)
+    )
     repo = ProjectImportRepository(session)
     row = await repo.create(
         project_id=project.id,
@@ -128,6 +145,7 @@ async def _create_import(
         source_key=source_key,
         source_bytes=source_bytes,
         original_filename=sanitize_filename(file.filename) if file.filename else None,
+        source=form.source.value,
     )
     job_id = await enqueuer.enqueue(row.id)
     if job_id is not None:
@@ -145,7 +163,7 @@ async def _create_import(
 )
 async def import_project(
     file: UploadFile,
-    name: Annotated[str | None, Form()] = None,
+    form: ImportForm = Depends(import_form),
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
@@ -162,7 +180,7 @@ async def import_project(
 
     source_key, source_bytes = await _stage_upload(file, head, store, settings)
     try:
-        row = await _create_import(session, enqueuer, user, file, name, source_key, source_bytes)
+        row = await _create_import(session, enqueuer, user, file, form, (source_key, source_bytes))
     except Exception:
         await store.delete(source_key)  # best-effort: no orphan blob on a DB failure
         raise
@@ -200,6 +218,27 @@ async def get_import(
     if row is None:
         raise ImportNotFoundError()
     return ProjectImportRead.model_validate(row)
+
+
+@router.post(
+    "/{project_id}/import/{import_id}/report-seen",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Mark an import's compatibility report as seen",
+    responses=_ERRORS,
+)
+async def mark_report_seen(
+    import_id: UUID,
+    project: Project = Depends(read_access),
+    session: AsyncSession = UNIT_OF_WORK,
+) -> Response:
+    """Idempotent: the first call stamps ``report_seen_at``; later calls keep the first stamp."""
+    repo = ProjectImportRepository(session)
+    row = await repo.get(project.id, import_id)
+    if row is None:
+        raise ImportNotFoundError()
+    if row.report_seen_at is None:
+        await repo.update(row, report_seen_at=datetime.now(UTC))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(

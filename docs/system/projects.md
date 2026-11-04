@@ -31,7 +31,14 @@ The module is `backend/src/inkstave/modules/projects/`.
 | `backend/src/inkstave/modules/projects/transfer/zip_import/plan.py` | Central-directory validation, `TEXT_EXTENSIONS`, zip error types |
 | `backend/src/inkstave/modules/projects/transfer/zip_import/reconstruct.py` | `reconstruct_tree`: archive to folders, docs and files |
 | `backend/src/inkstave/modules/projects/transfer/zip_import/content.py` | `decode_text`, `detect_root_doc` |
-| `backend/src/inkstave/worker.py` | Registers `import_project_zip` with `max_tries=1` |
+| `backend/src/inkstave/modules/projects/transfer/names.py` | `default_import_name`, `numbered_name`, `reserved_safe_name`: the names an import picks |
+| `backend/src/inkstave/modules/projects/transfer/compat/rules.py` | `load_compat_rules`, `CompatRule`: reads and validates `infra/tectonic/compat-rules.toml`, once per process |
+| `backend/src/inkstave/modules/projects/transfer/compat/scan.py` | `CompatScanner`, `scan_compat`, `Finding`: the compatibility scan and the template's title |
+| `infra/tectonic/compat-rules.toml` | The compatibility rules of Overleaf templates (data, not code) |
+| `frontend/src/modules/projects/overleaf-template-dialog.tsx` | The "From an Overleaf template…" dialog |
+| `frontend/src/modules/projects/use-template-report.ts` | The latest import's compatibility report and its seen marker |
+| `frontend/src/modules/editor/use-compat-report.tsx`, `frontend/src/modules/editor/compat-notice.tsx` | The status-line notice and the report list in the editor |
+| `backend/src/inkstave/worker.py` | Registers `import_project_zip` with `max_tries=1`; loads the compat rules; the first-compile hook |
 | `frontend/src/routes/projects.tsx` | Project list route |
 | `frontend/src/modules/projects/` | List page, dialogs, import dialog, download hook |
 | `frontend/src/modules/file-tree/` | Tree panel, drag and drop, uploads |
@@ -41,8 +48,9 @@ Tests live in `backend/tests/integration/test_projects_api.py`,
 `backend/tests/integration/test_tree_api_move.py`, `backend/tests/integration/test_tree_api_delete.py`,
 `backend/tests/integration/test_project_import_api.py`,
 `backend/tests/integration/test_project_import_job.py`,
-`backend/tests/integration/test_project_export_api.py`, `backend/tests/unit/test_zip_import.py` and
-`backend/tests/unit/test_safe_path.py`.
+`backend/tests/integration/test_project_export_api.py`, `backend/tests/unit/test_zip_import.py`, `backend/tests/unit/test_safe_path.py`,
+`backend/tests/integration/test_template_import_api.py`, `backend/tests/unit/test_compat_scan.py` and
+`backend/tests/unit/test_compat_rules.py`.
 
 ## Data
 
@@ -50,7 +58,7 @@ Tests live in `backend/tests/integration/test_projects_api.py`,
 |---|---|---|
 | `projects` | `owner_id`, `name`, `root_doc_id`, `deleted_at` | `backend/migrations/versions/20260609_1709_feb8f5c76b1a_create_projects.py` |
 | `tree_entities` | `project_id`, `parent_id`, `type`, `name`, `is_root` | `backend/migrations/versions/20260609_1722_8b301674ef53_create_tree_entities.py` |
-| `project_imports` | `project_id`, `requested_by`, `status`, `source_key`, `source_bytes`, `job_id`, `entries_total`, `entries_imported`, `error_type`, `error_message`, `started_at`, `finished_at` | `backend/migrations/versions/20260612_1000_e2f4a8b13c90_create_project_imports.py` |
+| `project_imports` | `project_id`, `requested_by`, `status`, `source`, `source_key`, `source_bytes`, `job_id`, `entries_total`, `entries_imported`, `compat_report`, `report_seen_at`, `error_type`, `error_message`, `started_at`, `finished_at` | `backend/migrations/versions/20260612_1000_e2f4a8b13c90_create_project_imports.py`, `backend/migrations/versions/20261104_1200_d6a0b2c4e8f1_spec120_template_import.py` |
 
 `tree_entities` is an adjacency list. `type` is `folder`, `doc` or `file`. Paths are never stored:
 `compute_path` derives them from the ancestor chain, root excluded. The constraints are:
@@ -67,6 +75,10 @@ partial index on `(owner_id, updated_at DESC) WHERE deleted_at IS NULL`.
 
 `project_imports.status` is `queued`, `running`, `success`, `partial`, `failure` or `error`. `failure`
 is a rejected archive, `error` an unexpected fault. The last four are terminal.
+
+`project_imports.source` is `zip` (the default) or `overleaf_template` (a check constraint). A template
+import writes `compat_report`, a JSON list of `{rule_id, severity, path, line, message}`, and the
+person's first view of it sets `report_seen_at`. A plain zip leaves both null.
 
 Object storage holds the staged archive at `imports/{uuid}/source.zip` until the job ends. Import
 also uses a scratch file at `{import_workdir_root}/{import_id}.zip`. Redis holds `cache:project:{id}`
@@ -88,9 +100,10 @@ caller's role lacks the capability. The capability column names the check.
 | `PATCH /projects/{project_id}` | `PROJECT_WRITE` | Rename | 404, 403, 422 |
 | `DELETE /projects/{project_id}` | `PROJECT_DELETE` | Soft delete, sweep compile outputs; 204 | 404, 403 |
 | `GET /projects/{project_id}/export.zip` | `PROJECT_DOWNLOAD` | Stream the project as a zip | 404, 413 `export_too_large` |
-| `POST /projects/import` | any user, `upload` rate limit | Stage a zip, create a new project, enqueue; 202 | 413 `file_too_large`, 415 `unsupported_media_type`, 429 |
+| `POST /projects/import` | any user, `upload` rate limit | Stage a zip, create a new project, enqueue; 202. Form field `source`: `zip` (default) or `overleaf_template` | 413 `file_too_large`, 415 `unsupported_media_type`, 422 (unknown `source`), 429 |
 | `GET /projects/{project_id}/import` | `PROJECT_READ` | Latest import of the project | 404 `import_not_found` |
 | `GET /projects/{project_id}/import/{import_id}` | `PROJECT_READ` | One import | 404 `import_not_found` |
+| `POST /projects/{project_id}/import/{import_id}/report-seen` | `PROJECT_READ` | Stamp `report_seen_at` on the first call; idempotent; 204 | 404 `import_not_found` |
 | `GET /projects/{project_id}/import/{import_id}/events` | member, via `sse_user` | SSE status stream | 404 |
 | `GET /projects/{project_id}/tree` | `DOC_READ` | Nested tree | 404, 422 `tree_too_large` |
 | `POST /projects/{project_id}/tree/entities` | `DOC_WRITE` | Create a `folder` or `doc` | 404 `parent_not_found`, 409 `name_conflict`, 422 `invalid_name`, `parent_not_a_folder` |
@@ -174,6 +187,8 @@ header with ASCII and RFC 5987 forms.
 3. `_create_import` creates the project (`_effective_name`: the form name, else the sanitized file stem, else `Imported project`), the `project_imports` row, then enqueues. On any failure the staged blob is deleted.
 4. The route answers 202 with `ProjectImportRead`.
 
+The form field `source` is validated as an enum before the upload is read, so an unknown value is a 422.
+
 The job `import_project_zip` wraps `_import_once`. It loads the row, returns at once if terminal, and
 re-checks ownership with `_still_owned`. It then marks `running` and calls `_import_archive`:
 
@@ -187,6 +202,29 @@ rolls back and ends `failure`; any other exception rolls back and ends `error`. 
 project behind, and the frontend offers "Excluir o projeto vazio". `_cleanup` always removes the staged
 blob and scratch file. `settle` commits and publishes to Redis at each transition; `sse_stream`
 subscribes before sending its snapshot so no transition is lost.
+
+### Overleaf template import (spec 120)
+
+`source=overleaf_template` runs the same job with `ImportLimits.template` set. Only the template gets
+these fixes: a case-only clash between two documents keeps the first and renames the second
+`name (2).ext` (`_create_doc`); a reserved device name is renamed `con_.tex`, not rejected as zip slip
+(`_checked_segment`); `latexmkrc` and `.latexmkrc` are kept as documents. EPS figures are kept for every
+import, since the PostScript signature and `application/postscript` are in the sniffing and the MIME
+allow-list. A plain zip keeps its old behaviour otherwise.
+
+`reconstruct_tree` reports each kept file through its `observer` argument, as `(project path, text or
+None)`, so `CompatScanner` never holds the project in memory. `finish()` resolves the file references
+and returns the findings for `compat_report`. The project name becomes the root document's `\title{}`
+(or the first title found) only while it still equals the default name from the upload.
+
+After the settle commit, a `success` or `partial` template with a root document calls
+`ctx["start_template_compile"]`, which the worker wires to `CompileCoordinator` as the requester. Its
+failure is logged and leaves the import status as it was. The job never imports the compile module
+(`projects` sits below `compile` in the module order).
+
+The rules are in `infra/tectonic/compat-rules.toml`. `load_compat_rules` validates them when the worker
+starts: a bad pattern, severity or duplicate id stops the worker and names the rule. A `target` group in a
+pattern marks a file reference, which `missing_file` checks against the project's paths.
 
 ## Rules and guarantees
 
@@ -219,6 +257,13 @@ subscribes before sending its snapshot so no transition is lost.
 | Symlink entries are rejected | `backend/tests/unit/test_zip_import.py::test_plan_rejects_symlink` |
 | Declared sizes are capped before decompression | `backend/tests/unit/test_zip_import.py::test_plan_rejects_oversize_total_before_decompress` |
 | Entry count is capped | `backend/tests/unit/test_zip_import.py::test_plan_rejects_too_many_entries` |
+| A template's `.eps` figure is kept as a file | `backend/tests/integration/test_template_import_api.py::test_overleaf_zip_keeps_eps` |
+| A template's case clash renames the second entry | `backend/tests/integration/test_template_import_api.py::test_case_clash_renames_second` |
+| A template's reserved device name is renamed, not rejected | `backend/tests/integration/test_template_import_api.py::test_reserved_device_name_is_renamed_for_a_template` |
+| A template's first compile starts only for the requester's template with a root | `backend/tests/integration/test_template_import_api.py::test_template_starts_its_first_compile_as_the_requester` |
+| The compat rules are data; a bad rule fails at load and names itself | `backend/tests/unit/test_compat_rules.py::test_compat_rules_load` |
+| Inkstave never contacts overleaf.com (no HTTP client on the import path) | `backend/tests/integration/test_template_import_api.py::test_template_import_makes_no_http_request` |
+| The report's seen marker is stamped once and hidden from other users | `backend/tests/integration/test_template_import_api.py::test_report_seen_is_stamped_once` |
 | A disallowed extension is skipped, not fatal | `backend/tests/unit/test_zip_import.py::test_plan_skips_disallowed_extension_not_fatal` |
 | A skipped entry ends `partial` | `backend/tests/integration/test_project_import_job.py::test_import_partial_when_entry_skipped` |
 | The job re-checks ownership and ends `error` if lost | `backend/tests/integration/test_project_import_job.py::test_ownership_defence_marks_error` |
@@ -247,13 +292,15 @@ subscribes before sending its snapshot so no transition is lost.
 
 - `GET /projects` filters on `owner_id`. A collaborator's accepted projects do not appear, and `frontend/src/modules/projects/api.ts` has no other list call.
 - Import is exposed to a race. `_create_import` enqueues before the unit of work commits. A worker that picks the job up first finds no row, returns, and with `max_tries=1` the row stays `queued` and the staged blob stays. No test covers this, since tests use a fake enqueuer.
-- A case-only clash between text entries (`A.tex`, `a.tex`) is not handled. `_import_text` lets `NameConflictError` escape, so the whole import ends `error`. The same clash for binaries is a skip.
+- A case-only clash between text entries (`A.tex`, `a.tex`) still ends a plain zip's import `error`: `_import_text` lets `NameConflictError` escape. A template renames the second entry. The same clash for binaries is a skip.
 - In `_ensure_folder`, when a path segment clashes with an existing non-folder, `_find_child_folder` returns `None`, and `None` means root. Entries below it land in the project root.
 - A rollback in `_import_archive` drops rows, but blobs already written by `upload_file` stay as orphans.
 - When `_still_owned` fails, the job settles without reaching `_import_archive`, so `_cleanup` never runs and the staged blob stays.
-- `.eps` is in `IMPORT_ALLOWED_EXTENSIONS` but always skipped. It has no magic signature, `_import_binary` passes no declared type, and `application/octet-stream` is not in `allowed_upload_mime`. An archive with EPS figures ends `partial`.
+- EPS figures are kept since spec 120. Whether Tectonic renders them is not verified; the `eps_figure` rule asks the person to check the preview.
+- The first compile of a template is started through the `ctx` hook, so the job does not import the compile module. The hook builds its coordinator with `ArqEnqueuer`, which the worker's ARQ pool serves.
+- The job sets `projects.name` for a template, like `root_doc_id`, without invalidating `cache:project:{id}`. A read during the job can keep the old name for up to `CACHE_TTL_SECONDS`.
 - `_import_binary` treats an `upload_file` rejection as a skip, but the entity is already flushed and nothing rolls it back. The default lists never reach this path. Adding an import extension absent from `UPLOAD_ALLOWED_EXTENSIONS` leaves a `file` entity with no `files` row.
-- A reserved or unsafe name anywhere in an archive (`con.tex`) rejects the whole archive as `zip_slip`, even though it is not a traversal.
+- A reserved or unsafe name anywhere in a plain archive (`con.tex`) rejects the whole archive as `zip_slip`, even though it is not a traversal. A template renames the reserved stem instead.
 - `IMPORT_MAX_ENTRIES` counts leaf entries only, though its comment says folders too. `TEXT_EXTENSIONS` wins over `IMPORT_ALLOWED_EXTENSIONS`, so removing `.tex` from the setting changes nothing.
 - `EXPORT_ASYNC_ENABLED=true` does not start a job. No async path exists; the flag only disables the 413, so the export streams regardless of size. Its comment in `backend/src/inkstave/core/config/groups.py` promises an ARQ artifact.
 - `BodySizeLimitMiddleware` in `backend/src/inkstave/core/http/body_limit.py` caps `/import` at `MAX_UPLOAD_BYTES`. Raising `IMPORT_MAX_ZIP_BYTES` above it has no effect.

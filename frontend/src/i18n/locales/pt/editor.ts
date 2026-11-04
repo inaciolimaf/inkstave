@@ -14,6 +14,7 @@ const dict: Dict = {
   toolbar: {
     agent: "Agente",
     history: "Histórico",
+    compatReport: "Relatório de compatibilidade",
     share: "Compartilhar",
     download: "Baixar",
     notInProject: "Este trecho não vem de um arquivo do projeto",
@@ -92,6 +93,18 @@ const dict: Dict = {
     online: "{{who}} — online",
     peopleOnline: "Pessoas online",
     moreOnline: "Mais {{count}} online",
+  },
+  compat: {
+    notice_one: "{{count}} coisa pode não funcionar no Inkstave",
+    notice_other: "{{count}} coisas podem não funcionar no Inkstave",
+    review: "Ver",
+    dismiss: "Dispensar",
+    dialogTitle: "Relatório de compatibilidade",
+    dialogDescription:
+      "Trechos do template que podem não compilar no Inkstave. Escolha um para abrir a linha.",
+    groupWarning: "Avisos",
+    groupInfo: "Observações",
+    close: "Fechar",
   },
 };
 

@@ -128,7 +128,7 @@ traversal is stripped, not rejected. `upload_file` then:
 
 1. Calls `create_entity` for a `file`, which runs `validate_name_segment`, parent checks and the sibling check.
 2. Checks `extension_allowed` against `upload_allowed_extensions`. Failure is 415.
-3. Reads the first chunk, and `_validated_content_type` sniffs it. PNG, JPEG, GIF, WebP and PDF are recognised by signature; anything else falls back to the client's declared type. The type must be in `allowed_upload_mime`, and `content_matches_extension` must hold.
+3. Reads the first chunk, and `_validated_content_type` sniffs it. PNG, JPEG, GIF, WebP, PDF and EPS (`%!PS` or the DOS binary header, since spec 120) are recognised by signature; anything else falls back to the client's declared type. The type must be in `allowed_upload_mime`, and `content_matches_extension` must hold.
 4. Calls `store.put` with `_hashing_body`, which replays the first chunk, hashes SHA-256 off the event loop, and raises `FileTooLargeError` past `max_upload_bytes`.
 5. Inserts the `File` row.
 

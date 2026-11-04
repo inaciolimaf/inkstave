@@ -1,7 +1,13 @@
 /** Import state machine: idle → uploading(progress) → processing → done | failed (spec 101). */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ImportUploadError, getImportStatus, importProjectZip, type ProjectImport } from "./api";
+import {
+  ImportUploadError,
+  getImportStatus,
+  importProjectZip,
+  type ImportSourceKind,
+  type ProjectImport,
+} from "./api";
 
 export type ImportPhase = "idle" | "uploading" | "processing" | "done" | "failed";
 
@@ -73,13 +79,18 @@ export function useImportProject(onSuccess: (projectId: string) => void) {
   );
 
   const start = useCallback(
-    async (file: File, name?: string) => {
+    async (file: File, name?: string, source: ImportSourceKind = "zip") => {
       setState({ phase: "uploading", progress: 0, projectId: null, errorType: null });
       let row: ProjectImport;
       try {
-        row = await importProjectZip(file, name, (fraction) => {
-          if (!cancelled.current) setState((s) => ({ ...s, progress: fraction }));
-        });
+        row = await importProjectZip(
+          file,
+          name,
+          (fraction) => {
+            if (!cancelled.current) setState((s) => ({ ...s, progress: fraction }));
+          },
+          source,
+        );
       } catch (err) {
         if (cancelled.current) return;
         const errorType = err instanceof ImportUploadError ? (err.errorType ?? "generic") : "generic";

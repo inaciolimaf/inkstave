@@ -1,4 +1,4 @@
-import { Plus, Upload } from "lucide-react";
+import { ChevronDown, Plus, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -7,11 +7,18 @@ import { useAuth } from "@/modules/auth";
 import { InkstaveLogo } from "@/components/inkstave-logo";
 import { Manuscript, ManuscriptHeader, Rule } from "@/components/manuscript";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 import { ImportProjectDialog } from "./import-project-dialog";
+import { OverleafTemplateDialog } from "./overleaf-template-dialog";
 import { CreateProjectDialog, DeleteProjectDialog, RenameProjectDialog } from "./project-dialogs";
 import { ProjectListView } from "./project-list-view";
 import type { Project, SortKey } from "./types";
@@ -19,7 +26,10 @@ import { NotificationsBell } from "@/modules/notifications";
 
 import { useProjects, visibleProjects } from "./use-projects";
 
-type DialogState = { type: "create" | "import" | "rename" | "delete" | null; project?: Project };
+type DialogState = {
+  type: "create" | "import" | "template" | "rename" | "delete" | null;
+  project?: Project;
+};
 
 /** The projects dashboard header: title, search, sort, and new-project action (spec 16 §5.3.2). */
 function ProjectsHeader({
@@ -29,6 +39,7 @@ function ProjectsHeader({
   onSortChange,
   onCreate,
   onImport,
+  onTemplate,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -36,6 +47,7 @@ function ProjectsHeader({
   onSortChange: (value: SortKey) => void;
   onCreate: () => void;
   onImport: () => void;
+  onTemplate: () => void;
 }) {
   const { t } = useTranslation("projects");
   return (
@@ -48,10 +60,19 @@ function ProjectsHeader({
               <Upload />
               {t("import.cta")}
             </Button>
-            <Button onClick={onCreate}>
-              <Plus />
-              {t("header.newProject")}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus />
+                  {t("header.newProject")}
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={onCreate}>{t("header.blankProject")}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={onTemplate}>{t("template.menuItem")}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         }
       />
@@ -133,6 +154,7 @@ export function ProjectsPage() {
         onSortChange={setSortKey}
         onCreate={() => setDialog({ type: "create" })}
         onImport={() => setDialog({ type: "import" })}
+        onTemplate={() => setDialog({ type: "template" })}
       />
 
       <ProjectListView
@@ -148,6 +170,7 @@ export function ProjectsPage() {
 
       <CreateProjectDialog open={dialog.type === "create"} onOpenChange={closeDialog} />
       <ImportProjectDialog open={dialog.type === "import"} onOpenChange={closeDialog} />
+      <OverleafTemplateDialog open={dialog.type === "template"} onOpenChange={closeDialog} />
       <RenameProjectDialog
         open={dialog.type === "rename"}
         onOpenChange={closeDialog}

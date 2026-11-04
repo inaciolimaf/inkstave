@@ -4,6 +4,7 @@ const dict: Dict = {
   header: {
     title: "Seus projetos",
     newProject: "Novo projeto",
+    blankProject: "Projeto em branco",
     searchLabel: "Buscar projetos",
     searchPlaceholder: "Buscar projetos…",
     sortLabel: "Ordenar projetos",
@@ -88,6 +89,19 @@ const dict: Dict = {
       upload_failed: "O envio falhou. Tente novamente.",
       generic: "A importação falhou. Tente novamente.",
     },
+  },
+  template: {
+    menuItem: "De um template do Overleaf…",
+    title: "Novo projeto a partir de um template do Overleaf",
+    description:
+      "Comece com um template baixado do Overleaf. O Inkstave não acessa o Overleaf: você envia o .zip.",
+    step1: "Encontre um template no Overleaf e abra-o.",
+    browse: "Ver os templates do Overleaf",
+    step2: "No template, escolha Menu, depois Download e depois Source. Isso salva um .zip.",
+    step3: "Solte esse .zip aqui ou escolha o arquivo.",
+    dropHint: "Solte o .zip aqui, ou escolha um arquivo",
+    imported: "Template importado. Abra o projeto para ver o que pode precisar de atenção.",
+    openProject: "Abrir projeto",
   },
 };
 

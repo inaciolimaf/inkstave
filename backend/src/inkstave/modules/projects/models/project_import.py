@@ -10,7 +10,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     BigInteger,
@@ -23,6 +23,7 @@ from sqlalchemy import (
     Text,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,6 +31,11 @@ from inkstave.core.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from inkstave.modules.projects.models.project import Project
+
+
+class ImportSource(enum.StrEnum):
+    ZIP = "zip"
+    OVERLEAF_TEMPLATE = "overleaf_template"
 
 
 class ProjectImportStatus(enum.StrEnum):
@@ -78,6 +84,13 @@ class ProjectImport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     entries_imported: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # ``zip`` (plain archive) or ``overleaf_template`` (spec 120: template fixes, report, first compile).
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default=ImportSource.ZIP.value, server_default=ImportSource.ZIP.value
+    )
+    # Findings of the compatibility scan, set by a successful template import (spec 120).
+    compat_report: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    report_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -89,6 +102,7 @@ class ProjectImport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="project_import_status_valid",
         ),
         CheckConstraint("source_bytes >= 0", name="project_import_source_bytes_nonneg"),
+        CheckConstraint("source IN ('zip','overleaf_template')", name="project_import_source_valid"),
         Index("ix_project_imports_project_id", "project_id"),
         Index("ix_project_imports_requester", "requested_by", text("created_at DESC")),
     )

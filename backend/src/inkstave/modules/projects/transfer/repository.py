@@ -10,7 +10,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from inkstave.modules.projects.models.project_import import ProjectImport, ProjectImportStatus
+from inkstave.modules.projects.models.project_import import ImportSource, ProjectImport, ProjectImportStatus
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,7 @@ class ProjectImportRepository:
         source_key: str,
         source_bytes: int,
         original_filename: str | None,
+        source: str = ImportSource.ZIP.value,
     ) -> ProjectImport:
         row = ProjectImport(
             project_id=project_id,
@@ -36,6 +37,7 @@ class ProjectImportRepository:
             source_bytes=source_bytes,
             original_filename=original_filename,
             status=ProjectImportStatus.QUEUED.value,
+            source=source,
         )
         self._session.add(row)
         await self._session.flush()

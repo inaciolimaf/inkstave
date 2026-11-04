@@ -1,0 +1,60 @@
+# Compatibility rules for imported Overleaf templates (spec 120).
+#
+# Each [[rule]] names a construct that may not compile in Inkstave, and the import report lists
+# every match with its file and line. The file is data, not code: add a rule here, no source change.
+#
+# Fields:
+#   id          unique, snake_case; the UI translates it when a key exists
+#   severity    "info" or "warning"
+#   applies_to  "tex" (.tex, .sty, .cls, ...), "bib" (.bib), "any" (every text file), or a bare file
+#               name such as "latexmkrc" (matched case-insensitively, with or without a leading dot)
+#   pattern     a Python regex. For tex, bib and any it runs over one line with comments removed
+#               (an unescaped % ends the line). For a file name it is searched in the file name.
+#               A group named "target" marks a file reference: the import checks that the project
+#               holds it, and reports the reference as missing when it does not.
+#   message     English text; "{target}" is replaced with the missing reference
+#
+# The rules were checked against the Tectonic engine that the compile sandbox runs. Drop a rule
+# here when it stops applying.
+
+[[rule]]
+id = "shell_escape"
+severity = "warning"
+applies_to = "tex"
+pattern = '\\usepackage\s*(\[[^\]]*\])?\s*\{[^}]*\b(minted|pythontex|svg)\b[^}]*\}|\\write18\b'
+message = "This package needs shell escape to run an external program, which the compile sandbox does not allow."
+
+[[rule]]
+id = "latexmkrc"
+severity = "warning"
+applies_to = "latexmkrc"
+pattern = '^\.?latexmkrc$'
+message = "latexmk settings are ignored: Inkstave does not run latexmk, so custom build steps will not run."
+
+[[rule]]
+id = "pdftex_primitive"
+severity = "warning"
+applies_to = "tex"
+pattern = '\\pdf(output|minorversion|compresslevel)\b'
+message = "This uses a pdfTeX primitive, which the Tectonic engine does not provide."
+
+[[rule]]
+id = "biber_backend"
+severity = "info"
+applies_to = "tex"
+pattern = 'backend\s*=\s*biber\b'
+message = "biblatex is set to Biber. Check that the bibliography builds and the citations resolve."
+
+[[rule]]
+id = "eps_figure"
+severity = "info"
+applies_to = "tex"
+pattern = '(?i)\\includegraphics\s*(\[[^\]]*\])?\s*\{[^}]*\.eps\}'
+message = "EPS figures need conversion to PDF. Check that this figure renders in the preview."
+
+[[rule]]
+id = "missing_file"
+severity = "warning"
+applies_to = "tex"
+pattern = '\\(?:input|include|includegraphics)\s*(?:\[[^\]]*\])?\s*\{\s*(?P<target>[^}#\\]+?)\s*\}'
+message = "{target} is referenced but is not in the project. The archive may be incomplete."

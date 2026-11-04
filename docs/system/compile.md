@@ -26,6 +26,7 @@ PDF and back) and parses the LaTeX log into problems. Specs 21 (service), 22 (qu
 | `backend/src/inkstave/worker.py` | ARQ `WorkerSettings`, `_build_runner`, `_register_compile` |
 | `backend/src/inkstave/compile/worker.py` | Compatibility entrypoint named by every compose file; re-exports the one above |
 | `infra/tectonic/Dockerfile`, `infra/tectonic/packages.toml` | The offline `inkstave-tectonic` image; package configuration |
+| `infra/tectonic/compat-rules.toml` | Rules that flag constructs of imported Overleaf templates. Read by the projects module, not by Tectonic (spec 120) |
 | `frontend/src/modules/pdf-preview/` | Compile button, log, problems, PDF viewer; see the frontend file. `frontend/src/modules/pdf-preview/PdfPageText.tsx` lays the page's text over its canvas, which is what makes it selectable |
 | `backend/tests/golden/`, `backend/tests/smoke/test_real_compile.py` | Parser fixtures; the one opt-in real compile |
 
@@ -170,6 +171,9 @@ overfull or underfull boxes (`info`). `LogProblemsService` keeps the tail of an 
 
 **Worker wiring.** `startup` loads `infra/tectonic/packages.toml` relative to the working directory, then
 `_register_compile` puts `make_compile_service`, `persist_hook` and `make_output_store` in the ARQ `ctx`.
+`_register_template_import` loads `infra/tectonic/compat-rules.toml` (a bad rule stops the worker) and
+sets `start_template_compile`. The import job calls it after an Overleaf template import: it builds a
+`CompileCoordinator` as the requester, over an ARQ pool that `startup` creates and `shutdown` closes.
 `WorkerSettings` registers `run_compile` with `max_tries=1` and `timeout=compile_job_timeout_s`. The worker
 serves one queue, shared with agent, e-mail, history, notification and import jobs. `max_jobs` is not set, so
 ARQ's default of 10 applies across all of them.

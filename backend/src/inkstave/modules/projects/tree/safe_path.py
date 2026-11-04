@@ -36,7 +36,7 @@ class InvalidNameError(AppError):
         super().__init__(message)
 
 
-def _is_reserved(name: str) -> bool:
+def is_reserved_name(name: str) -> bool:
     """Windows device names are rejected bare and as a file stem (``con.txt``)."""
     stem = name.split(".", 1)[0]
     return name.lower() in _RESERVED_NAMES or stem.lower() in _RESERVED_NAMES
@@ -53,7 +53,7 @@ _NAME_RULES: tuple[tuple[Callable[[str], bool], str], ...] = (
         "Name must not contain control characters.",
     ),
     (lambda n: n.endswith((".", " ")), "Name must not end with a dot or space."),
-    (_is_reserved, "Name is a reserved device name."),
+    (is_reserved_name, "Name is a reserved device name."),
 )
 
 

@@ -223,6 +223,10 @@
               }
             ],
             "title": "Name"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ImportSource",
+            "default": "zip"
           }
         },
         "required": [
@@ -307,6 +311,44 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "CompatFindingRead": {
+        "description": "One line of the compatibility report (spec 120).",
+        "properties": {
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "severity",
+          "path",
+          "line",
+          "message"
+        ],
+        "title": "CompatFindingRead",
         "type": "object"
       },
       "CompileJobStatus": {
@@ -1106,6 +1148,14 @@
         "title": "HunkLine",
         "type": "object"
       },
+      "ImportSource": {
+        "enum": [
+          "zip",
+          "overleaf_template"
+        ],
+        "title": "ImportSource",
+        "type": "string"
+      },
       "InverseResult": {
         "description": "pdf -> code: the best source location for a PDF point.",
         "properties": {
@@ -1782,6 +1832,20 @@
       },
       "ProjectImportRead": {
         "properties": {
+          "compat_report": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CompatFindingRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compat Report"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -1852,6 +1916,22 @@
             "format": "uuid",
             "title": "Project Id",
             "type": "string"
+          },
+          "report_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Seen At"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ImportSource",
+            "default": "zip"
           },
           "status": {
             "$ref": "#/components/schemas/ProjectImportStatus"
@@ -7978,6 +8058,88 @@
           }
         ],
         "summary": "Live import status (Server-Sent Events)",
+        "tags": [
+          "project-import"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/import/{import_id}/report-seen": {
+      "post": {
+        "description": "Idempotent: the first call stamps ``report_seen_at``; later calls keep the first stamp.",
+        "operationId": "mark_report_seen_api_v1_projects__project_id__import__import_id__report_seen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark an import's compatibility report as seen",
         "tags": [
           "project-import"
         ]

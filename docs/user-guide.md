@@ -16,10 +16,17 @@ built-in AI writing agent. See the [docs index](README.md) for everything else.
 
 From the dashboard you can:
 
-- **New project** — give it a name; it appears in your list.
+- **New project** — a blank project, or **From an Overleaf template…** (see below).
 - **Rename / Delete** — via the per-project actions menu (delete asks for
   confirmation).
 - **Open** a project to enter the editor workspace.
+
+**From an Overleaf template.** Open the template on Overleaf (the dialog links to the gallery), choose
+Menu, then Download, then Source, and drop the `.zip` into the dialog. Inkstave creates the project, named
+after the template's title, and starts the first compile. If a construct may not work here (for example
+a `minted` package or a `latexmkrc`), the editor shows a notice in the status line. Its list, which opens
+each line, stays under the project menu as **Compatibility report**. Inkstave never contacts Overleaf; it
+reads only the file you upload.
 
 Inside a project, the **file tree** lets you create `.tex` files and folders,
 rename, move, and **upload** binary assets (images, PDFs, `.bib`). Uploads are

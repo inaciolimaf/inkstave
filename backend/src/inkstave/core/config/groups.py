@@ -185,6 +185,7 @@ class StorageSettingsMixin:
             "image/webp",
             "image/svg+xml",
             "application/pdf",
+            "application/postscript",
             "text/plain",
             "application/x-bibtex",
             "text/x-bibtex",

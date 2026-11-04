@@ -1,4 +1,4 @@
-import { ChevronDown, Download, History, MoreHorizontal, Share2, Undo2 } from "lucide-react";
+import { ChevronDown, ClipboardList, Download, History, MoreHorizontal, Share2, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -20,12 +20,14 @@ function MoreMenu({
   historyDisabled,
   onOpenHistory,
   onOpenShare,
+  onOpenCompatReport,
 }: {
   projectId: string;
   projectName: string | undefined;
   historyDisabled: boolean;
   onOpenHistory: () => void;
   onOpenShare: () => void;
+  onOpenCompatReport?: () => void;
 }) {
   const { t } = useTranslation("editor");
   const { download, downloadingId } = useDownloadProject();
@@ -52,6 +54,12 @@ function MoreMenu({
           <Share2 aria-hidden="true" className="size-4" />
           {t("toolbar.share")}
         </DropdownMenuItem>
+        {onOpenCompatReport && (
+          <DropdownMenuItem onSelect={onOpenCompatReport}>
+            <ClipboardList aria-hidden="true" className="size-4" />
+            {t("toolbar.compatReport")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link to="/projects">
             <Undo2 aria-hidden="true" className="size-4" />
@@ -76,6 +84,7 @@ export function EditorBar({
   historyDisabled,
   onOpenHistory,
   onOpenShare,
+  onOpenCompatReport,
 }: {
   projectId: string;
   projectName: string | undefined;
@@ -85,6 +94,7 @@ export function EditorBar({
   historyDisabled: boolean;
   onOpenHistory: () => void;
   onOpenShare: () => void;
+  onOpenCompatReport?: () => void;
 }) {
   const { t } = useTranslation(["editor", "common"]);
   return (
@@ -119,6 +129,7 @@ export function EditorBar({
           historyDisabled={historyDisabled}
           onOpenHistory={onOpenHistory}
           onOpenShare={onOpenShare}
+          onOpenCompatReport={onOpenCompatReport}
         />
         <div ref={compileSlotRef} className="contents" />
       </div>
