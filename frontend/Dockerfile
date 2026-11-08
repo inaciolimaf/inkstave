@@ -12,11 +12,9 @@
 # --- Stage 1: builder — Vite production build --------------------------------- #
 FROM node:25-alpine AS builder
 # Pin pnpm to the version that produced the committed lockfile (pnpm@9.15.4,
-# lockfileVersion 9.0). corepack otherwise downloads the latest pnpm, which now
-# requires Node >= 22.13 and crashes on this Node 20 base. The `packageManager`
-# field lives in frontend/package.json (not the /app workspace root corepack sees
-# here), so we activate the version explicitly.
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+# lockfileVersion 9.0). Node 25 images no longer ship corepack, so pnpm is
+# installed with npm instead (npm is still bundled).
+RUN npm install -g pnpm@9.15.4
 WORKDIR /app
 
 # Deps first for layer caching. This is a pnpm WORKSPACE: the lockfile and the
