@@ -105,7 +105,7 @@ jobs:
       - name: Run unit tests (pytest unit subset + Vitest with coverage)
         id: measure
         run: scripts/measure_stage.sh make test-unit web-coverage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: unit-results
           path: test-results/
@@ -142,7 +142,7 @@ jobs:
       - name: Run integration tests
         id: measure
         run: scripts/measure_stage.sh make test-integration
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: integration-results
           path: test-results/
@@ -218,7 +218,7 @@ jobs:
         # Runs even when the budget fails, so one red gate cannot hide the other.
         if: ${{ !cancelled() }}
         run: make coverage-combine
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: test-results/coverage.xml
