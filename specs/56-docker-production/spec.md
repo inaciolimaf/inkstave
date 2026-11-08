@@ -59,7 +59,7 @@ Two source Dockerfiles produce all runtime images:
 | Image | Source Dockerfile | Base | Runs |
 | --- | --- | --- | --- |
 | `inkstave-backend` | `backend/Dockerfile` | `python:3.12-alpine` | API (`uvicorn`), `worker` (`arq`), `collab` (uvicorn/ws) — selected by command |
-| `inkstave-frontend` | `frontend/Dockerfile` | build on `node:20-alpine`, serve on `nginx:1.27-alpine` | static assets + nginx reverse proxy |
+| `inkstave-frontend` | `frontend/Dockerfile` | build on `node:25-alpine`, serve on `nginx:1.29-alpine` | static assets + nginx reverse proxy |
 
 The backend image is shared by the `backend`, `worker`, and `collab` services;
 they differ only by the **command** they run, so the image is built once.
@@ -99,11 +99,11 @@ TeX Live.)
 
 ### 5.3 Frontend Dockerfile (`frontend/Dockerfile`, multi-stage, Alpine)
 
-**Stage 1 — `builder`** (`node:20-alpine`): `pnpm install --frozen-lockfile`,
+**Stage 1 — `builder`** (`node:25-alpine`): `pnpm install --frozen-lockfile`,
 then `pnpm build` (Vite) producing `/app/dist`. Build-time env (`VITE_*`) passed
 as build args.
 
-**Stage 2 — `runtime`** (`nginx:1.27-alpine`): copy `dist/` to
+**Stage 2 — `runtime`** (`nginx:1.29-alpine`): copy `dist/` to
 `/usr/share/nginx/html`; copy the nginx config (see §5.5); run nginx as the
 provided non-root nginx user where feasible; `EXPOSE 80`; `HEALTHCHECK` hitting a
 lightweight `GET /healthz` location that returns `200`.
@@ -270,7 +270,7 @@ No secrets are ever baked into an image; `.dockerignore` must exclude `.env`.
    completes using a multi-stage `python:3.12-alpine`-based Dockerfile and the
    final image contains the Tectonic binary and a non-root default user.
 2. **Given** the frontend image build, **when** it completes, **then** the runtime
-   stage is `nginx:1.27-alpine` serving the Vite `dist/` and contains no Node
+   stage is `nginx:1.29-alpine` serving the Vite `dist/` and contains no Node
    toolchain.
 3. **Given** `docker compose -f docker-compose.prod.yml up`, **when** all services
    start, **then** `postgres`, `redis`, `backend`, `worker`, `frontend` (and

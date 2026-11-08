@@ -188,7 +188,7 @@ services:
         condition: service_started
 
   frontend:
-    image: node:20-alpine
+    image: node:25-alpine
     working_dir: /app/frontend
     # Resolve the npm registry via public resolvers — `pnpm install` below runs on
     # every boot and the host's systemd-resolved/Tailscale stub makes Docker's

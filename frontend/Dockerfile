@@ -10,7 +10,7 @@
 # everything; override VITE_API_BASE_URL only for a split-origin deployment.
 
 # --- Stage 1: builder — Vite production build --------------------------------- #
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 # Pin pnpm to the version that produced the committed lockfile (pnpm@9.15.4,
 # lockfileVersion 9.0). corepack otherwise downloads the latest pnpm, which now
 # requires Node >= 22.13 and crashes on this Node 20 base. The `packageManager`
@@ -37,7 +37,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
 RUN pnpm build
 
 # --- Stage 2: runtime — nginx serving dist + reverse proxy -------------------- #
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.29-alpine AS runtime
 # Replace the stock config with Inkstave's (gzip, server_tokens off, proxy rules).
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY infra/nginx/nginx.conf /etc/nginx/nginx.conf
