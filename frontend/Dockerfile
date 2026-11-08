@@ -10,7 +10,7 @@
 # everything; override VITE_API_BASE_URL only for a split-origin deployment.
 
 # --- Stage 1: builder — Vite production build --------------------------------- #
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 # Pin pnpm to the version that produced the committed lockfile (pnpm@9.15.4,
 # lockfileVersion 9.0). corepack otherwise downloads the latest pnpm, which now
 # requires Node >= 22.13 and crashes on this Node 20 base. The `packageManager`
