@@ -37,7 +37,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
 RUN pnpm build
 
 # --- Stage 2: runtime — nginx serving dist + reverse proxy -------------------- #
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.29-alpine AS runtime
 # Replace the stock config with Inkstave's (gzip, server_tokens off, proxy rules).
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY infra/nginx/nginx.conf /etc/nginx/nginx.conf
