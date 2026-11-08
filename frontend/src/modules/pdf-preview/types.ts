@@ -3,13 +3,7 @@ import type { Schemas } from "@/api/models";
 
 /** Job lifecycle states, mirroring the backend `CompileJobStatus` enum (spec 22). */
 export type CompileJobStatus =
-  | "queued"
-  | "running"
-  | "success"
-  | "failure"
-  | "timeout"
-  | "cancelled"
-  | "error";
+  "queued" | "running" | "success" | "failure" | "timeout" | "cancelled" | "error";
 
 /** The local compile state machine: `idle` plus every backend status. */
 export type CompileState = "idle" | CompileJobStatus;

@@ -9,5 +9,4 @@ export type SpellOperation =
 export type SpellRequest = SpellOperation & { id: number; base: string };
 
 export type SpellResponse =
-  | { id: number; ok: true; result: string[] }
-  | { id: number; ok: false; error: string };
+  { id: number; ok: true; result: string[] } | { id: number; ok: false; error: string };
