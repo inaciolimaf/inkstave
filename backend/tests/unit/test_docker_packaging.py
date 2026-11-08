@@ -146,8 +146,8 @@ def test_backend_dockerfile_multistage_alpine_nonroot() -> None:
 
 def test_frontend_dockerfile_builds_then_serves_with_nginx() -> None:
     body = _FRONTEND_DOCKERFILE.read_text("utf-8")
-    assert "FROM node:20-alpine AS builder" in body
-    assert "FROM nginx:1.27-alpine AS runtime" in body
+    assert "FROM node:25-alpine AS builder" in body
+    assert "FROM nginx:1.29-alpine AS runtime" in body
     assert "pnpm build" in body
     # No Node toolchain in the runtime stage: nothing after the nginx FROM installs node.
     runtime = body.split("AS runtime", 1)[1]
