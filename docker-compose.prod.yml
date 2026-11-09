@@ -40,7 +40,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     restart: unless-stopped
     # Broker/cache/pub-sub only — persistence is OFF (queued ARQ jobs are
     # best-effort across restarts; see docs/adr/0056 §volumes).
