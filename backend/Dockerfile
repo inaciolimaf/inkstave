@@ -12,7 +12,7 @@
 # `build.network: host`; the production compose does not, and the warmup tolerates a miss.
 
 # --- Stage 1: builder — resolve the locked runtime deps into a venv ----------- #
-FROM python:3.12-alpine AS builder
+FROM python:3.15-alpine AS builder
 
 # Toolchain for any musl C-extension builds (argon2/cffi, asyncpg). Thrown away
 # with this stage — never copied forward.
@@ -40,7 +40,7 @@ COPY backend/src ./src
 RUN uv sync --frozen --no-dev
 
 # --- Stage 2: runtime — minimal Alpine + Tectonic, non-root ------------------- #
-FROM python:3.12-alpine AS runtime
+FROM python:3.15-alpine AS runtime
 
 # Runtime OS deps only — NO compilers. Tectonic comes from Alpine community (a
 # single LaTeX engine, NOT a full TeX Live); see docs/adr/0056. fontconfig + a
