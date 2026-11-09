@@ -10,7 +10,7 @@
 # everything; override VITE_API_BASE_URL only for a split-origin deployment.
 
 # --- Stage 1: builder — Vite production build --------------------------------- #
-FROM node:25-alpine AS builder
+FROM node:26-alpine AS builder
 # Pin pnpm to the version that produced the committed lockfile (pnpm@9.15.4,
 # lockfileVersion 9.0). Node 25 images no longer ship corepack, so pnpm is
 # installed with npm instead (npm is still bundled).
