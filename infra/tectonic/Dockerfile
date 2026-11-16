@@ -20,7 +20,7 @@
 # top-level packages a document `\usepackage{...}`s.
 
 # --- Stage 1: warm the Tectonic cache for the pinned package set -------------- #
-FROM alpine:3.20 AS warm
+FROM alpine:3.24 AS warm
 
 # Tectonic from Alpine community (a single LaTeX engine, not a full TeX Live) plus
 # fontconfig + a base font so it can lay documents out. Same engine as the backend.
@@ -58,7 +58,7 @@ rm -rf /tmp/prewarm.*
 WARM
 
 # --- Stage 2: runtime — Tectonic + the warmed cache, non-root, no network ----- #
-FROM alpine:3.20 AS runtime
+FROM alpine:3.24 AS runtime
 
 RUN apk add --no-cache ca-certificates fontconfig ttf-freefont tectonic
 
