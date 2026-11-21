@@ -338,7 +338,7 @@ Defaults are from `backend/src/inkstave/core/config/agent.py`, and `.env.example
 | Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_STREAM_TRANSPORT` `sse`, unused |
 | Context | `AGENT_CONTEXT_CACHE` `memory`, and `redis` behaves like `off`; `AGENT_SECTION_EXTRA_COMMANDS` empty; `AGENT_CONTEXT_TOKEN_BUDGET` 8000 and `AGENT_CONTEXT_SURROUNDING_LINES` 40, both unused |
 | Limits, 0 disables | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` 10; `AGENT_MAX_CONCURRENT_RUNS_PER_USER` 2; `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` 20 |
-| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30 |
+| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30. A user whose e-mail is in `AGENT_BUDGET_EXEMPT_EMAILS` runs with all four at 0 (`is_budget_exempt`, `without_budget_caps`, applied in `_run_agent_turn`); rate limits still apply |
 | Safety | `AGENT_MODEL_COST_TABLE` Claude Haiku 5.5 rates first (they price any model not listed), then gpt-4o-mini, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
 
 Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false),

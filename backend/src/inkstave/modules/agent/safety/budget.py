@@ -19,6 +19,26 @@ _SECONDS_PER_DAY = 86_400  # day-bucket granularity for per-day usage counters
 _BUDGET_KEY_TTL_SECONDS = 2 * _SECONDS_PER_DAY  # == 172_800 (2-day grace TTL)
 
 
+_RUN_AND_DAY_CAPS = (
+    "agent_max_tokens_per_run",
+    "agent_max_cost_per_run_usd",
+    "agent_max_tokens_per_day_per_project",
+    "agent_max_cost_per_day_per_user_usd",
+)
+
+
+def is_budget_exempt(settings: AgentSettings, email: str) -> bool:
+    """Whether ``email`` is listed in ``AGENT_BUDGET_EXEMPT_EMAILS`` (case and spaces ignored)."""
+    raw = getattr(settings, "agent_budget_exempt_emails", "")  # a test ctx may carry the app Settings
+    listed = {e.strip().lower() for e in raw.split(",") if e.strip()}
+    return email.strip().lower() in listed
+
+
+def without_budget_caps(settings: AgentSettings) -> AgentSettings:
+    """A copy of ``settings`` with every token and cost cap off (0 disables a cap)."""
+    return settings.model_copy(update=dict.fromkeys(_RUN_AND_DAY_CAPS, 0))
+
+
 def model_rates(settings: AgentSettings, model: str) -> dict[str, float]:
     table = settings.agent_model_cost_table
     return table.get(model, next(iter(table.values()), _DEFAULT_RATE))

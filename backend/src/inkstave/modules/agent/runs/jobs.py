@@ -39,9 +39,12 @@ from inkstave.modules.agent.safety import (
     AuditUsage,
     acquire_run,
     avg_rate_per_1k,
+    is_budget_exempt,
     release_run,
+    without_budget_caps,
 )
 from inkstave.modules.agent.tools import default_registry
+from inkstave.modules.auth import User
 
 __all__ = ["agent_audit_cleanup", "run_agent_turn"]
 
@@ -197,6 +200,14 @@ async def _run_scoped(
         await release_run(scope.redis, user_id=scope.user_id)
 
 
+async def _settings_for(db: Any, settings: Any, user_id: UUID) -> Any:
+    """The run's settings, with the token and cost caps off for a user in ``AGENT_BUDGET_EXEMPT_EMAILS``."""
+    owner = await db.get(User, user_id)
+    if owner is not None and is_budget_exempt(settings, owner.email):
+        return without_budget_caps(settings)
+    return settings
+
+
 async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, user_message: str) -> None:
     # The shared ARQ ctx carries the compile ``Settings`` under "settings" (compile/
     # history/mailer jobs need it); the agent turn needs ``AgentSettings``. The
@@ -216,7 +227,7 @@ async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, 
         scope = RunScope(
             db=db,
             redis=redis,
-            settings=settings,
+            settings=await _settings_for(db, settings, session.user_id),
             sink=sink,
             user_id=session.user_id,
             project_id=session.project_id,

@@ -269,6 +269,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_MAX_COST_PER_RUN_USD` | No | `0.30` | hard USD cost cap for a single agent run | backend, worker |
 | `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` | No | `2000000` | daily token budget per project | backend, worker |
 | `AGENT_MAX_COST_PER_DAY_PER_USER_USD` | No | `0.30` | daily USD cost budget per user | backend, worker |
+| `AGENT_BUDGET_EXEMPT_EMAILS` | No | `—` | comma-separated e-mails whose agent runs skip every token and cost cap; rate limits still apply | worker |
 | `AGENT_MODEL_COST_TABLE` | No | `{"claude-haiku-5-5":{"input":0.0001,"output":0.0005},"openai/gpt-4o-mini":{"input":0.00015,"output":0.0006}}` | per-model input/output token prices (USD per 1K tokens) for cost accounting | backend, worker |
 | `AGENT_AUDIT_RETENTION_DAYS` | No | `90` | 0 = keep forever | worker |
 | `AGENT_INJECTION_GUARD` | No | `on` | on \| off | backend, worker |

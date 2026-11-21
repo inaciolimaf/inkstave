@@ -71,6 +71,8 @@ class AgentSettings(BaseSettings):
     agent_max_cost_per_run_usd: float = 0.30
     agent_max_tokens_per_day_per_project: int = 2000000
     agent_max_cost_per_day_per_user_usd: float = 0.30  # ~R$0.50/day per user
+    # Comma-separated e-mails whose runs skip every token and cost cap above (rate limits still apply).
+    agent_budget_exempt_emails: str = ""
     agent_model_cost_table: dict[str, dict[str, float]] = Field(
         default_factory=lambda: {
             "claude-haiku-5-5": {"input": 0.0001, "output": 0.0005},

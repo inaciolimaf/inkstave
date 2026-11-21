@@ -5,10 +5,12 @@ from inkstave.modules.agent.safety.budget import (
     BudgetDecision,
     avg_rate_per_1k,
     cost_for,
+    is_budget_exempt,
     precheck_day,
     record_usage,
     run_cost_exceeded,
     run_tokens_exceeded,
+    without_budget_caps,
 )
 from inkstave.modules.agent.safety.injection import flag_injection, wrap_untrusted
 from inkstave.modules.agent.safety.models import AgentAuditAction, AgentAuditLog
@@ -27,10 +29,12 @@ __all__ = [
     "check_rate_limit",
     "cost_for",
     "flag_injection",
+    "is_budget_exempt",
     "precheck_day",
     "record_usage",
     "release_run",
     "run_cost_exceeded",
     "run_tokens_exceeded",
+    "without_budget_caps",
     "wrap_untrusted",
 ]
