@@ -152,8 +152,8 @@ run; the rest were read, not run.
   `DocumentContentReplace` (reproduced).
 - The debounced CRDT text flush cancels itself and never writes, so `documents.content` stays stale until the
   last client leaves or a forced flush runs (reproduced with a fake bridge).
-- A document's seed is never captured by history, so diffs and restore go wrong for any document that had
-  content when first opened (reproduced on replay).
+- History versions recorded before the seed fix, for documents that had content when first opened, reconstruct
+  empty or wrong text; the document heals from its next edit, the old versions cannot be recovered.
 - A failed history flush loses its buffer.
 - Multiple backend replicas are unsafe for collaboration: the forwarder never applies updates to the receiving
   `YDocument`, and compaction then overwrites the snapshot with partial state.
@@ -219,5 +219,5 @@ while `COMPILE_ADDRESS_SPACE_BYTES` has its default.
 ### Unused code
 
 `configure_logging` in `backend/src/inkstave/core/logging.py`, `RequestIdMiddleware`, `select_context` in the agent
-turn, `ensure_snapshot`. `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
+turn. `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
 unreachable.

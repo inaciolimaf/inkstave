@@ -7,6 +7,7 @@ import { Rule } from "@/components/manuscript";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { hasCapability, usePermissions } from "@/modules/sharing";
 
+import { diffRange } from "./diff-range";
 import { HistoryDiffView } from "./HistoryDiffView";
 import { HistoryTimeline } from "./HistoryTimeline";
 import { RestoreVersionButton } from "./RestoreVersionButton";
@@ -50,9 +51,7 @@ export function HistoryPanel({
   const selectedVersion =
     versionsQuery.data?.pages.flatMap((page) => page.versions).find((v) => v.version === primary) ?? null;
 
-  const from = compare !== null && primary !== null ? Math.min(primary, compare) : primary;
-  const to: number | "current" | null =
-    compare !== null && primary !== null ? Math.max(primary, compare) : primary !== null ? "current" : null;
+  const { from, to } = diffRange(primary, compare);
 
   const onAddLabel = (version: number, name: string) =>
     addLabel.mutate({ version, name }, { onError: () => toast.error(t("toast.addLabelFailed")) });

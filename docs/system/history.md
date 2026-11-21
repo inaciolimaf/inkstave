@@ -14,7 +14,8 @@ module is `backend/src/inkstave/modules/history`.
 | `backend/src/inkstave/modules/history/schemas.py` | Request and response models |
 | `backend/src/inkstave/modules/history/routes.py` | The REST routes |
 | `backend/src/inkstave/modules/history/versions/capture.py` | `HistoryCaptureService`: buffer, flush, chunks, replica |
-| `backend/src/inkstave/modules/history/versions/reconstruct.py` | `reconstruct_doc`, `reconstruct_state`, `load_current_state`, `current_text`, `text_from_state`, `is_binary` |
+| `backend/src/inkstave/modules/history/versions/capture_values.py` | `Pending`, `UpdateEntry`, `Replica`: the values between buffering and writing |
+| `backend/src/inkstave/modules/history/versions/reconstruct.py` | `reconstruct_doc`, `reconstruct_state`, `load_live_state`, `load_current_state`, `current_text`, `text_from_state`, `is_binary` |
 | `backend/src/inkstave/modules/history/versions/read.py` | `list_versions`, `list_updates`, `get_diff`, `doc_belongs_to_project` |
 | `backend/src/inkstave/modules/history/versions/diff.py` | `diff_text`, `apply_hunks` |
 | `backend/src/inkstave/modules/history/versions/labels.py` | Document and project labels |
@@ -23,7 +24,8 @@ module is `backend/src/inkstave/modules/history`.
 | `backend/src/inkstave/worker.py` | Registers the job and its cron |
 | `backend/src/inkstave/modules/collab/ws/components.py` | Builds the capture service |
 | `backend/src/inkstave/modules/collab/ws/messaging.py` | `_capture_history` feeds it |
-| `frontend/src/modules/history/HistoryPanel.tsx` | Panel in the editor |
+| `frontend/src/modules/history/HistoryPanel.tsx` | Panel in the editor, opened from the editor bar's More actions menu |
+| `frontend/src/modules/history/diff-range.ts` | `diffRange`: which two versions the panel diffs |
 | `frontend/src/modules/history/HistoryTimeline.tsx` | Version list |
 | `frontend/src/modules/history/HistoryDiffView.tsx` | Diff rendering |
 | `frontend/src/modules/history/HistoryLabels.tsx` | Label controls |
@@ -93,12 +95,18 @@ not touch the database. Reaching `HISTORY_FLUSH_MAX_BUFFER` updates flushes at o
 `op_count` set to the number of raw updates. `_write` then opens a session and:
 
 1. finds the open chunk;
-2. gets the replica, from memory or by `reconstruct_doc` at the open chunk's `end_version`, or an empty `YDocument`
-   if no open chunk exists;
-3. takes `max(version) + 1`;
-4. creates a chunk if there is none, with the replica state as its base;
-5. applies the update to the replica and inserts one `HistoryUpdate`;
-6. `_roll_over`: at `HISTORY_CHUNK_MAX_UPDATES` versions in the chunk, seals it and opens the next from the replica.
+2. `_replica` gets the replica from memory, or rebuilds it: by `reconstruct_doc` at the open chunk's `end_version`,
+   or, when no open chunk exists, from the live CRDT state (`load_live_state`; an empty `YDocument` when the
+   document was never opened). A rebuilt replica carries the live state with it. The first chunk therefore starts
+   from the content the room seeded, and versions of a document that had content before its first edit reconstruct;
+3. applies the update to the replica. When the replica's state did not change (the empty step 2 an editor sends on
+   connect, a replayed update), no version is written. A replica built from the live state always writes one;
+4. takes `max(version) + 1`, creates a chunk if there is none with the replica's state before the update as its
+   base, and inserts one `HistoryUpdate`;
+5. `_maybe_seal`: when a rebuilt replica's text differs from the live text, it has drifted (a history captured before
+   the seed fix, or the multi-instance case). The chunk is sealed and the next one opens from the live state, which
+   becomes the replica, so this version and the ones after it reconstruct to what the editor showed. Otherwise, at
+   `HISTORY_CHUNK_MAX_UPDATES` versions in the chunk, it seals it and opens the next from the replica.
 
 Flush triggers: the idle timer (`idle`), the room becoming empty (`idle`, from `_cleanup`), the buffer threshold
 (`threshold`), restore (`manual`), app shutdown (`flush_all`, reason `shutdown`). Reasons `idle` and `shutdown`
@@ -108,8 +116,9 @@ then call `_drop_state`, so an idle document costs no memory.
 
 `reconstruct_doc` picks the chunk where `base_version <= version <= end_version`, preferring the highest
 `base_version`, applies its base, then applies its updates up to `version`. No such chunk raises
-`HistoryVersionNotFoundError`. `load_current_state` reads the live state from `crdt_document_state` and
-`crdt_update`, not from the history tables.
+`HistoryVersionNotFoundError`. `load_live_state` reads the live state from `crdt_document_state` and
+`crdt_update`, not from the history tables, and is `None` for a document never opened; `load_current_state` turns
+that into an empty document's state.
 
 ### Diff
 
@@ -131,7 +140,8 @@ from the payload. `list_versions` joins labels on the versions of the current pa
 1. `_rewind_room`: reconstruct the target text (404 if absent); `ensure_label_available` (409 before anything
    changes); `DocumentManager.apply_server_update`, whose failure becomes `RoomUnreachableError`.
 2. `_record_restore`: `capture_update` with the restoring user as author, `flush_doc(reason="manual")`, then read
-   the new maximum version.
+   the new maximum version. Restoring text identical to the current text writes no version, so this is the
+   latest existing one.
 3. `_label_restore` attaches the label to the new version.
 4. `redis_bridge.publish` broadcasts the update last, with origin `restore-<hex>`, which matches no socket, so
    every client receives it.
@@ -185,7 +195,10 @@ Replaced blobs are deleted after the commit. The job is idempotent.
 | Compaction merges, keeps the kept version and is idempotent | `backend/tests/integration/test_history_compact.py::test_compaction_merges_and_is_idempotent` |
 | Compaction preserves the head state byte for byte | `backend/tests/integration/test_refactor_40.py::test_compact_preserves_reconstructed_state` |
 | Compaction offloads oversized data | `backend/tests/integration/test_history_compact.py::test_compaction_offloads_oversized` |
-| History of a document seeded from existing content reconstructs | no dedicated test, and it does not (see Points of attention) |
+| History of a document seeded from existing content reconstructs | `backend/tests/integration/test_history_seeded.py::test_seeded_document_versions_reconstruct` |
+| An update that changes nothing records no version | `backend/tests/integration/test_history_seeded.py::test_update_that_changes_nothing_records_no_version` |
+| A history captured on an empty base heals on the next edit | `backend/tests/integration/test_history_seeded.py::test_history_captured_on_an_empty_base_heals` |
+| One selected version diffs against the previous one; the first against the current text | `frontend/src/modules/history/diff-range.test.ts` |
 
 ## Settings
 
@@ -207,13 +220,12 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 
 ## Points of attention
 
-**A document with content before its first edit has broken history.** `DocumentManager._load` seeds the CRDT from
-`documents.content`, and that seed is never captured. `_replica` starts from an empty `YDocument` when no chunk
-exists, so the first chunk has an empty base. Client updates reference items of the seed, and replaying them on the
-empty base leaves them pending. Reproduced directly: live text `hello BIG world seeded`, replay on an empty base
-`''`. By reading, then, `diff` shows wrong text for such documents and a restore replaces the live document with that
-wrong text, as a new version. This covers every document that had content when first opened, including imported
-projects and the starter project. Test fixtures start from an empty document, so nothing catches it.
+**Versions captured before the seed fix stay wrong.** Until this was fixed, the first chunk of a document that had
+content before its first edit started from an empty base, so replaying its versions left the editors' updates pending
+and reconstructed empty or wrong text: `diff` showed the whole file as added, and a restore would replace the live
+document with that text. New documents start from the live state. An existing one heals on its next captured edit
+(step 5 of the write), but the versions recorded before it cannot be recovered, because the seed was never stored.
+Restoring one of those old versions still restores the wrong text.
 
 **Merged-away versions do not 404.** After compaction an intermediate version number has no row, but its chunk still
 spans it, so `reconstruct_doc` silently returns the state of the previous kept row. A diff or a restore of such a
@@ -235,8 +247,8 @@ replica are per instance. Two instances flushing the same document can hit `uq_h
 loses the buffer as above. Restore mutates only the local `DocumentManager`. See also the multi-instance
 note in [collab.md](collab.md).
 
-**No-op versions.** The empty step 2 an editor sends on connect is captured like any update, so opening a document
-can add a version with no change. Dedupe only compares with the immediately previous update.
+**Rows already recorded as no-op versions stay.** Before the no-change check, opening a document recorded a version
+with no change. Those rows are still listed.
 
 **Offloaded blobs are not removed with their rows.** Chunks and updates cascade when a document or project goes, and
 nothing outside `backend/src/inkstave/modules/history` refers to the blob keys, so those objects stay. Compaction
@@ -254,8 +266,6 @@ label's name.
 
 **Project restore on a poisoned session.** `restore_project` shares one session across documents and catches every
 exception, so a database error on one document may fail the following ones with a less useful message.
-
-**`ensure_snapshot`** is public and has no caller. The docstring leaves it for spec 37, which did not use it.
 
 **Project label scope.** `create_project_label` stores only documents with history, so a document created later, or
 never edited, is untouched by a project restore.

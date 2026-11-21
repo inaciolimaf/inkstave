@@ -7,9 +7,15 @@ timer; the DB write happens on ``flush_doc``.
 
 History is stored as **chunks** (a base snapshot + the ordered incremental updates
 after it). A per-doc replica `Y.Doc`, built from the captured stream, supplies the
-full state for chunk base snapshots (empty for the very first chunk). Any version
-is reconstructed by replaying a chunk's updates onto its base; see
+full state for chunk base snapshots. The very first chunk starts from the live CRDT
+state, so content the document had before its first edit is part of the history.
+Any version is reconstructed by replaying a chunk's updates onto its base; see
 ``docs/adr/0036-history-capture.md`` for the chunking/merge trade-offs.
+
+A flush that changes nothing records no version. A replica rebuilt from the database
+whose text disagrees with the live document (history captured before the live seed
+was, or drift) is re-based: its chunk is sealed and the next one starts from the live
+state, so later versions reconstruct correctly.
 """
 
 from __future__ import annotations
@@ -24,10 +30,12 @@ from typing import TYPE_CHECKING, Any, Literal
 from pycrdt import merge_updates
 from sqlalchemy import func, select
 
+from inkstave.core.invariants import require
 from inkstave.core.tasks import spawn
 from inkstave.modules.collab import YDocument
 from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
-from inkstave.modules.history.versions.reconstruct import reconstruct_doc, reconstruct_state
+from inkstave.modules.history.versions.capture_values import Pending, Replica, UpdateEntry, doc_from
+from inkstave.modules.history.versions.reconstruct import load_live_state, reconstruct_doc, reconstruct_state
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -55,18 +63,6 @@ class _DocBuffer:
     origin: str | None = None
     last_at: datetime | None = None
     timer: asyncio.TimerHandle | None = None
-
-
-@dataclass(slots=True)
-class _Pending:
-    """A doc's buffered updates, merged and detached from the buffer."""
-
-    merged: bytes
-    op_count: int
-    author_id: UUID | None
-    at: datetime
-    project_id: UUID
-    origin: str | None = None
 
 
 class HistoryCaptureService:
@@ -129,7 +125,7 @@ class HistoryCaptureService:
         # or the periodic compaction job.
         spawn(self.flush_doc(doc_id=doc_id, reason="idle"), name="history-idle-flush")
 
-    def _take(self, doc_id: UUID) -> _Pending | None:
+    def _take(self, doc_id: UUID) -> Pending | None:
         """Detach the doc's buffer and return its merged contents, if any."""
         buf = self._buffers.get(doc_id)
         if buf is None or not buf.updates:
@@ -138,7 +134,7 @@ class HistoryCaptureService:
             buf.timer.cancel()
         self._buffers.pop(doc_id, None)
         raw = buf.updates
-        return _Pending(
+        return Pending(
             merged=merge_updates(*raw) if len(raw) > 1 else raw[0],
             op_count=len(raw),
             author_id=buf.author_id,
@@ -147,53 +143,40 @@ class HistoryCaptureService:
             origin=buf.origin,
         )
 
-    async def _write(self, doc_id: UUID, pending: _Pending) -> None:
+    async def _write(self, doc_id: UUID, pending: Pending) -> None:
         """Append the pending update to the open chunk, sealing it when it is full."""
         async with self._session_factory() as session:
             open_chunk = await self._open_chunk(session, doc_id)
             replica = await self._replica(session, doc_id, open_chunk)
-            max_v = await self._max_version(session, doc_id)
-            next_v = max_v + 1
-
+            before = replica.doc.get_state()
+            replica.doc.apply_update(pending.merged)
+            drifted = replica.drifted_from_live()
+            if not (drifted or replica.from_live or replica.doc.get_state() != before):
+                return  # nothing changed: an empty sync step or a replayed update
+            next_v = await self._max_version(session, doc_id) + 1
             if open_chunk is None:
                 open_chunk = await self._new_chunk(
-                    session, pending.project_id, doc_id, replica.get_state(), base_version=max_v
+                    session, pending.project_id, doc_id, before, base_version=next_v - 1
                 )
-
-            replica.apply_update(pending.merged)
-            await self._insert_update(
-                session,
-                _UpdateEntry(
-                    chunk=open_chunk,
-                    project_id=pending.project_id,
-                    doc_id=doc_id,
-                    version=next_v,
-                    payload=pending.merged,
-                    op_count=pending.op_count,
-                    author_id=pending.author_id,
-                    at=pending.at,
-                    origin=pending.origin,
-                ),
-            )
+            await self._insert_update(session, UpdateEntry.of(open_chunk, doc_id, next_v, pending))
             open_chunk.end_version = next_v
-            await self._roll_over(session, open_chunk, doc_id, pending, replica, next_v)
+            await self._maybe_seal(session, open_chunk, replica, drifted)
             await session.commit()
 
-    async def _roll_over(
-        self,
-        session: AsyncSession,
-        chunk: HistoryChunk,
-        doc_id: UUID,
-        pending: _Pending,
-        replica: YDocument,
-        version: int,
+    async def _maybe_seal(
+        self, session: AsyncSession, chunk: HistoryChunk, replica: Replica, drifted: bool
     ) -> None:
-        """Seal a full chunk and open the next one from the current replica state."""
-        if version - chunk.start_version + 1 < self._settings.history_chunk_max_updates:
+        """Seal ``chunk`` when it is full, or re-base it on the live state when the replica drifted."""
+        if drifted:
+            state = require(replica.live, "a drifted replica always has a live state")
+            self._replicas[chunk.doc_id] = doc_from(state)
+        elif chunk.end_version - chunk.start_version + 1 >= self._settings.history_chunk_max_updates:
+            state = replica.doc.get_state()
+        else:
             return
         chunk.sealed = True
         await session.flush()  # free the partial-unique open-chunk index
-        await self._new_chunk(session, pending.project_id, doc_id, replica.get_state(), base_version=version)
+        await self._new_chunk(session, chunk.project_id, chunk.doc_id, state, base_version=chunk.end_version)
 
     async def flush_doc(self, *, doc_id: UUID, reason: FlushReason) -> None:
         async with self._lock(doc_id):
@@ -214,32 +197,22 @@ class HistoryCaptureService:
         self._locks.pop(doc_id, None)
         self._project_ids.pop(doc_id, None)
 
-    async def ensure_snapshot(
-        self, *, project_id: UUID, doc_id: UUID, current_state: bytes, version: int
-    ) -> None:
-        """Public seal-and-reopen primitive (spec 37 may drive snapshots explicitly)."""
-        async with self._lock(doc_id), self._session_factory() as session:
-            open_chunk = await self._open_chunk(session, doc_id)
-            if open_chunk is not None:
-                open_chunk.sealed = True
-                await session.flush()
-            await self._new_chunk(session, project_id, doc_id, current_state, base_version=version)
-            await session.commit()
-
     async def reconstruct_state(self, *, doc_id: UUID, version: int) -> bytes:
         async with self._session_factory() as session:
             return await reconstruct_state(session, self._store, doc_id, version)
 
-    async def _replica(
-        self, session: AsyncSession, doc_id: UUID, open_chunk: HistoryChunk | None
-    ) -> YDocument:
-        replica = self._replicas.get(doc_id)
-        if replica is None:
-            if open_chunk is not None:
-                replica = await reconstruct_doc(session, self._store, doc_id, open_chunk.end_version)
-            else:
-                replica = YDocument()
-            self._replicas[doc_id] = replica
+    async def _replica(self, session: AsyncSession, doc_id: UUID, open_chunk: HistoryChunk | None) -> Replica:
+        """The doc's replica at the head of its history, rebuilt from the database when not in memory."""
+        cached = self._replicas.get(doc_id)
+        if cached is not None:
+            return Replica(cached)
+        live = await load_live_state(session, doc_id)
+        if open_chunk is None:
+            replica = Replica(doc_from(live), live=live, from_live=live is not None)
+        else:
+            doc = await reconstruct_doc(session, self._store, doc_id, open_chunk.end_version)
+            replica = Replica(doc, live=live)
+        self._replicas[doc_id] = replica.doc
         return replica
 
     async def _open_chunk(self, session: AsyncSession, doc_id: UUID) -> HistoryChunk | None:
@@ -292,7 +265,7 @@ class HistoryCaptureService:
         await self._store.put(key, payload, content_type="application/octet-stream")
         return None, key
 
-    async def _insert_update(self, session: AsyncSession, entry: _UpdateEntry) -> None:
+    async def _insert_update(self, session: AsyncSession, entry: UpdateEntry) -> None:
         """Persist one history update, offloading an oversized payload to the store."""
         inline, blob_key = await self._store_payload(entry.payload, self._is_oversized(entry.payload))
         session.add(
@@ -310,21 +283,6 @@ class HistoryCaptureService:
                 origin=entry.origin,
             )
         )
-
-
-@dataclass(slots=True)
-class _UpdateEntry:
-    """One history row's worth of data, before it is written."""
-
-    chunk: HistoryChunk
-    project_id: UUID
-    doc_id: UUID
-    version: int
-    payload: bytes
-    op_count: int
-    author_id: UUID | None
-    at: datetime
-    origin: str | None = None
 
 
 def _utcnow() -> datetime:
