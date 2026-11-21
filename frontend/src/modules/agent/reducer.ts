@@ -206,12 +206,9 @@ export function applyEvent(state: AgentRunState, event: AgentEvent): AgentRunSta
   }
 }
 
-/** Convert a loaded transcript (stored messages + open diffs) into render items. */
-export function historyToItems(
-  messages: WireMessage[],
-  diffs: WireDiffSummary[],
-  fileOps: WireFileOp[] = [],
-): TranscriptItem[] {
+type HistoryProposal = Extract<TranscriptItem, { kind: "diff-proposal" | "file-op" }>;
+
+function toolResultsOf(messages: WireMessage[]): Map<string, { ok: boolean; summary: unknown }> {
   const toolResults = new Map<string, { ok: boolean; summary: unknown }>();
   for (const m of messages) {
     if (m.role === "tool" && m.tool_call_id) {
@@ -226,42 +223,46 @@ export function historyToItems(
       }
     }
   }
+  return toolResults;
+}
 
-  const items: TranscriptItem[] = [];
-  for (const m of messages) {
-    if (m.role === "user") {
-      items.push({
-        kind: "message",
-        id: m.id,
-        role: "user",
-        text: m.content ?? "",
-        status: "complete",
-      });
-    } else if (m.role === "assistant") {
-      for (const tc of m.tool_calls ?? []) {
-        const res = toolResults.get(tc.id);
-        items.push({
-          kind: "tool",
-          id: tc.id,
-          name: tc.name,
-          args: tc.arguments,
-          result: res?.summary,
-          status: res ? (res.ok ? "ok" : "error") : "running",
-        });
-      }
-      if (m.content) {
-        items.push({
-          kind: "message",
-          id: m.id,
-          role: "assistant",
-          text: m.content,
-          status: "complete",
-        });
-      }
-    }
+function messageItems(
+  m: WireMessage,
+  toolResults: Map<string, { ok: boolean; summary: unknown }>,
+): TranscriptItem[] {
+  if (m.role === "user") {
+    return [{ kind: "message", id: m.id, role: "user", text: m.content ?? "", status: "complete" }];
   }
+  if (m.role !== "assistant") return [];
+  const items: TranscriptItem[] = (m.tool_calls ?? []).map((tc) => {
+    const res = toolResults.get(tc.id);
+    return {
+      kind: "tool",
+      id: tc.id,
+      name: tc.name,
+      args: tc.arguments,
+      result: res?.summary,
+      status: res ? (res.ok ? "ok" : "error") : "running",
+    };
+  });
+  if (m.content) {
+    items.push({ kind: "message", id: m.id, role: "assistant", text: m.content, status: "complete" });
+  }
+  return items;
+}
+
+/** A turn's proposals, keyed by the turn's last message (the one they are stored against). */
+function proposalsByMessage(
+  diffs: WireDiffSummary[],
+  fileOps: WireFileOp[],
+): Map<string | null, HistoryProposal[]> {
+  const byMessage = new Map<string | null, HistoryProposal[]>();
+  const add = (messageId: string | null | undefined, item: HistoryProposal) => {
+    const key = messageId ?? null;
+    byMessage.set(key, [...(byMessage.get(key) ?? []), item]);
+  };
   for (const d of diffs) {
-    items.push({
+    add(d.message_id, {
       kind: "diff-proposal",
       id: d.id,
       proposalId: d.id,
@@ -269,6 +270,27 @@ export function historyToItems(
       files: [{ path: d.path, hunkCount: d.stats.hunk_count ?? 0 }],
     });
   }
-  for (const op of fileOps) items.push({ kind: "file-op", id: op.id, ...toFileOp(op) });
+  for (const op of fileOps) add(op.message_id, { kind: "file-op", id: op.id, ...toFileOp(op) });
+  return byMessage;
+}
+
+/**
+ * Convert a loaded transcript (stored messages + proposals) into render items. Each proposal
+ * follows the turn that made it, as it did live; one with no known message goes last.
+ */
+export function historyToItems(
+  messages: WireMessage[],
+  diffs: WireDiffSummary[],
+  fileOps: WireFileOp[] = [],
+): TranscriptItem[] {
+  const toolResults = toolResultsOf(messages);
+  const proposals = proposalsByMessage(diffs, fileOps);
+  const items: TranscriptItem[] = [];
+  for (const m of messages) {
+    items.push(...messageItems(m, toolResults));
+    items.push(...(proposals.get(m.id) ?? []));
+    proposals.delete(m.id);
+  }
+  for (const rest of proposals.values()) items.push(...rest);
   return items;
 }

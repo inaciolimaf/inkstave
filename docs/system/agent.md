@@ -107,7 +107,7 @@ project, is a 404.
 | `POST /sessions/{session_id}/file-ops/{op_id}/reject` | Record the refusal | same as apply, without the tree's |
 
 No route applies a diff on the server: a hunk is written by the browser, as a CRDT edit, when the user accepts
-it. The outcome route only stores the decision. A reload shows a decided diff with its status.
+it. The outcome route only stores the decision. A reload shows a decided diff with its status, in the place of the turn that proposed it: each diff and file operation carries `message_id`, the turn's last message, and the panel puts it right after that message (one without it goes last).
 
 SSE events are named after their `type` and carry `run_id`, `seq`, `ts`: `token` (`text`), `tool_call`
 (`tool_call_id`, `name`, `arguments`), `tool_result` (`tool_call_id`, `name`, `ok`, `summary`),

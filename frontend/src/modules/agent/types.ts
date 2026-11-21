@@ -118,6 +118,9 @@ export type WireMessage = Pick<
   "id" | "seq" | "role" | "content" | "tool_call_id"
 > & { tool_calls: { id: string; name: string; arguments: Record<string, unknown> }[] | null };
 
-export type WireDiffSummary = Pick<Schemas["ProposedDiffSummary"], "id" | "doc_id" | "path" | "status"> & {
+export type WireDiffSummary = Pick<
+  Schemas["ProposedDiffSummary"],
+  "id" | "message_id" | "doc_id" | "path" | "status"
+> & {
   stats: { hunk_count?: number };
 };

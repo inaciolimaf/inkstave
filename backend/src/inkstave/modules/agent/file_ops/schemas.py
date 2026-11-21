@@ -11,6 +11,7 @@ class ProposedFileOpOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    message_id: UUID | None  # the turn's last message; the transcript places the proposal after it
     kind: Literal["create", "delete", "move"]
     entity_type: str
     path: str

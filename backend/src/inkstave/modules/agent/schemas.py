@@ -44,6 +44,7 @@ class ProposedDiffSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    message_id: UUID | None  # the turn's last message; the transcript places the proposal after it
     doc_id: UUID
     path: str
     base_version: str

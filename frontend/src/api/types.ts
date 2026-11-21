@@ -3162,6 +3162,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Message Id */
+            message_id: string | null;
             /** Path */
             path: string;
             /** Rationale */
@@ -3196,6 +3198,8 @@ export interface components {
              * @enum {string}
              */
             kind: "create" | "delete" | "move";
+            /** Message Id */
+            message_id: string | null;
             /** New Path */
             new_path: string | null;
             /** Path */

@@ -2868,6 +2868,18 @@
             "title": "Id",
             "type": "string"
           },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
           "path": {
             "title": "Path",
             "type": "string"
@@ -2895,6 +2907,7 @@
         },
         "required": [
           "id",
+          "message_id",
           "doc_id",
           "path",
           "base_version",
@@ -2949,6 +2962,18 @@
             "title": "Kind",
             "type": "string"
           },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
           "new_path": {
             "anyOf": [
               {
@@ -2988,6 +3013,7 @@
         },
         "required": [
           "id",
+          "message_id",
           "kind",
           "entity_type",
           "path",

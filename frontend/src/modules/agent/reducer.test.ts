@@ -133,10 +133,48 @@ describe("historyToItems", () => {
           tool_call_id: null,
         },
       ],
-      [{ id: "d1", doc_id: "x", path: "main.tex", stats: { hunk_count: 2 }, status: "proposed" }],
+      [
+        {
+          id: "d1",
+          message_id: null,
+          doc_id: "x",
+          path: "main.tex",
+          stats: { hunk_count: 2 },
+          status: "proposed",
+        },
+      ],
     );
     expect(items.map((i) => i.kind)).toEqual(["message", "tool", "message", "diff-proposal"]);
     expect(items[1]).toMatchObject({ kind: "tool", status: "ok" });
+  });
+
+  it("places each turn's proposals after that turn, not at the end", () => {
+    const msg = (id: string, role: "user" | "assistant", content: string) => ({
+      id,
+      seq: Number(id.slice(1)),
+      role,
+      content,
+      tool_calls: null,
+      tool_call_id: null,
+    });
+    const diff = (id: string, message_id: string) => ({
+      id,
+      message_id,
+      doc_id: "x",
+      path: "main.tex",
+      stats: { hunk_count: 1 },
+      status: "applied",
+    });
+    const items = historyToItems(
+      [
+        msg("m0", "user", "a"),
+        msg("m1", "assistant", "one"),
+        msg("m2", "user", "b"),
+        msg("m3", "assistant", "two"),
+      ],
+      [diff("d2", "m3"), diff("d1", "m1")],
+    );
+    expect(items.map((i) => i.id)).toEqual(["m0", "m1", "d1", "m2", "m3", "d2"]);
   });
 });
 
@@ -174,6 +212,7 @@ describe("file operations", () => {
       status: "applied" as const,
       rationale: null,
       created_at: "2026-11-02T00:00:00Z",
+      message_id: null,
     };
     expect(historyToItems([], [], [op])[0]).toMatchObject({
       kind: "file-op",
