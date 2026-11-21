@@ -71,6 +71,9 @@ export function useRunActions({
         activity: undefined,
         startedAt: Date.now(),
         lastEventAt: undefined,
+        // `seq` restarts at 0 on every run, so the previous run's numbers must not
+        // make the reducer drop this run's events as duplicates.
+        seenSeqs: [],
         items: [...prev.items, userItem],
       }));
 

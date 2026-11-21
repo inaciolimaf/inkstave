@@ -167,6 +167,30 @@ describe("AgentPanel", () => {
     await waitFor(() => expect(screen.getByLabelText("Message the agent")).not.toBeDisabled());
   });
 
+  it("streams a second run in the same chat in full, though its seq restarts at 0", async () => {
+    renderPanel();
+    const composer = await screen.findByLabelText("Message the agent");
+    await userEvent.type(composer, "first");
+    await userEvent.click(screen.getByLabelText("Send message"));
+    await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+    const first = FakeEventSource.instances[0];
+    first.emit({ type: "token", seq: 0, text: "One " });
+    first.emit({ type: "token", seq: 1, text: "two" });
+    first.emit({ type: "done", seq: 2, final_text: "One two", usage: {}, iterations: 1 });
+    await waitFor(() => expect(composer).not.toBeDisabled());
+
+    api.startRun.mockResolvedValue({ runId: "r2", streamUrl: "http://x/events" });
+    await userEvent.type(composer, "second");
+    await userEvent.click(screen.getByLabelText("Send message"));
+    await waitFor(() => expect(FakeEventSource.instances).toHaveLength(2));
+    const second = FakeEventSource.instances[1];
+    second.emit({ type: "token", seq: 0, text: "Alpha " });
+    second.emit({ type: "token", seq: 1, text: "beta" });
+    await screen.findByText(/Alpha beta/);
+    second.emit({ type: "done", seq: 2, final_text: "Alpha beta", usage: {}, iterations: 1 });
+    await waitFor(() => expect(composer).not.toBeDisabled());
+  });
+
   it("Stop cancels the run and marks the message cancelled (AC7)", async () => {
     renderPanel();
     await userEvent.click(await screen.findByText("Add a conclusion summarising the key results."));
