@@ -184,8 +184,13 @@ each stays in its own row, which is what the pane tests render. In the status li
 on Problems after a failure and folds warnings under errors (`foldQuiet`). After a failure the last good PDF stays
 on screen with a notice.
 
-- Opening a file: `FileTreePanel` calls `onSelectEntity`. A `doc` opens in the editor; a binary `file` shows
-  `BinaryNotice`; a folder changes nothing.
+- Opening a file: `FileTreePanel` calls `onSelectEntity`. A `doc` opens in the editor; a folder changes nothing. A
+  binary `file` goes to `FilePreview` in `frontend/src/modules/editor/file-preview.tsx`, which picks by extension
+  (`fileKind` in `frontend/src/modules/editor/file-kind.ts`): a PDF opens in `ProjectFilePdf`
+  (`frontend/src/modules/pdf-preview/ProjectFilePdf.tsx`, the preview's viewer and toolbar over
+  `useProjectFilePdf`), an image is shown from an object URL, anything else shows `BinaryNotice`. The bytes come
+  from `GET /projects/{project_id}/files/{entity_id}/content` through `getProjectFileBytes`, since the token is not
+  a cookie. Guaranteed by `frontend/src/modules/editor/file-preview.test.tsx`.
 - Outline: `OutlinePanel` in `frontend/src/modules/editor/outline-panel.tsx` lists the sections of the project, from
   `useWorkspaceOutline` (`frontend/src/modules/editor/workspace-outline.tsx`). `FileDrawer` has two tabs, Files and
   Outline, and Search since spec 122 (`drawer.tabs` in the `editor` namespace), and the last tab is remembered in `localStorage` through

@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 
 import i18n from "@/i18n/config";
 
-import { getCompilePdf } from "../api";
+import { getCompilePdf, getProjectFileBytes } from "../api";
 import { type PdfDocument, loadPdfDocument } from "../pdfjs";
 
 export interface PdfDocumentState {
@@ -22,10 +22,22 @@ export interface PdfDocumentState {
 const EMPTY: PdfDocumentState = { pdf: null, numPages: 0, loading: false, error: null };
 
 export function usePdfDocument(projectId: string, compileId: string | null): PdfDocumentState {
+  return useLoadedPdf(compileId ? `${projectId}/${compileId}` : null, () =>
+    getCompilePdf(projectId, compileId ?? ""),
+  );
+}
+
+/** A project file that is a PDF, for viewing in the editor pane. */
+export function useProjectFilePdf(projectId: string, entityId: string): PdfDocumentState {
+  return useLoadedPdf(`${projectId}/files/${entityId}`, () => getProjectFileBytes(projectId, entityId));
+}
+
+/** Load the PDF whose bytes `fetchBytes` returns, again whenever `key` changes; `null` loads nothing. */
+function useLoadedPdf(key: string | null, fetchBytes: () => Promise<ArrayBuffer>): PdfDocumentState {
   const [state, setState] = useState<PdfDocumentState>(EMPTY);
 
   useEffect(() => {
-    if (!compileId) {
+    if (!key) {
       setState(EMPTY);
       return;
     }
@@ -33,7 +45,7 @@ export function usePdfDocument(projectId: string, compileId: string | null): Pdf
     let loaded: PdfDocument | null = null;
     setState((s) => ({ ...s, loading: true, error: null }));
 
-    getCompilePdf(projectId, compileId)
+    fetchBytes()
       .then((bytes) => loadPdfDocument(bytes))
       .then((pdf) => {
         if (cancelled) {
@@ -57,7 +69,9 @@ export function usePdfDocument(projectId: string, compileId: string | null): Pdf
       cancelled = true;
       if (loaded) void loaded.destroy();
     };
-  }, [projectId, compileId]);
+    // `fetchBytes` is a fresh closure each render; `key` names what it fetches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   return state;
 }

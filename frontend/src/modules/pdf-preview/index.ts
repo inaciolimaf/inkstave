@@ -3,3 +3,5 @@ export { PreviewPane } from "./PreviewPane";
 export { useProblems } from "./hooks/useProblems";
 export { useSyncTex } from "./hooks/useSyncTex";
 export type { Problem, ProblemSeverity } from "./problems";
+export { ProjectFilePdf } from "./ProjectFilePdf";
+export { getProjectFileBytes } from "./api";

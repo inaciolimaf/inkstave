@@ -5,6 +5,7 @@ const dict = {
     documentGone: "This document no longer exists.",
     loadFailed: "Couldn’t load this document.",
     binaryFile: "This is a binary file and can’t be edited here.",
+    imagePreview: "Preview of {{name}}",
     noFileOpen: "No file open",
     syncToPdf: "Sync to PDF",
     syncToPdfTitle: "Jump to this line in the PDF",

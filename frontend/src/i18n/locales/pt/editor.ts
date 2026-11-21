@@ -7,6 +7,7 @@ const dict: Dict = {
     documentGone: "Este documento não existe mais.",
     loadFailed: "Não foi possível carregar este documento.",
     binaryFile: "Este é um arquivo binário e não pode ser editado aqui.",
+    imagePreview: "Pré-visualização de {{name}}",
     noFileOpen: "Nenhum arquivo aberto",
     syncToPdf: "Sincronizar com o PDF",
     syncToPdfTitle: "Ir para esta linha no PDF",

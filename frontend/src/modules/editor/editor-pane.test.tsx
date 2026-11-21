@@ -100,7 +100,7 @@ describe("EditorPane", () => {
   });
 
   it("shows the binary notice for a file entity", () => {
-    renderPane(entity({ type: "file", name: "logo.png" }));
+    renderPane(entity({ type: "file", name: "data.zip" }));
     expect(screen.getByText(/binary file/i)).toBeInTheDocument();
   });
 

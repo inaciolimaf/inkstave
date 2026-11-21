@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { EditorView } from "@codemirror/view";
-import { FileText, LocateFixed } from "lucide-react";
+import { LocateFixed } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,7 @@ import { useDocumentAutosave, type DocumentAutosave } from "./autosave/use-docum
 import { CodeMirrorEditor } from "./codemirror-editor";
 import { ConflictDialog } from "./conflict-dialog";
 import { EditorSettingsPopover } from "./editor-settings-popover";
+import { FilePreview } from "./file-preview";
 import { SaveStatusIndicator } from "./save-status-indicator";
 import type { EditorSettings } from "./types";
 import { documentKey } from "./use-document";
@@ -41,16 +42,6 @@ function LoadingState() {
       {Array.from({ length: 8 }).map((_, i) => (
         <Skeleton key={i} className="h-4" style={{ width: `${90 - (i % 4) * 12}%` }} />
       ))}
-    </div>
-  );
-}
-
-function BinaryNotice() {
-  const { t } = useTranslation("editor");
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-body text-muted-foreground">
-      <FileText className="size-8" />
-      <p>{t("pane.binaryFile")}</p>
     </div>
   );
 }
@@ -127,11 +118,11 @@ function useOpenDocument({
   }, [notFound, onClearSelection]);
 
   const loaded = isDoc && query.data ? query.data : null;
-  return { openEntity, isDoc, query, notFound, collabActive, collabSession, loaded };
+  return { projectId, openEntity, isDoc, query, notFound, collabActive, collabSession, loaded };
 }
 
 function PaneBody({
-  document: { openEntity, query, notFound, collabActive, collabSession },
+  document: { projectId, openEntity, query, notFound, collabActive, collabSession },
   autosave,
   settings,
   dark,
@@ -151,7 +142,7 @@ function PaneBody({
 }) {
   const { t } = useTranslation("editor");
   if (!openEntity) return <EmptyState />;
-  if (openEntity.type === "file") return <BinaryNotice />;
+  if (openEntity.type === "file") return <FilePreview projectId={projectId} entity={openEntity} />;
   if (collabActive) {
     // Live CRDT editing (spec 31): content + sync come from the WebSocket, not REST.
     if (!collabSession) return <LoadingState />;

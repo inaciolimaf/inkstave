@@ -58,3 +58,8 @@ export function compileEventsUrl(projectId: string, compileId: string): string {
   const query = token ? `?access_token=${encodeURIComponent(token)}` : "";
   return `${config.apiBaseUrl}${base(projectId)}/${compileId}/events${query}`;
 }
+
+/** The raw bytes of a project file (a PDF or an image), through the authed client like the compiled PDF. */
+export function getProjectFileBytes(projectId: string, entityId: string): Promise<ArrayBuffer> {
+  return apiClient.getBytes(`/api/v1/projects/${projectId}/files/${entityId}/content`);
+}
