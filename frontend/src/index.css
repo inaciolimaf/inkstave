@@ -15,11 +15,21 @@
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-    --text-small: 0.8125rem;
-    --text-body: 0.875rem;
-    --text-heading: 1.0625rem;
+    --text-small-base: 0.8125rem;
+    --text-body-base: 0.875rem;
+    --text-heading-base: 1.0625rem;
+    --text-small: var(--text-small-base);
+    --text-body: var(--text-body-base);
+    --text-heading: var(--text-heading-base);
     --text-title: 1.5rem;
     --text-figure: 2.25rem;
+  }
+
+  /* The agent's conversation reads at the size its reader picked (src/modules/agent/use-text-scale.ts). */
+  .agent-text-scale {
+    --text-small: calc(var(--text-small-base) * var(--agent-text-scale, 1));
+    --text-body: calc(var(--text-body-base) * var(--agent-text-scale, 1));
+    --text-heading: calc(var(--text-heading-base) * var(--agent-text-scale, 1));
   }
 
   :root {

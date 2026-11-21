@@ -14,6 +14,7 @@ import { EmptyState, Launcher, PanelFooter, PanelHeader, type SideView } from ".
 import type { AgentQuote, AgentRequest } from "./quote";
 import { useAgentChat } from "./useAgentChat";
 import { useComposer } from "./use-composer";
+import { useTextScale } from "./use-text-scale";
 import { useWindowSize, type WindowSize } from "./use-window-size";
 import { WindowResizeHandles } from "./window-resize-handles";
 
@@ -160,6 +161,7 @@ export function AgentPanel({
   const chat = useAgentChat(projectId, onBeforeSend);
   const chatView = side?.view === "chat";
   const windowSize = useWindowSize();
+  const textScale = useTextScale();
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const active = ACTIVE_PHASES.includes(chat.run.phase);
   const composer = useComposer({ open, busy: active, send: chat.send, onClose: () => onOpenChange(false) });
@@ -208,20 +210,26 @@ export function AgentPanel({
           onMinimize={() => onOpenChange(false)}
           large={windowSize.large}
           onToggleLarge={windowSize.toggleLarge}
+          text={textScale}
           side={side && { view: side.view, onViewChange: side.onViewChange }}
         />
         {chatView && side ? (
           side.chat
         ) : (
-          <AgentBody
-            chat={chat}
-            projectId={projectId}
-            active={active}
-            composer={composer}
-            composerRef={composerRef}
-            onReviewProposal={handleReview}
-            proposalStatuses={proposalStatuses}
-          />
+          <div
+            className="agent-text-scale flex min-h-0 flex-1 flex-col"
+            style={{ "--agent-text-scale": textScale.scale } as CSSProperties}
+          >
+            <AgentBody
+              chat={chat}
+              projectId={projectId}
+              active={active}
+              composer={composer}
+              composerRef={composerRef}
+              onReviewProposal={handleReview}
+              proposalStatuses={proposalStatuses}
+            />
+          </div>
         )}
       </section>
     </>

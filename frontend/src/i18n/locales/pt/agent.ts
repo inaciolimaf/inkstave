@@ -16,6 +16,10 @@ const dict: Dict = {
     enlarge: "Ampliar a janela do agente",
     shrink: "Voltar a janela do agente ao tamanho normal",
   },
+  textSize: {
+    larger: "Aumentar o texto",
+    smaller: "Diminuir o texto",
+  },
   quote: {
     label: "{{path}}, linhas {{from}}-{{to}}",
     remove: "Remover a seleção",

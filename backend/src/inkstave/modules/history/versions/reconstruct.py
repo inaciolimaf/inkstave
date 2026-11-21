@@ -99,8 +99,8 @@ async def reconstruct_state(session: AsyncSession, store: ObjectStore, doc_id: U
     return (await reconstruct_doc(session, store, doc_id, version)).get_state()
 
 
-async def load_current_state(session: AsyncSession, doc_id: UUID) -> bytes:
-    """The live authoritative CRDT state from the spec-28 store (snapshot + log)."""
+async def load_live_state(session: AsyncSession, doc_id: UUID) -> bytes | None:
+    """The live authoritative CRDT state from the spec-28 store (snapshot + log), or ``None`` if absent."""
     state_row = await session.get(CrdtDocumentState, doc_id)
     updates = (
         await session.execute(
@@ -112,8 +112,14 @@ async def load_current_state(session: AsyncSession, doc_id: UUID) -> bytes:
         parts.append(state_row.state)
     parts.extend(updates)
     if not parts:
-        return YDocument().get_state()
+        return None
     return merge_updates(*parts) if len(parts) > 1 else parts[0]
+
+
+async def load_current_state(session: AsyncSession, doc_id: UUID) -> bytes:
+    """The live state, or an empty document's state when the doc has never been opened."""
+    live = await load_live_state(session, doc_id)
+    return live if live is not None else YDocument().get_state()
 
 
 async def current_text(session: AsyncSession, doc_id: UUID) -> str:

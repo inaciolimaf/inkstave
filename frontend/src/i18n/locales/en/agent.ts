@@ -14,6 +14,10 @@ const dict = {
     enlarge: "Enlarge the agent window",
     shrink: "Return the agent window to its usual size",
   },
+  textSize: {
+    larger: "Larger text",
+    smaller: "Smaller text",
+  },
   quote: {
     label: "{{path}}, lines {{from}}-{{to}}",
     remove: "Remove the selection",

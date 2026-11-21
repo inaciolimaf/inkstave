@@ -1,5 +1,15 @@
 /** The pieces of the agent window around the conversation. */
-import { ChevronDown, Loader2, Maximize2, MessageSquarePlus, Minimize2, Sparkles, X } from "lucide-react";
+import {
+  AArrowDown,
+  AArrowUp,
+  ChevronDown,
+  Loader2,
+  Maximize2,
+  MessageSquarePlus,
+  Minimize2,
+  Sparkles,
+  X,
+} from "lucide-react";
 import type { Ref } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { AgentComposer, RunControls } from "./controls";
 import type { AgentQuote } from "./quote";
 import { RunStatus } from "./run-status";
+import type { TextScale } from "./use-text-scale";
 import type { useAgentChat } from "./useAgentChat";
 import { DictateButton } from "./voice/mic-button";
 import { DictationStatus } from "./voice/dictation-status";
@@ -73,6 +84,37 @@ export function SideSwitch({ view, onChange }: { view: SideView; onChange: (view
   );
 }
 
+/** Smaller and larger text for the conversation; each stops at the end of the scale. */
+function TextSizeButtons({ text }: { text: TextScale }) {
+  const { t } = useTranslation("agent");
+  return (
+    <>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-7"
+        aria-label={t("textSize.smaller")}
+        title={t("textSize.smaller")}
+        disabled={!text.canShrink}
+        onClick={text.shrink}
+      >
+        <AArrowDown className="size-4" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-7"
+        aria-label={t("textSize.larger")}
+        title={t("textSize.larger")}
+        disabled={!text.canGrow}
+        onClick={text.grow}
+      >
+        <AArrowUp className="size-4" />
+      </Button>
+    </>
+  );
+}
+
 export function PanelHeader({
   titleId,
   title,
@@ -80,6 +122,7 @@ export function PanelHeader({
   onMinimize,
   large,
   onToggleLarge,
+  text,
   side,
 }: {
   titleId: string;
@@ -88,6 +131,7 @@ export function PanelHeader({
   onMinimize: () => void;
   large: boolean;
   onToggleLarge: () => void;
+  text: TextScale;
   /** Present when the window also holds the project chat: the switch replaces the title. */
   side?: { view: SideView; onViewChange: (view: SideView) => void };
 }) {
@@ -104,6 +148,7 @@ export function PanelHeader({
       )}
       {agentView && (
         <>
+          <TextSizeButtons text={text} />
           <Button
             size="icon"
             variant="ghost"

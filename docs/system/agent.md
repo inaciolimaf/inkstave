@@ -50,6 +50,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/worker.py` | Registers the job and the cron, picks the stub LLM |
 | `frontend/src/modules/agent/useAgentChat.ts`, `frontend/src/modules/agent/reducer.ts` | Sessions, runs, `EventSource`, transcript |
 | `frontend/src/modules/agent/use-window-size.ts`, `frontend/src/modules/agent/window-resize-handles.tsx` | The window's size on a wide screen: drag, arrow keys, one-click enlarge, kept in `localStorage`. On a phone it stays a full sheet |
+| `frontend/src/modules/agent/use-text-scale.ts` | The conversation's text size: a step above the app's by default (1.15), smaller and larger buttons in the header, kept in `localStorage`. The `.agent-text-scale` rule in `frontend/src/index.css` multiplies the type tokens by it |
 | `frontend/src/modules/agent/run-status.tsx` | What a run is doing and for how long, above the composer; after 60 s with no event it says so |
 | `frontend/src/modules/agent/file-op-card.tsx` | The card that applies or rejects a file operation |
 | `frontend/src/modules/diff-review/inline-review-extension.ts`, `frontend/src/modules/diff-review/inline-review-widgets.ts` | The review in the editor: hunk placement, removed and added text, the toolbar, keys, live edits (spec 110) |
