@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from inkstave.modules.agent.llm.base import (
+    PDF_MEDIA_TYPE,
     DeltaHandler,
     LLMDelta,
     LLMError,
@@ -50,15 +51,18 @@ def _assistant_content(message: LLMMessage) -> list[dict[str, Any]]:
 
 
 def _tool_result_content(message: LLMMessage) -> str | list[dict[str, Any]]:
-    """Plain text, or text plus image blocks when the tool returned images."""
+    """Plain text, or text plus image and document blocks when the tool returned images or PDFs."""
     text = message.content or ""
     if not message.images:
         return text
-    images = [
-        {"type": "image", "source": {"type": "base64", "media_type": i.media_type, "data": i.data}}
+    blocks = [
+        {
+            "type": "document" if i.media_type == PDF_MEDIA_TYPE else "image",
+            "source": {"type": "base64", "media_type": i.media_type, "data": i.data},
+        }
         for i in message.images
     ]
-    return [{"type": "text", "text": text}, *images]
+    return [{"type": "text", "text": text}, *blocks]
 
 
 def _append_tool_result(out: list[dict[str, Any]], message: LLMMessage) -> None:

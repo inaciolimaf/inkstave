@@ -282,7 +282,7 @@ what was deliberately skipped.
 When you implement Inkstave's own AI agent, note it has **no Overleaf
 equivalent** — Overleaf has no such feature, so there is nothing to reference.
 Build it from the spec. It must: run as a LangGraph graph server-side; expose
-tools (search project, read file, view an image, locate a LaTeX section, propose an edit, propose a
+tools (search project, read file, view an image or a PDF, locate a LaTeX section, propose an edit, propose a
 file operation);
 stream tokens and tool calls to a browser chat panel; and emit per-file unified
 diffs that the user reviews and applies hunk-by-hunk. It must never mutate

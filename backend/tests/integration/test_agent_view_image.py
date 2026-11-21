@@ -40,9 +40,15 @@ def _reader(data: bytes) -> Any:
     return read
 
 
-async def _upload(db: AsyncSession, seed: SimpleNamespace, store: InMemoryObjectStore, name: str) -> None:
+async def _upload(
+    db: AsyncSession,
+    seed: SimpleNamespace,
+    store: InMemoryObjectStore,
+    name: str,
+    content: tuple[bytes, str] = (PNG, "image/png"),
+) -> None:
     folder = await create_entity(db, seed.project_id, TreeEntityType.folder, "figures", None)
-    source = file_service.UploadSource(name, _reader(PNG), "image/png", name)
+    source = file_service.UploadSource(name, _reader(content[0]), content[1], name)
     await file_service.upload_file(db, store, seed.project_id, folder.id, source)
     await db.flush()
 
@@ -57,6 +63,17 @@ async def test_view_image_returns_the_image_beside_the_result(
     result = await ViewImageTool().run(ViewImageArgs(path="/figures/plot.png"), ctx)
     assert result.ok and result.data is not None
     assert result.data["media_type"] == "image/png" and result.images[0].media_type == "image/png"
+
+
+async def test_view_image_reads_a_pdf(seed: SimpleNamespace, db_session: AsyncSession) -> None:
+    store = InMemoryObjectStore()
+    pdf = b"%PDF-1.4\n%figure\n%%EOF\n"
+    await _upload(db_session, seed, store, "flow.pdf", (pdf, "application/pdf"))
+    ctx = _ctx(db_session, seed.project_id, seed.owner.id)
+    ctx.object_store = store
+    result = await ViewImageTool().run(ViewImageArgs(path="figures/flow.pdf"), ctx)
+    assert result.ok and result.data is not None and result.data["media_type"] == "application/pdf"
+    assert result.images[0].media_type == "application/pdf"
 
 
 async def test_view_image_refuses_what_it_cannot_show(

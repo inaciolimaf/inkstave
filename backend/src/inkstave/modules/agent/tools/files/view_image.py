@@ -1,4 +1,4 @@
-"""view_image tool: hands an image from the project to the model."""
+"""view_image tool: hands an image or a PDF from the project to the model."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from inkstave.modules.agent.file_ops.paths import normalize_path
-from inkstave.modules.agent.llm.base import LLMImage
+from inkstave.modules.agent.llm.base import PDF_MEDIA_TYPE, LLMImage
 from inkstave.modules.agent.tools._common import load_tree
 from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
 from inkstave.modules.projects import BlobMissingError, TreeEntityType, open_file_content
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-_UNSUPPORTED = "Only PNG, JPEG, GIF and WebP images can be viewed."
+_UNSUPPORTED = "Only PNG, JPEG, GIF and WebP images, and PDFs, can be viewed."
 
 
 def sniff_image(head: bytes) -> str | None:
@@ -30,6 +30,8 @@ def sniff_image(head: bytes) -> str | None:
         return "image/gif"
     if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
         return "image/webp"
+    if head.startswith(b"%PDF-"):
+        return PDF_MEDIA_TYPE
     return None
 
 
@@ -46,12 +48,15 @@ async def _read_capped(stream: AsyncIterator[bytes], cap: int) -> bytes | None:
 
 
 class ViewImageArgs(BaseModel):
-    path: str = Field(min_length=1, description="Path of a PNG, JPEG, GIF or WebP file in the project.")
+    path: str = Field(min_length=1, description="Path of a PNG, JPEG, GIF, WebP or PDF file in the project.")
 
 
 class ViewImageTool(Tool):
     name = "view_image"
-    description = "Look at an image in the project (PNG, JPEG, GIF or WebP)."
+    description = (
+        "Look at an image (PNG, JPEG, GIF or WebP) or read a PDF in the project, such as a figure "
+        "included with \\includegraphics. A PDF's text and pages are both visible."
+    )
     Args = ViewImageArgs
 
     async def run(self, args: ViewImageArgs, ctx: ToolContext) -> ToolResult:  # type: ignore[override]
@@ -88,5 +93,5 @@ async def _load_bytes(ctx: ToolContext, entity_id: UUID) -> bytes | ToolResult:
         return ToolResult.failure("not_found", "The file's stored content is missing.")
     data = await _read_capped(stream, ctx.settings.agent_tool_image_max_bytes)
     if data is None:
-        return ToolResult.failure("too_large", "The image is too large to view.")
+        return ToolResult.failure("too_large", "The file is too large to view.")
     return data

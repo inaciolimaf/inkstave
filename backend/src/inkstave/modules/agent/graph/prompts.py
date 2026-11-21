@@ -22,7 +22,7 @@ _CAPABILITIES = (
     "You can read and search the project's files and propose edits to them. You can "
     "**never modify files directly** — every change you suggest is proposed as a diff "
     "that the user reviews and applies. Never claim to have edited or saved a file. You "
-    "can also look at the project's images with `view_image`, and propose new documents "
+    "can also look at the project's images and read its PDFs with `view_image`, and propose new documents "
     "and folders (`propose_create`), deletions (`propose_delete`), and renames or moves "
     "(`propose_move`). Each of these is only a proposal: it happens when the user applies "
     "it, so never say it is done. Binary files cannot be created or edited."
@@ -39,7 +39,7 @@ _EDIT_PROTOCOL = (
     "the request spans several files or is a large rewrite, handle ONE file per "
     "`propose_edit` call across steps; do not try to emit every file at once. A proposed "
     "new document does not exist yet, so `propose_edit` cannot reach it: put its whole "
-    "content in `propose_create`. Images are seen only in the turn that calls `view_image`; "
+    "content in `propose_create`. Images and PDFs are seen only in the turn that calls `view_image`; "
     "call it again in a later turn. Use `propose_delete` only when the user asked to remove "
     "something."
 )

@@ -30,7 +30,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/tools/base.py` | `Tool`, `ToolContext`, `ToolResult`, `ToolRegistry`, `authorize` |
 | `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages, never applies |
 | `backend/src/inkstave/modules/agent/tools/search_project.py`, `backend/src/inkstave/modules/agent/tools/read_file.py`, `backend/src/inkstave/modules/agent/tools/list_tree.py`, `backend/src/inkstave/modules/agent/tools/locate_section.py` | The read tools |
-| `backend/src/inkstave/modules/agent/tools/files/view_image.py` | `view_image`: hands an image to the model |
+| `backend/src/inkstave/modules/agent/tools/files/view_image.py` | `view_image`: hands an image or a PDF to the model |
 | `backend/src/inkstave/modules/agent/tools/files/propose.py` | `propose_create`, `propose_delete`, `propose_move`: stage, never apply |
 | `backend/src/inkstave/modules/agent/file_ops/__init__.py`, `backend/src/inkstave/modules/agent/file_ops/models.py`, `backend/src/inkstave/modules/agent/file_ops/repository.py` | `materialize_file_ops`, `ProposedFileOp`, queries |
 | `backend/src/inkstave/modules/agent/file_ops/apply.py`, `backend/src/inkstave/modules/agent/file_ops/routes.py`, `backend/src/inkstave/modules/agent/file_ops/schemas.py`, `backend/src/inkstave/modules/agent/file_ops/paths.py` | Carrying out a proposal, its routes and models, pure path helpers |
@@ -203,7 +203,7 @@ scoped to `ToolContext.project_id`.
 | `list_tree` | Tree under a path, depth 1–10 | `AGENT_TOOL_TREE_MAX_NODES` |
 | `locate_section` | Resolves a human section name through the structure parser | Name up to 120 chars |
 | `propose_edit` | Stages a `StagedEdit`. `require_write=True`, so viewers get `forbidden` | `AGENT_TOOL_EDIT_MAX_CHARS` |
-| `view_image` | Hands a PNG, JPEG, GIF or WebP to the model. The type comes from the bytes | `AGENT_TOOL_IMAGE_MAX_BYTES` |
+| `view_image` | Hands a PNG, JPEG, GIF, WebP or PDF to the model. The type comes from the bytes. A PDF goes to Claude as a `document` block and to OpenRouter as a `file` part, so the model reads its text and sees its pages; it rides in `LLMImage` with `media_type` `application/pdf` | `AGENT_TOOL_IMAGE_MAX_BYTES` |
 | `propose_create` | Stages a new document with its whole text, or a folder. Missing folders on the path are created on apply. `require_write=True` | `AGENT_TOOL_EDIT_MAX_CHARS` |
 | `propose_delete` | Stages a delete and records what it removes in `affected_paths`. `require_write=True` | — |
 | `propose_move` | Stages a rename, a move or both. `require_write=True` | — |
@@ -299,6 +299,7 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | A folder that changed since the proposal is not deleted | `backend/tests/integration/test_agent_file_ops.py::test_delete_is_refused_when_the_folder_gained_a_file` |
 | A decided proposal cannot run twice | `backend/tests/integration/test_agent_file_ops.py::test_delete_and_move_apply_and_cannot_apply_twice` |
 | The model gets an image and the transcript does not keep it | `backend/tests/integration/test_agent_view_image.py::test_the_model_gets_the_image_and_the_transcript_does_not` |
+| A PDF in the project reaches the model, as a document block or a file part | `backend/tests/integration/test_agent_view_image.py::test_view_image_reads_a_pdf`, `backend/tests/unit/test_agent_file_ops_unit.py::test_anthropic_sends_a_pdf_as_a_document_block`, `backend/tests/unit/test_agent_file_ops_unit.py::test_openrouter_sends_a_pdf_as_a_file_part` |
 | A second message during a run is refused, one after a terminal state is accepted | `backend/tests/integration/test_agent_api.py::test_post_message_enqueues_and_conflicts`, `backend/tests/integration/test_agent_api.py::test_post_message_after_terminal_state_starts_new_run` |
 | Rate-limited run is refused before the LLM | `backend/tests/integration/test_agent_safety_api.py::test_rate_limited_run_is_refused` |
 | Exhausted day budget refuses the run | `backend/tests/integration/test_agent_safety_api.py::test_day_budget_preflight_refusal` |

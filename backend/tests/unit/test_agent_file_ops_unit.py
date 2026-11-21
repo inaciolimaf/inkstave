@@ -52,7 +52,7 @@ def test_a_folder_takes_no_content() -> None:
         (b"\xff\xd8\xff\xe0", "image/jpeg"),
         (b"GIF89a", "image/gif"),
         (b"RIFF\x00\x00\x00\x00WEBPVP8", "image/webp"),
-        (b"%PDF-1.7", None),
+        (b"%PDF-1.7", "application/pdf"),
         (b"<svg xmlns=", None),
     ],
 )
@@ -85,3 +85,27 @@ def test_openrouter_sends_the_image_after_the_last_tool_result() -> None:
     assert [m["role"] for m in out] == ["tool", "tool", "user", "assistant"]
     assert out[1]["content"] == "{}"
     assert out[2]["content"][1]["image_url"]["url"] == "data:image/png;base64,QUJD"
+
+
+PDF = LLMImage(media_type="application/pdf", data="JVBE")
+
+
+def test_anthropic_sends_a_pdf_as_a_document_block() -> None:
+    message = LLMMessage(role="tool", tool_call_id="c1", content="{}", images=[PDF])
+    _, turns = _to_anthropic_messages([message])
+    block = turns[0]["content"][0]["content"][1]
+    assert block == {
+        "type": "document",
+        "source": {"type": "base64", "media_type": "application/pdf", "data": "JVBE"},
+    }
+
+
+def test_openrouter_sends_a_pdf_as_a_file_part() -> None:
+    out = OpenRouterLLMClient._to_openai_messages(
+        [LLMMessage(role="tool", tool_call_id="c1", content="{}", images=[PDF])]
+    )
+    part = out[1]["content"][1]
+    assert part == {
+        "type": "file",
+        "file": {"filename": "document.pdf", "file_data": "data:application/pdf;base64,JVBE"},
+    }

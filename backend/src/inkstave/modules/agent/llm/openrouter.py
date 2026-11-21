@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
 from inkstave.modules.agent.llm.base import (
+    PDF_MEDIA_TYPE,
     DeltaHandler,
     LLMError,
     LLMImage,
@@ -69,11 +70,17 @@ def _to_openai_entry(m: LLMMessage) -> dict[str, Any]:
     return entry
 
 
+def _file_part(image: LLMImage) -> dict[str, Any]:
+    """An image part, or a file part for a PDF (OpenRouter parses it for any model)."""
+    data_url = f"data:{image.media_type};base64,{image.data}"
+    if image.media_type == PDF_MEDIA_TYPE:
+        return {"type": "file", "file": {"filename": "document.pdf", "file_data": data_url}}
+    return {"type": "image_url", "image_url": {"url": data_url}}
+
+
 def _images_message(images: list[LLMImage]) -> dict[str, Any]:
-    parts: list[dict[str, Any]] = [{"type": "text", "text": "The image the tool returned."}]
-    parts.extend(
-        {"type": "image_url", "image_url": {"url": f"data:{i.media_type};base64,{i.data}"}} for i in images
-    )
+    parts: list[dict[str, Any]] = [{"type": "text", "text": "The file the tool returned."}]
+    parts.extend(_file_part(i) for i in images)
     return {"role": "user", "content": parts}
 
 

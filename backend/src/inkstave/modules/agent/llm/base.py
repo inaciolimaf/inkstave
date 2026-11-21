@@ -30,8 +30,11 @@ class ToolSpec(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)  # JSON schema
 
 
+PDF_MEDIA_TYPE = "application/pdf"
+
+
 class LLMImage(BaseModel):
-    """An image a tool returned, for the model to see."""
+    """An image, or a PDF (``media_type`` is ``PDF_MEDIA_TYPE``), a tool returned for the model to see."""
 
     media_type: str
     data: str  # base64
