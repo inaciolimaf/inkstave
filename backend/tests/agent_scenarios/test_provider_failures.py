@@ -225,7 +225,6 @@ async def test_an_empty_reply_is_reported_as_a_failure_not_as_a_capped_answer(
     assert closing.content and closing.content != NARRATION
 
 
-@pytest.mark.xfail(reason="known bug: a cancelled tool call stays in the history (fixed next)", strict=True)
 async def test_a_cancel_during_a_tool_call_ends_cancelled_and_the_next_message_has_a_valid_history(
     project: SimpleNamespace, db_session: AsyncSession, redis: Any
 ) -> None:

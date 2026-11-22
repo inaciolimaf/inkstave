@@ -400,7 +400,7 @@ decided (`docs/known-gaps.md`). `rejected` also comes from an edit whose `old_te
 
 **Edits and drift.** A collaborator's edit between the read and the proposal is refused at stage time (the version check). An edit that was staged before a later collaborator edit is matched again at the end of the turn against the text then, so it becomes a `rejected` row if its `old_text` no longer fits; the browser's own rebase (`rebaseHunks`) handles drift in the hunks that do apply. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
 
-**Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result, and the next turn replays it. OpenAI-style APIs may reject that; not verified against a provider.
+**Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result. The next turn drops those calls before it replays the history (`_answered_calls_only` in `runner.py`), so no provider sees an unanswered call; the scenario tests in `backend/tests/agent_scenarios` pin it.
 
 **Unused code.** `select_context` was removed; `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES` have no effect, and the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
 

@@ -152,7 +152,6 @@ async def test_a_model_stuck_in_a_loop_is_stopped_at_the_step_cap(
     assert await diffs_of(db_session, session) == []
 
 
-@pytest.mark.xfail(reason="known bug: a cancelled tool call stays in the history (fixed next)", strict=True)
 async def test_the_next_message_after_a_capped_loop_sends_a_valid_history(
     project: SimpleNamespace, db_session: AsyncSession, redis: Any
 ) -> None:
