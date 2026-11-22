@@ -34,16 +34,36 @@ export function useWorkspaceTree(
   return { treeRoot, project };
 }
 
+/** The longest a send or a compile waits for the server to apply the local edits (never hangs). */
+export const FLUSH_DEADLINE_MS = 3_000;
+
+export type FlushFn = () => Promise<void>;
+
+/** Run `flush`, but resolve after `deadlineMs` at the latest, and never reject. */
+export function flushWithDeadline(flush: FlushFn | null, deadlineMs = FLUSH_DEADLINE_MS): Promise<void> {
+  if (!flush) return Promise.resolve();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, deadlineMs);
+  });
+  const work = Promise.resolve()
+    .then(flush)
+    .catch(() => undefined);
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
+
 /**
- * Flush pending local CRDT edits to the server before a compile materializes the content column
- * (spec 31 §5.4 / AC8). The open document's collab session registers its real `flush()` here; when no
- * session is active this resolves immediately.
+ * Flush pending local CRDT edits to the server before a compile or an agent turn reads `documents.content`
+ * (spec 31 §5.4 / AC8). The open document's collab session registers its `flush()` through `registerFlush`;
+ * with no session, or after the deadline, the caller goes on.
  */
 export function useFlushBeforeCompile() {
-  const flushRef = useRef<(() => Promise<void>) | null>(null);
-  return useCallback(async () => {
-    await flushRef.current?.();
+  const flushRef = useRef<FlushFn | null>(null);
+  const registerFlush = useCallback((flush: FlushFn | null) => {
+    flushRef.current = flush;
   }, []);
+  const flushBeforeCompile = useCallback(() => flushWithDeadline(flushRef.current), []);
+  return { flushBeforeCompile, registerFlush };
 }
 
 /** Following a link between the text and the PDF: a phone shows the side it lands on. */

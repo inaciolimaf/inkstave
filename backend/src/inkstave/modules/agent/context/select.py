@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from inkstave.modules.agent.context.locate import locate_section
 from inkstave.modules.agent.context.models import (
-    ContextBundle,
     ContextChunk,
     ProjectMap,
     SectionMatch,
@@ -108,28 +106,3 @@ def _candidates(
     chunks.append(ContextChunk(kind="outline", text=_outline_summary(project_map), priority=1))
     chunks.extend(_related_chunk(m) for m in matches[1:4])
     return chunks
-
-
-def select_context(
-    project_map: ProjectMap,
-    file_reader: FileReader,
-    goal: str,
-    budget_tokens: int,
-    *,
-    surrounding_lines: int = 40,
-    token_count: TokenCounter = estimate_tokens,
-) -> ContextBundle:
-    matches = locate_section(project_map, goal)
-    candidates = _candidates(project_map, file_reader, matches, surrounding_lines)
-    candidates.sort(key=lambda c: c.priority)
-
-    chosen: list[ContextChunk] = []
-    used = 0
-    for chunk in candidates:
-        fitted = _fit(chunk, budget_tokens - used, token_count)
-        if fitted is None:
-            continue  # drop lowest-priority chunks that don't fit
-        chosen.append(fitted)
-        used += token_count(fitted.text)
-
-    return ContextBundle(goal=goal, chunks=chosen, estimated_tokens=used, budget_tokens=budget_tokens)

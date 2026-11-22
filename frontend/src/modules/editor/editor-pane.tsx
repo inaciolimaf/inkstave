@@ -9,7 +9,7 @@ import { QueryView } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CollabEditor } from "./CollabEditor";
-import { useCollabDoc } from "@/modules/collab";
+import { type CollabDocSession, useCollabDoc } from "@/modules/collab";
 import { ApiError } from "@/lib/api-client";
 import { useShortcuts } from "@/lib/shortcuts";
 import type { TreeEntity } from "@/modules/file-tree";
@@ -69,6 +69,20 @@ interface EditorPaneProps {
   readOnly?: boolean;
   /** The status line these tools live in (spec 107); `undefined` keeps them in a row of their own. */
   statusSlot?: HTMLElement | null;
+  /** Hands the collab session's flush to the workspace, so a compile or an agent turn can wait for it. */
+  registerFlush?: (flush: (() => Promise<void>) | null) => void;
+}
+
+/** Registers the open collab session's flush while it lives; clears it on change and unmount. */
+function useRegisterCollabFlush(
+  collabSession: CollabDocSession | null,
+  registerFlush: EditorPaneProps["registerFlush"],
+) {
+  const flush = collabSession?.flush ?? null;
+  useEffect(() => {
+    registerFlush?.(flush);
+    return () => registerFlush?.(null);
+  }, [flush, registerFlush]);
 }
 
 /** The open entity, its REST content and its collab session. */
@@ -195,6 +209,7 @@ export function EditorPane({
   currentUser = null,
   readOnly = false,
   statusSlot,
+  registerFlush,
 }: EditorPaneProps) {
   const { t } = useTranslation("editor");
   const { settings, dark, update } = useEditorPreferences();
@@ -207,6 +222,7 @@ export function EditorPane({
     readOnly,
     currentUser,
   });
+  useRegisterCollabFlush(openDocument.collabSession, registerFlush);
   const { openEntity, isDoc, collabActive, loaded } = openDocument;
   const spell = useSpellcheck(projectId, openEntity?.type === "doc" ? openEntity.id : null);
   const autosave = useDocumentAutosave(projectId, loaded);

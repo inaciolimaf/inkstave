@@ -262,7 +262,7 @@ class DocumentManager:
 
     async def flush_text_if_dirty(self, document_id: UUID) -> None:
         """Flush only if the document has unsynced text edits (debounced path)."""
-        await self.flush_text_if_dirty(document_id)
+        await self._do_flush_text(document_id, force=False)
 
     async def _do_flush_text(self, document_id: UUID, *, force: bool) -> None:
         async with self._lock(document_id):
@@ -277,10 +277,12 @@ class DocumentManager:
             if pending is not None and pending is not asyncio.current_task() and not pending.done():
                 pending.cancel()
             entry.flush_task = None
-        await self._bridge.flush_text(document_id, text)
-        # Record that spec-13 content is current as of this seq, so a recovered
-        # process can tell its persisted text is not stale.
-        await self._store.mark_text_synced(document_id, seq)
+            # The write stays under the lock: two flushes must reach the column in the order they
+            # copied the text, or an older copy written last leaves the agent and compile on stale text.
+            await self._bridge.flush_text(document_id, text)
+            # Record that spec-13 content is current as of this seq, so a recovered
+            # process can tell its persisted text is not stale.
+            await self._store.mark_text_synced(document_id, seq)
 
     async def _maybe_compact(self, document_id: UUID, entry: _Entry) -> None:
         by_count = entry.updates_since_snapshot >= self._settings.snapshot_every_updates

@@ -78,10 +78,11 @@ async def test_diff_proposed_event_and_listing(
     sink = InMemoryEventSink(run_id)
     llm = FakeLLM(
         script=[
+            _tool_call("read_file", {"doc_id": str(seed.main_id)}),
             _tool_call(
                 "propose_edit",
-                {"doc_id": str(seed.main_id), "mode": "full", "new_text": "rewritten\n"},
-            )
+                {"doc_id": str(seed.main_id), "old_text": "line1", "new_text": "rewritten"},
+            ),
         ]
     )
 

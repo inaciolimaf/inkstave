@@ -6,12 +6,13 @@
  * React StrictMode's double-mount.
  */
 import type { Extension } from "@codemirror/state";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { yCollab, ySync } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 
 import { config } from "@/config";
+import { refreshTokens } from "@/lib/api-client";
 
 import { InkstaveWsProvider, type ProviderStatus } from "./InkstaveWsProvider";
 import { remoteCursorTheme } from "./remote-cursors";
@@ -38,7 +39,7 @@ export interface CollabDocSession {
   readOnly: boolean;
   /** The Suggesting switch of this session (spec 119). */
   suggest: SuggestController;
-  /** Resolve once pending local edits have been sent (call before triggering a compile). */
+  /** Resolve once the server has applied the local edits sent so far (call before a compile or an agent turn). */
   flush: () => Promise<void>;
 }
 
@@ -79,6 +80,8 @@ export function useCollabDoc(options: UseCollabDocOptions): CollabDocSession | n
   const [core, setCore] = useState<CoreSession | null>(null);
   const [status, setStatus] = useState<CollabStatus>("connecting");
   const [synced, setSynced] = useState(false);
+  // Stable for the session's lifetime, so an editor can register it in an effect.
+  const flush = useCallback(() => core?.provider.flush() ?? Promise.resolve(), [core]);
 
   // Keep getToken current without re-creating the session when its identity changes.
   const getTokenRef = useRef(options.getToken);
@@ -103,6 +106,8 @@ export function useCollabDoc(options: UseCollabDocOptions): CollabDocSession | n
       ydoc,
       awareness,
       getToken: () => getTokenRef.current(),
+      // A 4401 from the server means the access token expired: refresh it, as every REST call does.
+      refreshToken: refreshTokens,
       awarenessThrottleMs: CURSOR_THROTTLE_MS,
     });
     // `y-codemirror.next` scopes undo/redo to the local user via the undo manager, and renders remote
@@ -138,5 +143,5 @@ export function useCollabDoc(options: UseCollabDocOptions): CollabDocSession | n
   }, [projectId, documentId, enabled, readOnly]);
 
   if (core === null) return null;
-  return { ...core, status, synced, flush: () => core.provider.flush() };
+  return { ...core, status, synced, flush };
 }

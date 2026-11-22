@@ -126,7 +126,7 @@ async def test_adversarial_document_does_not_auto_apply(
             _tool_call("read_file", {"doc_id": str(seed.main_id)}),
             _tool_call(
                 "propose_edit",
-                {"doc_id": str(seed.main_id), "mode": "full", "new_text": "agent rewrite\n"},
+                {"doc_id": str(seed.main_id), "old_text": adversarial, "new_text": "agent rewrite\n"},
             ),
         ]
     )

@@ -29,6 +29,7 @@ and 118. The comment model, with the anchors, is in [ADR 0118](../adr/0118-comme
 | `frontend/src/modules/editor/workspace-chat.tsx` | `useWorkspaceChat`: wires the button and the panel into the editor |
 | `frontend/src/modules/agent/panel-parts.tsx` | `SideSwitch`: the Agent | Chat switch in the agent window |
 | `backend/src/inkstave/modules/discussion/comments/` | Comment threads: `models.py` (`CommentThread`, `CommentMessage`), `service.py` (`CommentService`, no commit), `outcome.py` (`CommentOutcome`, `MentionMail`), `anchors.py` (base64 in and out), `schemas.py`, `errors.py`, `publish.py` (`CommentPublisher`, the event and e-mail after the commit) |
+| `backend/src/inkstave/modules/discussion/comments/paging.py` | `page_threads`, the cursor (`encode_cursor`, `decode_cursor`), `DEFAULT_LIMIT`, `MAX_LIMIT` |
 | `backend/src/inkstave/modules/discussion/routes/comments.py` | The comment routes |
 | `backend/src/inkstave/modules/notifications/inbox/comment_hook.py` | `notify_comment_users`: the bell rows for mentions and replies |
 | `backend/migrations/versions/20261104_1800_b7e1c4d9a2f6_spec118_comments.py` | Creates the two comment tables |
@@ -87,7 +88,7 @@ Comment threads (spec 118), under `/api/v1/projects/{project_id}/comments`:
 
 | Method and path | Guard | What it does | Errors |
 |---|---|---|---|
-| `GET /comments?document_id=&status=open\|resolved\|all` | `PROJECT_READ` | The threads with their messages, oldest first. `status` defaults to `all`. Not paged | 404 `project_not_found` |
+| `GET /comments?document_id=&status=open\|resolved\|all&limit=&after=` | `PROJECT_READ` | One page of threads with their messages, oldest first, keyed on `(created_at, id)`. `limit` defaults to 50, at most 100. `after` is the `next_cursor` of the previous page; the response is `{items, has_more, next_cursor}`. `status` defaults to `all` | 404 `project_not_found`; 422 for a `limit` out of range; 400 `invalid_cursor` for a cursor that is not one of ours |
 | `POST /comments` `{document_id, anchor_start, anchor_end, quoted_text, body, mentions}` | `DISCUSSION_WRITE`, `RATE_LIMIT_COMMENTS` | Thread and first message, 201. Publishes `comment.thread_created` | 404, 403, 422 (`validation_error` for an anchor over 256 bytes, bad base64 or a quote over 500 characters; `not_a_text_document` for a folder or file), 429 |
 | `POST /comments/{thread_id}/messages` `{body, mentions}` | `DISCUSSION_WRITE`, `RATE_LIMIT_COMMENTS` | A reply, 201. Publishes `comment.message_created` | 404 `comment_thread_not_found`, 422, 429 |
 | `PATCH /comments/{thread_id}/messages/{message_id}` `{body, mentions}` | `DISCUSSION_WRITE`, author only | Edit, sets `edited_at`. Publishes `comment.message_updated` | 403 `not_message_author`, 404 `comment_message_not_found` (also for a deleted message) |
@@ -165,7 +166,7 @@ once: it opens the panel and the document, and puts the cursor on the thread.
 **The comments panel.** `useWorkspaceComments` (`frontend/src/modules/editor/workspace-comments.tsx`) owns the
 editor side. The highlights are a CodeMirror extension (`comment-marks.ts`) appended to the view, once, when
 the view has a collaborative Y.Text (`ySyncFacet`). Without collaboration the button and the Comment offer stay
-hidden. The panel is a column beside the text on a wide screen, and a sheet on a phone. Its list comes from
+hidden. The panel is a column beside the text on a wide screen, and a sheet on a phone. Its threads are loaded a page at a time: `useCommentThreads` is an infinite query, and the panel's "Load more comments" control asks for the next page while `has_more` is set. Its list comes from
 `orderThreads`: the open document in text order, detached threads after, then other files by name and age.
 `useCommentThreads` refetches on every `comment.*` event and on each (re)connect, so the list needs no patching.
 
@@ -199,6 +200,8 @@ panel reads the Y.Text and the thread API stores the anchors. A viewer may comme
 | The last live message deletes its thread | `backend/tests/integration/test_comments_api.py::test_deleting_the_only_live_message_deletes_the_thread` |
 | Comment events leave only after the commit | `backend/tests/integration/test_comments_api.py::test_event_is_published_after_the_commit`; `test_event_not_published_on_rollback` |
 | The panel filters by status and scope and orders by text | `frontend/src/modules/discussion/comments/comments-panel.test.tsx`; `frontend/src/modules/discussion/comments/mentions-order.test.ts` |
+| Threads are listed oldest first in pages, with no duplicates and no gaps; the default page is 50 and the cap is 100 | `backend/tests/integration/test_comments_paging.py` |
+| The panel offers the next page only while the server has more | `frontend/src/modules/discussion/comments/comments-panel.test.tsx`, "offers to load more threads"; `frontend/src/modules/discussion/comments/use-comments.test.tsx`, "loads the next page on demand" |
 | A comment event refetches the list over the project stream | `frontend/src/modules/discussion/comments/use-comments.test.tsx` |
 
 Other modules import it only through its `__init__.py`: the `discussion: other modules only use its public
@@ -238,8 +241,11 @@ the agent window.
   body stays in the database until the project is deleted.
 - **The event `payload` is untyped on the client.** `useChat` casts it to the chat message shape, and the
   `PROJECT_EVENT_TYPES` list must name every type the server sends. It names the `comment.*` types too.
-- **Comment threads are not paged.** `GET /comments` returns every thread of the project, with all messages.
-  Fine for a paper; a project with thousands of threads needs paging, and the panel needs it too.
+- **Only the loaded pages reach the editor.** The highlights in the text and the editor-bar badge read the threads
+  the panel has loaded, so a project with more threads than one page shows highlights and a count for the first
+  pages only, until "Load more comments" is used. Serving the open count from the API would fix the badge.
+- **Messages are not paged.** A page carries every message of its threads. A thread with thousands of replies
+  would make one large response.
 - **A mention e-mail is sent after the commit, but not retried.** The enqueue is a background task. A failed
   enqueue is logged and the mention stays in the bell. `send_email_job` never retries either (notifications.md).
 - **Edits do not repeat old mentions.** Editing a message notifies only the members it newly mentions. An

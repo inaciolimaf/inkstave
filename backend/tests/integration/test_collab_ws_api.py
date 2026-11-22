@@ -52,6 +52,7 @@ async def test_missing_token_closes_4401(app: Any, db_session: AsyncSession, red
     install_collab(app, db_session, redis)
     _user, project, entity, _token = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id)) as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == 4401
 
 
@@ -59,6 +60,7 @@ async def test_invalid_token_closes_4401(app: Any, db_session: AsyncSession, red
     install_collab(app, db_session, redis)
     _user, project, entity, _token = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id), query="token=not-a-jwt") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == 4401
 
 
@@ -69,6 +71,7 @@ async def test_non_member_closes_4403(app: Any, db_session: AsyncSession, redis:
     await db_session.flush()
     other_token, _ = build_token_service(get_settings()).create_access_token(other)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={other_token}") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == 4403
 
 
@@ -76,6 +79,7 @@ async def test_unknown_project_closes_4404(app: Any, db_session: AsyncSession, r
     install_collab(app, db_session, redis)
     _user, _project, _entity, token = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(uuid4(), uuid4()), query=f"token={token}") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == 4404
 
 
@@ -83,6 +87,7 @@ async def test_unknown_document_closes_4404(app: Any, db_session: AsyncSession, 
     install_collab(app, db_session, redis)
     _user, project, _entity, token = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, uuid4()), query=f"token={token}") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == 4404
 
 

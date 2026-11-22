@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -50,6 +51,12 @@ if TYPE_CHECKING:
 
 FlushReason = Literal["idle", "shutdown", "threshold", "manual"]
 
+# Failed flushes of one document that the idle timer retries on its own. Past this, the updates stay
+# buffered until an explicit flush (an edit over the threshold, the room closing, shutdown) succeeds.
+_MAX_AUTOMATIC_RETRIES = 3
+
+logger = logging.getLogger(__name__)
+
 
 def _sha256_digest(data: bytes) -> bytes:
     """SHA-256 raw digest, isolated so it can run via ``asyncio.to_thread``."""
@@ -77,6 +84,7 @@ class HistoryCaptureService:
         self._last_hash: dict[UUID, bytes] = {}
         self._project_ids: dict[UUID, UUID] = {}
         self._replicas: dict[UUID, YDocument] = {}
+        self._failed_flushes: dict[UUID, int] = {}  # consecutive failed flushes, per document
 
     def _lock(self, doc_id: UUID) -> asyncio.Lock:
         lock = self._locks.get(doc_id)
@@ -121,8 +129,8 @@ class HistoryCaptureService:
         buf.timer = asyncio.get_running_loop().call_later(delay, self._on_timer, doc_id)
 
     def _on_timer(self, doc_id: UUID) -> None:
-        # Fire-and-forget by design: a failed flush is logged and retried by the next edit
-        # or the periodic compaction job.
+        # Fire-and-forget by design: a failed flush is logged, its updates stay buffered, and
+        # _restore re-arms this timer a bounded number of times.
         spawn(self.flush_doc(doc_id=doc_id, reason="idle"), name="history-idle-flush")
 
     def _take(self, doc_id: UUID) -> Pending | None:
@@ -141,7 +149,33 @@ class HistoryCaptureService:
             at=buf.last_at or _utcnow(),
             project_id=self._project_ids[doc_id],
             origin=buf.origin,
+            raw=raw,
         )
+
+    def _restore(self, doc_id: UUID, pending: Pending) -> None:
+        """Put a failed flush's updates back in the buffer, so no update is lost to a database error.
+
+        The replica is forgotten: it may already hold the failed updates, and a retry would then find
+        nothing changed and drop them. The next flush rebuilds it from the database.
+        """
+        self._replicas.pop(doc_id, None)
+        buf = self._buffers.get(doc_id)
+        if buf is None:
+            buf = _DocBuffer(author_id=pending.author_id, origin=pending.origin, last_at=pending.at)
+            self._buffers[doc_id] = buf
+        buf.updates[:0] = pending.raw
+        failures = self._failed_flushes.get(doc_id, 0) + 1
+        self._failed_flushes[doc_id] = failures
+        if failures <= _MAX_AUTOMATIC_RETRIES:
+            logger.warning("history flush failed for document %s; retrying (attempt %d)", doc_id, failures)
+            self._arm_timer(doc_id, buf)
+        else:
+            logger.error(
+                "history flush failed %d times for document %s; %d updates held until the next flush",
+                failures,
+                doc_id,
+                len(buf.updates),
+            )
 
     async def _write(self, doc_id: UUID, pending: Pending) -> None:
         """Append the pending update to the open chunk, sealing it when it is full."""
@@ -182,13 +216,21 @@ class HistoryCaptureService:
         async with self._lock(doc_id):
             pending = self._take(doc_id)
             if pending is not None:
-                await self._write(doc_id, pending)
+                try:
+                    await self._write(doc_id, pending)
+                except Exception:
+                    self._restore(doc_id, pending)
+                    raise
+                self._failed_flushes.pop(doc_id, None)
             if reason in ("idle", "shutdown"):
                 self._drop_state(doc_id)
 
     async def flush_all(self) -> None:
         for doc_id in list(self._buffers):
-            await self.flush_doc(doc_id=doc_id, reason="shutdown")
+            try:
+                await self.flush_doc(doc_id=doc_id, reason="shutdown")
+            except Exception:
+                logger.exception("history flush failed at shutdown for document %s", doc_id)
 
     def _drop_state(self, doc_id: UUID) -> None:
         self._replicas.pop(doc_id, None)
@@ -196,6 +238,7 @@ class HistoryCaptureService:
         self._buffers.pop(doc_id, None)
         self._locks.pop(doc_id, None)
         self._project_ids.pop(doc_id, None)
+        self._failed_flushes.pop(doc_id, None)
 
     async def reconstruct_state(self, *, doc_id: UUID, version: int) -> bytes:
         async with self._session_factory() as session:
