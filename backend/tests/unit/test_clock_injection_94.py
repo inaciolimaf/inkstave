@@ -153,6 +153,7 @@ async def test_start_email_change_expiry_uses_injected_clock() -> None:
 
 def _pending_user() -> Any:
     return SimpleNamespace(
+        id="user-1",  # read by the outstanding-reset-link revocation on confirm
         email="old@example.com",
         email_confirmed=False,
         pending_email="new@example.com",
