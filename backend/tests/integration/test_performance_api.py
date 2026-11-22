@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.pool import QueuePool
 
-from inkstave.core.config.settings import get_settings
+from inkstave.core.config.settings import Settings, get_settings
 from inkstave.core.db.engine import create_engine_and_sessionmaker
 from inkstave.infra.cache import project_meta_key
 from inkstave.modules.auth.credentials.tokens import build_token_service
@@ -58,7 +59,7 @@ async def test_cache_helper_disabled_mode_bypasses(redis: Any) -> None:
 
     from inkstave.infra.cache import RedisCache
 
-    cache = RedisCache(redis, SimpleNamespace(cache_enabled=False, cache_ttl_seconds=30))
+    cache = RedisCache(redis, cast(Settings, SimpleNamespace(cache_enabled=False, cache_ttl_seconds=30)))
     await cache.set_json("k", {"a": 1})
     assert await cache.get_json("k") is None  # disabled → never reads/writes Redis
     assert await redis.get("k") is None
@@ -193,11 +194,12 @@ async def test_db_pool_uses_config_and_returns_to_baseline(settings_override: An
     settings = settings_override
     engine, sessionmaker = create_engine_and_sessionmaker(settings)
     try:
-        assert engine.pool.size() == settings.db_pool_size  # pool sized from config
+        pool = cast(QueuePool, engine.pool)
+        assert pool.size() == settings.db_pool_size  # pool sized from config
         for _ in range(20):
             async with sessionmaker() as session:
                 await session.execute(text("SELECT 1"))
         # Every session was released — no connection leaked back into the pool.
-        assert engine.pool.checkedout() == 0
+        assert pool.checkedout() == 0
     finally:
         await engine.dispose()

@@ -6,7 +6,7 @@ a role. Members whose role the owner set by hand, or who came by e-mail invite, 
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -31,13 +31,13 @@ SHARE_LINKS = "/api/v1/share-links"
 async def _link(client: AsyncClient, headers: dict[str, str], pid: str, role: str) -> dict[str, Any]:
     r = await client.post(f"{PROJECTS}/{pid}/share-links", json={"role": role}, headers=headers)
     assert r.status_code == 201, r.text
-    return r.json()
+    return cast(dict[str, Any], r.json())
 
 
 async def _join(client: AsyncClient, headers: dict[str, str], token: str) -> dict[str, Any]:
     r = await client.post(f"{SHARE_LINKS}/{token}/join", headers=headers)
     assert r.status_code == 200, r.text
-    return r.json()
+    return cast(dict[str, Any], r.json())
 
 
 async def _member(
@@ -52,6 +52,12 @@ async def _revoke(client: AsyncClient, owner_h: dict[str, str], pid: str, link: 
     assert r.status_code == 204, r.text
 
 
+async def _found(client: AsyncClient, owner_h: dict[str, str], pid: str, email: str) -> dict[str, Any]:
+    member = await _member(client, owner_h, pid, email)
+    assert member is not None, f"{email} is not a member"
+    return member
+
+
 async def test_revoke_restores_previous_role(
     async_client: AsyncClient, db_session: AsyncSession, enqueuer: FakeInviteEnqueuer
 ) -> None:
@@ -62,12 +68,12 @@ async def test_revoke_restores_previous_role(
 
     # AC3: C was invited as viewer, opens the edit link, becomes editor.
     assert await _join(async_client, carol_h, edit["token"]) == {"project_id": pid, "role": "editor"}
-    assert (await _member(async_client, owner_h, pid, "carol@example.com"))["role"] == "editor"
+    assert (await _found(async_client, owner_h, pid, "carol@example.com"))["role"] == "editor"
 
     await _revoke(async_client, owner_h, pid, edit)
 
     # C is returned to viewer, not removed.
-    carol = await _member(async_client, owner_h, pid, "carol@example.com")
+    carol = await _found(async_client, owner_h, pid, "carol@example.com")
     assert carol is not None
     assert carol["role"] == "viewer"
     assert carol["via_link"] is False
@@ -81,7 +87,7 @@ async def test_revoke_removes_link_only_members(
     view = await _link(async_client, owner_h, pid, "viewer")
     _, dan_h = await _auth(db_session, email="dan@example.com")
     await _join(async_client, dan_h, view["token"])
-    assert (await _member(async_client, owner_h, pid, "dan@example.com"))["via_link"] is True
+    assert (await _found(async_client, owner_h, pid, "dan@example.com"))["via_link"] is True
 
     await _revoke(async_client, owner_h, pid, view)
 
@@ -99,12 +105,12 @@ async def test_view_link_does_not_downgrade_editor(
 
     assert await _join(async_client, bob_h, view["token"]) == {"project_id": pid, "role": "editor"}
 
-    bob = await _member(async_client, owner_h, pid, "bob@example.com")
+    bob = await _found(async_client, owner_h, pid, "bob@example.com")
     assert bob["role"] == "editor"
     assert bob["via_link"] is False  # nothing changed, so nothing is attributed to the link
 
     await _revoke(async_client, owner_h, pid, view)
-    assert (await _member(async_client, owner_h, pid, "bob@example.com"))["role"] == "editor"
+    assert (await _found(async_client, owner_h, pid, "bob@example.com"))["role"] == "editor"
 
 
 async def test_hand_set_role_is_not_taken_back(
@@ -115,17 +121,17 @@ async def test_hand_set_role_is_not_taken_back(
     _, carol_h = await _add_member(async_client, db_session, owner_h, pid, "carol@example.com", role="viewer")
     edit = await _link(async_client, owner_h, pid, "editor")
     await _join(async_client, carol_h, edit["token"])
-    carol_id = (await _member(async_client, owner_h, pid, "carol@example.com"))["user_id"]
+    carol_id = (await _found(async_client, owner_h, pid, "carol@example.com"))["user_id"]
 
     # The owner sets the role by hand: the access no longer depends on the link.
     r = await async_client.patch(
         f"{PROJECTS}/{pid}/members/{carol_id}", json={"role": "editor"}, headers=owner_h
     )
     assert r.status_code == 200
-    assert (await _member(async_client, owner_h, pid, "carol@example.com"))["via_link"] is False
+    assert (await _found(async_client, owner_h, pid, "carol@example.com"))["via_link"] is False
 
     await _revoke(async_client, owner_h, pid, edit)
-    assert (await _member(async_client, owner_h, pid, "carol@example.com"))["role"] == "editor"
+    assert (await _found(async_client, owner_h, pid, "carol@example.com"))["role"] == "editor"
 
 
 async def test_email_invited_member_is_not_removed_by_revoke(
@@ -140,7 +146,7 @@ async def test_email_invited_member_is_not_removed_by_revoke(
     await _join(async_client, carol_h, view["token"])
     await _revoke(async_client, owner_h, pid, view)
 
-    carol = await _member(async_client, owner_h, pid, "carol@example.com")
+    carol = await _found(async_client, owner_h, pid, "carol@example.com")
     assert carol is not None and carol["role"] == "viewer"
 
 
@@ -156,7 +162,7 @@ async def test_rotate_takes_back_only_the_rotated_role(
 
     await _link(async_client, owner_h, pid, "editor")  # rotate the edit link only
 
-    eve = await _member(async_client, owner_h, pid, "eve@example.com")
+    eve = await _found(async_client, owner_h, pid, "eve@example.com")
     assert eve is not None and eve["role"] == "viewer"
     assert edit["id"] not in {
         row["id"] for row in (await async_client.get(f"{PROJECTS}/{pid}/share-links", headers=owner_h)).json()

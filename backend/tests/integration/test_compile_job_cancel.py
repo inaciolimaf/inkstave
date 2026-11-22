@@ -47,7 +47,7 @@ async def test_precancelled_exits_without_compiling(db_session: AsyncSession, re
 async def test_cancel_during_run_trips_token(db_session: AsyncSession, redis: Any, tmp_path: Path) -> None:
     # spec 68 #93/#94: real workdir + deterministic (event-driven) cancel, no sleeps.
     cid = await _new_compile(db_session)
-    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))
     service = CancelAwareWorkdirService(tmp_path)
 
     async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None: ...

@@ -101,7 +101,7 @@ async def test_import_oversize_413_and_no_orphan_blob(
     resp = await post_import(async_client, headers, big)
     assert resp.status_code == 413
     # The staged blob was best-effort deleted (no orphan).
-    assert store._d == {}  # type: ignore[attr-defined]
+    assert store._d == {}  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert len(enqueuer.calls) == 0
 
 

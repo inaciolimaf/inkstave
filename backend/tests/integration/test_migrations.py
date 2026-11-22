@@ -153,7 +153,8 @@ async def test_autogenerate_is_empty(_template_db: str) -> None:
             sync_conn,
             opts={"compare_type": True, "compare_server_default": True},
         )
-        return compare_metadata(ctx, Base.metadata)
+        typed_result: list[Any] = compare_metadata(ctx, Base.metadata)
+        return typed_result
 
     try:
         async with engine.connect() as conn:

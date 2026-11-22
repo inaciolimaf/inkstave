@@ -137,7 +137,7 @@ async def test_append_is_constant_cost(db_session: AsyncSession, query_counter: 
 
 def _suggesting_client_updates() -> list[bytes]:
     """Updates from a client that typed a suggested insertion and a suggested deletion (spec 119)."""
-    client = Doc()
+    client: Doc[Any] = Doc()
     client_text = client.get(YDocument.TEXT_KEY, type=Text)
     client_map = client.get(YDocument.SUGGESTIONS_KEY, type=Map)
     collected: list[bytes] = []

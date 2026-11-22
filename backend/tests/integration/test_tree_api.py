@@ -31,8 +31,8 @@ async def test_create_and_paths(async_client: AsyncClient, db_session: AsyncSess
     doc = await _create(async_client, pid, headers, type_="doc", name="main.tex")
     assert folder["status"] == 201
     assert doc["status"] == 201
-    assert folder["json"]["path"] == "figures"  # type: ignore[index]
-    assert doc["json"]["path"] == "main.tex"  # type: ignore[index]
+    assert folder["json"]["path"] == "figures"
+    assert doc["json"]["path"] == "main.tex"
 
     nested = await _create(
         async_client,
@@ -40,10 +40,10 @@ async def test_create_and_paths(async_client: AsyncClient, db_session: AsyncSess
         headers,
         type_="doc",
         name="diagram.tex",
-        parent_id=folder["json"]["id"],  # type: ignore[index]
+        parent_id=folder["json"]["id"],
     )
-    assert nested["json"]["path"] == "figures/diagram.tex"  # type: ignore[index]
-    assert nested["json"]["parent_id"] == folder["json"]["id"]  # type: ignore[index]
+    assert nested["json"]["path"] == "figures/diagram.tex"
+    assert nested["json"]["parent_id"] == folder["json"]["id"]
 
 
 async def test_duplicate_name_is_case_insensitive_conflict(
@@ -54,7 +54,7 @@ async def test_duplicate_name_is_case_insensitive_conflict(
     await _create(async_client, pid, headers, type_="doc", name="Main.tex")
     dup = await _create(async_client, pid, headers, type_="doc", name="main.tex")
     assert dup["status"] == 409
-    assert dup["json"]["error"]["type"] == "name_conflict"  # type: ignore[index]
+    assert dup["json"]["error"]["type"] == "name_conflict"
 
 
 # "" (empty) and "x"*256 (over-long) now fail fast at the schema (spec 100); the
@@ -78,10 +78,10 @@ async def test_create_under_non_folder_parent(async_client: AsyncClient, db_sess
         headers,
         type_="doc",
         name="child.tex",
-        parent_id=doc["json"]["id"],  # type: ignore[index]
+        parent_id=doc["json"]["id"],
     )
     assert child["status"] == 422
-    assert child["json"]["error"]["type"] == "parent_not_a_folder"  # type: ignore[index]
+    assert child["json"]["error"]["type"] == "parent_not_a_folder"
 
 
 async def test_create_under_other_project_parent_is_404(
@@ -97,10 +97,10 @@ async def test_create_under_other_project_parent_is_404(
         headers,
         type_="doc",
         name="c.tex",
-        parent_id=other_folder["json"]["id"],  # type: ignore[index]
+        parent_id=other_folder["json"]["id"],
     )
     assert child["status"] == 404
-    assert child["json"]["error"]["type"] == "parent_not_found"  # type: ignore[index]
+    assert child["json"]["error"]["type"] == "parent_not_found"
 
 
 async def test_rename(async_client: AsyncClient, db_session: AsyncSession) -> None:
@@ -108,7 +108,7 @@ async def test_rename(async_client: AsyncClient, db_session: AsyncSession) -> No
     pid = await _project(async_client, headers)
     a = await _create(async_client, pid, headers, type_="doc", name="a.tex")
     await _create(async_client, pid, headers, type_="doc", name="taken.tex")
-    eid = a["json"]["id"]  # type: ignore[index]
+    eid = a["json"]["id"]
 
     ok = await async_client.patch(
         f"{_tree(pid)}/entities/{eid}/rename", json={"name": "b.tex"}, headers=headers
@@ -141,4 +141,4 @@ async def test_create_accepts_max_length_name(async_client: AsyncClient, db_sess
     name = "x" * 255
     result = await _create(async_client, pid, headers, type_="doc", name=name)
     assert result["status"] == 201
-    assert result["json"]["name"] == name  # type: ignore[index]
+    assert result["json"]["name"] == name

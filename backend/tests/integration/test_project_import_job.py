@@ -176,7 +176,7 @@ async def test_zip_slip_writes_nothing(
     # Nothing reconstructed: only the project's root folder exists; no file blobs.
     tree = (await async_client.get(f"/api/v1/projects/{pid}/tree", headers=headers)).json()
     assert (tree["root"].get("children") or []) == []
-    assert all(not k.startswith(f"projects/{pid}/files/") for k in store._d)  # type: ignore[attr-defined]
+    assert all(not k.startswith(f"projects/{pid}/files/") for k in store._d)  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
 
 
 async def test_ownership_defence_marks_error(

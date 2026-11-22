@@ -43,7 +43,7 @@ class _Files:
 
 
 async def test_real_minimal_compile(tmp_path: Path) -> None:
-    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path / "compiles"))  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path / "compiles"))
     runner = LocalTectonicRunner(
         bin_path=settings.tectonic_bin,
         cache_dir=Path(settings.tectonic_cache_dir),

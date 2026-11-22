@@ -21,12 +21,13 @@ pytestmark = pytest.mark.integration
 
 async def _show(session: AsyncSession, name: str) -> str:
     result = await session.connection()
-    return (await result.exec_driver_sql(f"SHOW {name}")).scalar_one()
+    typed_result: str = (await result.exec_driver_sql(f"SHOW {name}")).scalar_one()
+    return typed_result
 
 
 def _settings(db_engine: Any, **overrides: Any) -> Settings:
     url = db_engine.url.render_as_string(hide_password=False)
-    return Settings(_env_file=None, database_url=url, **overrides)  # type: ignore[call-arg]
+    return Settings(_env_file=None, database_url=url, **overrides)
 
 
 @pytest_asyncio.fixture

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.core.config.settings import get_settings
+from inkstave.core.config.settings import Settings, get_settings
 from inkstave.infra.storage.local import LocalObjectStore
 from inkstave.modules.auth.credentials.tokens import build_token_service
 from inkstave.modules.collab.crdt.ydocument import YDocument
@@ -45,7 +45,7 @@ class _SessionCtx:
         return False
 
 
-def _settings(tmp_path: Any, **over: Any):
+def _settings(tmp_path: Any, **over: Any) -> Settings:
     return get_settings().model_copy(
         update={"history_debounce_ms": 10_000_000, "history_blob_prefix": "history/", **over}
     )
@@ -143,7 +143,7 @@ async def test_compact_preserves_reconstructed_state(db_session: AsyncSession, t
     head = await db_session.scalar(
         select(func.max(HistoryUpdate.version)).where(HistoryUpdate.doc_id == doc_id)
     )
-    before = await reconstruct_state(db_session, store, doc_id, head)
+    before = await reconstruct_state(db_session, store, doc_id, cast(int, head))
 
     ctx = {
         "settings": settings,
@@ -152,12 +152,14 @@ async def test_compact_preserves_reconstructed_state(db_session: AsyncSession, t
     }
     await compact_history(ctx)
 
-    after = await reconstruct_state(db_session, store, doc_id, head)
+    after = await reconstruct_state(db_session, store, doc_id, cast(int, head))
     assert after == before  # AC4: reconstruction byte-identical after compaction
 
 
 @pytest.fixture
-async def restorable(app: Any, async_client: AsyncClient, db_session: AsyncSession, redis: Any):
+async def restorable(
+    app: Any, async_client: AsyncClient, db_session: AsyncSession, redis: Any
+) -> SimpleNamespace:
     comp = install_collab(app, db_session, redis, history_debounce_ms=10_000_000)
     user = await UserFactory.create(db_session)
     await db_session.commit()
@@ -198,7 +200,7 @@ async def test_restore_duplicate_label_fails_fast(
     monkeypatch.setattr(
         restorable.comp.redis_bridge,
         "publish",
-        lambda *a, **k: published.append(a),  # type: ignore[misc]
+        lambda *a, **k: published.append(a),
     )
     before = await db_session.scalar(
         select(func.max(HistoryUpdate.version)).where(HistoryUpdate.doc_id == restorable.doc_uuid)

@@ -97,7 +97,7 @@ async def test_failed_blob_delete_is_logged_and_the_others_still_go(
             raise OSError("object store unavailable")
         await real_delete(key)
 
-    store.delete = flaky_delete  # type: ignore[method-assign]
+    store.delete = flaky_delete  # type: ignore[method-assign]  # replaces a method with a test double
     await purge_blobs_after_commit(db_session, store, [doc_id])
     await db_session.commit()
 

@@ -203,12 +203,12 @@ async def test_reordered_updates_converge_through_manager(db_session: AsyncSessi
     # Two independent concurrent edits forked from that same base (commuting inserts).
     fork_1 = YDocument()
     fork_1.apply_update(base_state)
-    fork_1._text.insert(5, " world")  # type: ignore[attr-defined]
+    fork_1._text.insert(5, " world")
     update_1 = fork_1.diff(base_sv)
 
     fork_2 = YDocument()
     fork_2.apply_update(base_state)
-    fork_2._text.insert(0, "hi ")  # type: ignore[attr-defined]
+    fork_2._text.insert(0, "hi ")
     update_2 = fork_2.diff(base_sv)
 
     # Deliver the same update bytes in opposite orders to the two docs.

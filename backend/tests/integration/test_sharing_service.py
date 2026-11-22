@@ -9,17 +9,19 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from inkstave.modules.auth.models.user import User
 from inkstave.modules.projects import sharing
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.models.invite import InviteStatus, ProjectInvite
 from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
+from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.schemas.sharing import InviteCreate
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration  # touches the DB
 
 
-async def _owner_and_project(db_session: AsyncSession):
+async def _owner_and_project(db_session: AsyncSession) -> tuple[User, Project]:
     owner = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, owner.id, "P")

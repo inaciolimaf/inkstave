@@ -11,7 +11,7 @@ import asyncio
 import io
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -23,6 +23,7 @@ from dulwich.repo import Repo
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from urllib3 import PoolManager
 
 from inkstave.core.config.settings import get_settings
 from inkstave.infra.deps import get_object_store
@@ -86,7 +87,7 @@ def git_client(
     """A dulwich client for the Git URL, authenticated with ``token`` as the password (or none)."""
     pool = AsgiPool(client, loop)
     return Urllib3HttpGitClient(
-        BASE_HOST, pool_manager=pool, username="git" if token else None, password=token
+        BASE_HOST, pool_manager=cast(PoolManager, pool), username="git" if token else None, password=token
     )
 
 
@@ -103,7 +104,7 @@ def _clone_sync(
 ) -> Repo:
     repo = Repo.init(str(target), mkdir=True)
     result = git_client(client, token, loop).fetch(repo_path_for(project_id).encode(), repo)
-    repo.refs[MAIN_REF] = result.refs[MAIN_REF]
+    repo.refs[MAIN_REF] = cast(ObjectID, result.refs[MAIN_REF])
     repo.refs.set_symbolic_ref(Ref(b"HEAD"), MAIN_REF)
     return repo
 
@@ -255,4 +256,4 @@ async def entity_ids_by_name(db_session: AsyncSession, project_id: UUID) -> dict
     rows = await db_session.execute(
         select(TreeEntity.name, TreeEntity.id).where(TreeEntity.project_id == project_id)
     )
-    return dict(rows.all())
+    return dict(rows.tuples().all())

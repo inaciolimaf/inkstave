@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from inkstave.core.config.agent import AgentSettings
 from inkstave.modules.agent.diffs import materialize_diffs
 from inkstave.modules.agent.diffs import repository as diff_repo
-from inkstave.modules.agent.diffs.models import ProposedDiffStatus
+from inkstave.modules.agent.diffs.models import ProposedDiff, ProposedDiffStatus
 from inkstave.modules.agent.graph import repository as agent_repo
 from inkstave.modules.agent.graph.edits import StagedEdit
+from inkstave.modules.agent.graph.state import AgentState
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
 from inkstave.modules.projects.models.tree_entity import TreeEntityType
@@ -43,8 +45,10 @@ def _edit(doc_id: str, old_text: str, new_text: str) -> StagedEdit:
     )
 
 
-async def _materialize(db, seed, edits, **settings_over):
-    state = {"staged_edits": edits}
+async def _materialize(
+    db: AsyncSession, seed: SimpleNamespace, edits: list[StagedEdit], **settings_over: Any
+) -> list[ProposedDiff]:
+    state = cast(AgentState, {"staged_edits": edits})
     return await materialize_diffs(
         state=state,
         settings=AgentSettings(**settings_over),

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -158,7 +158,8 @@ async def test_eval_disallowed_tool_is_flagged(project: SimpleNamespace, db_sess
     flagged = [
         e
         for e in result.audit_events
-        if e["action"] == "injection_flagged" and (e.get("detail") or {}).get("reason") == "disallowed_tool"
+        if e["action"] == "injection_flagged"
+        and (cast(dict[str, Any], e).get("detail") or {}).get("reason") == "disallowed_tool"
     ]
     assert flagged  # the disallowed tool produced an injection_flagged audit event
     assert result.error is None  # the run continued/finished gracefully

@@ -63,7 +63,9 @@ async def seed(db_session: AsyncSession) -> SimpleNamespace:
     )
 
 
-def _ctx(db: AsyncSession, redis: Any, llm: FakeLLM, sink: InMemoryEventSink, settings: AgentSettings):
+def _ctx(
+    db: AsyncSession, redis: Any, llm: FakeLLM, sink: InMemoryEventSink, settings: AgentSettings
+) -> dict[str, Any]:
     return {
         "settings": settings,
         "session_factory": lambda: _SessionCtx(db),

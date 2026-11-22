@@ -16,7 +16,8 @@ from inkstave.modules.collab.models import CrdtUpdate
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.models.document import Document
 from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import (
     ASGIWebSocketClient,
@@ -34,7 +35,7 @@ def _token(user: Any) -> str:
     return token
 
 
-async def _setup(db_session: AsyncSession):
+async def _setup(db_session: AsyncSession) -> tuple[Project, TreeEntity, dict[str, str]]:
     owner = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, owner.id, "P")
@@ -138,7 +139,7 @@ async def test_editor_update_applies_and_persists(app: Any, db_session: AsyncSes
         count = await db_session.scalar(
             select(func.count()).select_from(CrdtUpdate).where(CrdtUpdate.document_id == entity.id)
         )
-        assert count >= 1  # AC8 applied + persisted
+        assert count is not None and count >= 1  # AC8 applied + persisted
 
         await components.manager.flush(entity.id)
         content = await db_session.scalar(select(Document.content).where(Document.entity_id == entity.id))

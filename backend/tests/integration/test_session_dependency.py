@@ -8,11 +8,12 @@ isolated and rolled back.
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import AsyncGenerator
+from typing import Any, cast
 
 import pytest
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from inkstave.core.db.session import get_db_session
 from inkstave.modules.admin.models import Ping
@@ -36,7 +37,7 @@ async def test_get_db_session_commits_on_success(db_engine: Any) -> None:
         join_transaction_mode="create_savepoint",
     )
     try:
-        gen = get_db_session(sessionmaker)
+        gen = cast(AsyncGenerator[AsyncSession, None], get_db_session(sessionmaker))
         session = await anext(gen)
         session.add(Ping(note="dep-commit"))
         with pytest.raises(StopAsyncIteration):
@@ -57,7 +58,7 @@ async def test_get_db_session_rolls_back_on_error(db_engine: Any) -> None:
         join_transaction_mode="create_savepoint",
     )
     try:
-        gen = get_db_session(sessionmaker)
+        gen = cast(AsyncGenerator[AsyncSession, None], get_db_session(sessionmaker))
         session = await anext(gen)
         session.add(Ping(note="dep-rollback"))
         await session.flush()

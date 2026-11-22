@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import jwt
@@ -31,10 +32,11 @@ async def _register(
     return email, password
 
 
-async def _login(client: AsyncClient, email: str, password: str) -> dict[str, str]:
+async def _login(client: AsyncClient, email: str, password: str) -> dict[str, Any]:
     resp = await client.post(LOGIN, json={"email": email, "password": password})
     assert resp.status_code == 200
-    return resp.json()
+    body: dict[str, Any] = resp.json()
+    return body
 
 
 async def test_login_success_returns_token_pair(async_client: AsyncClient) -> None:

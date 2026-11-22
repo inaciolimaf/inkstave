@@ -36,7 +36,7 @@ async def _user(db_session: AsyncSession) -> tuple[Any, dict[str, str]]:
     return user, {"Authorization": f"Bearer {token}"}
 
 
-async def _set_version(comp: Any, pid: UUID, doc_id: UUID, text: str, author_id: UUID) -> None:
+async def _set_version(comp: Any, pid: UUID, doc_id: UUID, text: str, author_id: UUID | None) -> None:
     update = await comp.manager.apply_server_update(doc_id, text, "setup")
     await comp.history.capture_update(
         project_id=pid, doc_id=doc_id, update=update, author_id=author_id, at=_NOW
@@ -52,7 +52,7 @@ async def _max_version(db_session: AsyncSession, doc_id: UUID) -> int:
 
 
 @pytest.fixture
-async def hist(app: Any, async_client: AsyncClient, db_session: AsyncSession, redis: Any):
+async def hist(app: Any, async_client: AsyncClient, db_session: AsyncSession, redis: Any) -> SimpleNamespace:
     comp = install_collab(app, db_session, redis, history_debounce_ms=10_000_000)
     owner, owner_h = await _user(db_session)
     project = await create_project(db_session, owner.id, "P")

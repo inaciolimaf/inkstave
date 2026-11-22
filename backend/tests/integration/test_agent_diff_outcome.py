@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -96,7 +96,7 @@ async def test_outcome_is_stored_and_listed(
     audit = await db_session.execute(
         select(AgentAuditLog).where(AgentAuditLog.action == AgentAuditAction.proposal_decided.value)
     )
-    assert [row.detail["diff_id"] for row in audit.scalars()] == [str(diff.id)]
+    assert [cast(dict[str, Any], row.detail)["diff_id"] for row in audit.scalars()] == [str(diff.id)]
 
 
 @pytest.mark.parametrize(

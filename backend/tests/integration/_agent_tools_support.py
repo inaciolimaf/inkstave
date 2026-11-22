@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from inkstave.core.config.agent import AgentSettings
 from inkstave.modules.agent.graph import repository as agent_repo
 from inkstave.modules.agent.llm.base import LLMResponse, ToolCall
+from inkstave.modules.agent.models import AgentSession
 from inkstave.modules.agent.tools.base import ToolContext
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.content.documents import set_content_from_collab
@@ -63,7 +64,7 @@ def _tool_call(name: str, args: dict[str, Any]) -> LLMResponse:
     )
 
 
-async def _session(db: AsyncSession, seed: SimpleNamespace):
+async def _session(db: AsyncSession, seed: SimpleNamespace) -> AgentSession:
     return await agent_repo.create_session(
         db, project_id=seed.project_id, user_id=seed.owner.id, model="fake/model"
     )

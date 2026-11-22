@@ -32,12 +32,12 @@ async def test_delete_recursive(async_client: AsyncClient, db_session: AsyncSess
         headers,
         type_="doc",
         name="inner.tex",
-        parent_id=folder["json"]["id"],  # type: ignore[index]
+        parent_id=folder["json"]["id"],
     )
 
     deleted = await async_client.delete(
         f"{_tree(pid)}/entities/{folder['json']['id']}",
-        headers=headers,  # type: ignore[index]
+        headers=headers,
     )
     assert deleted.status_code == 204
 
@@ -90,7 +90,7 @@ async def test_root_is_immutable(async_client: AsyncClient, db_session: AsyncSes
     )
     move = await async_client.patch(
         f"{_tree(pid)}/entities/{root_id}/move",
-        json={"new_parent_id": folder["json"]["id"]},  # type: ignore[index]
+        json={"new_parent_id": folder["json"]["id"]},
         headers=headers,
     )
     delete = await async_client.delete(f"{_tree(pid)}/entities/{root_id}", headers=headers)
@@ -104,7 +104,7 @@ async def test_ownership_isolation(async_client: AsyncClient, db_session: AsyncS
     headers_b = await _auth(db_session)
     pid = await _project(async_client, headers_a)
     entity = await _create(async_client, pid, headers_a, type_="doc", name="a.tex")
-    eid = entity["json"]["id"]  # type: ignore[index]
+    eid = entity["json"]["id"]
 
     calls = [
         async_client.get(_tree(pid), headers=headers_b),

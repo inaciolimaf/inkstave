@@ -47,10 +47,10 @@ async def test_seeded_compile_assembles_every_seeded_file(db_session: AsyncSessi
     store = LocalObjectStore(tmp_path / "blobs", 65536)
     lived = await build_lived_in_project(db_session, store)
     await db_session.commit()
-    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path / "compiles"))  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path / "compiles"))
     service = CompileService(
         settings=settings,
-        runner=_FakeRunner(),  # type: ignore[arg-type]
+        runner=_FakeRunner(),
         docs=DbDocumentSource(db_session),
         files=StorageFileSource(db_session, store),
         packages=load_package_config(tmp_path / "none.toml", settings),

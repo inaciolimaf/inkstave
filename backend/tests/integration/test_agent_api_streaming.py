@@ -45,6 +45,7 @@ async def test_token_stream_and_done(seed: SimpleNamespace, db_session: AsyncSes
     assert all(t != "done" for t in types[:-1])  # terminal is last
 
     refreshed = await db_session.get(AgentSession, session.id)
+    assert refreshed is not None
     assert refreshed.run_state == "done" and refreshed.active_run_id is None
 
 
@@ -127,6 +128,7 @@ async def test_cancellation(seed: SimpleNamespace, db_session: AsyncSession, red
     error = sink.events[-1]
     assert error["type"] == "error" and error["code"] == "cancelled"  # AC6
     refreshed = await db_session.get(AgentSession, session.id)
+    assert refreshed is not None
     assert refreshed.run_state == "error" and refreshed.active_run_id is None
 
 
@@ -154,4 +156,5 @@ async def test_internal_error_emits_single_error(
     errors = [e for e in sink.events if e["type"] == "error"]
     assert len(errors) == 1 and errors[0]["code"] == "internal"
     refreshed = await db_session.get(AgentSession, session.id)
+    assert refreshed is not None
     assert refreshed.run_state == "error"

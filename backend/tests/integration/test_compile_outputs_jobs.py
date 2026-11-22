@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +29,7 @@ pytestmark = pytest.mark.integration
 
 
 async def test_job_persists_outputs_and_cleans_workdir(
-    db_session: AsyncSession, redis, tmp_path: Path
+    db_session: AsyncSession, redis: Any, tmp_path: Path
 ) -> None:
     from inkstave.modules.compile.queue.jobs import run_compile
 
@@ -36,9 +37,9 @@ async def test_job_persists_outputs_and_cleans_workdir(
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"  # the job cleans this up after persisting
     backend = LocalObjectStore(tmp_path / "blobs", 65536)
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
 
-    async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
+    async def persist(session: AsyncSession, cid: UUID, pid: UUID, res: CompileResult) -> None:
         await OutputStore(storage=backend, repo=OutputRepository(session), settings=settings).persist(
             cid, pid, res
         )
@@ -64,7 +65,7 @@ async def test_job_persists_outputs_and_cleans_workdir(
 def _ordered_persist_hook(backend: LocalObjectStore, settings: Settings, order: list[str]) -> Any:
     """A persist hook that records when it ran, relative to the publish spy."""
 
-    async def persist(session: AsyncSession, cid, pid, res: CompileResult) -> None:
+    async def persist(session: AsyncSession, cid: UUID, pid: UUID, res: CompileResult) -> None:
         await OutputStore(storage=backend, repo=OutputRepository(session), settings=settings).persist(
             cid, pid, res
         )
@@ -74,7 +75,7 @@ def _ordered_persist_hook(backend: LocalObjectStore, settings: Settings, order: 
 
 
 async def test_job_persists_before_terminal_status_event(
-    db_session: AsyncSession, redis, tmp_path: Path
+    db_session: AsyncSession, redis: Any, tmp_path: Path
 ) -> None:
     """AC2: outputs are persisted BEFORE the terminal status event is published.
     Spy on the persist hook and ``publish_status`` (instrumented on the job's
@@ -85,12 +86,12 @@ async def test_job_persists_before_terminal_status_event(
     _, _project, compile_row = await _seed(db_session)
     result = _result(tmp_path)
     result.workdir = tmp_path / "wd"
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
 
     order: list[str] = []
-    real_publish = jobs_module.publish_status
+    real_publish = jobs_module.publish_status  # type: ignore[attr-defined]  # re-exported by jobs; the test wraps it
 
-    async def spy_publish(*args, **kwargs):
+    async def spy_publish(*args: Any, **kwargs: Any) -> Any:
         order.append("publish")
         return await real_publish(*args, **kwargs)
 

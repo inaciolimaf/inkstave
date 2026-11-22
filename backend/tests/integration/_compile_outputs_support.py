@@ -6,13 +6,16 @@ Not ``test_``-prefixed so pytest does not collect it. Imported by the
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import Settings
 from inkstave.infra.storage.local import LocalObjectStore
+from inkstave.modules.auth.models.user import User
 from inkstave.modules.compile.models.compile import Compile
 from inkstave.modules.compile.models.compile_output import CompileOutput
 from inkstave.modules.compile.outputs.repository import OutputRepository
@@ -20,6 +23,7 @@ from inkstave.modules.compile.outputs.store import OutputStore
 from inkstave.modules.compile.queue.repository import CompileRepository
 from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
 from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.project import Project
 from tests.factories import UserFactory
 
 FILES = {
@@ -50,7 +54,7 @@ def _result(tmp_path: Path) -> CompileResult:
     )
 
 
-async def _seed(db_session: AsyncSession):
+async def _seed(db_session: AsyncSession) -> tuple[User, Project, Compile]:
     user = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, user.id, "P")
@@ -64,16 +68,16 @@ def _store(db_session: AsyncSession, tmp_path: Path) -> OutputStore:
     return OutputStore(
         storage=LocalObjectStore(tmp_path / "blobs", 65536),
         repo=OutputRepository(db_session),
-        settings=Settings(_env_file=None),  # type: ignore[call-arg]
+        settings=Settings(_env_file=None),
     )
 
 
-async def _collect(stream) -> bytes:
+async def _collect(stream: AsyncIterator[bytes]) -> bytes:
     return b"".join([c async for c in stream])
 
 
 async def _compile_with_output(
-    db_session: AsyncSession, project_id, user_id, created_at: datetime
+    db_session: AsyncSession, project_id: UUID, user_id: UUID, created_at: datetime
 ) -> Compile:
     row = Compile(
         project_id=project_id,
