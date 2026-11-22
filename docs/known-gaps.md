@@ -150,8 +150,8 @@ run; the rest were read, not run.
 
 - History versions recorded before the seed fix, for documents that had content when first opened, reconstruct
   empty or wrong text; the document heals from its next edit, the old versions cannot be recovered.
-- Multiple backend replicas are unsafe for collaboration: the forwarder never applies updates to the receiving
-  `YDocument`, and compaction then overwrites the snapshot with partial state.
+- With several backend replicas, the history capture still buffers updates in memory per replica and was not
+  re-checked under replicas; awareness (cursors, presence) stays per replica.
 - Offloaded history blobs are orphaned when a project is soft-deleted (nothing purges its history) and when a Git
   push deletes files (`git/push/apply.py` `_detach` does not notify the `on_entities_deleted` listeners).
 
