@@ -252,6 +252,14 @@ The tiers are chosen by marker, not by folder. `backend/tests/conftest.py` adds 
 a test under `backend/tests/unit` that reaches the `_template_db` fixture fails collection with
 `pytest.UsageError`.
 
+**Stateful features get a "do it again" test.** Anything that keeps state between actions (an agent
+chat, a review, a session, a panel's selection, a compile result) needs a test that does the action
+twice in a row, again after a simulated reload (remount from the server's state), and again after
+switching document. The Vitest files are `*.again.test.ts(x)` next to the module: `agent/reducer.again`,
+`agent/AgentPanel.again`, `diff-review/use-inline-review.again`, `editor/CollabEditor.again`,
+`history/HistoryPanel.again`, `pdf-preview/hooks/useCompile.again`. Each bug of this kind so far came from
+state left over from the previous action (a seen-event set, the transcript order, a view kept after a switch).
+
 **Integration tests skip when Postgres is unreachable.** `_template_db` in
 `backend/tests/fixtures/database.py` catches the connection failure and calls `pytest.skip`, so every
 dependent test skips and the run stays green. Each xdist worker uses its own database, migrated once
