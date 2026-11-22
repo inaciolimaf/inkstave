@@ -4,7 +4,8 @@ Real-time co-editing of one document. Browsers hold a Yjs document bound to Code
 per-document WebSocket room; the server keeps an authoritative `pycrdt` copy, persists every update to
 Postgres, fans messages out through Redis and writes the merged text back to `documents.content`, which
 REST readers, compile and the agent read. Presence (cursors, names) travels on the same socket and is
-never stored. It came from specs 28 (CRDT model), 29 (transport), 30 and 34 (roles), with later fixes in
+never stored. Several backend processes can share the database and Redis; the stored state is the merge point
+(ADR 0123). It came from specs 28 (CRDT model), 29 (transport), 30 and 34 (roles), with later fixes in
 65, 66 and 74. The module is `backend/src/inkstave/modules/collab`.
 
 ## Where it is
@@ -18,9 +19,9 @@ never stored. It came from specs 28 (CRDT model), 29 (transport), 30 and 34 (rol
 | `backend/src/inkstave/modules/collab/crdt/awareness.py` | `AwarenessRegistry`, in-memory presence per document |
 | `backend/src/inkstave/modules/collab/crdt/state.py` | `CollabSettings`, `UpdateTooLargeError`, `_Entry`, `OpenDocument` |
 | `backend/src/inkstave/modules/collab/rooms/manager.py` | `DocumentManager`: refcounted in-memory documents, flush, compaction, eviction |
-| `backend/src/inkstave/modules/collab/rooms/store.py` | `CrdtStore`: snapshot plus append-only log |
-| `backend/src/inkstave/modules/collab/rooms/content_bridge.py` | `ContentBridge`: CRDT text to and from `documents.content` |
-| `backend/src/inkstave/modules/collab/rooms/flush.py` | `flush_open_project_docs`: forced flush before a worker job reads content |
+| `backend/src/inkstave/modules/collab/rooms/store.py` | `CrdtStore`: snapshot plus append-only log. Every read or write of the stored state runs under a per-document advisory lock and merges first (ADR 0123) |
+| `backend/src/inkstave/modules/collab/rooms/content_bridge.py` | `ContentBridge`: writes the CRDT text into `documents.content` |
+| `backend/src/inkstave/modules/collab/rooms/flush.py` | `flush_open_project_docs`: writes the merged text of the project's documents before a worker job reads content, rooms on other replicas included |
 | `backend/src/inkstave/modules/collab/ws/router.py` | `collab_ws` endpoint, `_reject`, `_admit`, `_join_room`, `_handshake`, `_serve` |
 | `backend/src/inkstave/modules/collab/ws/connection.py` | `_authorize`, `_writer`, `_force_close`, `_make_forwarder`, `_cleanup` |
 | `backend/src/inkstave/modules/collab/ws/messaging.py` | `_receive_loop`, `_frame_rejection`, `_dispatch`, `_RateLimiter` |
@@ -142,7 +143,10 @@ message to `_dispatch`:
 All delivery, including to clients on the same instance, goes through Redis. `RedisBridge.publish` wraps the
 payload in an envelope of instance id, origin connection id and payload. `_reader` polls `get_message` once
 a second rather than using `listen()`, and passes `exclude=origin_conn_id` only when the envelope came from
-this instance. `_make_forwarder` calls `RoomManager.local_broadcast_timed`: each socket gets `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS`
+this instance, and `remote=True` when it came from another one. `_make_forwarder` first applies a `remote`
+update to the local copy (`DocumentManager.apply_remote_update`, origin `remote`: not stored again, not relayed
+again, the text marked dirty), so the copy of every replica is complete (ADR 0123). Then it calls
+`RoomManager.local_broadcast_timed`: each socket gets `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS`
 (concurrently with the others) to make room in its send queue. A socket that still has no room is reported back
 and closed with 4408 in a spawned task. `_writer` is the only code that writes to the socket.
 
@@ -157,33 +161,37 @@ reachable from ASGI, which is why the keepalive is at the application level.
 ### Manager lifecycle
 
 `DocumentManager.acquire` retries around a per-document `asyncio.Lock` because eviction can swap the lock
-out. `_load` reads `CrdtStore.load` (snapshot merged with the log in id order). If the resulting text is
-empty it seeds from `documents.content` via `ContentBridge.load_initial_text`, using `replace_text`, and
-writes a snapshot at once.
+out. `_load` calls `CrdtStore.load(seed=True)`: the snapshot merged with the log in id order, under the document's
+advisory lock. If the resulting text is empty it seeds from `documents.content` in the same transaction, using
+`replace_text`, and writes a snapshot at once.
 
 `release` decrements the refcount. At zero it calls `flush_text_now`, compacts if updates are pending, and
 starts `_evict_after_idle`. Eviction drops the entry, the awareness state, the lock and the load counter.
 
 Compaction (`_maybe_compact`, `_compact`) runs inside `handle_update` when `updates_since_snapshot` reaches
-`COLLAB_SNAPSHOT_EVERY_UPDATES` or `COLLAB_SNAPSHOT_INTERVAL_SECONDS` have passed. `CrdtStore.snapshot`
-writes state, bumps `seq` and deletes log rows up to `last_update_id` in one transaction.
+`COLLAB_SNAPSHOT_EVERY_UPDATES` or `COLLAB_SNAPSHOT_INTERVAL_SECONDS` have passed. `CrdtStore.snapshot` merges
+the stored snapshot, the log rows it reads and the in-memory state, writes the result, bumps `seq` and deletes
+exactly the log rows it read (those with `id <= upto_update_id` when given) in one transaction under the
+advisory lock. `_compact` then reloads the stored state into memory, so a replica that missed a relayed update
+catches up.
 
 ### Flush to `documents.content`
 
-`_do_flush_text` copies the text under the lock, clears `dirty_text`, then calls `ContentBridge.flush_text`
-(`set_content_from_collab`, a direct column write that emits no CRDT update) and
-`CrdtStore.mark_text_synced`. The write stays under the per-document lock, so two flushes reach the column in the
-order they copied the text (an older copy written last would leave the agent and compile on stale text). Edits
+`_do_flush_text` clears `dirty_text` and calls `CrdtStore.flush_text`. In one transaction under the advisory
+lock, that merges the stored snapshot, the log and the in-memory state, writes the text of the merge through
+`ContentBridge.write_text` (`set_content_from_collab`, a direct column write that emits no CRDT update) and
+records `text_synced_seq`. The in-memory copy then catches up with the merge. Two flushes, on one replica or on
+two, reach the column in the order they read the stored state, so an older text is never written last. Edits
 wait for that write, which is one short commit.
 `flush_text_if_dirty` is the debounced path without a forced write. Callers:
 
 - `release` at refcount zero (forced);
-- `flush_open_project_docs`, from the compile route, the agent run route and the zip export route, which calls
-  `DocumentManager.flush` for this project's in-memory documents and swallows errors;
+- `flush` (`DocumentManager.flush`), from `flush_open_project_docs`: the compile route, the agent run route,
+  the zip export route and the Git snapshot. For each document of the project that has a stored snapshot or log
+  rows, or is open here, it writes the merged text, so a room open on another replica is covered (ADR 0123).
+  A document not open here is written from the stored state alone. Errors are logged and swallowed;
 - the debounced `_delayed_flush`, `COLLAB_TEXT_FLUSH_DEBOUNCE_MS` after an update. It runs inside `flush_task`, so
   `_do_flush_text` cancels a pending `flush_task` only when it is not the current task.
-
-`flush_open_project_docs` only sees rooms in its own process.
 
 ### Disconnect
 
@@ -233,6 +241,10 @@ It resolves at once when no socket is open, and when the socket closes first. Ca
 | Concurrent clients converge, also after an offline period | `backend/tests/integration/test_runtime_collab_convergence.py::test_concurrent_edits_converge`, `backend/tests/integration/test_runtime_collab_convergence.py::test_offline_client_merges_on_reconnect` |
 | The relay excludes the originating socket | `backend/tests/integration/test_runtime_collab_convergence.py::test_relay_excludes_origin` |
 | Redis delivers across instances and excludes the origin only on its own instance (transport only, no `DocumentManager` involved) | `backend/tests/unit/test_collab_ws_redis.py::test_cross_instance_relay_and_origin_exclusion`, `backend/tests/unit/test_collab_ws_redis.py::test_cross_instance_room_delivery` |
+| Two replicas sharing a database converge: an edit on one reaches the other's copy, which is not stored twice | `backend/tests/integration/test_collab_replicas.py::test_edits_on_both_replicas_converge` |
+| Compaction on either replica drops no stored update, including one not yet relayed to it | `backend/tests/integration/test_collab_replicas.py::test_compaction_on_either_replica_drops_no_stored_update` |
+| A forced flush on one replica writes the edit typed on another (`flush_open_project_docs`) | `backend/tests/integration/test_collab_replicas.py::test_forced_flush_on_a_writes_the_edit_typed_on_b` |
+| A replica stopping loses no acknowledged edit | `backend/tests/integration/test_collab_replicas.py::test_a_replica_stopping_loses_no_acknowledged_edit` |
 | Concurrent acquires load once | `backend/tests/integration/test_collab_manager.py::test_concurrent_acquire_loads_once`, `backend/tests/integration/test_collab_refactor.py::test_concurrent_acquire_evicted_lock_swap_loads_once` |
 | No eviction while a connection holds the document | `backend/tests/integration/test_collab_refactor.py::test_no_eviction_while_connections_remain` |
 | Eviction leaves no per-document state | `backend/tests/integration/test_collab_refactor.py::test_locks_and_load_count_bounded_after_eviction` |
@@ -306,14 +318,11 @@ on the handshake, which the browser reports as 1006, so the provider could not r
 Every rejection is now accepted and then closed with its code (`_reject`). The harness `ASGIWebSocketClient`
 records the accept, so tests call `expect_accept()` before `close_code()`.
 
-**Multiple instances are not safe for the document state, despite ADR 0029 and the admin guide.** Redis
-relays messages to browsers only: `_make_forwarder` calls `local_broadcast_timed` and never applies the update to the
-receiving instance's `YDocument`. Reading the code, each instance's copy therefore holds only the updates from its
-own clients. `_compact` writes that partial state into `crdt_document_state`, overwriting the other instance's
-snapshot, and deletes log rows up to its own `last_update_id`, including rows from the other instance.
-`documents.content` also gets a partial text. Awareness snapshots are per instance too. Browsers still converge
-with each other, and a reconnect re-sends what the server lacks. This was not reproduced end to end: the
-cross-instance tests exercise only `RedisBridge` and `RoomManager`.
+**A relayed update can be missing from a replica's copy.** Redis pub/sub is fire-and-forget, and a replica
+subscribes after it has loaded the document. An update that never reaches a replica is absent from its copy
+until its next compaction or flush, which reads the stored state (ADR 0123). The stored state always holds it,
+so nothing acknowledged is lost, and browsers converge through the server. Awareness is still per replica, and the
+history capture buffers in memory per replica (see [history.md](history.md)).
 
 **Keepalive needs the browser to answer.** A client that predates tag 3 (a cached old bundle) never pongs, so
 after about 35 seconds of no traffic it is closed 4000 and reconnects. The current provider answers every ping.

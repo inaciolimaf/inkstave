@@ -175,8 +175,7 @@ The upload limit for `git-upload-pack` bodies is `MAX_UPLOAD_BYTES`. The `/api/`
   also why `GIT_REPOS_ROOT` is safe to lose in a backup plan.
 - **Restores are edits.** A history restore is a new edit in the project, so it appears in the next fetch, not as a
   Git commit of its own.
-- **One replica is still the rule for collaboration.** The Git lock is in Redis, so Git itself is safe across
-  replicas that share the volume, but live text updates reach only rooms on the same instance (see
-  [collab.md](collab.md)).
+- **Replicas.** The Git lock is in Redis, so Git itself is safe across replicas that share the volume. Live text
+  updates are safe across replicas too (ADR 0123, see [collab.md](collab.md)).
 - **Divergence from the spec.** Spec 121 named the snapshot `snapshot_project`; the code uses `snapshot_locked`
   (under the lock) and `repository.snapshot_commit` (the commit itself). The glossary follows the code.

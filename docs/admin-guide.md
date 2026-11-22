@@ -367,9 +367,8 @@ Each container is one process, supervised by Docker `restart` + healthchecks.
 App services are stateless (all state is in Postgres/Redis/volumes), so you can
 scale horizontally: `docker compose -f docker-compose.prod.yml up -d --scale
 worker=3`. Redis is the ARQ broker + pub/sub, so multiple workers share the
-compile/agent queues. **Run one `backend` replica:** updates relayed through Redis are
-not applied to the receiving instance's document, so several replicas are unsafe for
-collaboration (see [known gaps](known-gaps.md#data-correctness)). The compile concurrency caps
+compile/agent queues. Several `backend` replicas can share Postgres and Redis: the stored
+document state is the merge point for collaboration (ADR 0123, [collab](system/collab.md)). The compile concurrency caps
 (`COMPILE_MAX_CONCURRENT_PER_*`) and agent limits are per-user/project, not
 per-replica.
 

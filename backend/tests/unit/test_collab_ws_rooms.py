@@ -136,7 +136,7 @@ async def test_forwarder_closes_slow_consumer_without_stalling_others() -> None:
     slow.try_enqueue(b"fill")  # slow consumer's queue is now full
 
     forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]
-    await forwarder(b"broadcast", None)
+    await forwarder(b"broadcast", None, False)
     await asyncio.sleep(0.02)  # let the scheduled close run
 
     assert slow.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]
@@ -163,7 +163,7 @@ async def test_forwarder_applies_slow_client_grace_window() -> None:
 
     drainer = asyncio.create_task(drain())
     forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]
-    await forwarder(b"broadcast", None)
+    await forwarder(b"broadcast", None, False)
     await drainer
     await asyncio.sleep(0.02)
 
