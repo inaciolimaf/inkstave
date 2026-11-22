@@ -131,7 +131,8 @@ class ConsoleFormatter(logging.Formatter):
 
 
 def build_formatter(settings: Settings) -> logging.Formatter:
-    if settings.log_format == "console":
+    """JSON only when both ``LOG_JSON`` and ``LOG_FORMAT=json`` allow it; console otherwise."""
+    if not settings.log_json or settings.log_format == "console":
         return ConsoleFormatter()
     return JsonLogFormatter(
         service=settings.service_name, env=settings.env_name, log_stacks=settings.log_stacks
