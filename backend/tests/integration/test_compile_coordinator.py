@@ -13,6 +13,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import Settings
+from inkstave.core.db.session import run_after_commit
 from inkstave.modules.compile.models.compile import CompileJobStatus
 from inkstave.modules.compile.queue.coordinator import CompileConcurrencyError, CompileCoordinator
 from inkstave.modules.compile.queue.repository import CompileRepository
@@ -59,7 +60,8 @@ async def test_creates_and_enqueues(db_session: AsyncSession) -> None:
         project_id=project.id, user_id=user.id, main_file="main.tex", force=False
     )
     assert row.status == "queued"
-    assert row.job_id == f"job-{row.id}"
+    assert row.job_id == str(row.id)
+    await run_after_commit(db_session)  # the job is enqueued only once the row is committed
     assert enq.calls == [row.id]
 
 
@@ -88,6 +90,7 @@ async def test_force_creates_new_when_under_cap(db_session: AsyncSession) -> Non
         project_id=project.id, user_id=user.id, main_file="main.tex", force=True
     )
     assert row.id != existing.id
+    await run_after_commit(db_session)
     assert enq.calls == [row.id]
 
 

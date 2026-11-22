@@ -17,11 +17,13 @@ class ArqEnqueuer:
         self._queue_name = queue_name
 
     async def enqueue(self, compile_id: UUID) -> str | None:
-        # Chain the enqueuing request's correlation id into the job (spec 51 §5.4).
+        # Chain the enqueuing request's correlation id into the job (spec 51 §5.4). The job id is the
+        # compile id, the same one the row stores, so a retried enqueue cannot queue a second job.
         job = await self._pool.enqueue_job(
             "run_compile",
             str(compile_id),
             request_id=request_id_var.get(),
+            _job_id=str(compile_id),
             _queue_name=self._queue_name,
         )
         return job.job_id if job is not None else None

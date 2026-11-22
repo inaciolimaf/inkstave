@@ -17,7 +17,7 @@ from inkstave.modules.compile.assembly.workdir import (
 )
 from inkstave.modules.compile.running.errors import CompileError
 from inkstave.modules.compile.running.limits import CancelToken, ResourceLimits
-from inkstave.modules.compile.running.result import CompileResult, CompileStatus, RunOutcome
+from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus, RunOutcome
 
 if TYPE_CHECKING:
     from inkstave.core.config.settings import Settings
@@ -175,8 +175,11 @@ class CompileService:
     ) -> CompileResult:
         output_dir = workdir / "output"
         artifacts = collect_outputs(output_dir)
-        pdf = next((a for a in artifacts if a.content_type == "application/pdf"), None)
         log_text, truncated = self._read_log(output_dir, main_file, outcome, limits)
+        overflow = _output_overflow(artifacts, limits.max_output_bytes)
+        if overflow is not None:
+            return _oversized_result(overflow, log_text, outcome)
+        pdf = next((a for a in artifacts if a.content_type == "application/pdf"), None)
 
         if outcome.cancelled:
             status = CompileStatus.CANCELLED
@@ -207,6 +210,27 @@ class CompileService:
         raw = log_path.read_bytes() if log_path.is_file() else outcome.stdout.encode("utf-8")
         truncated = len(raw) > limits.max_log_bytes
         return raw[: limits.max_log_bytes].decode("utf-8", "replace"), truncated
+
+
+def _output_overflow(artifacts: list[CompileArtifact], limit: int) -> str | None:
+    """A message when the collected outputs together exceed ``COMPILE_MAX_OUTPUT_BYTES``."""
+    total = sum(a.size_bytes for a in artifacts)
+    if total <= limit:
+        return None
+    return f"output too large: {total} bytes of outputs exceed COMPILE_MAX_OUTPUT_BYTES ({limit} bytes)"
+
+
+def _oversized_result(message: str, log_text: str, outcome: RunOutcome) -> CompileResult:
+    """A system error that keeps no artifacts, so nothing oversized is read into memory to persist."""
+    return CompileResult(
+        status=CompileStatus.SYSTEM_ERROR,
+        pdf=None,
+        log_text=f"{message}\n\n{log_text}",
+        stdout=outcome.stdout,
+        stderr=outcome.stderr,
+        exit_code=outcome.exit_code,
+        duration_ms=outcome.duration_ms,
+    )
 
 
 def _empty(status: CompileStatus, *, log_text: str = "") -> CompileResult:

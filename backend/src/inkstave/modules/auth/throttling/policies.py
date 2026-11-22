@@ -3,7 +3,8 @@
 A fixed-window counter incremented atomically with a Lua script (INCR + EXPIRE in
 one round trip, no race). Applied as a FastAPI dependency; sets ``X-RateLimit-*``
 headers on every response and returns 429 + ``Retry-After`` when exceeded. **Fails
-open** (logs a warning + increments a metric) if Redis is unavailable.
+open** (logs a warning + increments a metric) if Redis is unavailable, except the
+policies in ``_FAIL_CLOSED``, which return 503 instead.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from fastapi import Depends, Request, Response
 from pydantic import BaseModel
 from redis.exceptions import ResponseError
 
-from inkstave.core.deps import get_redis, get_settings_dep
+from inkstave.core.deps import ServiceUnavailableError, get_redis, get_settings_dep
 from inkstave.core.errors import RateLimitError
 from inkstave.core.observability.metrics import inc_rate_limit_error
 from inkstave.modules.auth.deps import get_optional_user
@@ -112,6 +113,10 @@ _NAMED_POLICIES: dict[str, tuple[str, str]] = {
     "share_link": ("rate_limit_share_link", "user"),
 }
 
+# Policies that refuse (503) when the limiter is down, instead of failing open. The daily compile
+# quota is an anti-abuse cap: failing open would let a burst of compiles through during an outage.
+_FAIL_CLOSED = frozenset({"compile_daily"})
+
 
 async def _enforce(
     redis: Redis,
@@ -125,9 +130,12 @@ async def _enforce(
     try:
         result = await check_rate_limit(redis, policy, scope_id, now=time.time())
     except Exception:
-        # Fail open — a limiter outage must not lock out legitimate traffic.
         logger.warning("rate_limit_backend_unavailable (policy=%s)", policy.name)
         inc_rate_limit_error(policy.name)
+        if policy.name in _FAIL_CLOSED:
+            # A quota that protects the platform from abuse must not lift during an outage.
+            raise ServiceUnavailableError("Rate limiting is unavailable; try again shortly.") from None
+        # Fail open — a limiter outage must not lock out legitimate traffic.
         return
     _set_headers(response, result)
     if not result.allowed:

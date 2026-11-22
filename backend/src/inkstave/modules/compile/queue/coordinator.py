@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from inkstave.core.errors import AppError
+from inkstave.modules.compile.queue.stale import stale_cutoffs
 
 if TYPE_CHECKING:
     from inkstave.core.config.settings import Settings
     from inkstave.modules.compile.models.compile import Compile
     from inkstave.modules.compile.queue.repository import CompileRepository
+    from inkstave.modules.compile.queue.stale import StaleCutoffs
 
 
 class CompileConcurrencyError(AppError):
@@ -44,23 +46,41 @@ class CompileCoordinator:
     async def request_compile(
         self, *, project_id: UUID, user_id: UUID, main_file: str, force: bool
     ) -> Compile:
+        # One request at a time per project and per user, so coalescing and the caps see each other.
+        await self._repo.lock_for_request(project_id, user_id)
+        cutoffs = stale_cutoffs(self._settings)
+
         # Debounce/coalesce: return the in-flight compile unless forced.
         if not force and self._settings.compile_debounce_coalesce:
-            active = await self._repo.find_active_for_project(project_id)
+            active = await self._repo.find_active_for_project(project_id, cutoffs)
             if active is not None:
                 return active
 
-        # Concurrency caps (count of queued + running).
+        await self._check_caps(project_id, user_id, cutoffs)
+
+        # The job id is the compile id, so the row needs no second write once the job is queued.
+        compile_id = uuid4()
+        row = await self._repo.create(
+            project_id=project_id,
+            requested_by=user_id,
+            main_file=main_file,
+            compile_id=compile_id,
+            job_id=str(compile_id),
+        )
+        # Enqueue only after the row commits: a worker must find the row it is asked to run.
+        self._repo.after_commit(lambda: self._enqueue(compile_id))
+        return row
+
+    async def _check_caps(self, project_id: UUID, user_id: UUID, cutoffs: StaleCutoffs) -> None:
+        """Concurrency caps (count of fresh queued + running rows)."""
         if (
-            await self._repo.count_active_for_project(project_id)
+            await self._repo.count_active_for_project(project_id, cutoffs)
             >= self._settings.compile_max_concurrent_per_project
         ):
             raise CompileConcurrencyError()
-        if await self._repo.count_active_for_user(user_id) >= self._settings.compile_max_concurrent_per_user:
+        per_user = await self._repo.count_active_for_user(user_id, cutoffs)
+        if per_user >= self._settings.compile_max_concurrent_per_user:
             raise CompileConcurrencyError()
 
-        row = await self._repo.create(project_id=project_id, requested_by=user_id, main_file=main_file)
-        job_id = await self._enqueuer.enqueue(row.id)
-        if job_id is not None:
-            await self._repo.update(row, job_id=job_id)
-        return row
+    async def _enqueue(self, compile_id: UUID) -> None:
+        await self._enqueuer.enqueue(compile_id)
