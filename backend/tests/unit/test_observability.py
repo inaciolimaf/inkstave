@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+from collections.abc import Callable
 
 import pytest
 from fastapi import FastAPI
@@ -103,7 +104,7 @@ async def test_track_job_records_status_even_on_exception() -> None:
 
 
 def test_track_ws_gauge_returns_to_baseline_on_exception() -> None:
-    sample = lambda: (  # noqa: E731 - a named one-liner reads better here
+    sample: Callable[[], float] = lambda: (  # noqa: E731 - a named one-liner reads better here
         REGISTRY.get_sample_value("inkstave_ws_connections_active", {"kind": "collab"}) or 0.0
     )
     before = sample()

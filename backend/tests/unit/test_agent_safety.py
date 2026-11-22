@@ -112,4 +112,4 @@ async def test_audit_failure_is_isolated() -> None:
             pass
 
     # Must not raise — auditing never crashes a run (AC9).
-    await audit(_Boom(), AgentAuditAction.run_start, AuditSubject(uuid4()))  # type: ignore[arg-type]
+    await audit(_Boom(), AgentAuditAction.run_start, AuditSubject(uuid4()))  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path

@@ -82,11 +82,12 @@ def _client_with_transport(handler: Any, **settings_over: Any) -> tuple[OpenRout
         captured["url"] = request.url
         captured["headers"] = request.headers
         captured["json"] = json.loads(request.content)
-        return handler(request)
+        typed_result: httpx.Response = handler(request)
+        return typed_result
 
     # Swap the SDK for one over a mock socket so the real mapping/parsing runs but
     # no network is touched; `capturing` records each request for assertions.
-    client._client = AsyncOpenAI(  # type: ignore[attr-defined]
+    client._client = AsyncOpenAI(
         api_key=DUMMY_KEY,
         base_url=settings.openrouter_base_url,
         http_client=httpx.AsyncClient(transport=httpx.MockTransport(capturing)),

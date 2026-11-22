@@ -23,7 +23,7 @@ from inkstave.modules.auth.throttling.policies import (
 
 
 def _settings(**overrides: Any) -> Settings:
-    return Settings(_env_file=None, **overrides)  # type: ignore[call-arg]
+    return Settings(_env_file=None, **overrides)
 
 
 def test_compile_daily_policy_is_registered_and_defaults_to_30_per_day() -> None:
@@ -90,4 +90,4 @@ async def test_daily_quota_fails_closed_when_redis_is_down() -> None:
     user = SimpleNamespace(id="11111111-1111-1111-1111-111111111111")
 
     with pytest.raises(ServiceUnavailableError):
-        await _enforce(_RedisDown(), Response(), request, user, s, policy)  # type: ignore[arg-type]
+        await _enforce(_RedisDown(), Response(), request, user, s, policy)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path

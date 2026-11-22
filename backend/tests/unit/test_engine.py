@@ -22,7 +22,7 @@ async def test_create_engine_and_sessionmaker_uses_async_driver(
 
 def test_create_engine_requires_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
     assert settings.database_url is None
     with pytest.raises(ValueError, match="database_url"):
         create_engine_and_sessionmaker(settings)

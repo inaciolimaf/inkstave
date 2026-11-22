@@ -9,10 +9,11 @@ join-check behaviour).
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.modules.projects.content.documents import NotADocumentError
 from inkstave.modules.projects.content.files import NotAFileError
@@ -42,19 +43,19 @@ def _entity(entity_type: TreeEntityType) -> Any:
 
 async def test_found_returns_entity() -> None:
     ent = _entity(TreeEntityType.folder)
-    assert await get_entity(FakeSession(ent), uuid4(), uuid4()) is ent
+    assert await get_entity(cast(AsyncSession, FakeSession(ent)), uuid4(), uuid4()) is ent
 
 
 async def test_missing_raises_entity_not_found() -> None:
     with pytest.raises(EntityNotFoundError) as exc:
-        await get_entity(FakeSession(None), uuid4(), uuid4())
+        await get_entity(cast(AsyncSession, FakeSession(None)), uuid4(), uuid4())
     assert str(exc.value) == "Tree entity not found."
 
 
 async def test_doc_type_match_returns_entity() -> None:
     ent = _entity(TreeEntityType.doc)
     result = await get_entity(
-        FakeSession(ent),
+        cast(AsyncSession, FakeSession(ent)),
         uuid4(),
         uuid4(),
         expected_type=TreeEntityType.doc,
@@ -67,7 +68,7 @@ async def test_wrong_type_doc_raises_not_a_document() -> None:
     ent = _entity(TreeEntityType.file)
     with pytest.raises(NotADocumentError):
         await get_entity(
-            FakeSession(ent),
+            cast(AsyncSession, FakeSession(ent)),
             uuid4(),
             uuid4(),
             expected_type=TreeEntityType.doc,
@@ -79,7 +80,7 @@ async def test_wrong_type_file_raises_not_a_file() -> None:
     ent = _entity(TreeEntityType.doc)
     with pytest.raises(NotAFileError):
         await get_entity(
-            FakeSession(ent),
+            cast(AsyncSession, FakeSession(ent)),
             uuid4(),
             uuid4(),
             expected_type=TreeEntityType.file,
@@ -92,4 +93,6 @@ async def test_wrong_type_without_factory_falls_back_to_not_found() -> None:
     # (which the collab path translates to CLOSE_NOT_FOUND).
     ent = _entity(TreeEntityType.file)
     with pytest.raises(EntityNotFoundError):
-        await get_entity(FakeSession(ent), uuid4(), uuid4(), expected_type=TreeEntityType.doc)
+        await get_entity(
+            cast(AsyncSession, FakeSession(ent)), uuid4(), uuid4(), expected_type=TreeEntityType.doc
+        )

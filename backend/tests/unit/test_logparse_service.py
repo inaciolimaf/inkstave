@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -48,15 +49,15 @@ class _FakeStore:
         return self._obj
 
 
-def _settings(**over: object) -> Settings:
-    return Settings(_env_file=None, **over)  # type: ignore[call-arg]
+def _settings(**over: Any) -> Settings:
+    return Settings(_env_file=None, **over)
 
 
-def _service(log: bytes | None, **over: object) -> LogProblemsService:
+def _service(log: bytes | None, **over: Any) -> LogProblemsService:
     store = _FakeStore(_FakeStored(log) if log is not None else None)
     return LogProblemsService(
-        repo=_FakeRepo(_Row()),  # type: ignore[arg-type]
-        output_store=store,  # type: ignore[arg-type]
+        repo=_FakeRepo(_Row()),  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+        output_store=store,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
         settings=_settings(**over),
     )
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]  # no stubs in the dev group
 
 from inkstave.core.config.settings import Settings
 from inkstave.infra.storage.base import ObjectNotFoundError
@@ -74,7 +74,9 @@ async def test_objectstore_get_streams(local_store: LocalObjectStore) -> None:
     assert await _collect(stream) == b"streamed"
 
 
-def _streaming_hash_size_limit(chunks: list[bytes], *, limit: int):
+def _streaming_hash_size_limit(
+    chunks: list[bytes], *, limit: int
+) -> tuple[AsyncIterator[bytes], dict[str, Any]]:
     """Mirror of the upload streaming pipeline (file_service.upload_file): count
     bytes, hash with sha256, and raise ``FileTooLargeError`` once the running
     size exceeds ``limit``. Returns an async generator yielding the chunks plus a
@@ -150,12 +152,12 @@ async def test_local_put_writes_temp_then_replaces_atomically(
 
 
 def test_factory_selects_local() -> None:
-    settings = Settings(_env_file=None, file_storage_backend="local")  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, file_storage_backend="local")
     assert isinstance(get_object_store(settings), LocalObjectStore)
 
 
 def test_factory_selects_s3() -> None:
-    settings = Settings(_env_file=None, file_storage_backend="s3", s3_bucket="b")  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, file_storage_backend="s3", s3_bucket="b")
     assert isinstance(get_object_store(settings), S3ObjectStore)
 
 
@@ -163,7 +165,7 @@ def test_s3_requires_bucket() -> None:
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
-        Settings(_env_file=None, file_storage_backend="s3", s3_bucket="")  # type: ignore[call-arg]
+        Settings(_env_file=None, file_storage_backend="s3", s3_bucket="")
 
 
 class _FakeBody:

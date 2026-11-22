@@ -29,13 +29,13 @@ def _user(*, is_admin: bool) -> User:
 
 async def test_get_current_user_without_credentials_raises_401() -> None:
     with pytest.raises(NotAuthenticatedError):
-        await get_current_user(credentials=None, token_service=None, session=None)  # type: ignore[arg-type]
+        await get_current_user(credentials=None, token_service=None, session=None)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
 
 async def test_get_current_user_with_empty_token_raises_401() -> None:
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
     with pytest.raises(NotAuthenticatedError):
-        await get_current_user(credentials=creds, token_service=None, session=None)  # type: ignore[arg-type]
+        await get_current_user(credentials=creds, token_service=None, session=None)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
 
 async def test_get_current_user_with_non_bearer_scheme_raises_401() -> None:
@@ -49,9 +49,9 @@ async def test_get_current_user_with_non_bearer_scheme_raises_401() -> None:
     non_bearer_resolved = None
     with pytest.raises(NotAuthenticatedError):
         await get_current_user(
-            credentials=non_bearer_resolved,  # type: ignore[arg-type]
-            token_service=None,  # type: ignore[arg-type]
-            session=None,  # type: ignore[arg-type]
+            credentials=non_bearer_resolved,
+            token_service=None,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+            session=None,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
         )
 
 

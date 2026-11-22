@@ -13,18 +13,19 @@ delay) and the flush sink is stubbed. They cover:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
 
 from inkstave.core.config.settings import Settings
+from inkstave.infra.storage.base import ObjectStore
 from inkstave.modules.collab import YDocument
 from inkstave.modules.history.versions.capture import HistoryCaptureService
 
 
-def _settings(**over: object) -> Settings:
-    return Settings(_env_file=None, **over)  # type: ignore[call-arg]
+def _settings(**over: Any) -> Settings:
+    return Settings(_env_file=None, **over)
 
 
 class _FakeClock:
@@ -42,12 +43,12 @@ class _FakeClock:
         self.cancels += 1
 
 
-def _make_service(**over: object) -> HistoryCaptureService:
+def _make_service(**over: Any) -> HistoryCaptureService:
     # A session factory that must never be entered in these in-memory tests.
     def _factory() -> Any:  # pragma: no cover - only called if a real flush happens
         raise AssertionError("no DB access expected in fake-clock unit tests")
 
-    return HistoryCaptureService(_factory, object(), _settings(**over))
+    return HistoryCaptureService(_factory, cast(ObjectStore, object()), _settings(**over))
 
 
 async def test_timer_rearms_on_each_update(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -118,7 +119,9 @@ async def test_failed_flush_keeps_updates_and_stops_retrying_after_the_bound(
 ) -> None:
     clock = _FakeClock()
     monkeypatch.setattr("inkstave.modules.history.versions.capture.asyncio.get_running_loop", lambda: clock)
-    svc = HistoryCaptureService(_DownSession, object(), _settings(history_flush_max_buffer=1000))
+    svc = HistoryCaptureService(
+        _DownSession, cast(ObjectStore, object()), _settings(history_flush_max_buffer=1000)
+    )
     pid, did = uuid4(), uuid4()
     at = datetime.now(UTC)
     ed, updates = _real_updates()
@@ -142,7 +145,9 @@ async def test_failed_flush_keeps_updates_and_stops_retrying_after_the_bound(
 async def test_flush_all_continues_past_a_failing_document(monkeypatch: pytest.MonkeyPatch) -> None:
     clock = _FakeClock()
     monkeypatch.setattr("inkstave.modules.history.versions.capture.asyncio.get_running_loop", lambda: clock)
-    svc = HistoryCaptureService(_DownSession, object(), _settings(history_flush_max_buffer=1000))
+    svc = HistoryCaptureService(
+        _DownSession, cast(ObjectStore, object()), _settings(history_flush_max_buffer=1000)
+    )
     at = datetime.now(UTC)
     docs = [uuid4(), uuid4()]
     for did in docs:

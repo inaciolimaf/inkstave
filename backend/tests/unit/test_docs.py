@@ -183,7 +183,7 @@ def _load_export_module() -> object:
 
 def test_openapi_artifact_in_sync() -> None:
     committed = json.loads((_DOCS / "api" / "openapi.json").read_text("utf-8"))
-    current = _load_export_module().generate_openapi()  # type: ignore[attr-defined]
+    current = _load_export_module().generate_openapi()  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert current == committed, (
         "docs/api/openapi.json is stale — run `python scripts/export_openapi.py` and commit it"
     )

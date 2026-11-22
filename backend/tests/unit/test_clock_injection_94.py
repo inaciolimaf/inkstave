@@ -9,18 +9,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import jwt
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import get_settings
 from inkstave.core.errors import GoneError
 from inkstave.core.time import SYSTEM_CLOCK, Clock, SystemClock
 from inkstave.modules.auth.accounts.account import confirm_email_change, start_email_change
+from inkstave.modules.auth.credentials.password import PasswordHasher
 from inkstave.modules.auth.credentials.refresh_store import build_refresh_store
 from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.auth.models.user import User
 from tests.unit._clock import FrozenClock
 
 BASE = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
@@ -51,7 +54,7 @@ def test_access_token_exp_derives_from_injected_clock() -> None:
     user = SimpleNamespace(id=uuid4(), is_admin=False, session_version=0)
     clock = FrozenClock(BASE)
 
-    token, expires_in = svc.create_access_token(user, clock=clock)
+    token, expires_in = svc.create_access_token(cast(User, user), clock=clock)
     claims = _unverified_claims(token)
     ttl = settings.access_token_ttl_seconds
     assert expires_in == ttl
@@ -73,11 +76,11 @@ def test_token_default_clock_lifetime_unchanged() -> None:
     svc = build_token_service(settings)
     user = SimpleNamespace(id=uuid4(), is_admin=False, session_version=0)
 
-    access, _ = svc.create_access_token(user)  # no clock -> system clock
+    access, _ = svc.create_access_token(cast(User, user))  # no clock -> system clock
     a = _unverified_claims(access)
     assert a["exp"] - a["iat"] == settings.access_token_ttl_seconds
 
-    refresh, _ = svc.create_refresh_token(user, uuid4())
+    refresh, _ = svc.create_refresh_token(cast(User, user), uuid4())
     r = _unverified_claims(refresh)
     assert r["exp"] - r["iat"] == settings.refresh_token_ttl_seconds
 
@@ -140,9 +143,9 @@ async def test_start_email_change_expiry_uses_injected_clock() -> None:
         email_change_expires_at=None,
     )
     await start_email_change(
-        FakeEmailSession(exists=False),
-        FakeHasher(),
-        user,
+        cast(AsyncSession, FakeEmailSession(exists=False)),
+        cast(PasswordHasher, FakeHasher()),
+        cast(User, user),
         new_email="new@example.com",
         current_password="pw",
         settings=settings,
@@ -164,13 +167,13 @@ def _pending_user() -> Any:
 
 async def test_confirm_email_change_succeeds_just_before_expiry() -> None:
     user = _pending_user()
-    session = FakeEmailSession(user=user)
+    session = cast(AsyncSession, FakeEmailSession(user=user))
     result = await confirm_email_change(session, token="raw", clock=FrozenClock(BASE + timedelta(seconds=99)))
     assert result.email == "new@example.com" and result.email_confirmed is True
 
 
 async def test_confirm_email_change_fails_after_expiry() -> None:
     user = _pending_user()
-    session = FakeEmailSession(user=user)
+    session = cast(AsyncSession, FakeEmailSession(user=user))
     with pytest.raises(GoneError):
         await confirm_email_change(session, token="raw", clock=FrozenClock(BASE + timedelta(seconds=101)))

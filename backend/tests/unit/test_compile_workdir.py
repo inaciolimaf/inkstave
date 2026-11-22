@@ -30,7 +30,7 @@ def _limits(**over: int | None) -> ResourceLimits:
         "address_space_bytes": None,
     }
     base.update(over)
-    return ResourceLimits(**base)  # type: ignore[arg-type]
+    return ResourceLimits(**base)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
 
 class FakeDocs:
@@ -80,7 +80,7 @@ class _RecordingFiles:
 
     async def iter_files(self, project_id: object) -> AsyncIterator[tuple[str, AsyncIterator[bytes]]]:
         for path, stream in self._streams:
-            yield path, stream  # type: ignore[misc]
+            yield path, stream
 
 
 def test_safe_join_accepts_in_tree(tmp_path: Path) -> None:

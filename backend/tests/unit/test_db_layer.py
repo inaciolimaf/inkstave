@@ -30,15 +30,16 @@ def test_ping_columns() -> None:
     columns = Ping.__table__.columns
     assert set(columns.keys()) == {"id", "note", "created_at", "updated_at"}
     assert columns["id"].primary_key is True
-    assert columns["created_at"].type.timezone is True  # type: ignore[attr-defined]
+    assert columns["created_at"].type.timezone is True  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert columns["updated_at"].onupdate is not None
-    assert columns["note"].type.length == 200  # type: ignore[attr-defined]
+    assert columns["note"].type.length == 200  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
 
 
 def test_unique_constraint_naming() -> None:
     table = Table("widgets_tmp", Base.metadata, Column("kind", Integer), UniqueConstraint("kind"))
     try:
-        ddl = str(CreateTable(table).compile(dialect=postgresql.dialect()))
+        # SQLAlchemy's postgresql.dialect() is untyped; the DDL string is what the test checks.
+        ddl = str(CreateTable(table).compile(dialect=postgresql.dialect()))  # type: ignore[no-untyped-call]  # calls an untyped third-party API
         assert "uq_widgets_tmp_kind" in ddl
     finally:
         Base.metadata.remove(table)

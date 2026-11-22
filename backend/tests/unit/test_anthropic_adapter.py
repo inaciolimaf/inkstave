@@ -24,7 +24,7 @@ def _sse(*events: dict[str, Any]) -> bytes:
 
 def _message_events(blocks: list[dict[str, Any]], stop_reason: str) -> list[dict[str, Any]]:
     """The stream of one message: thinking, text and tool_use blocks, then its stop."""
-    start = {
+    start: dict[str, Any] = {
         "id": "msg_1",
         "type": "message",
         "role": "assistant",
@@ -49,6 +49,8 @@ def _message_events(blocks: list[dict[str, Any]], stop_reason: str) -> list[dict
 
 
 def _block_events(index: int, block: dict[str, Any]) -> list[dict[str, Any]]:
+    first: dict[str, Any]
+    delta: dict[str, Any]
     if block["type"] == "text":
         first, delta = {"type": "text", "text": ""}, {"type": "text_delta", "text": block["text"]}
     elif block["type"] == "thinking":
@@ -79,7 +81,7 @@ def _client(
         return httpx2.Response(200, content=body, headers={"content-type": "text/event-stream"})
 
     client = AnthropicLLMClient(AgentSettings(anthropic_api_key=DUMMY_KEY))
-    client._client = AsyncAnthropic(  # type: ignore[attr-defined]
+    client._client = AsyncAnthropic(
         api_key=DUMMY_KEY,
         max_retries=0,
         http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
@@ -134,7 +136,7 @@ async def test_system_goes_top_level_and_tool_results_share_a_user_turn() -> Non
 
 
 async def test_tool_call_is_parsed_and_its_thinking_is_replayed_unchanged() -> None:
-    blocks = [
+    blocks: list[dict[str, Any]] = [
         {"type": "thinking", "signature": "sig"},
         {"type": "tool_use", "id": "t1", "name": "read", "input": {"p": "a.tex"}},
     ]
@@ -204,7 +206,7 @@ def test_factory_defaults_to_anthropic_and_can_pick_openrouter() -> None:
 
 
 async def test_complete_reports_text_and_tool_calls_as_they_arrive() -> None:
-    blocks = [
+    blocks: list[dict[str, Any]] = [
         {"type": "text", "text": "Reading."},
         {"type": "tool_use", "id": "t1", "name": "read_file", "input": {"path": "a.tex"}},
     ]

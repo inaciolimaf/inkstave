@@ -67,7 +67,7 @@ def test_read_file_args_require_exactly_one_selector() -> None:
 
 def test_propose_edit_args_are_exact_text_only() -> None:
     with pytest.raises(ValidationError):
-        ProposeEditArgs(doc_id="d", new_text="x")  # old_text is required
+        ProposeEditArgs(doc_id="d", new_text="x")  # type: ignore[call-arg]  # old_text is required; the test checks the runtime rejection
     assert ProposeEditArgs(doc_id="d", old_text="a", new_text="").new_text == ""  # deleting is allowed
     properties = ProposeEditTool().spec().parameters["properties"]
     assert set(properties) == {"doc_id", "old_text", "new_text", "rationale"}  # no mode, no line numbers
@@ -143,14 +143,15 @@ async def test_search_project_caps_snippet_and_truncates_payload(
         agent_tool_search_max_results = 50
 
     ctx = ToolContext(
-        db=None,  # type: ignore[arg-type]
+        db=None,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
         project_id=str(uuid4()),
         user_id=str(uuid4()),
-        settings=_Settings(),  # type: ignore[arg-type]
+        settings=_Settings(),  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     )
     result = await sp.SearchProjectTool().run(SearchProjectArgs(query="needle"), ctx)
 
     assert result.ok
+    assert result.data is not None
     matches = result.data["matches"]
     assert matches, "expected at least one match"
     # Every snippet is capped at the 240-char maximum.

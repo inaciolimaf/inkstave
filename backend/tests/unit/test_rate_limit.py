@@ -13,7 +13,7 @@ from inkstave.modules.auth.throttling.limiter import client_ip, parse_rate_limit
 
 
 def _settings(**overrides: Any) -> Settings:
-    return Settings(_env_file=None, **overrides)  # type: ignore[call-arg]
+    return Settings(_env_file=None, **overrides)
 
 
 def _request(host: str = "1.2.3.4", headers: dict[str, str] | None = None) -> Any:
@@ -71,7 +71,7 @@ async def test_identity_falls_back_to_ip_when_body_unparseable(redis: Any) -> No
         async def json(self) -> Any:
             raise ValueError("not json")
 
-    await dep(BadBodyRequest(), redis, settings)  # type: ignore[arg-type]
+    await dep(BadBodyRequest(), redis, settings)
     assert await redis.exists("ratelimit:register:1.2.3.4") == 1
 
 
@@ -83,7 +83,7 @@ async def test_limiter_fails_open_when_redis_errors() -> None:
     settings = _settings(rate_limit_refresh="1/60")
     dep = rate_limit("refresh")
     # Must not raise — a limiter outage fails open.
-    await dep(_request(), BrokenRedis(), settings)  # type: ignore[arg-type]
+    await dep(_request(), BrokenRedis(), settings)
 
 
 async def test_behind_an_untrusted_private_peer_ip_scopes_stand_down(redis: Any) -> None:
@@ -116,7 +116,7 @@ async def test_behind_an_untrusted_proxy_forgot_password_keeps_the_per_address_l
         async def json(self) -> Any:
             return {"email": self._email}
 
-    await dep(JsonRequest("a@example.com"), redis, settings)  # type: ignore[arg-type]
-    await dep(JsonRequest("b@example.com"), redis, settings)  # type: ignore[arg-type]
+    await dep(JsonRequest("a@example.com"), redis, settings)
+    await dep(JsonRequest("b@example.com"), redis, settings)
     with pytest.raises(RateLimitError):
-        await dep(JsonRequest("a@example.com"), redis, settings)  # type: ignore[arg-type]
+        await dep(JsonRequest("a@example.com"), redis, settings)

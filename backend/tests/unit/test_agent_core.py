@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
+from typing import Any
 
 from inkstave.core.config.agent import AgentSettings
 from inkstave.modules.agent.graph import builder as graph_mod
@@ -85,8 +86,8 @@ def test_only_the_anthropic_client_imports_anthropic() -> None:
     assert offenders == []
 
 
-def _deps(script: list, **over: object) -> AgentDeps:
-    settings = AgentSettings(**over)  # type: ignore[arg-type]
+def _deps(script: list[Any], **over: Any) -> AgentDeps:
+    settings = AgentSettings(**over)
     return AgentDeps(llm=FakeLLM(script=script), settings=settings)
 
 
@@ -100,7 +101,7 @@ async def _run(deps: AgentDeps) -> AgentState:
         "final_response": None,
         "error": None,
     }
-    return await build_graph(deps).ainvoke(initial)  # type: ignore[return-value]
+    return await build_graph(deps).ainvoke(initial)  # type: ignore[return-value]  # the query result is Optional; the test expects a row
 
 
 def _tool_response(_msgs: list[LLMMessage]) -> LLMResponse:

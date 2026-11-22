@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gzip
 from collections.abc import AsyncIterator
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -49,22 +50,22 @@ class _FakeStore:
         return self._obj
 
 
-def _settings(**over: object) -> Settings:
-    return Settings(_env_file=None, **over)  # type: ignore[call-arg]
+def _settings(**over: Any) -> Settings:
+    return Settings(_env_file=None, **over)
 
 
-def _service(store: _FakeStore, row: _Row | None = None, **over: object) -> SyncTexService:
+def _service(store: _FakeStore, row: _Row | None = None, **over: Any) -> SyncTexService:
     return SyncTexService(
-        repo=_FakeRepo(row if row is not None else _Row()),  # type: ignore[arg-type]
-        output_store=store,  # type: ignore[arg-type]
+        repo=_FakeRepo(row if row is not None else _Row()),  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+        output_store=store,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
         settings=_settings(**over),
     )
 
 
 async def test_missing_compile_is_unavailable() -> None:
     service = SyncTexService(
-        repo=_FakeRepo(None),  # type: ignore[arg-type]
-        output_store=_FakeStore(_FakeStored(gz(SINGLE_FILE))),  # type: ignore[arg-type]
+        repo=_FakeRepo(None),  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+        output_store=_FakeStore(_FakeStored(gz(SINGLE_FILE))),  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
         settings=_settings(),
     )
     with pytest.raises(SyncTexNotAvailableError):

@@ -38,7 +38,7 @@ _COST = {
 
 def _settings(**over: Any) -> Settings:
     base = {"jwt_secret": "x" * 40, "redis_url": "redis://redis:6379/0"}
-    return Settings(**{**base, **over})  # type: ignore[arg-type]
+    return Settings(**{**base, **over})
 
 
 def test_defaults_preserved() -> None:

@@ -83,7 +83,7 @@ def _conn() -> Connection:
 
 async def test_sync_step1_enqueues_both_replies() -> None:
     comp, conn = _Components(), _conn()
-    cont = await _dispatch(read_message(encode_sync_step1(b"\x00")), conn, comp, _ws_settings())  # type: ignore[arg-type]
+    cont = await _dispatch(read_message(encode_sync_step1(b"\x00")), conn, comp, _ws_settings())  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     assert cont is True
     assert comp.manager.calls[0][0] == "step1"
     assert conn.send_queue.get_nowait() == b"STEP2"
@@ -93,7 +93,7 @@ async def test_sync_step1_enqueues_both_replies() -> None:
 async def test_update_routes_to_manager_and_publishes() -> None:
     comp, conn = _Components(), _conn()
     update = b"\x07yjs-update"
-    cont = await _dispatch(read_message(encode_update(update)), conn, comp, _ws_settings())  # type: ignore[arg-type]
+    cont = await _dispatch(read_message(encode_update(update)), conn, comp, _ws_settings())  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     assert cont is True
     assert comp.manager.calls[0] == ("update", update, "c1")
     assert comp.redis_bridge.published == [("c1", encode_update(update))]
@@ -102,7 +102,7 @@ async def test_update_routes_to_manager_and_publishes() -> None:
 async def test_awareness_routes_to_manager_and_publishes() -> None:
     comp, conn = _Components(), _conn()
     blob = b"\x01\x02"
-    await _dispatch(read_message(encode_awareness(blob)), conn, comp, _ws_settings())  # type: ignore[arg-type]
+    await _dispatch(read_message(encode_awareness(blob)), conn, comp, _ws_settings())  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     assert comp.manager.calls[0] == ("awareness", blob)
     assert comp.redis_bridge.published == [("c1", encode_awareness(blob))]
 
@@ -111,9 +111,9 @@ async def test_oversize_update_closes_4400() -> None:
     comp, conn = _Components(), _conn()
     parsed = read_message(encode_update(b"x" * 50))
     assert isinstance(parsed, SyncUpdate)
-    cont = await _dispatch(parsed, conn, comp, _ws_settings(max_update=5))  # type: ignore[arg-type]
+    cont = await _dispatch(parsed, conn, comp, _ws_settings(max_update=5))  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     assert cont is False
-    assert conn.websocket.closed == 4400  # type: ignore[attr-defined]
+    assert conn.websocket.closed == 4400  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert comp.manager.calls == []  # never reached the manager
 
 
@@ -121,7 +121,7 @@ async def test_unknown_message_is_ignored() -> None:
     from pycrdt import write_var_uint
 
     comp, conn = _Components(), _conn()
-    cont = await _dispatch(read_message(write_var_uint(9)), conn, comp, _ws_settings())  # type: ignore[arg-type]
+    cont = await _dispatch(read_message(write_var_uint(9)), conn, comp, _ws_settings())  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     assert cont is True
     assert comp.manager.calls == []
     assert comp.redis_bridge.published == []

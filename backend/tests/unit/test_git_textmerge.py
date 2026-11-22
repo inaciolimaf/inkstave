@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from typing import Any
 
 from pycrdt import Doc, Text
 
@@ -10,7 +11,7 @@ from inkstave.modules.collab.crdt.ydocument import YDocument
 from inkstave.modules.git.push.textmerge import plan_text_edits
 
 
-def _apply(live: str, edits: list) -> str:  # type: ignore[type-arg]
+def _apply(live: str, edits: list[Any]) -> str:
     """Apply the planner's edits the way the CRDT does: from the end, character offsets."""
     text = live
     for edit in edits:
@@ -102,7 +103,7 @@ def test_crdt_edits_round_trip_through_pycrdt_utf8_offsets() -> None:
 def test_pycrdt_counts_utf8_bytes_so_the_helper_must_convert() -> None:
     # Documents the pitfall apply_edits guards against: a character offset past an emoji is not the
     # same position in pycrdt, which counts UTF-8 bytes.
-    raw = Doc()
+    raw: Doc[Any] = Doc()
     text = raw.get("content", type=Text)
     text.insert(0, "😀b")
     text.insert(4, "X")  # byte offset 4 is right before "b"

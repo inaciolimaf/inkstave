@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -14,14 +15,14 @@ OTHER_STRONG = "another-strong-secret-value-of-sufficient-length-987"
 ENV_EXAMPLE = Path(__file__).resolve().parents[3] / ".env.example"
 
 
-def _prod(**overrides: object) -> Settings:
+def _prod(**overrides: Any) -> Settings:
     values: dict[str, object] = {
         "environment": "prod",
         "jwt_secret": STRONG,
         "database_url": "postgresql+asyncpg://u:p@db/inkstave",
         "redis_url": "redis://redis:6379/0",
     }
-    return Settings(_env_file=None, **{**values, **overrides})  # type: ignore[arg-type,call-arg]
+    return Settings(_env_file=None, **{**values, **overrides})
 
 
 def test_example_constant_matches_env_example() -> None:
@@ -49,7 +50,7 @@ def test_production_refuses_a_bad_previous_secret(secret: str) -> None:
 
 
 def test_example_secret_still_works_outside_production() -> None:
-    settings = Settings(_env_file=None, environment="dev", jwt_secret=EXAMPLE_JWT_SECRET)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, environment="dev", jwt_secret=EXAMPLE_JWT_SECRET)
     assert settings.jwt_secret == EXAMPLE_JWT_SECRET
 
 

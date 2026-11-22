@@ -165,14 +165,17 @@ def _entry(*parts: str) -> PlannedEntry:
 def test_detect_root_prefers_documentclass_over_main() -> None:
     paper = _entry("paper.tex")
     main = _entry("main.tex")
-    blobs = {("paper.tex",): b"\\documentclass{article}", ("main.tex",): b"no class here"}
+    blobs: dict[tuple[str, ...], bytes] = {
+        ("paper.tex",): b"\\documentclass{article}",
+        ("main.tex",): b"no class here",
+    }
     assert detect_root_doc([paper, main], blobs) == ("paper.tex",)
 
 
 def test_detect_root_shallowest_documentclass_wins() -> None:
     deep = _entry("src", "deep.tex")
     top = _entry("top.tex")
-    blobs = {
+    blobs: dict[tuple[str, ...], bytes] = {
         ("src", "deep.tex"): b"\\documentclass{article}",
         ("top.tex",): b"\\documentclass{book}",
     }
@@ -182,7 +185,7 @@ def test_detect_root_shallowest_documentclass_wins() -> None:
 def test_detect_root_falls_back_to_top_level_main() -> None:
     main = _entry("main.tex")
     other = _entry("other.tex")
-    blobs = {("main.tex",): b"no class", ("other.tex",): b"also none"}
+    blobs: dict[tuple[str, ...], bytes] = {("main.tex",): b"no class", ("other.tex",): b"also none"}
     assert detect_root_doc([main, other], blobs) == ("main.tex",)
 
 

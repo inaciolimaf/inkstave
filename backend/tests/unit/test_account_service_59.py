@@ -78,10 +78,10 @@ async def test_change_password_rehashes_and_revokes_sessions() -> None:
     store = _FakeRefreshStore()
 
     await account.change_password(
-        session,  # type: ignore[arg-type]
-        store,  # type: ignore[arg-type]
-        hasher,  # type: ignore[arg-type]
-        user,  # type: ignore[arg-type]
+        session,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+        store,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+        hasher,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+        user,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
         current_password="correct-old",
         new_password="brandnew123",
     )
@@ -99,10 +99,10 @@ async def test_change_password_rejects_wrong_current_password() -> None:
 
     with pytest.raises(UnauthorizedError):
         await account.change_password(
-            session,  # type: ignore[arg-type]
-            store,  # type: ignore[arg-type]
-            hasher,  # type: ignore[arg-type]
-            user,  # type: ignore[arg-type]
+            session,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+            store,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+            hasher,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+            user,  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
             current_password="WRONG",
             new_password="brandnew123",
         )
@@ -121,7 +121,7 @@ async def test_confirm_email_change_matches_hashed_token_never_raw() -> None:
     )
     session = _FakeSession(user=user)
 
-    result = await account.confirm_email_change(session, token=raw_token)  # type: ignore[arg-type]
+    result = await account.confirm_email_change(session, token=raw_token)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
     assert result.email == "new@example.com"
     assert result.email_confirmed is True
@@ -142,6 +142,6 @@ async def test_confirm_email_change_rejects_expired_token() -> None:
     session = _FakeSession(user=user)
 
     with pytest.raises(GoneError):
-        await account.confirm_email_change(session, token=raw_token)  # type: ignore[arg-type]
+        await account.confirm_email_change(session, token=raw_token)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
     assert user.email == "ada@example.com"  # email not swapped on an expired token

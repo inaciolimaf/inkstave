@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -15,8 +16,8 @@ from inkstave.modules.compile.running.result import CompileStatus, RunOutcome
 from inkstave.modules.compile.running.service import CompileOptions, CompileService
 
 
-def make_settings(tmp_path: Path, **over: object) -> Settings:
-    return Settings(_env_file=None, compile_workdir_root=str(tmp_path), **over)  # type: ignore[call-arg]
+def make_settings(tmp_path: Path, **over: Any) -> Settings:
+    return Settings(_env_file=None, compile_workdir_root=str(tmp_path), **over)
 
 
 class FakeDocs:
@@ -63,7 +64,7 @@ def ok_outcome(exit_code: int = 0) -> RunOutcome:
 
 
 def build_service(
-    tmp_path: Path, runner: FakeRunner, docs: list[tuple[str, str]], **over: object
+    tmp_path: Path, runner: FakeRunner, docs: list[tuple[str, str]], **over: Any
 ) -> CompileService:
     settings = make_settings(tmp_path, **over)
     return CompileService(

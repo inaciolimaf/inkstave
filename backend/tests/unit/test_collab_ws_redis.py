@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import fakeredis.aioredis as fakeredis
+from fakeredis import FakeServer
 
 from inkstave.modules.collab.crdt.ydocument import YDocument
 from inkstave.modules.collab.ws.redis_bridge import RedisBridge, decode_envelope, encode_envelope
@@ -19,7 +20,7 @@ def test_envelope_round_trip() -> None:
 
 
 async def test_cross_instance_relay_and_origin_exclusion() -> None:
-    server = fakeredis.FakeServer()
+    server = FakeServer()
     redis_a = fakeredis.FakeRedis(server=server)
     redis_b = fakeredis.FakeRedis(server=server)
     bridge_a = RedisBridge(redis_a, "A", "collab:doc:")
@@ -90,7 +91,7 @@ async def test_cross_instance_room_delivery() -> None:
     """Two instances + same Redis: a publish on A reaches a connection on B, the
     receiver *applies* the relayed update and converges, and A's own sending
     connection is not echoed (criterion 5)."""
-    server = fakeredis.FakeServer()
+    server = FakeServer()
     redis_a = fakeredis.FakeRedis(server=server)
     redis_b = fakeredis.FakeRedis(server=server)
     bridge_a = RedisBridge(redis_a, "A", "collab:doc:")
