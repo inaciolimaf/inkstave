@@ -5,12 +5,12 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from inkstave.modules.agent.context import parse_latex_structure
-from inkstave.modules.agent.context.models import StructureKind
+from inkstave.modules.agent.context.models import StructureKind, StructureNode
 from inkstave.modules.agent.tools.locate_section import _extra_commands
 
 
-def _sections(nodes):
-    out = []
+def _sections(nodes: list[StructureNode]) -> list[StructureNode]:
+    out: list[StructureNode] = []
     for n in nodes:
         if n.kind == StructureKind.SECTIONING:
             out.append(n)
@@ -44,4 +44,4 @@ def test_partial_is_not_a_part_section() -> None:
 
 def test_extra_commands_setting_is_split_and_trimmed() -> None:
     ctx = SimpleNamespace(settings=SimpleNamespace(agent_section_extra_commands=" defsection, ,sec ,"))
-    assert _extra_commands(ctx) == ["defsection", "sec"]  # type: ignore[arg-type]
+    assert _extra_commands(ctx) == ["defsection", "sec"]  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path

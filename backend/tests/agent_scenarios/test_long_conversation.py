@@ -8,7 +8,7 @@ The HTTP routes are real. The enqueuer is a recorder: the test runs each queued 
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -73,13 +73,14 @@ async def _send(routed: SimpleNamespace, text: str) -> tuple[int, dict[str, Any]
 async def _detail(routed: SimpleNamespace) -> dict[str, Any]:
     response = await routed.client.get(_base(routed), headers=routed.headers)
     assert response.status_code == 200
-    return response.json()
+    return cast(dict[str, Any], response.json())
 
 
 async def _run_queued(routed: SimpleNamespace, db: AsyncSession, redis: Any, llm: Any) -> Any:
     """Run the most recently enqueued turn through the real job."""
     queued = routed.recorder.calls[-1]
     session = await db.get(AgentSession, routed.session_id)
+    assert session is not None
     return await play_turn(db, redis, session, llm, queued["message"], run_id=queued["run_id"])
 
 
