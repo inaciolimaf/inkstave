@@ -205,7 +205,8 @@ async def test_audit_rows_for_a_full_run(seed: SimpleNamespace, db_session: Asyn
     sink = InMemoryEventSink(str(seed.run_id))
     llm = FakeLLM(
         script=[
-            _tool_call("propose_edit", {"doc_id": str(seed.main_id), "mode": "full", "new_text": "new\n"})
+            _tool_call("read_file", {"doc_id": str(seed.main_id)}),
+            _tool_call("propose_edit", {"doc_id": str(seed.main_id), "old_text": "body", "new_text": "new"}),
         ]
     )
 
