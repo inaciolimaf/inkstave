@@ -41,7 +41,7 @@ PLAYWRIGHT := pnpm -C frontend exec playwright test
         docker-up docker-down docker-logs db-test e2e-infra \
         install install-backend install-web e2e-install migrate \
         test test-unit test-integration coverage coverage-combine budget \
-        lint boundaries format types docs fix-tests \
+        lint boundaries format types docs fix-tests mutation mutation-all \
         web-types web-types-check web-dev web-lint web-typecheck web-unit web-test \
         web-format web-coverage web-build web-budget e2e mobile e2e-flows e2e-smoke e2e-all
 
@@ -176,6 +176,17 @@ types: ## Type-check the backend with strict mypy
 
 docs: ## Check that docs/system matches the code
 	uv run --project backend python -m tools.docs_coverage
+
+# Mutation testing (backend/tools/mutation.py): the functions a change touched, on every core. Red below the
+# tier minimum ([tool.mutation] in backend/pyproject.toml) or when the tests it runs pass 5 s.
+# MUTATION_BASE: the ref the diff is taken against (CI passes the pull-request base or the previous tip of main).
+MUTATION_BASE ?= origin/main
+
+mutation: ## Mutation testing of the functions changed since origin/main (fails below the tier minimum)
+	cd backend && timeout 600 uv run python -m tools.mutation --base $(MUTATION_BASE)
+
+mutation-all: ## Mutation testing of every file in [tool.mutation].paths (at most 40 min; survivors in backend/mutants-survivors.md)
+	cd backend && timeout 2400 uv run python -m tools.mutation --all --survivors mutants-survivors.md
 
 # A `fix` commit must change a test file (scripts/check_fix_has_test.py). FIX_RANGE is the
 # commits to check; CI sets it to the pushed or pull-request range.
