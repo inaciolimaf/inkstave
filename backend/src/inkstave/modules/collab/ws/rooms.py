@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from time import monotonic
 from uuid import UUID
 
 CLOSE_NORMAL = 1000
@@ -35,6 +36,8 @@ class Connection:
     can_write: bool = True
     # Set by the WS endpoint; lets history capture (spec 36) tag rows with the project.
     project_id: UUID | None = None
+    # monotonic time of the last inbound frame; the keepalive closes a silent peer (spec 29).
+    last_seen: float = field(default_factory=monotonic)
 
     def try_enqueue(self, payload: bytes) -> bool:
         """Non-blocking enqueue; ``False`` if the send queue is full (slow socket)."""
@@ -124,13 +127,12 @@ class RoomManager:
         room = self._rooms.get(document_id)
         if room is None:
             return []
-        overflowed: list[Connection] = []
-        for conn_id, conn in list(room.connections.items()):
-            if conn_id == exclude or conn.closed:
-                continue
-            if not await conn.enqueue_timed(payload, self._slow_client_timeout_ms):
-                overflowed.append(conn)
-        return overflowed
+        targets = [c for cid, c in room.connections.items() if cid != exclude and not c.closed]
+        # Concurrently, so one stalled socket's grace window does not delay the others.
+        results = await asyncio.gather(
+            *(conn.enqueue_timed(payload, self._slow_client_timeout_ms) for conn in targets)
+        )
+        return [conn for conn, delivered in zip(targets, results, strict=True) if not delivered]
 
     def is_empty(self, document_id: UUID) -> bool:
         return document_id not in self._rooms

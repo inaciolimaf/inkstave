@@ -12,7 +12,7 @@ from inkstave.modules.agent.tools._latex import match_score, scan_headings, sect
 from inkstave.modules.agent.tools.base import ToolContext
 from inkstave.modules.agent.tools.list_tree import ListTreeArgs
 from inkstave.modules.agent.tools.locate_section import LocateSectionArgs
-from inkstave.modules.agent.tools.propose_edit import ProposeEditArgs
+from inkstave.modules.agent.tools.propose_edit import ProposeEditArgs, ProposeEditTool
 from inkstave.modules.agent.tools.read_file import ReadFileArgs
 from inkstave.modules.agent.tools.search_project import _PAYLOAD_SOFT_CAP, _SNIPPET_MAX, SearchProjectArgs
 
@@ -65,11 +65,12 @@ def test_read_file_args_require_exactly_one_selector() -> None:
     ReadFileArgs(doc_id="d")  # ok
 
 
-def test_propose_edit_args_range_requires_lines() -> None:
+def test_propose_edit_args_are_exact_text_only() -> None:
     with pytest.raises(ValidationError):
-        ProposeEditArgs(doc_id="d", mode="range", new_text="x")
-    ProposeEditArgs(doc_id="d", mode="range", new_text="x", start_line=0, end_line=2)
-    ProposeEditArgs(doc_id="d", mode="full", new_text="x")  # full needs no lines
+        ProposeEditArgs(doc_id="d", new_text="x")  # old_text is required
+    assert ProposeEditArgs(doc_id="d", old_text="a", new_text="").new_text == ""  # deleting is allowed
+    properties = ProposeEditTool().spec().parameters["properties"]
+    assert set(properties) == {"doc_id", "old_text", "new_text", "rationale"}  # no mode, no line numbers
 
 
 def test_search_project_args_reject_empty_query() -> None:

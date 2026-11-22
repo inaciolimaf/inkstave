@@ -20,7 +20,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/graph/builder.py` | `build_graph`: plan, act, observe, respond |
 | `backend/src/inkstave/modules/agent/graph/nodes.py` | Node functions, tool dispatch, sentinels |
 | `backend/src/inkstave/modules/agent/graph/runner.py` | `run_turn`: one turn, one transaction |
-| `backend/src/inkstave/modules/agent/graph/state.py`, `backend/src/inkstave/modules/agent/graph/edits.py` | `AgentState`, `StagedEdit`, `EditMode` |
+| `backend/src/inkstave/modules/agent/graph/state.py`, `backend/src/inkstave/modules/agent/graph/edits.py` | `AgentState`, `StagedEdit` (exact-text replacement), `apply_edit`, `apply_edits` |
 | `backend/src/inkstave/modules/agent/graph/prompts.py`, `backend/src/inkstave/modules/agent/graph/agent_deps.py`, `backend/src/inkstave/modules/agent/graph/repository.py` | System prompt, injected `AgentDeps`, session and message queries |
 | `backend/src/inkstave/modules/agent/llm/base.py` | `LLMClient` protocol, message types, `LLMError` |
 | `backend/src/inkstave/modules/agent/llm/anthropic_client.py` | `AnthropicLLMClient`, the default and the only `anthropic` import |
@@ -28,7 +28,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/llm/factory.py` | `build_llm_client`, picks the client from `AGENT_LLM_PROVIDER` |
 | `backend/src/inkstave/modules/agent/llm/stub.py`, `backend/src/inkstave/modules/agent/llm/fake.py` | `StubAgentLLM` for e2e, scripted `FakeLLM` for tests |
 | `backend/src/inkstave/modules/agent/tools/base.py` | `Tool`, `ToolContext`, `ToolResult`, `ToolRegistry`, `authorize` |
-| `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages, never applies |
+| `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages an exact-text replacement after a read, never applies |
 | `backend/src/inkstave/modules/agent/tools/search_project.py`, `backend/src/inkstave/modules/agent/tools/read_file.py`, `backend/src/inkstave/modules/agent/tools/list_tree.py`, `backend/src/inkstave/modules/agent/tools/locate_section.py` | The read tools |
 | `backend/src/inkstave/modules/agent/tools/files/view_image.py` | `view_image`: hands an image or a PDF to the model |
 | `backend/src/inkstave/modules/agent/tools/files/propose.py` | `propose_create`, `propose_delete`, `propose_move`: stage, never apply |
@@ -36,7 +36,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/file_ops/apply.py`, `backend/src/inkstave/modules/agent/file_ops/routes.py`, `backend/src/inkstave/modules/agent/file_ops/schemas.py`, `backend/src/inkstave/modules/agent/file_ops/paths.py` | Carrying out a proposal, its routes and models, pure path helpers |
 | `backend/src/inkstave/modules/agent/tools/_latex.py` | Regex heading scan, used only for `search_project` ranking |
 | `backend/src/inkstave/modules/agent/context/parser.py`, `backend/src/inkstave/modules/agent/context/project_map.py` | `parse_latex_structure`, `build_project_map` |
-| `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`; `select_context`, not wired to the turn |
+| `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`, token estimate; `select_context` was removed |
 | `backend/src/inkstave/modules/agent/diffs/__init__.py`, `backend/src/inkstave/modules/agent/diffs/compute.py` | `materialize_diffs`, `is_stale`; pure diff computation |
 | `backend/src/inkstave/modules/agent/diffs/models.py`, `backend/src/inkstave/modules/agent/diffs/repository.py` | `ProposedDiff`, `ProposedDiffStatus`, queries |
 | `backend/src/inkstave/modules/agent/diffs/outcome.py`, `backend/src/inkstave/modules/agent/diffs/schemas.py` | `record_outcome`, `outcome_status`, `check_outcome`; `DiffOutcomeIn` (spec 110) |
@@ -202,14 +202,16 @@ scoped to `ToolContext.project_id`.
 | `read_file` | Reads by `doc_id` or `path`, with an optional line window | `AGENT_TOOL_READ_MAX_CHARS` |
 | `list_tree` | Tree under a path, depth 1–10 | `AGENT_TOOL_TREE_MAX_NODES` |
 | `locate_section` | Resolves a human section name through the structure parser | Name up to 120 chars |
-| `propose_edit` | Stages a `StagedEdit`. `require_write=True`, so viewers get `forbidden` | `AGENT_TOOL_EDIT_MAX_CHARS` |
+| `propose_edit` | Stages `old_text` → `new_text`. `require_write=True`, so viewers get `forbidden`. Refused unless `read_file` returned the document in this turn and it has not changed since; `old_text` must occur exactly once in the text the turn's earlier edits leave | `AGENT_TOOL_EDIT_MAX_CHARS` |
 | `view_image` | Hands a PNG, JPEG, GIF, WebP or PDF to the model. The type comes from the bytes. A PDF goes to Claude as a `document` block and to OpenRouter as a `file` part, so the model reads its text and sees its pages; it rides in `LLMImage` with `media_type` `application/pdf` | `AGENT_TOOL_IMAGE_MAX_BYTES` |
 | `propose_create` | Stages a new document with its whole text, or a folder. Missing folders on the path are created on apply. `require_write=True` | `AGENT_TOOL_EDIT_MAX_CHARS` |
 | `propose_delete` | Stages a delete and records what it removes in `affected_paths`. `require_write=True` | — |
 | `propose_move` | Stages a rename, a move or both. `require_write=True` | — |
 
-A foreign or malformed id is `not_found`, a binary file is `unsupported`. `mode` is `full` or `range`
-(0-based, end exclusive). The tools added by spec 108 accept a path with a leading `/` or `./`; the older
+A foreign or malformed id is `not_found`, a binary file is `unsupported`. `read_file` returns the text with no
+line numbers, so `old_text` is copied from it verbatim; it records the document's version in `ToolContext.read_versions`
+for the read guard, and once the turn has staged edits on a document it returns the text they leave, flagged with
+`proposed_edits`. The model never gives line numbers to an edit. The tools added by spec 108 accept a path with a leading `/` or `./`; the older
 read tools still want it exactly as the tree spells it.
 
 ### Images
@@ -247,18 +249,17 @@ included outlines, with a cycle guard and a list of unresolved inputs.
 `locate_section` scores by exact title (1.0), label (0.95), ordinal such as "section 2" (0.92), synonym
 (0.9), substring (0.7), token overlap (up to 0.6). An ordinal match returns alone.
 
-`select_context` builds a `ContextBundle` within a token budget: target section with surrounding lines
-first, then an outline, then up to three related matches, truncating or dropping what does not fit. Tokens
-are estimated at four characters each. It is tested but nothing in the turn calls it.
 
 ### How a proposed edit reaches the user
 
-1. The model calls `propose_edit`. The tool validates and appends a `StagedEdit` to
-   `ToolContext.staged_edits`. The document is untouched and the result says `staged: true`.
+1. The model calls `propose_edit`. The tool checks the read guard, then that `old_text` occurs exactly once in the
+   text the turn's earlier edits to that document leave, and appends a `StagedEdit` to `ToolContext.staged_edits`.
+   The document is untouched and the result says `staged: true`. A refusal is a `ToolResult` error the model reads.
 2. At the end of the turn `materialize_diffs` groups edits by document and re-reads each one. It skips a
    missing document, one over `AGENT_DIFF_MAX_DOC_CHARS`, and a no-op.
-3. `apply_staged_edits` builds the proposed text in memory. `full` wins over `range`, with a note in the
-   rationale. Overlapping ranges raise `DiffConflictError` and store a `rejected` row with no hunks.
+3. `apply_staged_edits` replays the edits in order on the current text in memory, each `old_text` again required to
+   occur exactly once. One that no longer fits raises `DiffConflictError` and stores a `rejected` row with no hunks,
+   whose rationale says why.
 4. `compute_diff` uses `difflib` over lines and returns `diff_text`, hunks `h1`, `h2`… and `stats`.
 5. `_persist` moves earlier `proposed` rows for the same session and document to `superseded`, then inserts
    the new one with `base_version` and `base_hash`.
@@ -309,7 +310,10 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | SSE requires auth and membership at connect | `backend/tests/integration/test_agent_api_sse.py::test_sse_events_route_requires_auth` |
 | A revoked session cannot open a new SSE stream | `backend/tests/integration/test_session_revocation.py::test_websocket_and_sse_paths_refuse_a_revoked_session` |
 | A new proposal supersedes the old one for the same document | `backend/tests/integration/test_agent_diffs.py::test_superseding_prior_proposal` |
-| Overlapping ranges are rejected, never mis-applied | `backend/tests/integration/test_agent_diffs.py::test_overlapping_ranges_rejected` |
+| An edit whose `old_text` no longer fits is rejected, never mis-applied | `backend/tests/integration/test_agent_diffs.py::test_edit_that_no_longer_fits_is_rejected` |
+| `propose_edit` refuses a document not read in this turn, or changed since the read | `backend/tests/integration/test_agent_propose_edit.py::test_propose_without_reading_is_refused`, `backend/tests/integration/test_agent_propose_edit.py::test_change_since_read_is_refused`, `backend/tests/agent_evals/test_agent_evals.py::test_eval_a_collaborator_edit_after_the_read_is_refused` |
+| `old_text` must occur exactly once; an empty one only fills an empty file | `backend/tests/integration/test_agent_propose_edit.py::test_old_text_missing_is_refused`, `backend/tests/integration/test_agent_propose_edit.py::test_old_text_repeated_is_refused_with_the_count`, `backend/tests/unit/test_agent_diffs_unit.py::test_old_text_repeated_raises_conflict` |
+| Successive edits to one document apply in order and make one diff that applies to the current text | `backend/tests/integration/test_agent_propose_edit.py::test_the_proposed_diff_applies_to_the_current_text`, `backend/tests/agent_evals/test_agent_evals.py::test_eval_two_edits_in_one_run_make_one_applicable_diff` |
 | Oversized documents and no-ops create no row | `backend/tests/integration/test_agent_diffs.py::test_oversized_doc_is_skipped`, `backend/tests/integration/test_agent_diffs.py::test_noop_edit_creates_no_row` |
 | The turn raises its idle limit first | `backend/tests/unit/test_external_timeouts.py::test_the_agent_turn_raises_its_idle_limit_first` |
 | A timed-out job settles as `timeout` | no dedicated test |
@@ -349,7 +353,7 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 **The outcome is recorded once, when the last hunk is decided.** Until then the server knows nothing of a
 partial review: a reload in the middle of one shows the proposal as pending, and the hunks accepted before it
 are drawn again as blocked, since their old lines are gone. Only the browser's memory of this page keeps them
-decided (`docs/known-gaps.md`). `rejected` also comes from overlapping ranges, which store a row with no hunks.
+decided (`docs/known-gaps.md`). `rejected` also comes from an edit whose `old_text` no longer fits the file, which stores a row with no hunks.
 `is_stale` is used only by its test.
 
 **Timeouts.** `AGENT_REQUEST_TIMEOUT_S` bounds one LLM request. `AGENT_JOB_TIMEOUT_S` is the ARQ `timeout` for the whole turn, and `run_turn` passes the same value to `allow_idle`, because the transaction stays open across model calls. Fifty plan steps at 120 s far exceed 600 s, and the SDK's default two retries are not disabled, so one call can take three times the request timeout. The job timeout is the real ceiling and a slow multi-step turn can hit it.
@@ -368,10 +372,10 @@ decided (`docs/known-gaps.md`). `rejected` also comes from overlapping ranges, w
 
 **`hunks` and `stats` are separate.** `_diff_summary` in `backend/src/inkstave/modules/agent/routes.py` clears `hunks` unless asked. Commit b83e563 corrected it: `model_validate` already filled `hunks`, so the flag did nothing and lists always carried them. It changed what is sent, not how hunks are counted; `hunk_count` comes from `_stats` in `backend/src/inkstave/modules/agent/diffs/compute.py`. `test_listing_draws_hunks_only_when_asked` now asserts on `hunks` in both forms.
 
-**Edits and drift.** `StagedEdit.base_version` is recorded and never compared. `propose_edit` checks range bounds at stage time, but ranges apply to the text re-read at the end of the turn, so collaborator edits during the turn can shift them. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
+**Edits and drift.** A collaborator's edit between the read and the proposal is refused at stage time (the version check). An edit that was staged before a later collaborator edit is matched again at the end of the turn against the text then, so it becomes a `rejected` row if its `old_text` no longer fits; the browser's own rebase (`rebaseHunks`) handles drift in the hunks that do apply. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
 
 **Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result, and the next turn replays it. OpenAI-style APIs may reject that; not verified against a provider.
 
-**Unused code.** `select_context`, `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES`: the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
+**Unused code.** `select_context` was removed; `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES` have no effect, and the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
 
 **Injection guard limits.** `flag_injection` only audits, it blocks nothing. `wrap_untrusted` frames tool messages sent to the model and the transcript stays raw. Protection against acting on injected text rests on every tool only proposing and on review by the user. Text inside an image is not scanned at all.

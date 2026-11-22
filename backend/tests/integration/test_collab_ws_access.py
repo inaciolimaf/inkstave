@@ -74,6 +74,7 @@ async def test_non_member_join_rejected_4403(app: Any, db_session: AsyncSession,
     async with ASGIWebSocketClient(
         app, _path(project.id, entity.id), query=f"token={tokens['outsider']}"
     ) as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == 4403  # AC6 — no room, no sync
 
 

@@ -21,9 +21,10 @@ never stored. It came from specs 28 (CRDT model), 29 (transport), 30 and 34 (rol
 | `backend/src/inkstave/modules/collab/rooms/store.py` | `CrdtStore`: snapshot plus append-only log |
 | `backend/src/inkstave/modules/collab/rooms/content_bridge.py` | `ContentBridge`: CRDT text to and from `documents.content` |
 | `backend/src/inkstave/modules/collab/rooms/flush.py` | `flush_open_project_docs`: forced flush before a worker job reads content |
-| `backend/src/inkstave/modules/collab/ws/router.py` | `collab_ws` endpoint, `_admit`, `_join_room`, `_handshake`, `_serve` |
+| `backend/src/inkstave/modules/collab/ws/router.py` | `collab_ws` endpoint, `_reject`, `_admit`, `_join_room`, `_handshake`, `_serve` |
 | `backend/src/inkstave/modules/collab/ws/connection.py` | `_authorize`, `_writer`, `_force_close`, `_make_forwarder`, `_cleanup` |
 | `backend/src/inkstave/modules/collab/ws/messaging.py` | `_receive_loop`, `_frame_rejection`, `_dispatch`, `_RateLimiter` |
+| `backend/src/inkstave/modules/collab/ws/heartbeat.py` | `_heartbeat`: the application-level keepalive ping and the silent-peer close |
 | `backend/src/inkstave/modules/collab/ws/rooms.py` | Close codes, `Connection`, `Room`, `RoomManager` |
 | `backend/src/inkstave/modules/collab/ws/redis_bridge.py` | `RedisBridge`, the binary envelope, `Subscription` |
 | `backend/src/inkstave/modules/collab/ws/components.py` | `CollabComponents`, `CollabWsSettings`, `build_collab_components` |
@@ -89,7 +90,7 @@ Close codes, from `backend/src/inkstave/modules/collab/ws/rooms.py`:
 
 | Code | Name | When |
 |---|---|---|
-| 4000 | `CLOSE_DEAD` | `app.state.collab` is `None` (database or Redis not wired). Named "ping timeout" in the source, but the server has no ping logic |
+| 4000 | `CLOSE_DEAD` | `app.state.collab` is `None` (database or Redis not wired), or the peer sent nothing for `COLLAB_WS_PING_INTERVAL_SECONDS` + `COLLAB_WS_PONG_TIMEOUT_SECONDS` (keepalive) |
 | 4400 | `CLOSE_BAD_MESSAGE` | Text frame, frame over `COLLAB_WS_MAX_FRAME_BYTES`, or update over `COLLAB_MAX_UPDATE_BYTES` |
 | 4401 | `CLOSE_UNAUTHORIZED` | Token missing, invalid, expired, or `is_alive` refused it |
 | 4403 | `CLOSE_FORBIDDEN` | Authenticated, project exists, no membership |
@@ -97,17 +98,19 @@ Close codes, from `backend/src/inkstave/modules/collab/ws/rooms.py`:
 | 4408 | `CLOSE_SLOW_CONSUMER` | Send queue full when the Redis forwarder enqueues |
 | 4429 | `CLOSE_RATE_LIMITED` | More than `COLLAB_WS_MAX_MSGS_PER_SEC` messages in the current one-second window |
 
-`CLOSE_NORMAL` (1000) is defined and never used. 4000, 4401, 4403 and 4404 are all sent before `accept()`;
-see Points of attention for what the browser sees.
+`CLOSE_NORMAL` (1000) is defined and never used. Every close code is sent after `accept()`: a rejection
+is accepted and then closed with its code (`_reject`), so the browser receives the code rather than an
+HTTP 403 (see Points of attention).
 
 Wire format is the standard y-protocols encoding: outer tag 0 for sync (sub-types step 1, step 2, update),
-1 for awareness. Unknown or malformed input decodes to `UnknownMessage` and is ignored.
+1 for awareness. Tags 2 (keepalive ping) and 3 (pong) are not y-protocols: the server sends 2 and the browser
+answers 3. Unknown or malformed input decodes to `UnknownMessage` and is ignored.
 
 ## How it works
 
 ### Join
 
-1. `collab_ws` returns 4000 if `app.state.collab` is missing and 4401 if no token.
+1. `collab_ws` returns 4000 if `app.state.collab` is missing and 4401 if no token, each through `_reject`.
 2. `_admit` runs before `accept()`: `authenticate_ws_token` (the same `_resolve_user` and `is_alive` as
    `get_current_user`), then `_authorize`. `_authorize` loads the project, calls `role_for`, calls
    `get_entity` with `TreeEntityType.doc`, and computes `can_write` as
@@ -139,8 +142,17 @@ message to `_dispatch`:
 All delivery, including to clients on the same instance, goes through Redis. `RedisBridge.publish` wraps the
 payload in an envelope of instance id, origin connection id and payload. `_reader` polls `get_message` once
 a second rather than using `listen()`, and passes `exclude=origin_conn_id` only when the envelope came from
-this instance. `_make_forwarder` calls `RoomManager.local_broadcast`, which only enqueues; a full queue is
-reported back and closed with 4408 in a spawned task. `_writer` is the only code that writes to the socket.
+this instance. `_make_forwarder` calls `RoomManager.local_broadcast_timed`: each socket gets `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS`
+(concurrently with the others) to make room in its send queue. A socket that still has no room is reported back
+and closed with 4408 in a spawned task. `_writer` is the only code that writes to the socket.
+
+### Keepalive
+
+`_heartbeat` runs beside the writer. Every `COLLAB_WS_PING_INTERVAL_SECONDS` it enqueues a ping (tag 2) and,
+if the peer has sent no frame for interval + `COLLAB_WS_PONG_TIMEOUT_SECONDS`, closes it with 4000. `_receive_loop`
+stamps `Connection.last_seen` on every inbound frame, so any traffic keeps a connection alive, and the browser's
+pong (tag 3) is answered by `InkstaveWsProvider`. An interval of 0 disables it. Uvicorn's own protocol ping is not
+reachable from ASGI, which is why the keepalive is at the application level.
 
 ### Manager lifecycle
 
@@ -192,9 +204,11 @@ appends the update, schedules a flush, releases and returns the raw update. The 
 
 ### Browser
 
-`InkstaveWsProvider` sends step 1 on every open, answers the server's step 1 with step 2, throttles
-awareness, and reconnects with full-jitter backoff. Closes 4401, 4403 and 4404 are terminal: it stops
-retrying and goes to `closed`.
+`InkstaveWsProvider` sends step 1 on every open, answers the server's step 1 with step 2, answers a keepalive ping
+with a pong, throttles awareness, and reconnects with full-jitter backoff. On 4401 it calls `refreshToken`
+(`refreshTokens` from `lib/api-client`, the same refresh REST calls use) and reconnects once with the new token.
+It stops and goes to `closed` when the refresh fails, when a second 4401 comes before the session syncs, or on
+4403 and 4404, which are terminal. `useCollabDoc` supplies the refresh.
 
 `flush()` is the ack for the edits sent so far: it sends a SyncStep1 and resolves on the server's SyncStep2
 reply to that step1. The server handles each socket's frames in order, so the reply proves the earlier updates
@@ -206,7 +220,10 @@ It resolves at once when no socket is open, and when the socket closes first. Ca
 
 | Invariant | Test |
 |---|---|
-| Missing or invalid token closes 4401 | `backend/tests/integration/test_collab_ws_api.py::test_missing_token_closes_4401`, `backend/tests/integration/test_collab_ws_api.py::test_invalid_token_closes_4401` |
+| Missing or invalid token closes 4401 (after accept, so the browser sees the code) | `backend/tests/integration/test_collab_ws_api.py::test_missing_token_closes_4401`, `backend/tests/integration/test_collab_ws_api.py::test_invalid_token_closes_4401` |
+| A silent peer is closed 4000; a peer that answers pings stays open | `backend/tests/integration/test_collab_ws_keepalive.py` |
+| A 4401 refreshes the token once and reconnects; a refused refresh, a repeated 4401 or 4403/4404 stops the provider | `frontend/src/modules/collab/InkstaveWsProvider.lifecycle.test.ts` (`auth close handling`) |
+| A slow client's queue gets the grace window before it is closed 4408 | `backend/tests/unit/test_collab_ws_rooms.py::test_forwarder_applies_slow_client_grace_window` |
 | An expired token is refused | `backend/tests/integration/test_runtime_ws_auth_reconnect.py::test_expired_token_rejected_4401` |
 | A revoked session cannot open a socket (function level, not through the endpoint) | `backend/tests/integration/test_session_revocation.py::test_websocket_and_sse_paths_refuse_a_revoked_session` |
 | A non-auth error at admission is not reported as 4401 | `backend/tests/unit/test_collab_ws_auth_logging_92.py::test_ws_non_auth_error_propagates` |
@@ -260,9 +277,9 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 | `COLLAB_WS_SEND_QUEUE_MAX` | 256 | Send queue size per connection |
 | `COLLAB_WS_MAX_MSGS_PER_SEC` | 200 | Inbound rate guard per connection (a fixed window, despite the docstring) |
 | `COLLAB_REDIS_CHANNEL_PREFIX` | `collab:doc:` | Pub/sub channel prefix |
-| `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS` | 2000 | No effect in production (see below) |
-| `COLLAB_WS_PING_INTERVAL_SECONDS` | 25.0 | No effect (see below) |
-| `COLLAB_WS_PONG_TIMEOUT_SECONDS` | 10.0 | No effect (see below) |
+| `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS` | 2000 | Grace window for a full send queue before the socket is closed 4408 |
+| `COLLAB_WS_PING_INTERVAL_SECONDS` | 25.0 | Keepalive ping interval; 0 disables the keepalive |
+| `COLLAB_WS_PONG_TIMEOUT_SECONDS` | 10.0 | Silence allowed beyond the interval before the peer is closed 4000 |
 
 ## Points of attention
 
@@ -284,15 +301,13 @@ Each case separately:
 The comment in `frontend/src/modules/collab/InkstaveWsProvider.ts` naming a "removed collaborator (4403)"
 applies only to a new connection attempt.
 
-**Rejection close codes do not reach the browser.** 4000, 4401, 4403 and 4404 are sent with
-`websocket.close()` before `accept()`. Under uvicorn that is an HTTP 403 on the handshake, reproduced with the
-installed uvicorn and `websockets`: "server rejected WebSocket connection: HTTP 403". A browser reports 1006,
-so `TERMINAL_CLOSE_CODES` in the provider never matches these and it keeps reconnecting with backoff, up to its
-cap, forever. The tests use `backend/tests/collab_ws_harness.py`, which surfaces the ASGI close code directly and
-hides this. Only 4400, 4408 and 4429 are sent after accept.
+**Rejections were sent before `accept()` (fixed).** A close before `accept()` reached the browser as an HTTP 403
+on the handshake, which the browser reports as 1006, so the provider could not read the code and retried forever.
+Every rejection is now accepted and then closed with its code (`_reject`). The harness `ASGIWebSocketClient`
+records the accept, so tests call `expect_accept()` before `close_code()`.
 
 **Multiple instances are not safe for the document state, despite ADR 0029 and the admin guide.** Redis
-relays messages to browsers only: `_make_forwarder` calls `local_broadcast` and never applies the update to the
+relays messages to browsers only: `_make_forwarder` calls `local_broadcast_timed` and never applies the update to the
 receiving instance's `YDocument`. Reading the code, each instance's copy therefore holds only the updates from its
 own clients. `_compact` writes that partial state into `crdt_document_state`, overwriting the other instance's
 snapshot, and deletes log rows up to its own `last_update_id`, including rows from the other instance.
@@ -300,15 +315,8 @@ snapshot, and deletes log rows up to its own `last_update_id`, including rows fr
 with each other, and a reconnect re-sends what the server lacks. This was not reproduced end to end: the
 cross-instance tests exercise only `RedisBridge` and `RoomManager`.
 
-**Heartbeat settings are unused.** `COLLAB_WS_PING_INTERVAL_SECONDS` and `COLLAB_WS_PONG_TIMEOUT_SECONDS` are read
-into `CollabWsSettings` and nothing reads those fields. The source and `.env.example` say "delegated to the ASGI
-server", but `backend/Dockerfile` starts uvicorn with no `--ws-ping-*` flag, so uvicorn's own defaults apply and
-these variables change nothing. `CLOSE_DEAD` is never sent for a ping timeout.
-
-**`COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS` is unused in production.** It reaches `RoomManager`, but only
-`local_broadcast_timed` reads it, and only tests call that method. `_make_forwarder` uses the non-blocking
-`local_broadcast`, so a full queue closes the socket at once. The comment in `build_collab_components` describing a
-grace window is wrong.
+**Keepalive needs the browser to answer.** A client that predates tag 3 (a cached old bundle) never pongs, so
+after about 35 seconds of no traffic it is closed 4000 and reconnects. The current provider answers every ping.
 
 **Empty text re-seeds.** `_load` seeds whenever `ydoc.text` is empty, not only on first open. A document emptied by
 its users and then reopened seeds again from `documents.content`. That is harmless after a clean release, which

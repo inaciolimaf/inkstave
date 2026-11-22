@@ -141,3 +141,32 @@ async def test_forwarder_closes_slow_consumer_without_stalling_others() -> None:
 
     assert slow.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]
     assert healthy.send_queue.get_nowait() == b"broadcast"  # healthy member still served
+
+
+async def test_forwarder_applies_slow_client_grace_window() -> None:
+    # COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS is honoured by the Redis forwarder: a queue that
+    # drains inside the window keeps its client, and the healthy member is not delayed.
+    class _Components:
+        rooms = RoomManager(slow_client_timeout_ms=200)
+
+    components = _Components()
+    doc = uuid4()
+    slow = _conn(doc, "slow", maxsize=1)
+    healthy = _conn(doc, "healthy", maxsize=10)
+    components.rooms.join(slow)
+    components.rooms.join(healthy)
+    slow.try_enqueue(b"fill")
+
+    async def drain() -> None:
+        await asyncio.sleep(0.01)
+        slow.send_queue.get_nowait()
+
+    drainer = asyncio.create_task(drain())
+    forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]
+    await forwarder(b"broadcast", None)
+    await drainer
+    await asyncio.sleep(0.02)
+
+    assert slow.websocket.closed is None  # type: ignore[attr-defined]
+    assert slow.send_queue.get_nowait() == b"broadcast"
+    assert healthy.send_queue.get_nowait() == b"broadcast"

@@ -7,6 +7,7 @@ guarantee the agent must always uphold.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
@@ -20,7 +21,7 @@ from inkstave.modules.agent.graph import repository as agent_repo
 from inkstave.modules.agent.graph.agent_deps import AgentDeps
 from inkstave.modules.agent.graph.runner import run_turn
 from inkstave.modules.agent.llm.base import LLMResponse, LLMUsage, ToolCall
-from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.llm.fake import FakeLLM, ScriptItem
 from inkstave.modules.agent.safety import avg_rate_per_1k
 from inkstave.modules.agent.tools import default_registry
 from inkstave.modules.projects.catalog.service import create_project
@@ -28,6 +29,7 @@ from inkstave.modules.projects.content.documents import get_document, set_conten
 from inkstave.modules.projects.models.tree_entity import TreeEntityType
 from inkstave.modules.projects.tree.service import create_entity
 from tests.factories import UserFactory
+from tests.fixtures.unified import apply_unified
 
 pytestmark = pytest.mark.integration
 
@@ -58,9 +60,13 @@ async def project(db_session: AsyncSession) -> SimpleNamespace:
 
 
 def _deps(script: list[Any], **over: Any) -> AgentDeps:
+    return _deps_for(FakeLLM(script=script), **over)
+
+
+def _deps_for(llm: FakeLLM, **over: Any) -> AgentDeps:
     settings = AgentSettings(**over)
     return AgentDeps(
-        llm=FakeLLM(script=script),
+        llm=llm,
         settings=settings,
         tools=default_registry(),
         injection_guard=settings.agent_injection_guard == "on",
@@ -93,17 +99,18 @@ async def test_eval_locate_accuracy() -> None:
 async def test_eval_propose_edit_yields_valid_diff(
     project: SimpleNamespace, db_session: AsyncSession
 ) -> None:
-    """AC7b — propose_edit produces a syntactically valid unified diff (spec 43)."""
+    """AC7b — a read then an exact-text edit produces a valid unified diff (spec 43)."""
     deps = _deps(
         [
+            _tool_call("read_file", {"doc_id": str(project.main_id)}),
             _tool_call(
                 "propose_edit",
                 {
                     "doc_id": str(project.main_id),
-                    "mode": "full",
-                    "new_text": _MAIN.replace("motivates", "MOTIVATES"),
+                    "old_text": "motivates",
+                    "new_text": "MOTIVATES",
                 },
-            )
+            ),
         ]
     )
     result = await run_turn(session=project.session, user_message="tweak intro", deps=deps, db=db_session)
@@ -162,17 +169,125 @@ async def test_eval_never_auto_applies(project: SimpleNamespace, db_session: Asy
     before = (await get_document(db_session, project.proj.id, project.main_id)).content
     deps = _deps(
         [
+            _tool_call("read_file", {"doc_id": str(project.main_id)}),
             _tool_call(
                 "propose_edit",
-                {
-                    "doc_id": str(project.main_id),
-                    "mode": "full",
-                    "new_text": "completely rewritten\n",
-                },
-            )
+                {"doc_id": str(project.main_id), "old_text": _MAIN, "new_text": "completely rewritten\n"},
+            ),
         ]
     )
     result = await run_turn(session=project.session, user_message="rewrite", deps=deps, db=db_session)
     assert len(result.proposed_diffs) == 1  # a proposal was created
     after = (await get_document(db_session, project.proj.id, project.main_id)).content
     assert after == before  # but the document was NOT changed
+
+
+async def _tool_messages(db: AsyncSession, project: SimpleNamespace) -> list[str]:
+    rows = await agent_repo.list_messages(db, project.session.id)
+    return [row.content or "" for row in rows if row.role == "tool"]
+
+
+class _CollaboratorEditsBeforeCall(FakeLLM):
+    """A FakeLLM that lets a collaborator change the document just before its ``at``-th call."""
+
+    def __init__(self, script: list[ScriptItem], *, at: int, edit: Callable[[], Awaitable[None]]) -> None:
+        super().__init__(script=script)
+        self._at = at
+        self._edit = edit
+
+    async def complete(self, messages: Any, **kwargs: Any) -> Any:
+        if len(self.calls) == self._at:
+            await self._edit()
+        return await super().complete(messages, **kwargs)
+
+
+async def test_eval_edit_without_a_read_is_refused_then_succeeds(
+    project: SimpleNamespace, db_session: AsyncSession
+) -> None:
+    """AC7f — a proposal before any read fails; after read_file it is staged and reaches the diff."""
+    edit = {"doc_id": str(project.main_id), "old_text": "motivates", "new_text": "MOTIVATES"}
+    deps = _deps(
+        [
+            _tool_call("propose_edit", edit),
+            _tool_call("read_file", {"doc_id": str(project.main_id)}),
+            _tool_call("propose_edit", edit),
+        ]
+    )
+    result = await run_turn(session=project.session, user_message="tweak", deps=deps, db=db_session)
+    tool_results = await _tool_messages(db_session, project)
+    assert "read_file this document before proposing an edit." in tool_results[0]
+    assert len(result.proposed_diffs) == 1 and result.proposed_diffs[0].status == "proposed"
+
+
+async def test_eval_a_collaborator_edit_after_the_read_is_refused(
+    project: SimpleNamespace, db_session: AsyncSession
+) -> None:
+    """AC7g — the document changed since the read: the edit is refused, nothing is proposed."""
+
+    async def collaborator() -> None:
+        await set_content_from_collab(db_session, project.main_id, _MAIN.replace("motivates", "MOTIVATES"))
+        await db_session.flush()
+
+    llm = _CollaboratorEditsBeforeCall(
+        [
+            _tool_call("read_file", {"doc_id": str(project.main_id)}),
+            _tool_call(
+                "propose_edit",
+                {"doc_id": str(project.main_id), "old_text": "motivates", "new_text": "x"},
+            ),
+        ],
+        at=1,
+        edit=collaborator,
+    )
+    result = await run_turn(session=project.session, user_message="tweak", deps=_deps_for(llm), db=db_session)
+    tool_results = await _tool_messages(db_session, project)
+    assert "the file changed since you read it; read_file again." in tool_results[-1]
+    assert result.proposed_diffs == []
+
+
+async def test_eval_missing_and_ambiguous_old_text_are_refused(
+    project: SimpleNamespace, db_session: AsyncSession
+) -> None:
+    """AC7h — old_text that is absent or occurs twice is refused with a reason; nothing is staged."""
+    deps = _deps(
+        [
+            _tool_call("read_file", {"doc_id": str(project.main_id)}),
+            _tool_call(
+                "propose_edit", {"doc_id": str(project.main_id), "old_text": "\\section{", "new_text": "x"}
+            ),
+            _tool_call(
+                "propose_edit", {"doc_id": str(project.main_id), "old_text": "Discussion", "new_text": "x"}
+            ),
+        ]
+    )
+    result = await run_turn(session=project.session, user_message="edit", deps=deps, db=db_session)
+    tool_results = await _tool_messages(db_session, project)
+    assert "occurs 2 times" in tool_results[1]
+    assert "not found in the current file" in tool_results[2]
+    assert result.proposed_diffs == [] and result.staged_edits == []
+
+
+async def test_eval_two_edits_in_one_run_make_one_applicable_diff(
+    project: SimpleNamespace, db_session: AsyncSession
+) -> None:
+    """AC7i — several places in one file: one proposal, and its diff applies to the current text."""
+    deps = _deps(
+        [
+            _tool_call("read_file", {"doc_id": str(project.main_id)}),
+            _tool_call(
+                "propose_edit",
+                {"doc_id": str(project.main_id), "old_text": "motivates", "new_text": "MOTIVATES"},
+            ),
+            _tool_call(
+                "propose_edit",
+                {"doc_id": str(project.main_id), "old_text": "We describe", "new_text": "We outline"},
+            ),
+        ]
+    )
+    result = await run_turn(session=project.session, user_message="edit", deps=deps, db=db_session)
+    assert len(result.proposed_diffs) == 1
+    current = (await get_document(db_session, project.proj.id, project.main_id)).content
+    applied = apply_unified(current, result.proposed_diffs[0].diff_text)
+    assert "The introduction MOTIVATES the work." in applied
+    assert "We outline the methods here." in applied
+    assert applied == _MAIN.replace("motivates", "MOTIVATES").replace("We describe", "We outline") + "\n"
