@@ -10,7 +10,8 @@ monotonic sequence for unique defaults and two classmethods —
 Keep factories dependency-light and async-explicit (no factory_boy magic).
 """
 
+from tests.factories.lived_in import LivedInProject, build_lived_in_project
 from tests.factories.ping import PingFactory
 from tests.factories.user import UserFactory
 
-__all__ = ["PingFactory", "UserFactory"]
+__all__ = ["LivedInProject", "PingFactory", "UserFactory", "build_lived_in_project"]

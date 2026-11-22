@@ -226,6 +226,32 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 | E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
+### Lived-in projects
+
+Empty fixtures hid bug 5548812 (a document with content before its first edit reconstructed its
+history as empty). Feature tests that need existing data start from a **lived-in project**, built
+by `backend/tests/factories/lived_in.py` with plain inserts (no services, no compile, no LLM; about
+0.1 s per build, asserted under 200 ms):
+
+| Piece | Content |
+|---|---|
+| Documents | `main.tex` with `\input` of two chapters, a bibliography and a figure; `chapters/intro.tex`, `chapters/methods.tex`, `refs.bib` |
+| Blob | `figures/plot.png`, binary, written to the object store |
+| Older document | `appendix.tex`: content, no history rows (it predates history) |
+| History | two recorded versions of `main.tex` (a chunk and two updates) |
+| Collaboration | an owner, an editor collaborator, a view share link, a comment thread on `intro.tex` |
+| Agent | a session with a user turn, the reply, and a pending proposal on `intro.tex` |
+
+Backend: the `lived_in_project` fixture in `backend/tests/integration/conftest.py` (with
+`lived_in_store`, the object store it serves) and the `test_seeded_*.py` files cover collab edits,
+history list, diff and restore, the read-only agent tools, compile assembly, export, rename and
+move, and project deletion. `_seeded_support.py` holds the WebSocket join and edit helpers.
+
+Frontend: `frontend/src/test/lived-in.ts` exports the same project (paths, text, versions, comment
+thread, session, proposal) and `installLivedInFetch()`, a `fetch` stub that answers the real
+endpoints in their wire shape and returns 404 for anything the project lacks. The tests that use it
+are `*.lived-in.test.tsx` and `file-tree-lived-in.test.tsx`.
+
 ### Property tests
 
 Property tests check invariants over generated inputs on the pure seams of the stateful cores. They
