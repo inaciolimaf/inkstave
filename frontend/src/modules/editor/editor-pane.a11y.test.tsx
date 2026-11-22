@@ -8,6 +8,19 @@ import type { TreeEntity } from "@/modules/file-tree/types";
 import { EditorPane } from "./editor-pane";
 
 expect.extend(toHaveNoViolations);
+
+// The live session and the editor are replaced: this checks the pane's own markup.
+vi.mock("@/modules/collab", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/collab")>()),
+  useCollabDoc: () => ({ flush: () => Promise.resolve() }),
+}));
+vi.mock("./CollabEditor", async () => {
+  const { createElement } = await import("react");
+  return {
+    CollabEditor: () =>
+      createElement("div", { "aria-label": "LaTeX editor", role: "textbox", "aria-multiline": "true" }, "Hi"),
+  };
+});
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const auth = vi.hoisted(() => ({
@@ -55,8 +68,7 @@ describe("EditorPane accessibility", () => {
         <EditorPane projectId="p" selected={DOC} onClearSelection={vi.fn()} />
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(container.querySelector(".cm-content")).toBeTruthy());
-    expect(screen.getByLabelText("LaTeX editor")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("LaTeX editor")).toBeInTheDocument());
     expect(await axe(container)).toHaveNoViolations();
   });
 });

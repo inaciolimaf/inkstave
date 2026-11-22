@@ -2,8 +2,6 @@ const dict = {
   pane: {
     selectFile: "Select a file to start editing.",
     loadingDocument: "Loading document",
-    documentGone: "This document no longer exists.",
-    loadFailed: "Couldn’t load this document.",
     binaryFile: "This is a binary file and can’t be edited here.",
     imagePreview: "Preview of {{name}}",
     noFileOpen: "No file open",
@@ -60,13 +58,6 @@ const dict = {
   selection: {
     ask: "Ask the agent",
   },
-  conflict: {
-    title: "This document changed on the server",
-    description:
-      "Someone (or another tab) saved a newer version since you opened it. Choose how to resolve the conflict.",
-    keepMine: "Keep my version",
-    reload: "Reload server version",
-  },
   settings: {
     trigger: "Editor settings",
     title: "Editor settings",
@@ -77,25 +68,6 @@ const dict = {
     keymapVim: "Vim",
     keymapEmacs: "Emacs",
     lineWrapping: "Line wrapping",
-  },
-  saveStatus: {
-    saved: "Saved",
-    unsaved: "Unsaved changes",
-    saving: "Saving…",
-    saveFailed: "Save failed — retrying",
-    offline: "Offline — changes will save when you reconnect",
-    conflict: "Conflict",
-    retry: "Retry",
-    savedJustNow: "Saved just now",
-    savedSecondsAgo: "Saved {{seconds}}s ago",
-    savedMinutesAgo: "Saved {{minutes}}m ago",
-    savedHoursAgo: "Saved {{hours}}h ago",
-  },
-  unsavedGuard: {
-    title: "Leave with unsaved changes?",
-    description: "Your latest edits haven’t finished saving. If you leave now they may be lost.",
-    stay: "Stay",
-    leave: "Leave",
   },
   cm: {
     label: "LaTeX editor",

@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { QueryView } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CollabEditor } from "./CollabEditor";
@@ -16,12 +15,8 @@ import type { TreeEntity } from "@/modules/file-tree";
 import { useSpellcheck, type SpellcheckBinding } from "@/modules/spellcheck";
 
 import { getDocument } from "./api";
-import { useDocumentAutosave, type DocumentAutosave } from "./autosave/use-document-autosave";
-import { CodeMirrorEditor } from "./codemirror-editor";
-import { ConflictDialog } from "./conflict-dialog";
 import { EditorSettingsPopover } from "./editor-settings-popover";
 import { FilePreview } from "./file-preview";
-import { SaveStatusIndicator } from "./save-status-indicator";
 import type { EditorSettings } from "./types";
 import { documentKey } from "./use-document";
 import { useEditorPreferences } from "./use-editor-preferences";
@@ -50,7 +45,6 @@ interface EditorPaneProps {
   projectId: string;
   selected: TreeEntity | null;
   onClearSelection: () => void;
-  onDirtyChange?: (dirty: boolean) => void;
   /** Exposes the CodeMirror view for SyncTeX reveal (spec 26). */
   onEditorView?: (view: EditorView | null) => void;
   /** "Sync to PDF" (forward sync) clicked for the open document. */
@@ -59,9 +53,7 @@ interface EditorPaneProps {
   onDocumentLoaded?: (entity: TreeEntity) => void;
   /** Whether forward sync is available (a successful compile exists). */
   syncEnabled?: boolean;
-  /** Use the live CRDT editor (spec 31) instead of REST autosave for documents. */
-  collabEnabled?: boolean;
-  /** Access-token getter for the collab WebSocket (required when collabEnabled). */
+  /** Access-token getter for the collab WebSocket. */
   getToken?: () => string | Promise<string>;
   /** Local user identity for presence (spec 32). */
   currentUser?: { id: string; name: string } | null;
@@ -90,12 +82,10 @@ function useOpenDocument({
   projectId,
   selected,
   onClearSelection,
-  collabEnabled,
   getToken,
   readOnly,
   currentUser,
 }: Pick<EditorPaneProps, "projectId" | "selected" | "onClearSelection" | "getToken" | "currentUser"> & {
-  collabEnabled: boolean;
   readOnly: boolean;
 }) {
   // Folders are ignored: keep the last opened doc/file as the active entity.
@@ -113,12 +103,11 @@ function useOpenDocument({
   });
 
   const isDoc = openEntity?.type === "doc";
-  const collabActive = collabEnabled && isDoc;
   const collabSession = useCollabDoc({
     projectId,
-    documentId: collabActive ? docId : null,
+    documentId: docId,
     getToken: getToken ?? (() => ""),
-    enabled: collabActive,
+    enabled: isDoc,
     readOnly,
     author: currentUser,
   });
@@ -132,12 +121,11 @@ function useOpenDocument({
   }, [notFound, onClearSelection]);
 
   const loaded = isDoc && query.data ? query.data : null;
-  return { projectId, openEntity, isDoc, query, notFound, collabActive, collabSession, loaded };
+  return { projectId, openEntity, isDoc, collabSession, loaded };
 }
 
 function PaneBody({
-  document: { projectId, openEntity, query, notFound, collabActive, collabSession },
-  autosave,
+  document: { projectId, openEntity, collabSession },
   settings,
   dark,
   onEditorView,
@@ -146,7 +134,6 @@ function PaneBody({
   spellcheck,
 }: {
   document: ReturnType<typeof useOpenDocument>;
-  autosave: DocumentAutosave;
   settings: EditorSettings;
   dark: boolean;
   onEditorView: EditorPaneProps["onEditorView"];
@@ -154,44 +141,20 @@ function PaneBody({
   statusSlot: HTMLElement | null | undefined;
   spellcheck: SpellcheckBinding | null;
 }) {
-  const { t } = useTranslation("editor");
   if (!openEntity) return <EmptyState />;
   if (openEntity.type === "file") return <FilePreview projectId={projectId} entity={openEntity} />;
-  if (collabActive) {
-    // Live CRDT editing (spec 31): content + sync come from the WebSocket, not REST.
-    if (!collabSession) return <LoadingState />;
-    return (
-      <CollabEditor
-        session={collabSession}
-        settings={settings}
-        dark={dark}
-        onView={onEditorView}
-        currentUser={currentUser}
-        statusSlot={statusSlot}
-        spellcheck={spellcheck}
-      />
-    );
-  }
+  // Live CRDT editing (spec 31): content + sync come from the WebSocket, not REST.
+  if (!collabSession) return <LoadingState />;
   return (
-    <QueryView
-      query={query}
-      loading={<LoadingState />}
-      errorMessage={notFound ? t("pane.documentGone") : t("pane.loadFailed")}
-      errorClassName="h-full flex-col justify-center"
-    >
-      {() => (
-        <CodeMirrorEditor
-          doc={autosave.displayText}
-          settings={settings}
-          dark={dark}
-          editable
-          onChange={autosave.onLocalChange}
-          onBlur={autosave.saveNow}
-          onView={onEditorView}
-          spellcheck={spellcheck}
-        />
-      )}
-    </QueryView>
+    <CollabEditor
+      session={collabSession}
+      settings={settings}
+      dark={dark}
+      onView={onEditorView}
+      currentUser={currentUser}
+      statusSlot={statusSlot}
+      spellcheck={spellcheck}
+    />
   );
 }
 
@@ -199,12 +162,10 @@ export function EditorPane({
   projectId,
   selected,
   onClearSelection,
-  onDirtyChange,
   onEditorView,
   onSyncToPdf,
   onDocumentLoaded,
   syncEnabled = false,
-  collabEnabled = false,
   getToken,
   currentUser = null,
   readOnly = false,
@@ -217,20 +178,13 @@ export function EditorPane({
     projectId,
     selected,
     onClearSelection,
-    collabEnabled,
     getToken,
     readOnly,
     currentUser,
   });
   useRegisterCollabFlush(openDocument.collabSession, registerFlush);
-  const { openEntity, isDoc, collabActive, loaded } = openDocument;
+  const { openEntity, isDoc, collabSession, loaded } = openDocument;
   const spell = useSpellcheck(projectId, openEntity?.type === "doc" ? openEntity.id : null);
-  const autosave = useDocumentAutosave(projectId, loaded);
-  const { status, hasUnsaved, conflict, lastSavedAt, saveNow, resolveReload, resolveKeepMine } = autosave;
-
-  useEffect(() => {
-    onDirtyChange?.(hasUnsaved);
-  }, [hasUnsaved, onDirtyChange]);
 
   // Notify when the open document's content is ready (deferred SyncTeX reveal).
   useEffect(() => {
@@ -239,14 +193,11 @@ export function EditorPane({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded?.id]);
 
-  // Ctrl/Cmd+S forces an immediate flush and suppresses the browser save dialog.
-  useShortcuts({ "mod+s": () => saveNow() }, isDoc);
+  // Ctrl/Cmd+S waits for the server to hold every local edit, and suppresses the browser save dialog.
+  useShortcuts({ "mod+s": () => void collabSession?.flush() }, isDoc);
 
   const tools = (
     <>
-      {isDoc && !collabActive && (
-        <SaveStatusIndicator status={status} onRetry={saveNow} lastSavedAt={lastSavedAt} />
-      )}
       {spell.failed && (
         <span role="status" className="text-small text-muted-foreground">
           {t("spellcheck.unavailable")}
@@ -284,7 +235,6 @@ export function EditorPane({
       <div className="min-h-0 flex-1">
         <PaneBody
           document={openDocument}
-          autosave={autosave}
           settings={settings}
           dark={dark}
           onEditorView={onEditorView}
@@ -293,14 +243,6 @@ export function EditorPane({
           spellcheck={spell.binding}
         />
       </div>
-      <ConflictDialog
-        open={conflict !== null}
-        onOpenChange={() => {
-          /* stays open until resolved */
-        }}
-        onReload={resolveReload}
-        onKeepMine={resolveKeepMine}
-      />
     </div>
   );
 }

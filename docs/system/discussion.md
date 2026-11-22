@@ -252,8 +252,8 @@ the agent window.
   edit that removes a mention does not notify anyone.
 - **Resolve and reopen are idempotent and quiet.** A call that changes nothing returns the thread and publishes
   nothing, so two writers see one event per real change.
-- **The Comment offer needs a selection and a collaborative editor.** Without the collaborative editor (the
-  `collabEnabled` setting off), the comments button and the Comment offer are hidden, so no thread can be made.
+- **The Comment offer needs a selection and a collaborative editor.** Outside the collaborative editor (a
+  binary file, or no document open), the comments button and the Comment offer are hidden, so no thread can be made.
 - **The selected text's anchors come from the view's Y.Text.** A text that is selected while the document is
   still syncing is not commentable, because the Y.Text is not there yet. The button stays hidden until it is.
 - **The panel counts open threads project-wide.** The button's badge is the number of open threads in the

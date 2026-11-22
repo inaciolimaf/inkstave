@@ -13,7 +13,6 @@ import { ShareDialog, isReadOnly, usePermissions } from "@/modules/sharing";
 import { AskAgentButton } from "./ask-agent-button";
 import { ContentPane } from "./content-pane";
 import { MobileTabs, type MobileView } from "./mobile-tabs";
-import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
 import { useWorkspaceSide } from "./workspace-side";
 import {
@@ -32,7 +31,6 @@ import { type WorkspaceOutline, useWorkspaceOutline } from "./workspace-outline"
 import { type WorkspaceComments, useWorkspaceComments } from "./workspace-comments";
 import { WorkspaceBar } from "./workspace-bar";
 
-const COLLAB_ENABLED = Boolean(config.collabWsUrl);
 const getCollabToken = () => tokenStore.getAccessToken() ?? "";
 
 /** The hosts in the bar and the status line that the panes render their controls into. */
@@ -110,7 +108,6 @@ function WorkspaceContent({
   projectId,
   selected,
   onSelect,
-  onDirtyChange,
   sync,
   onSyncToPdf,
   readOnly,
@@ -125,7 +122,6 @@ function WorkspaceContent({
   projectId: string;
   selected: TreeEntity | null;
   onSelect: (entity: TreeEntity | null) => void;
-  onDirtyChange: (dirty: boolean) => void;
   sync: ReturnType<typeof useSourceSync>;
   onSyncToPdf: () => void;
   readOnly: boolean;
@@ -153,12 +149,10 @@ function WorkspaceContent({
               projectId,
               selected,
               onClearSelection: () => onSelect(null),
-              onDirtyChange,
               onEditorView: sync.handleEditorView,
               onSyncToPdf,
               onDocumentLoaded: sync.handleDocumentLoaded,
               syncEnabled: sync.syncCompileId !== null,
-              collabEnabled: COLLAB_ENABLED,
               getToken: getCollabToken,
               currentUser: user ? { id: user.id, name: user.display_name } : null,
               readOnly,
@@ -193,7 +187,6 @@ function WorkspaceContent({
 /** The whole editor screen (spec 107): one bar, the text and the PDF, and the rest on demand. */
 export function EditorWorkspace({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<TreeEntity | null>(null);
-  const [dirty, setDirty] = useState(false);
   const wide = useMediaQuery("(min-width: 768px)");
   const [view, setView] = useState<MobileView>("content");
   const [filesOpen, setFilesOpen] = useState(false);
@@ -217,7 +210,6 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       projectId={projectId}
       selected={selected}
       onSelect={setSelected}
-      onDirtyChange={setDirty}
       sync={sync}
       onSyncToPdf={jumps.onSyncToPdf}
       readOnly={readOnly}
@@ -285,7 +277,6 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
         />
       )}
       {!agentOpen && <SelectionAsk selection={selection} clear={clearSelection} wide={wide} asks={asks} />}
-      <UnsavedChangesGuard when={dirty} />
     </Desk>
   );
 }

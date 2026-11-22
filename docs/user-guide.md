@@ -35,9 +35,8 @@ size- and type-checked.
 ## The editor
 
 The editor is CodeMirror 6 with LaTeX syntax highlighting, line numbers, and
-configurable font size. Edits are saved automatically — when collaborating, your
-keystrokes sync live (see [Collaboration](#collaboration)); otherwise a save-status
-badge shows **Saved** / **Unsaved changes**. Your content survives a reload.
+configurable font size. Edits sync live as you type (see [Collaboration](#collaboration)), and your content
+survives a reload.
 
 **Search and replace across the project.** The **Search** tab of the file list (Ctrl+Shift+F, Cmd+Shift+F on a
 Mac) searches every file of the project at once. The three buttons beside the box match case, match whole words
