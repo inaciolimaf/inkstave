@@ -94,6 +94,7 @@ are English-only today ([known gaps](known-gaps.md)).
 | Compile log | `output.log` | "Registro da compilação" |
 | Compile output | `compile_outputs` | "Saída da compilação" |
 | Problems | `CompileProblems` | "Problemas" |
+| Stale compile | `stale_cutoffs`, `reap_stale_compiles` (backend only, no product text) | none |
 | Errors, warnings | `ProblemSeverity` | "Erros", "Avisos" |
 | Typesetting (info severity) | `ProblemSeverity.info` | "Composição" |
 | PDF preview | module `pdf-preview` | "Prévia do PDF" |

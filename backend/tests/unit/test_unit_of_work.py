@@ -18,6 +18,7 @@ class FakeSession:
     def __init__(self, log: list[str], *, commit_fails: bool) -> None:
         self._log = log
         self._commit_fails = commit_fails
+        self.info: dict[str, Any] = {}  # AsyncSession.info: holds the after-commit actions
 
     async def commit(self) -> None:
         self._log.append("commit")

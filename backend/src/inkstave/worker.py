@@ -19,6 +19,7 @@ from arq.worker import func
 from inkstave.core.config.agent import get_agent_settings
 from inkstave.core.config.settings import get_settings
 from inkstave.core.db.engine import create_engine_and_sessionmaker
+from inkstave.core.db.session import run_after_commit
 from inkstave.core.observability.log import configure_logging
 from inkstave.infra.mailer.jobs import send_email_job
 from inkstave.infra.mailer.sender import get_email_sender
@@ -31,6 +32,7 @@ from inkstave.modules.compile.outputs.store import OutputStore
 from inkstave.modules.compile.queue.coordinator import CompileCoordinator
 from inkstave.modules.compile.queue.enqueuer import ArqEnqueuer
 from inkstave.modules.compile.queue.jobs import run_compile
+from inkstave.modules.compile.queue.reaper import reap_stale_compiles
 from inkstave.modules.compile.queue.repository import CompileRepository
 from inkstave.modules.compile.queue.retention import cleanup_compile_outputs
 from inkstave.modules.compile.running.packages import load_package_config
@@ -137,6 +139,7 @@ async def _start_template_compile(
         project_id=project_id, user_id=user_id, main_file=main_file, force=False
     )
     await session.commit()
+    await run_after_commit(session)
 
 
 async def _register_template_import(ctx: dict[str, Any], settings: Any) -> None:
@@ -213,6 +216,8 @@ class WorkerSettings:
             run_at_startup=False,
         ),
         # History compaction sweep (~every 5 min; HISTORY_COMPACT_INTERVAL_S documents intent).
+        # Stuck compiles (a lost job, a dead worker): settled as timeout, every five minutes.
+        cron(reap_stale_compiles, minute=set(range(0, 60, 5)), run_at_startup=False),
         cron(compact_history, minute=set(range(0, 60, 5)), run_at_startup=False),
         # Notification expiry sweep (hourly; NOTIFICATION_SWEEP_INTERVAL_S documents intent).
         cron(sweep_notifications, minute=0, run_at_startup=False),

@@ -149,17 +149,18 @@ async def _settle_if_cancelled(job: _Job) -> dict[str, Any] | None:
     return await job.finish(status=CompileJobStatus.CANCELLED.value, finished_at=_now())
 
 
-async def _settle_if_unauthorized(job: _Job) -> dict[str, Any] | None:
+async def _settle_if_unauthorized(job: _Job, compile_for_viewers: bool) -> dict[str, Any] | None:
     """Defense-in-depth re-authorization (spec 34 §5.2).
 
     The compile ARQ job entry re-verifies COMPILE + active membership for the
     requesting user, even though the REST trigger already authorized before
     enqueue. It reuses the same authorization seam (`role_for` + the capability
-    matrix) the REST endpoint uses. If the requester lost membership/capability
-    between enqueue and pickup, fail the compile gracefully instead of running it.
+    matrix, with COMPILE_ALLOWED_FOR_VIEWERS) the REST endpoint uses. If the
+    requester lost membership/capability between enqueue and pickup, fail the
+    compile gracefully instead of running it.
     """
     role = await role_for(job.session, job.row.requested_by, job.row.project_id)
-    if Capability.COMPILE in capabilities_for(role):
+    if Capability.COMPILE in capabilities_for(role, compile_for_viewers=compile_for_viewers):
         return None
     return await _fail(job, "requester no longer authorized to compile this project")
 
@@ -245,7 +246,7 @@ async def _compile_once(ctx: dict[str, Any], session: Any, cid: UUID, compile_id
     job = _Job(session, repo, ctx["redis"], cid, row)
     settled = await _settle_if_cancelled(job)
     if settled is None:
-        settled = await _settle_if_unauthorized(job)
+        settled = await _settle_if_unauthorized(job, ctx["settings"].compile_allowed_for_viewers)
     if settled is not None:
         return settled
 

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from inkstave.modules.compile.synctex.models import ForwardResult, InverseResult
-from inkstave.modules.compile.synctex.parser import SyncTexIndex
+from inkstave.modules.compile.synctex.parser import SyncTexIndex, SyncTexTooLargeError
 
 if TYPE_CHECKING:
     from inkstave.core.config.settings import Settings
@@ -94,7 +94,13 @@ class SyncTexService:
             return cached
 
         data = b"".join([chunk async for chunk in obj.stream()])
-        index = await asyncio.to_thread(SyncTexIndex.from_gz_bytes, data)
+        try:
+            index = await asyncio.to_thread(
+                SyncTexIndex.from_gz_bytes, data, max_bytes=self._settings.synctex_max_text_bytes
+            )
+        except SyncTexTooLargeError as exc:
+            logger.warning("synctex file for compile %s refused: %s", cid, exc)
+            raise SyncTexNotAvailableError() from exc
         _CACHE.put(key, index, self._settings.synctex_index_cache_size)
         return index
 

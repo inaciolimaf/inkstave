@@ -168,19 +168,16 @@ run; the rest were read, not run.
 ### Authorization and security
 
 - `COMPILE_ALLOWED_FOR_VIEWERS` is ignored by the compile job and the compile SSE route.
-- Password-reset links survive an e-mail change, and `complete_password_reset` ignores `is_active`.
-- Deleting the last admin reopens the public `POST /api/setup/admin`.
-- Rate limits are missing on `/me/change-email`, `DELETE /me`, the invite routes and `/api/setup/admin`.
-- Only login stands down behind an untrusted proxy; `refresh`, `forgot_password` and `reset_password` share one
-  counter across all users there.
-- `doctor` prints the full `DATABASE_URL`, password included.
+- `logout` and `confirm-email-change` have no rate limit.
+- Behind an untrusted proxy (`TRUST_PROXY_HEADERS=false`), the per-IP limits stand down: `refresh` and
+  `reset_password` then have no limit at all (their tokens are random, so guessing stays infeasible), and
+  `forgot_password` counts per e-mail only.
 - `?token=` on the collab WebSocket lands in nginx access logs.
 - Share-link and invite tokens in paths (`/api/v1/share-links/{token}`, `/api/v1/invites/{token}`, the SPA's
   `/join/{token}` and `/invite/{token}`) land in nginx access logs. The backend masks them in its own access and
   uvicorn lines (`redact_path` in `core/observability/log.py`), but nginx logs `$request` as sent.
   *Why:* nginx is left as is by user decision; a `map` on `$request` in `infra/nginx/nginx.conf` would close it.
-- The console e-mail backend logs tokens at INFO, and `check-config` does not flag it in production. The raw invite
-  token is stored in the notification's `accept_url`.
+- The raw invite token is stored in the notification's `accept_url`.
 - nginx's `add_header` inheritance drops security headers on `index.html`, and the SPA has no CSP.
 
 ### Limits that do not hold

@@ -28,7 +28,14 @@ from inkstave.modules.compile.routes.helpers import (
     get_output_store,
 )
 from inkstave.modules.compile.schemas import CompileRequest, CompileStatusResponse, OutputSummary
-from inkstave.modules.projects import Capability, ProjectNotFoundError, require_capability, role_for
+from inkstave.modules.projects import (
+    Capability,
+    InsufficientRoleError,
+    ProjectNotFoundError,
+    capabilities_for,
+    require_capability,
+    role_for,
+)
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -227,6 +234,23 @@ async def get_output_log(
     )
 
 
+async def _authorize_events(
+    session: AsyncSession, user_id: UUID, project_id: UUID, settings: Settings
+) -> None:
+    """The trigger route's gate, applied inline because EventSource cannot send headers.
+
+    Non-members get 404. Members without the COMPILE capability (viewers, when
+    COMPILE_ALLOWED_FOR_VIEWERS is off) get 403, as the compile routes return.
+    """
+    role = await role_for(session, user_id, project_id)
+    if role is None:
+        raise ProjectNotFoundError()
+    if Capability.COMPILE not in capabilities_for(
+        role, compile_for_viewers=settings.compile_allowed_for_viewers
+    ):
+        raise InsufficientRoleError()
+
+
 @router.get(
     "/{compile_id}/events",
     summary="Live compile status (Server-Sent Events)",
@@ -241,10 +265,7 @@ async def compile_events(
     settings: Settings = Depends(get_settings_dep),
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
-    # SSE uses a query-param token (EventSource can't set headers), so authorize
-    # inline: any active member may read compile events (COMPILE capability).
-    if await role_for(session, user.id, project_id) is None:
-        raise ProjectNotFoundError()  # 404 — non-member / missing project
+    await _authorize_events(session, user.id, project_id, settings)
     if await CompileRepository(session).get(project_id, compile_id) is None:
         raise CompileNotFoundError()
 

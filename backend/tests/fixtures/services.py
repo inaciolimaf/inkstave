@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.app import create_app
-from inkstave.core.db.session import get_db_session, get_session_factory
+from inkstave.core.db.session import get_db_session, get_session_factory, run_after_commit
 from inkstave.core.deps import get_redis
 from inkstave.infra.deps import get_email_enqueuer
 
@@ -50,6 +50,7 @@ async def app(db_engine: Any, db_session: AsyncSession, redis: Any) -> Any:
         try:
             yield db_session
             await db_session.commit()
+            await run_after_commit(db_session)
         except Exception:
             await db_session.rollback()
             raise

@@ -6,10 +6,20 @@ The per-user concurrency cap is already covered by test_compile_coordinator.py
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
+import pytest
+from fastapi import Response
+
 from inkstave.core.config.settings import Settings
-from inkstave.modules.auth.throttling.policies import _NAMED_POLICIES, check_rate_limit, policy_from_setting
+from inkstave.core.deps import ServiceUnavailableError
+from inkstave.modules.auth.throttling.policies import (
+    _NAMED_POLICIES,
+    _enforce,
+    check_rate_limit,
+    policy_from_setting,
+)
 
 
 def _settings(**overrides: Any) -> Settings:
@@ -65,3 +75,19 @@ def test_compile_route_attaches_the_daily_quota_dependency() -> None:
     }
     assert "compile" in policies
     assert "compile_daily" in policies
+
+
+class _RedisDown:
+    async def eval(self, *_args: Any, **_kwargs: Any) -> None:
+        raise ConnectionError("redis is down")
+
+
+async def test_daily_quota_fails_closed_when_redis_is_down() -> None:
+    # A limiter outage must not lift the daily cap: the compile is refused, not run unthrottled.
+    s = _settings()
+    policy = policy_from_setting("compile_daily", s.rate_limit_compile_daily, "user")
+    request = SimpleNamespace(client=None, headers={}, path_params={})
+    user = SimpleNamespace(id="11111111-1111-1111-1111-111111111111")
+
+    with pytest.raises(ServiceUnavailableError):
+        await _enforce(_RedisDown(), Response(), request, user, s, policy)  # type: ignore[arg-type]
