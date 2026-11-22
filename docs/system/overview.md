@@ -231,7 +231,7 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 Empty fixtures hid bug 5548812 (a document with content before its first edit reconstructed its
 history as empty). Feature tests that need existing data start from a **lived-in project**, built
 by `backend/tests/factories/lived_in.py` with plain inserts (no services, no compile, no LLM; about
-0.1 s per build, asserted under 200 ms):
+0.1 s per build, asserted under 1 s so a loaded parallel run does not flake):
 
 | Piece | Content |
 |---|---|

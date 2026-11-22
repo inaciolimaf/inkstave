@@ -95,4 +95,5 @@ async def test_seeded_builder_is_fast(db_session: AsyncSession) -> None:
     started = time.perf_counter()
     await build_lived_in_project(db_session, InMemoryObjectStore(), name="Second")
     elapsed = time.perf_counter() - started
-    assert elapsed < 0.2, f"lived-in builder took {elapsed * 1000:.0f} ms"
+    # About 0.1 s alone; the bound leaves room for a loaded parallel run (CI has no retries).
+    assert elapsed < 1.0, f"lived-in builder took {elapsed * 1000:.0f} ms"
