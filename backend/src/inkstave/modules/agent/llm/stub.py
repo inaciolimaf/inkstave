@@ -66,7 +66,9 @@ class StubAgentLLM:
         return self._model
 
     def _plan(self, messages: list[LLMMessage]) -> LLMResponse:
-        tool_results = [m for m in messages if m.role == "tool"]
+        # Only this turn's results: a session's earlier turns must not count as steps of this one.
+        last_user = max((i for i, m in enumerate(messages) if m.role == "user"), default=-1)
+        tool_results = [m for m in messages[last_user + 1 :] if m.role == "tool"]
         step = len(tool_results)
         usage = LLMUsage(prompt=1, completion=1, total=2)
 

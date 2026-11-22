@@ -137,3 +137,18 @@ async def test_stub_llm_waits_before_replying(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr("inkstave.modules.agent.llm.stub.asyncio.sleep", fake_sleep)
     await StubAgentLLM(delay_s=0.4).complete([])
     assert pauses == [0.4]
+
+
+async def test_stub_llm_plays_each_message_of_a_session_from_its_start() -> None:
+    """A second message in the same session gets the search again, not the first turn's last step."""
+    stub = StubAgentLLM()
+    did = "11111111-1111-1111-1111-111111111111"
+    first_turn = [
+        LLMMessage(role="user", content="rewrite"),
+        _tool_msg(f'{{"ok":true,"data":{{"matches":[{{"doc_id":"{did}"}}]}}}}'),
+        _tool_msg('{"ok":true,"data":{"doc_id":"' + did + '","content":"stored text\\n"}}'),
+        _tool_msg('{"staged":true}'),
+        LLMMessage(role="assistant", content=FINAL_REPLY),
+    ]
+    r = await stub.complete([*first_turn, LLMMessage(role="user", content="rewrite it again")])
+    assert r.tool_calls and r.tool_calls[0].name == "search_project"
