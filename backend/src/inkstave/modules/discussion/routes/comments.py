@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Query, status
 from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.modules.auth import get_current_user, rate_limit_named
+from inkstave.modules.discussion.comments.paging import DEFAULT_LIMIT, MAX_LIMIT
 from inkstave.modules.discussion.comments.publish import CommentPublisher, get_comment_publisher
 from inkstave.modules.discussion.comments.schemas import (
     CommentMessageRead,
@@ -47,12 +48,14 @@ async def list_threads(
     project_id: UUID,
     document_id: UUID | None = Query(None, description="Only the threads of this document"),
     status_filter: Literal["open", "resolved", "all"] = Query("all", alias="status"),
+    limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT, description="Threads per page"),
+    after: str | None = Query(None, description="The next_cursor of the previous page"),
     session: AsyncSession = UNIT_OF_WORK,
 ) -> CommentThreadList:
-    items = await CommentService(session).list_threads(
-        project_id, document_id=document_id, status=status_filter
+    items, next_cursor = await CommentService(session).list_threads(
+        project_id, document_id=document_id, status=status_filter, limit=limit, after=after
     )
-    return CommentThreadList(items=items)
+    return CommentThreadList(items=items, has_more=next_cursor is not None, next_cursor=next_cursor)
 
 
 @router.post(

@@ -24,14 +24,14 @@ document's live text is in the collaboration session, which the workspace does n
 
 ### Frontend standard
 
-**`flushBeforeCompile` does nothing.** `EditorWorkspace` never assigns `flushRef`, so a compile or agent message
-does not wait for pending edits to reach the server. *Why:* found while splitting the editor; a fix changes
-the compile path and needs its own test.
-
 **An inline review does not survive a reload.** The outcome is stored once, when the last hunk is decided
 (spec 110). Until then the decisions live in this page only: after a reload the proposal shows as pending, and a
 hunk accepted before it is drawn as blocked, since its old lines are gone. *Why:* storing each hunk decision on
 the server needs a schema and route of its own; the page-level memory covers closing and reopening the review.
+
+**Reloading during an agent run does not reattach to it.** The panel becomes usable again, but the server's run
+keeps going unseen until it ends and the session is reloaded. *Why:* found by the "do it again" tests; reattaching
+needs the stream to resume from the last seen event.
 
 **Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
 
@@ -150,35 +150,29 @@ run; the rest were read, not run.
 
 - `PUT` on document content strips surrounding whitespace, through `str_strip_whitespace=True` on
   `DocumentContentReplace` (reproduced).
-- The debounced CRDT text flush cancels itself and never writes, so `documents.content` stays stale until the
-  last client leaves or a forced flush runs (reproduced with a fake bridge).
 - History versions recorded before the seed fix, for documents that had content when first opened, reconstruct
   empty or wrong text; the document heals from its next edit, the old versions cannot be recovered.
-- A failed history flush loses its buffer.
 - Multiple backend replicas are unsafe for collaboration: the forwarder never applies updates to the receiving
   `YDocument`, and compaction then overwrites the snapshot with partial state.
-- Offloaded history blobs and project blobs are orphaned on delete.
+- Project blobs are orphaned on delete, and a Git push that deletes files orphans their offloaded history blobs
+  (`git/push/apply.py` `_detach` does not notify the `on_entities_deleted` listeners).
 
 ### Stuck work
 
 - Compiles have no reaper. A job enqueued before commit, a dead worker or an ARQ timeout leaves a row `queued` or
   `running`, and coalescing then returns it forever.
-- Agent runs: `_resolve_llm` and `precheck_run` run outside any `try`, so a missing API key or a Redis failure
-  leaves the session `queued` and new messages get 409. A worker crash does the same.
+- A stalled agent run is reaped lazily: the session shows its stale state until the user sends the next message.
 - Zip imports enqueue before commit, with `max_tries=1`.
 - E-mail retries never happen: ARQ retries only on `Retry`, so `max_tries=3` on `send_email_job` does nothing.
 
 ### Authorization and security
 
-- Agent event and cancel routes accept any `run_id`, unbound to the session in the path.
 - `COMPILE_ALLOWED_FOR_VIEWERS` is ignored by the compile job and the compile SSE route.
 - Password-reset links survive an e-mail change, and `complete_password_reset` ignores `is_active`.
 - Deleting the last admin reopens the public `POST /api/setup/admin`.
 - Rate limits are missing on `/me/change-email`, `DELETE /me`, the invite routes and `/api/setup/admin`.
 - Only login stands down behind an untrusted proxy; `refresh`, `forgot_password` and `reset_password` share one
   counter across all users there.
-- Pre-accept close codes (4401, 4403, 4404) reach browsers as HTTP 403 from uvicorn, so the provider keeps retrying
-  (403 reproduced; the browser side inferred).
 - `doctor` prints the full `DATABASE_URL`, password included.
 - `?token=` on the collab WebSocket lands in nginx access logs.
 - Share-link and invite tokens in paths (`/api/v1/share-links/{token}`, `/api/v1/invites/{token}`, the SPA's
@@ -195,29 +189,24 @@ run; the rest were read, not run.
 - The daily compile quota counts requests, is a fixed window and fails open. Concurrency caps are count-then-insert
   with no lock.
 - The effective document size limit is `MAX_REQUEST_BODY_BYTES` (1 MiB), not `MAX_DOCUMENT_BYTES` (2 MB).
-- `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 1000000 soft cap stops
-  first.
 - `gzip.decompress` on SyncTeX data has no output bound.
-- Comment threads are not paged. `GET /api/v1/projects/{id}/comments` returns every thread of the project with
-  all its messages, and the panel renders them all (spec 118).
+- The editor's comment highlights and the editor-bar badge read only the loaded comment pages, so with more than
+  50 threads they are incomplete until "Load more" (spec 118 paging).
 
 ### Settings with no effect
 
-`LOG_JSON`, `OTEL_ENABLED` (no opentelemetry package), `COLLAB_WS_PING_INTERVAL_SECONDS`,
-`COLLAB_WS_PONG_TIMEOUT_SECONDS`, `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS`, `HISTORY_COMPACT_INTERVAL_S`,
-`NOTIFICATION_SWEEP_INTERVAL_S`, `AGENT_STREAM_TRANSPORT`, `AGENT_SECTION_EXTRA_COMMANDS`, `TEST_DB_TEMPLATE`,
+`OTEL_ENABLED` (no opentelemetry package), `HISTORY_COMPACT_INTERVAL_S`, `NOTIFICATION_SWEEP_INTERVAL_S`,
+`AGENT_CONTEXT_TOKEN_BUDGET`, `AGENT_CONTEXT_SURROUNDING_LINES` (their reader `select_context` was dead code), `AGENT_STREAM_TRANSPORT`, `AGENT_SECTION_EXTRA_COMMANDS`, `TEST_DB_TEMPLATE`,
 `PUBLIC_HTTP_PORT`, and most of `infra/tectonic/packages.toml` at runtime. `COMPILE_SANDBOX_MEMORY_MB` is ignored
 while `COMPILE_ADDRESS_SPACE_BYTES` has its default.
 
 ### Observability
 
-- A 500 has `request_id: null` and no `X-Request-ID`, security or CORS headers (reproduced).
-- The body-limit 413 uses `error.code` rather than the envelope (reproduced), and unknown-route 404 and 405 answer
-  `{"detail": ...}`.
-- Worker metrics are never scraped, and `inkstave_job_queue_depth` reads `arq:queue` while the queue is `compiles`.
+- Worker metrics (compile, job, agent) are never scraped: the worker has no metrics endpoint and no multiprocess
+  registry.
 
 ### Unused code
 
-`configure_logging` in `backend/src/inkstave/core/logging.py`, `RequestIdMiddleware`, `select_context` in the agent
-turn. `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
+The helpers left in `backend/src/inkstave/modules/agent/context/select.py` after `select_context` was removed
+(`_outline_summary`, `_section_text`, `_fit`, `_target_chunk`, `_related_chunk`, `_candidates`). `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
 unreachable.

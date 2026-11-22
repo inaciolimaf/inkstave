@@ -4,8 +4,8 @@
 protocol but reaches no provider. It drives the agent graph through a fixed
 tool-call sequence — **search_project → read_file → propose_edit** — and then a
 fixed assistant reply, exactly the shape spec 54 §5.4 requires. The proposed edit
-is a *full*-document rewrite, so the diff-review UI always has at least one hunk
-to apply against the seeded file.
+replaces the whole text it read (its `old_text` is that text), so the diff-review UI
+always has at least one hunk to apply against the seeded file.
 
 State is derived purely from the conversation passed to ``complete`` (the number
 of ``role="tool"`` results so far), so it is robust to retries and needs no
@@ -16,6 +16,7 @@ result, so the stub works against whatever project the e2e seeds.
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from collections.abc import AsyncIterator
 from uuid import uuid4
@@ -33,8 +34,8 @@ from inkstave.modules.agent.llm.base import (
 #: The keyword the stub searches for; the e2e seeds a doc containing it.
 SEARCH_QUERY = "Introduction"
 
-#: The full replacement body the stub proposes — differs from the seeded file so
-#: there is always a reviewable hunk.
+#: The replacement body the stub proposes for the text it read — differs from the seeded
+#: file so there is always a reviewable hunk.
 PROPOSED_TEXT = (
     "\\documentclass{article}\n"
     "\\begin{document}\n"
@@ -84,9 +85,11 @@ class StubAgentLLM:
         if step == 1:
             return _tool_call("read_file", {"doc_id": doc_id}, usage)
         if step == 2:
+            # The whole read text is replaced, so old_text is the document as read (it is unique).
+            old_text = _read_content(tool_results[-1])
             return _tool_call(
                 "propose_edit",
-                {"doc_id": doc_id, "mode": "full", "new_text": PROPOSED_TEXT},
+                {"doc_id": doc_id, "old_text": old_text, "new_text": PROPOSED_TEXT},
                 usage,
             )
         return LLMResponse(content=FINAL_REPLY, finish_reason="stop", usage=usage)
@@ -126,6 +129,16 @@ def _tool_call(name: str, args: dict[str, object], usage: LLMUsage) -> LLMRespon
         finish_reason="tool_calls",
         usage=usage,
     )
+
+
+def _read_content(read_result: LLMMessage) -> str:
+    """The `content` of a `read_file` result (the text as it was read), or "" when unreadable."""
+    try:
+        data = json.loads(read_result.content or "{}").get("data") or {}
+    except (json.JSONDecodeError, AttributeError):
+        return ""
+    content = data.get("content")
+    return content if isinstance(content, str) else ""
 
 
 def _first_doc_id(tool_results: list[LLMMessage]) -> str | None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from inkstave.modules.agent.graph.edits import DiffConflictError, StagedEdit, apply_edits
 from inkstave.modules.agent.tools.base import ToolContext, ToolError
 from inkstave.modules.projects import (
     Document,
@@ -26,6 +27,26 @@ async def load_tree(ctx: ToolContext) -> tuple[list[TreeEntity], dict[UUID, str]
     by_id = {e.id: e for e in entities}
     paths = {e.id: compute_path(e, by_id) for e in entities}
     return entities, paths
+
+
+def edits_for(ctx: ToolContext, doc_id: str) -> list[StagedEdit]:
+    """The edits this turn has staged for one document, in the order they were staged."""
+    return [e for e in ctx.staged_edits if e.doc_id == doc_id]
+
+
+def text_after_staged_edits(ctx: ToolContext, doc_id: str, content: str) -> str:
+    """The document's text as the turn's staged edits leave it: what `old_text` must match.
+
+    The staged edits were checked when they were staged against the same version, so they
+    replay cleanly; if they ever do not, the stored text is returned unchanged.
+    """
+    edits = edits_for(ctx, doc_id)
+    if not edits:
+        return content
+    try:
+        return apply_edits(content, edits)
+    except DiffConflictError:
+        return content
 
 
 def depth_of(entity: TreeEntity, by_id: dict[UUID, TreeEntity]) -> int:

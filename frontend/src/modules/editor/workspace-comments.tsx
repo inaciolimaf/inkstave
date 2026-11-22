@@ -239,6 +239,9 @@ export function useWorkspaceComments(
       meId={user?.id ?? null}
       selectedId={state.selectedId}
       onSelect={state.selectThread}
+      hasMore={state.threads.hasNextPage}
+      loadingMore={state.threads.isFetchingNextPage}
+      onLoadMore={() => void state.threads.fetchNextPage()}
       draft={draft ? { quote: draft.quote } : null}
       creating={create.isPending}
       onCreate={(body, mentions) => {

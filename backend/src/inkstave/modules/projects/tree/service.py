@@ -35,12 +35,16 @@ from inkstave.modules.projects.tree.errors import (
 from inkstave.modules.projects.tree.safe_path import validate_name_segment
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
     from sqlalchemy import CTE
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.infra.storage.base import ObjectStore
+
+# Told, before the delete runs, which entities (a subtree's ids) a delete removes. A module above
+# projects cannot be imported from here, so it registers through :func:`on_entities_deleted`.
+_deletion_listeners: list[Callable[[AsyncSession, ObjectStore | None, list[UUID]], Awaitable[None]]] = []
 
 __all__ = [
     "EntityNotFoundError",
@@ -59,6 +63,7 @@ __all__ = [
     "get_tree",
     "is_descendant",
     "move_entity",
+    "on_entities_deleted",
     "rename_entity",
 ]
 
@@ -268,6 +273,19 @@ async def _file_keys_in_subtree(session: AsyncSession, project_id: UUID, entity_
     return list(rows)
 
 
+def on_entities_deleted(
+    listener: Callable[[AsyncSession, ObjectStore | None, list[UUID]], Awaitable[None]],
+) -> None:
+    """Register ``listener``, called inside the delete's transaction before the rows go (idempotent)."""
+    if listener not in _deletion_listeners:
+        _deletion_listeners.append(listener)
+
+
+async def _subtree_ids(session: AsyncSession, project_id: UUID, entity_id: UUID) -> list[UUID]:
+    subtree = _subtree(project_id, entity_id)
+    return list(await session.scalars(select(subtree.c.id)))
+
+
 async def delete_entity(
     session: AsyncSession,
     project_id: UUID,
@@ -277,6 +295,8 @@ async def delete_entity(
     entity = await _get_entity(session, project_id, entity_id)
     if entity.is_root:
         raise RootImmutableError()
+    for listener in _deletion_listeners:
+        await listener(session, store, await _subtree_ids(session, project_id, entity_id))
     # Collect blob keys before the cascade removes the rows.
     keys = await _file_keys_in_subtree(session, project_id, entity_id) if store else []
     # The self-FK ON DELETE CASCADE removes the whole subtree.

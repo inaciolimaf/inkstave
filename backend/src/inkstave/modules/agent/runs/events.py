@@ -32,6 +32,15 @@ def last_event_key(run_id: UUID | str) -> str:
     return f"agent:run:{run_id}:last"
 
 
+def beat_key(run_id: UUID | str) -> str:
+    """Progress marker of a run: it expires when the run has been silent for the stall timeout."""
+    return f"agent:run:{run_id}:beat"
+
+
+async def record_progress(redis: Redis, run_id: UUID | str, stall_seconds: int) -> None:
+    await redis.set(beat_key(run_id), b"1", ex=stall_seconds)
+
+
 def build_event(run_id: str, seq: int, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "type": event_type,
@@ -64,18 +73,25 @@ class InMemoryEventSink:
 
 
 class RedisEventSink:
-    """Publishes events to the per-run Redis channel; persists the terminal event."""
+    """Publishes events to the per-run Redis channel; persists the terminal event.
 
-    def __init__(self, redis: Redis, run_id: str, ttl_seconds: int) -> None:
+    Every event also refreshes the run's progress marker when ``stall_seconds`` is set, so the
+    reaper can tell a live run from one whose worker died (spec 44).
+    """
+
+    def __init__(self, redis: Redis, run_id: str, ttl_seconds: int, stall_seconds: int | None = None) -> None:
         self.run_id = run_id
         self._redis = redis
         self._ttl = ttl_seconds
+        self._stall = stall_seconds
         self._seq = 0
 
     async def emit(self, event_type: str, **payload: Any) -> dict[str, Any]:
         event = build_event(self.run_id, self._seq, event_type, payload)
         self._seq += 1
         data = json.dumps(event, default=str).encode()
+        if self._stall:
+            await record_progress(self._redis, self.run_id, self._stall)
         await self._redis.publish(run_channel(self.run_id), data)
         if event_type in TERMINAL_TYPES:
             # Let a late subscriber replay the terminal event.

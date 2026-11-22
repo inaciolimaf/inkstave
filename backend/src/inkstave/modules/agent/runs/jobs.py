@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from inkstave.core.observability.context import bind_context, clear_context
@@ -34,17 +34,20 @@ from inkstave.modules.agent.runs.run_helpers import (
     persist_results,
     precheck_run,
 )
+from inkstave.modules.agent.runs.stall import claim_slot, release_slot
 from inkstave.modules.agent.safety import (
     AgentAuditAction,
     AuditUsage,
     acquire_run,
     avg_rate_per_1k,
     is_budget_exempt,
-    release_run,
     without_budget_caps,
 )
 from inkstave.modules.agent.tools import default_registry
 from inkstave.modules.auth import User
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 __all__ = ["agent_audit_cleanup", "run_agent_turn"]
 
@@ -104,11 +107,19 @@ def _build_deps(scope: RunScope, llm: Any, run_id: str) -> AgentDeps:
     )
 
 
+async def _announce_error(scope: RunScope, *, code: str, message: str) -> None:
+    """Stream the terminal error; a Redis failure here must not keep the session from being freed."""
+    try:
+        await scope.sink.emit("error", code=code, message=message)
+    except Exception:
+        logger.warning("could not stream the error of agent run %s", scope.run_id, exc_info=True)
+
+
 async def _settle_error(scope: RunScope, *, code: str, message: str) -> None:
     """Roll back, stream a terminal error, and free the session (no wedged run)."""
     await scope.db.rollback()
     inc_agent_request("error")
-    await scope.sink.emit("error", code=code, message=message)
+    await _announce_error(scope, code=code, message=message)
     failed = await scope.db.get(AgentSession, scope.session_id)
     if failed is not None:
         failed.run_state = AgentRunState.error.value
@@ -174,12 +185,18 @@ async def _run_scoped(
         session.active_run_id = None
         await scope.db.commit()
 
-    if not await precheck_run(scope, finalize):
+    # Any failure before the turn starts settles the run too: a session left queued would refuse
+    # every message with 409 until the reaper runs (spec 44).
+    try:
+        if not await precheck_run(scope, finalize):
+            return
+        await acquire_run(scope.redis, user_id=scope.user_id, project_id=scope.project_id, now=scope.now)
+        await claim_slot(scope.redis, scope.run_id)
+    except Exception:
+        logger.exception("agent run %s failed before it started", run_id)
+        await _settle_error(scope, code="internal", message="The agent run failed.")
         return
 
-    # acquire_run lives inside the try so any failure during setup still releases
-    # the concurrency slot and streams a terminal error (no stuck "running" run).
-    await acquire_run(scope.redis, user_id=scope.user_id, project_id=scope.project_id, now=scope.now)
     try:
         await _execute_turn(scope, session, run_id=run_id, user_message=user_message, llm=llm)
     except asyncio.CancelledError:
@@ -197,7 +214,7 @@ async def _run_scoped(
         logger.exception("run_agent_turn failed for run %s", run_id)
         await _settle_error(scope, code="internal", message="The agent run failed.")
     finally:
-        await release_run(scope.redis, user_id=scope.user_id)
+        await release_slot(scope.redis, scope.run_id, scope.user_id)
 
 
 async def _settings_for(db: Any, settings: Any, user_id: UUID) -> Any:
@@ -208,15 +225,47 @@ async def _settings_for(db: Any, settings: Any, user_id: UUID) -> Any:
     return settings
 
 
+def _make_scope(
+    ctx: dict[str, Any], db: AsyncSession, session: AgentSession, sink: Any, settings: Any, run_id: str
+) -> RunScope:
+    """The run's scope: who it belongs to and the infrastructure it writes through."""
+    return RunScope(
+        db=db,
+        redis=ctx["redis"],
+        settings=settings,
+        sink=sink,
+        user_id=session.user_id,
+        project_id=session.project_id,
+        session_id=session.id,
+        run_id=UUID(run_id),
+        now=ctx.get("clock", time.time)(),
+        object_store=ctx.get("object_store"),
+    )
+
+
+async def _start_run(
+    ctx: dict[str, Any], scope: RunScope, session: AgentSession, *, run_id: str, user_message: str
+) -> None:
+    """Resolve the LLM and the run's caps; a failure here settles the run like any other."""
+    try:
+        llm = _resolve_llm(ctx, scope.settings)
+        scope.settings = await _settings_for(scope.db, scope.settings, session.user_id)
+    except Exception:
+        logger.exception("agent run %s could not be set up", run_id)
+        await _settle_error(scope, code="internal", message="The agent run failed.")
+        return
+    await _run_scoped(scope, session, run_id=run_id, user_message=user_message, llm=llm)
+
+
 async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, user_message: str) -> None:
     # The shared ARQ ctx carries the compile ``Settings`` under "settings" (compile/
     # history/mailer jobs need it); the agent turn needs ``AgentSettings``. The
     # worker provides those under "agent_settings"; tests that hand-build a ctx put
     # an ``AgentSettings`` straight into "settings", so fall back to that.
     settings = ctx.get("agent_settings") or ctx["settings"]
-    redis = ctx["redis"]
-    sink = ctx.get("event_sink") or RedisEventSink(redis, run_id, settings.agent_run_ttl_s)
-    llm = _resolve_llm(ctx, settings)
+    sink = ctx.get("event_sink") or RedisEventSink(
+        ctx["redis"], run_id, settings.agent_run_ttl_s, stall_seconds=settings.stall_timeout_s()
+    )
     sid = UUID(session_id)
 
     async with ctx["session_factory"]() as db:
@@ -224,18 +273,11 @@ async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, 
         if session is None:
             await sink.emit("error", code="not_found", message="session not found")
             return
-        scope = RunScope(
-            db=db,
-            redis=redis,
-            settings=await _settings_for(db, settings, session.user_id),
-            sink=sink,
-            user_id=session.user_id,
-            project_id=session.project_id,
-            session_id=sid,
-            run_id=UUID(run_id),
-            now=ctx.get("clock", time.time)(),
-            object_store=ctx.get("object_store"),
-        )
+        if session.active_run_id != UUID(run_id):
+            # The run was reaped (or superseded) while it waited in the queue: it must not touch the session.
+            logger.warning("agent run %s is no longer the active run; skipped", run_id)
+            return
+        scope = _make_scope(ctx, db, session, sink, settings, run_id)
         logger.info(
             "agent run %s start: session=%s project=%s msg_chars=%d",
             run_id,
@@ -243,4 +285,4 @@ async def _run_agent_turn(ctx: dict[str, Any], *, session_id: str, run_id: str, 
             scope.project_id,
             len(user_message),
         )
-        await _run_scoped(scope, session, run_id=run_id, user_message=user_message, llm=llm)
+        await _start_run(ctx, scope, session, run_id=run_id, user_message=user_message)

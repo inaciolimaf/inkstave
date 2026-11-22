@@ -22,7 +22,7 @@ from inkstave import __version__
 from inkstave.core.config.settings import Settings, get_settings
 from inkstave.core.db.engine import check_db, create_engine_and_sessionmaker
 from inkstave.core.errors import ErrorEnvelope
-from inkstave.core.exception_handlers import register_exception_handlers
+from inkstave.core.exception_handlers import UnhandledErrorMiddleware, register_exception_handlers
 from inkstave.core.http.body_limit import BodySizeLimitMiddleware
 from inkstave.core.http.headers import SecurityHeadersMiddleware
 from inkstave.core.observability.log import configure_logging
@@ -33,7 +33,13 @@ from inkstave.infra.redis import create_redis_pool, ping_redis
 from inkstave.modules.admin.routes import health, setup
 from inkstave.modules.collab.ws import router as collab_ws
 from inkstave.modules.collab.ws.components import build_collab_components
+from inkstave.modules.history import purge_blobs_for_deleted
+from inkstave.modules.projects.tree.service import on_entities_deleted
 from inkstave.router import api_v1
+
+# Deleting a document purges its offloaded history blobs. projects cannot import history (module
+# order), so the composition root connects the two once, at import.
+on_entities_deleted(purge_blobs_for_deleted)
 
 logger = logging.getLogger("inkstave.app")
 
@@ -180,26 +186,7 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.docs_enabled else None,
         redoc_url="/redoc" if settings.docs_enabled else None,
     )
-
-    # Middleware (outermost added LAST). Spec-52 order, outermost → inner:
-    # RequestContext → SecurityHeaders → BodySizeLimit → CORS → routing.
-    #
-    # CORS deviation (supersedes spec 02 §5.2): spec 02 specified
-    # ``allow_methods=["*"]`` / ``allow_headers=["*"]``. We deliberately tighten
-    # to explicit allow-lists for defense-in-depth — only the methods and request
-    # headers the API actually accepts are advertised in preflight responses.
-    # This is intentional and stricter; do not loosen back to wildcards.
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", settings.request_id_header],
-        expose_headers=[settings.request_id_header, "X-RateLimit-Remaining", "Retry-After"],
-    )
-    app.add_middleware(BodySizeLimitMiddleware, settings=settings)
-    app.add_middleware(SecurityHeadersMiddleware, settings=settings)
-    app.add_middleware(RequestContextMiddleware, header_name=settings.request_id_header)
+    _install_middleware(app, settings)
 
     setup_tracing(app, settings)  # no-op unless OTEL_ENABLED=true
     register_exception_handlers(app)
@@ -215,3 +202,28 @@ def create_app() -> FastAPI:
     app.openapi = _build_openapi(app, settings)  # type: ignore[method-assign]
 
     return app
+
+
+def _install_middleware(app: FastAPI, settings: Settings) -> None:
+    """Add the HTTP middleware. Added last means outermost, so the order is the reverse of the calls."""
+    # Outermost → inner: RequestContext → SecurityHeaders → CORS → BodySizeLimit → UnhandledError → routing.
+    # CORS sits outside the body limit so a 413 is readable by the browser, and inside the
+    # security headers. UnhandledError sits inside everything, so a 500 carries all of them.
+    #
+    # CORS deviation (supersedes spec 02 §5.2): spec 02 specified
+    # ``allow_methods=["*"]`` / ``allow_headers=["*"]``. We deliberately tighten
+    # to explicit allow-lists for defense-in-depth — only the methods and request
+    # headers the API actually accepts are advertised in preflight responses.
+    # This is intentional and stricter; do not loosen back to wildcards.
+    app.add_middleware(UnhandledErrorMiddleware)
+    app.add_middleware(BodySizeLimitMiddleware, settings=settings)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", settings.request_id_header],
+        expose_headers=[settings.request_id_header, "X-RateLimit-Remaining", "Retry-After"],
+    )
+    app.add_middleware(SecurityHeadersMiddleware, settings=settings)
+    app.add_middleware(RequestContextMiddleware, header_name=settings.request_id_header)

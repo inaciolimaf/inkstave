@@ -14,6 +14,7 @@ module is `backend/src/inkstave/modules/history`.
 | `backend/src/inkstave/modules/history/schemas.py` | Request and response models |
 | `backend/src/inkstave/modules/history/routes.py` | The REST routes |
 | `backend/src/inkstave/modules/history/versions/capture.py` | `HistoryCaptureService`: buffer, flush, chunks, replica |
+| `backend/src/inkstave/modules/history/blobs.py` | `purge_blobs_after_commit`, `purge_blobs_for_deleted`: the offloaded blobs of deleted documents, removed after the commit |
 | `backend/src/inkstave/modules/history/versions/capture_values.py` | `Pending`, `UpdateEntry`, `Replica`: the values between buffering and writing |
 | `backend/src/inkstave/modules/history/versions/reconstruct.py` | `reconstruct_doc`, `reconstruct_state`, `load_live_state`, `load_current_state`, `current_text`, `text_from_state`, `is_binary` |
 | `backend/src/inkstave/modules/history/versions/read.py` | `list_versions`, `list_updates`, `get_diff`, `doc_belongs_to_project` |
@@ -112,6 +113,12 @@ Flush triggers: the idle timer (`idle`), the room becoming empty (`idle`, from `
 (`threshold`), restore (`manual`), app shutdown (`flush_all`, reason `shutdown`). Reasons `idle` and `shutdown`
 then call `_drop_state`, so an idle document costs no memory.
 
+A failed flush is not lost. `flush_doc` puts the updates back at the front of the buffer and forgets the replica,
+which may already hold them: the next flush rebuilds it from the database. Each failed idle flush re-arms the timer
+up to three times in a row (`_MAX_AUTOMATIC_RETRIES`). Past that the updates stay buffered, logged at error level,
+until an explicit flush succeeds: the next edit over the threshold, the room closing, a restore or shutdown.
+`flush_all` tries every document, so one failure does not stop the others.
+
 ### Reconstruct
 
 `reconstruct_doc` picks the chunk where `base_version <= version <= end_version`, preferring the highest
@@ -198,6 +205,11 @@ Replaced blobs are deleted after the commit. The job is idempotent.
 | History of a document seeded from existing content reconstructs | `backend/tests/integration/test_history_seeded.py::test_seeded_document_versions_reconstruct` |
 | An update that changes nothing records no version | `backend/tests/integration/test_history_seeded.py::test_update_that_changes_nothing_records_no_version` |
 | A history captured on an empty base heals on the next edit | `backend/tests/integration/test_history_seeded.py::test_history_captured_on_an_empty_base_heals` |
+| A failed flush keeps its updates and the next flush writes them | `backend/tests/integration/test_history_flush_retry.py::test_failed_flush_keeps_buffer_and_next_flush_persists` |
+| Automatic retries after failed flushes are bounded, and the updates stay buffered | `backend/tests/unit/test_history_capture_36.py::test_failed_flush_keeps_updates_and_stops_retrying_after_the_bound` |
+| Shutdown tries every document even when one fails | `backend/tests/unit/test_history_capture_36.py::test_flush_all_continues_past_a_failing_document` |
+| Deleting a document deletes its offloaded blobs, after the commit | `backend/tests/integration/test_history_blob_purge.py::test_deleting_a_document_deletes_its_offloaded_blobs` |
+| A rolled-back delete keeps its blobs; a failed blob delete is logged and the others still go | `backend/tests/integration/test_history_blob_purge.py::test_rolled_back_delete_keeps_its_blobs`; `test_failed_blob_delete_is_logged_and_the_others_still_go` |
 | One selected version diffs against the previous one; the first against the current text | `frontend/src/modules/history/diff-range.test.ts` |
 
 ## Settings
@@ -233,11 +245,6 @@ number gives older text than the user saw. `create_doc_label` does not check tha
 on a merged-away version no longer appears in `list_versions`, though `list_doc_labels` still returns it. The chunk's
 version range is not changed by compaction. No test covers intermediate versions.
 
-**A failed flush loses the buffer.** `_take` removes the buffer before `_write` runs. If `_write` raises, those
-updates are gone, and the replica may already include them. The comment in `_on_timer` says a failed flush is retried
-by the next edit or the compaction job; neither has the data. `_cleanup` also suppresses the error. The live document
-is unaffected, only its history.
-
 **Coalescing loses authorship.** A row keeps the last author of its buffer, so two users typing within one debounce
 window appear as one. `author_id` becomes NULL on user delete, shown as unknown. Restore's `flush_doc` can absorb
 other users' buffered edits into the row attributed to the restorer.
@@ -250,9 +257,10 @@ note in [collab.md](collab.md).
 **Rows already recorded as no-op versions stay.** Before the no-change check, opening a document recorded a version
 with no change. Those rows are still listed.
 
-**Offloaded blobs are not removed with their rows.** Chunks and updates cascade when a document or project goes, and
-nothing outside `backend/src/inkstave/modules/history` refers to the blob keys, so those objects stay. Compaction
-deletes only what it replaced. A blob written before a failed commit also stays.
+**Blobs of a document removed through a Git push are not purged.** `modules/git/push/apply.py` (`_detach`)
+removes a document's rows without calling `purge_blobs_for_deleted`, so its offloaded history blobs stay in object
+storage. The tree delete does purge them. Blobs written before a failed commit also stay: nothing removes an
+object whose row was rolled back.
 
 **Compaction scope.** The sweep has no marker of what it finished, so every document over the threshold has its sealed
 chunks re-read every five minutes, forever, inside one transaction across all documents.

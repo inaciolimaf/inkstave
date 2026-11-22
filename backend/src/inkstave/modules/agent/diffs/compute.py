@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import difflib
 import hashlib
-from itertools import pairwise
 from typing import TYPE_CHECKING, Any
 
-from inkstave.modules.agent.graph.edits import EditMode
+from inkstave.modules.agent.graph.edits import DiffConflictError, apply_edits
 
 if TYPE_CHECKING:
     from inkstave.modules.agent.graph.edits import StagedEdit
 
-
-class DiffConflictError(Exception):
-    """Overlapping range edits on one document — the proposal cannot be applied."""
+__all__ = ["DiffConflictError", "apply_staged_edits", "compute_diff", "content_hash"]
 
 
 def content_hash(text: str) -> str:
@@ -22,34 +19,11 @@ def content_hash(text: str) -> str:
 
 
 def apply_staged_edits(current_text: str, edits: list[StagedEdit]) -> str:
-    """Build the proposed content for ONE doc from its staged edits.
+    """The proposed content for ONE doc: its staged edits applied in order to ``current_text``.
 
-    ``full`` wins over any ``range`` edits (ranges ignored). Multiple ``range`` edits
-    must be non-overlapping; they are applied bottom-up so earlier indices stay valid.
-    Overlapping ranges raise ``DiffConflictError``.
+    Raises ``DiffConflictError`` when an edit's ``old_text`` no longer occurs exactly once.
     """
-    had_trailing = current_text.endswith("\n")
-    fulls = [e for e in edits if e.mode == EditMode.full]
-    ranges = [e for e in edits if e.mode == EditMode.range]
-
-    if fulls:
-        lines = fulls[-1].new_text.splitlines()
-    else:
-        lines = current_text.splitlines()
-        ordered = sorted(ranges, key=lambda e: e.start_line or 0)
-        for a, b in pairwise(ordered):
-            if (a.end_line or 0) > (b.start_line or 0):
-                raise DiffConflictError(
-                    f"overlapping range edits: [{a.start_line},{a.end_line}) and "
-                    f"[{b.start_line},{b.end_line})"
-                )
-        for edit in sorted(ranges, key=lambda e: e.start_line or 0, reverse=True):
-            lines[edit.start_line : edit.end_line] = edit.new_text.splitlines()
-
-    proposed = "\n".join(lines)
-    if had_trailing and proposed:
-        proposed += "\n"
-    return proposed
+    return apply_edits(current_text, edits)
 
 
 def _format_range(start: int, stop: int) -> tuple[int, int]:

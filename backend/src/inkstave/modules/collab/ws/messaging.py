@@ -151,6 +151,7 @@ async def _receive_loop(conn: Connection, components: CollabComponents, ws: Coll
         message = await websocket.receive()  # type: ignore[attr-defined]
         if message["type"] == "websocket.disconnect":
             return
+        conn.last_seen = monotonic()  # any frame proves the peer is alive (keepalive)
         data = message.get("bytes")
         rejection = _frame_rejection(data, ws, limiter)
         if rejection is not None:

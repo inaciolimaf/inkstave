@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from inkstave.core.errors import AppError, NotFoundError
+from inkstave.core.errors import AppError, BadRequestError, NotFoundError
 
 
 class CommentThreadNotFoundError(NotFoundError):
@@ -17,6 +17,13 @@ class CommentMessageNotFoundError(NotFoundError):
 
     def __init__(self) -> None:
         super().__init__("Comment message not found.")
+
+
+class InvalidCursorError(BadRequestError):
+    error_type = "invalid_cursor"
+
+    def __init__(self) -> None:
+        super().__init__("The page cursor is not valid.")
 
 
 class NotATextDocumentError(AppError):

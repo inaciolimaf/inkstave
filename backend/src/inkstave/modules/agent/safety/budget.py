@@ -24,6 +24,7 @@ _RUN_AND_DAY_CAPS = (
     "agent_max_cost_per_run_usd",
     "agent_max_tokens_per_day_per_project",
     "agent_max_cost_per_day_per_user_usd",
+    "agent_max_total_tokens",  # the soft backstop is a token cap too
 )
 
 

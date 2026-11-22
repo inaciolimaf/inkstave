@@ -16,7 +16,6 @@ from inkstave.modules.agent.diffs.compute import (
     content_hash,
 )
 from inkstave.modules.agent.diffs.models import ProposedDiff, ProposedDiffStatus
-from inkstave.modules.agent.graph.edits import EditMode
 from inkstave.modules.projects import NotADocumentError, get_document
 from inkstave.modules.projects import EntityNotFoundError
 
@@ -51,16 +50,6 @@ def is_oversized(content: str, max_doc_chars: int) -> bool:
     return len(content) > max_doc_chars
 
 
-def _note_ignored_ranges(rationale: str | None, edits: list[StagedEdit]) -> str | None:
-    """Append the note that a full replacement overrode the range edits, if it did."""
-    has_full = any(e.mode == EditMode.full for e in edits)
-    has_range = any(e.mode == EditMode.range for e in edits)
-    if not (has_full and has_range):
-        return rationale
-    note = "A full replacement was proposed; range edits were ignored."
-    return f"{rationale}\n{note}" if rationale else note
-
-
 @dataclass(slots=True)
 class _Materializer:
     """Turns one document's staged edits into a persisted proposal row."""
@@ -84,9 +73,10 @@ class _Materializer:
         try:
             proposed = apply_staged_edits(current, edits)
         except DiffConflictError as exc:
-            # Overlapping ranges: record a rejected proposal; never mis-apply.
+            # An old_text no longer fits the file (it changed, or it is ambiguous): record a
+            # rejected proposal with the reason; never mis-apply.
             spec.status = ProposedDiffStatus.rejected.value
-            spec.rationale = f"Conflicting edits could not be combined: {exc}"
+            spec.rationale = f"The edits could not be applied to the current file: {exc}"
             return await self._persist(spec)
 
         spec.diff_text, spec.hunks, spec.stats = compute_diff(
@@ -95,7 +85,6 @@ class _Materializer:
         if not spec.hunks:
             logger.info("materialize_diffs: doc %s diff is a no-op; skipped", doc_id_str)
             return None
-        spec.rationale = _note_ignored_ranges(spec.rationale, edits)
         return await self._persist(spec)
 
     def _spec(self, doc_id: UUID, document: Document, edits: list[StagedEdit]) -> repo.NewDiff:
