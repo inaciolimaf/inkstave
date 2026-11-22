@@ -72,8 +72,8 @@ def test_real_network_is_blocked() -> None:
 
 
 def test_crdt_burst_converges_within_bound() -> None:
-    a: Doc = Doc()
-    b: Doc = Doc()
+    a: Doc[Any] = Doc()
+    b: Doc[Any] = Doc()
     a_text = a.get("content", type=Text)
     b_text = b.get("content", type=Text)
     updates: list[bytes] = []

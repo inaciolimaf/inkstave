@@ -99,7 +99,7 @@ async def test_the_model_gets_the_image_and_the_transcript_does_not(
     deps = AgentDeps(llm=llm, settings=AgentSettings(), tools=default_registry(), object_store=store)
     await run_turn(session=session, user_message="what is this?", deps=deps, db=db_session)
 
-    sent: list[Any] = llm.calls[-1]["messages"]  # type: ignore[assignment]
+    sent: list[Any] = llm.calls[-1]["messages"]  # type: ignore[assignment]  # replaces a value with a test double
     assert any(m.images for m in sent if m.role == "tool")
     rows = await agent_repo.list_messages(db_session, session.id)
     stored = next(r for r in rows if r.role == "tool")

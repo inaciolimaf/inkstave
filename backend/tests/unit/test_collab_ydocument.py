@@ -77,12 +77,12 @@ def test_concurrent_inserts_commute() -> None:
 
     d1 = YDocument()
     d1.apply_update(base.get_state())
-    d1._text.insert(0, "X")  # type: ignore[attr-defined]
+    d1._text.insert(0, "X")
     u1 = d1.diff(base_sv)
 
     d2 = YDocument()
     d2.apply_update(base.get_state())
-    d2._text.insert(0, "Y")  # type: ignore[attr-defined]
+    d2._text.insert(0, "Y")
     u2 = d2.diff(base_sv)
 
     left = YDocument()

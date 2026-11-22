@@ -12,12 +12,15 @@ import json
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import get_settings
+from inkstave.modules.auth.credentials.password import PasswordHasher
+from inkstave.modules.projects.models.project_import import ProjectImport
 
 
 class _Result:
@@ -65,8 +68,10 @@ async def test_login_verify_runs_via_to_thread(monkeypatch: pytest.MonkeyPatch) 
 
     calls = _record_to_thread(monkeypatch)
     hasher = FakeHasher(ok=True)
-    user = SimpleNamespace(id=uuid4(), hashed_password="$argon2id$dummy", is_active=True)
-    result = await authenticate_user(FakeSession(user), hasher, "u@example.com", "pw")
+    user: Any = SimpleNamespace(id=uuid4(), hashed_password="$argon2id$dummy", is_active=True)
+    result = await authenticate_user(
+        cast(AsyncSession, FakeSession(user)), cast(PasswordHasher, hasher), "u@example.com", "pw"
+    )
     assert result is user
     assert hasher.verify in calls  # the Argon2 verify was offloaded
 
@@ -78,7 +83,9 @@ async def test_missing_user_dummy_verify_runs_via_to_thread(
 
     calls = _record_to_thread(monkeypatch)
     hasher = FakeHasher(ok=False)
-    result = await authenticate_user(FakeSession(None), hasher, "missing@example.com", "pw")
+    result = await authenticate_user(
+        cast(AsyncSession, FakeSession(None)), cast(PasswordHasher, hasher), "missing@example.com", "pw"
+    )
     assert result is None  # timing mitigation: still verifies against the dummy hash
     assert hasher.verify in calls
 
@@ -126,7 +133,7 @@ async def test_compile_filesystem_work_runs_via_to_thread(
 async def test_opening_and_planning_the_zip_run_via_to_thread(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    from inkstave.modules.projects.transfer import jobs
+    from inkstave.modules.projects.transfer import jobs, zip_import
 
     archive = tmp_path / "project.zip"
     with zipfile.ZipFile(archive, "w") as zf:
@@ -139,17 +146,21 @@ async def test_opening_and_planning_the_zip_run_via_to_thread(
     monkeypatch.setattr(jobs, "reconstruct_tree", stop)
 
     with pytest.raises(RuntimeError):
-        await jobs._process_archive(None, None, SimpleNamespace(project_id=uuid4()), archive, get_settings())
+        await jobs._process_archive(
+            None, None, cast(ProjectImport, SimpleNamespace(project_id=uuid4())), archive, get_settings()
+        )
 
     assert zipfile.ZipFile in calls
-    assert jobs.plan_entries in calls
+    assert zip_import.plan_entries in calls
 
 
 async def test_a_corrupt_zip_is_still_an_invalid_zip_error(tmp_path: Path) -> None:
-    from inkstave.modules.projects.transfer import jobs
+    from inkstave.modules.projects.transfer import jobs, zip_import
 
     archive = tmp_path / "project.zip"
     archive.write_bytes(b"not a zip")
 
-    with pytest.raises(jobs.InvalidZipError):
-        await jobs._process_archive(None, None, SimpleNamespace(), archive, get_settings())
+    with pytest.raises(zip_import.InvalidZipError):
+        await jobs._process_archive(
+            None, None, cast(ProjectImport, SimpleNamespace()), archive, get_settings()
+        )

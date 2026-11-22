@@ -129,4 +129,4 @@ def test_resilient_to_garbage() -> None:
 
 def test_rejects_non_string() -> None:
     with pytest.raises(ValueError):
-        parse_latex_log(None)  # type: ignore[arg-type]
+        parse_latex_log(None)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path

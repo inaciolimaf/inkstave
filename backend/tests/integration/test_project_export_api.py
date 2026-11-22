@@ -240,7 +240,7 @@ def _override_enqueuer(async_client: AsyncClient) -> None:
         async def enqueue(self, import_id: Any) -> str | None:
             return "job"
 
-    app = async_client._transport.app  # type: ignore[attr-defined]
+    app = async_client._transport.app  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     app.dependency_overrides[get_import_enqueuer] = lambda: _Fake()
 
 

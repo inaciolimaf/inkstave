@@ -159,7 +159,7 @@ warn_unreachable = true
 # Paths are relative to where mypy runs, and it only finds this file from `backend/`:
 # run it as `cd backend && uv run mypy`. `mypy backend/src` from the repository root
 # reads no configuration at all, misses `strict` and reports a false pass.
-files = ["src", "scripts", "../scripts", "../tools"]
+files = ["src", "scripts", "tests", "../scripts", "../tools"]
 # The pydantic plugin teaches mypy that BaseSettings fields are populated from
 # the environment (so they are not required __init__ args).
 plugins = ["pydantic.mypy"]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ from inkstave.modules.compile.running.service import CompileOptions, CompileServ
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.content import files as file_service
 from inkstave.modules.projects.content.documents import replace_content
+from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.models.tree_entity import TreeEntityType
 from inkstave.modules.projects.tree.service import create_entity, ensure_root
 from tests.factories import UserFactory
@@ -39,7 +41,7 @@ class FakeRunner:
         return self._outcome
 
 
-def _byte_reader(data: bytes):
+def _byte_reader(data: bytes) -> Callable[..., Awaitable[bytes]]:
     state = {"pos": 0}
 
     async def read(size: int = -1) -> bytes:
@@ -51,7 +53,7 @@ def _byte_reader(data: bytes):
     return read
 
 
-async def _seed_project(db_session: AsyncSession, store: LocalObjectStore):
+async def _seed_project(db_session: AsyncSession, store: LocalObjectStore) -> Project:
     user = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, user.id, "Paper")
@@ -75,8 +77,10 @@ async def _seed_project(db_session: AsyncSession, store: LocalObjectStore):
     return project
 
 
-def _service(db_session: AsyncSession, store: LocalObjectStore, runner: FakeRunner, tmp: Path):
-    settings = Settings(_env_file=None, compile_workdir_root=str(tmp / "compiles"))  # type: ignore[call-arg]
+def _service(
+    db_session: AsyncSession, store: LocalObjectStore, runner: FakeRunner, tmp: Path
+) -> CompileService:
+    settings = Settings(_env_file=None, compile_workdir_root=str(tmp / "compiles"))
     return CompileService(
         settings=settings,
         runner=runner,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,17 +13,18 @@ from inkstave.modules.agent.graph import repository as repo
 from inkstave.modules.agent.graph.agent_deps import AgentDeps
 from inkstave.modules.agent.graph.runner import run_turn
 from inkstave.modules.agent.llm.fake import FakeLLM
+from inkstave.modules.agent.models import AgentSession
 from inkstave.modules.projects.catalog.service import create_project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
 
 
-def _deps(*responses: object) -> AgentDeps:
+def _deps(*responses: Any) -> AgentDeps:
     return AgentDeps(llm=FakeLLM(script=list(responses)), settings=AgentSettings())
 
 
-async def _session(db: AsyncSession):
+async def _session(db: AsyncSession) -> AgentSession:
     user = await UserFactory.create(db)
     project = await create_project(db, user.id, "Paper")
     await db.flush()

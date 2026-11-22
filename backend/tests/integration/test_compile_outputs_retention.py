@@ -104,7 +104,7 @@ async def test_cleanup_compile_outputs_job_evicts(db_session: AsyncSession, tmp_
     project = await create_project(db_session, user.id, "P")
     now = datetime.now(UTC)
     backend = LocalObjectStore(tmp_path / "blobs", 65536)
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
 
     def make_store(session: AsyncSession) -> OutputStore:
         return OutputStore(storage=backend, repo=OutputRepository(session), settings=settings)

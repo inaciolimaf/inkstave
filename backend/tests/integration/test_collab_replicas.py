@@ -14,6 +14,7 @@ from uuid import UUID
 
 import fakeredis.aioredis as fakeredis
 import pytest
+from fakeredis import FakeServer
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,7 +41,7 @@ pytestmark = pytest.mark.integration
 class _Replica:
     """One backend process: its own rooms and manager, the shared database and Redis."""
 
-    def __init__(self, name: str, db_session: AsyncSession, server: fakeredis.FakeServer) -> None:
+    def __init__(self, name: str, db_session: AsyncSession, server: FakeServer) -> None:
         settings = Settings(_env_file=None, collab_text_flush_debounce_ms=60_000)  # no timer-driven flush
         self._redis: Any = fakeredis.FakeRedis(server=server)
         self.components: CollabComponents = build_collab_components(
@@ -83,8 +84,8 @@ class _Replica:
 
 
 @pytest.fixture
-def redis_server() -> fakeredis.FakeServer:
-    return fakeredis.FakeServer()
+def redis_server() -> FakeServer:
+    return FakeServer()
 
 
 async def _make_project_doc(db_session: AsyncSession) -> tuple[UUID, UUID]:

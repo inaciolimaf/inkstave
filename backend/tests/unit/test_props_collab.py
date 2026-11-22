@@ -14,6 +14,8 @@ diverged, and re-delivering the log fixed every one. The server never produces s
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from hypothesis import given
 from hypothesis import strategies as st
 from pycrdt import Doc, merge_updates
@@ -34,7 +36,10 @@ class _Mesh:
         self.inboxes: list[list[bytes]] = [[] for _ in range(size)]
         self.local_updates: list[bytes] = []
         for index, replica in enumerate(self.replicas):
-            replica.observe(lambda update, origin, i=index: self._broadcast(i, update, origin))
+            replica.observe(self._observer(index))
+
+    def _observer(self, index: int) -> Callable[[bytes, str | None], None]:
+        return lambda update, origin: self._broadcast(index, update, origin)
 
     def _broadcast(self, sender: int, update: bytes, origin: str | None) -> None:
         if origin == _REMOTE:
@@ -60,7 +65,8 @@ def test_replicas_converge_and_match_the_flushed_text(size: int, data: st.DataOb
     mesh = _Mesh(size)
     for _ in range(data.draw(st.integers(0, 30))):  # random peers, random lag between edits and delivery
         peer = data.draw(st.integers(0, size - 1))
-        if mesh.inboxes[peer] and data.draw(st.booleans()):
+        deliver_now = data.draw(st.booleans()) if mesh.inboxes[peer] else False
+        if deliver_now:
             mesh.deliver(peer)
         else:
             _edit(data, mesh.replicas[peer])

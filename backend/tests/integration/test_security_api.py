@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import Response
@@ -13,7 +13,7 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
-from inkstave.core.config.settings import get_settings
+from inkstave.core.config.settings import Settings, get_settings
 from inkstave.core.errors import RateLimitError
 from inkstave.core.http.body_limit import BodySizeLimitMiddleware
 from inkstave.modules.auth.credentials.tokens import build_token_service
@@ -62,7 +62,7 @@ async def test_body_size_limit_returns_413() -> None:
         git_max_push_bytes = 16
         max_document_bytes = 16
 
-    app.add_middleware(BodySizeLimitMiddleware, settings=_Cap())
+    app.add_middleware(BodySizeLimitMiddleware, settings=cast(Settings, _Cap()))
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://t") as client:
         small = await client.post("/x", content=b"tiny")

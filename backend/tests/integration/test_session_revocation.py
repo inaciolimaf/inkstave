@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import jwt
@@ -35,7 +35,7 @@ EMAIL = "session@example.com"
 async def _login(client: AsyncClient) -> dict[str, Any]:
     response = await client.post(LOGIN, json={"email": EMAIL, "password": PASSWORD})
     assert response.status_code == 200
-    return response.json()
+    return cast(dict[str, Any], response.json())
 
 
 async def _account(client: AsyncClient) -> dict[str, Any]:
@@ -54,7 +54,7 @@ async def _refresh(client: AsyncClient, pair: dict[str, Any]) -> Any:
 
 
 async def _user(session: AsyncSession) -> User:
-    return await session.scalar(select(User).where(User.email == EMAIL))  # type: ignore[return-value]
+    return await session.scalar(select(User).where(User.email == EMAIL))  # type: ignore[return-value]  # the query result is Optional; the test expects a row
 
 
 def _claims(token: str) -> dict[str, Any]:

@@ -16,14 +16,14 @@ def _fake_request(**state: object) -> SimpleNamespace:
 
 def test_get_redis_returns_state_client() -> None:
     sentinel = object()
-    assert get_redis(_fake_request(redis=sentinel)) is sentinel  # type: ignore[arg-type]
+    assert get_redis(_fake_request(redis=sentinel)) is sentinel  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
 
 def test_get_redis_missing_raises() -> None:
     with pytest.raises(ServiceUnavailableError):
-        get_redis(_fake_request(redis=None))  # type: ignore[arg-type]
+        get_redis(_fake_request(redis=None))  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
 
 def test_get_session_factory_unavailable_raises() -> None:
     with pytest.raises(ServiceUnavailableError):
-        get_session_factory(_fake_request(db_sessionmaker=None))  # type: ignore[arg-type]
+        get_session_factory(_fake_request(db_sessionmaker=None))  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path

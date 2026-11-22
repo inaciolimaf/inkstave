@@ -7,7 +7,7 @@ it. The sibling ``test_sharing_api*.py`` modules import the helpers and the
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -48,7 +48,7 @@ async def _auth(db_session: AsyncSession, email: str | None = None) -> tuple[Any
 async def _project(client: AsyncClient, headers: dict[str, str], name: str = "Paper") -> str:
     r = await client.post(PROJECTS, json={"name": name}, headers=headers)
     assert r.status_code == 201, r.text
-    return r.json()["id"]
+    return cast(str, r.json()["id"])
 
 
 async def _invite(
@@ -56,7 +56,7 @@ async def _invite(
 ) -> dict[str, Any]:
     r = await client.post(f"{PROJECTS}/{pid}/invites", json={"email": email, "role": role}, headers=headers)
     assert r.status_code == 201, r.text
-    return r.json()
+    return cast(dict[str, Any], r.json())
 
 
 async def _add_member(

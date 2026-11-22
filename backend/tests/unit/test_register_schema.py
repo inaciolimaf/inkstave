@@ -20,7 +20,7 @@ def _valid(**overrides: object) -> dict[str, object]:
 
 
 def test_valid_payload_parses() -> None:
-    req = RegisterRequest(**_valid())  # type: ignore[arg-type]
+    req = RegisterRequest(**_valid())
     assert req.email == "alice@example.com"
     assert req.display_name == "Alice"
 
@@ -40,16 +40,16 @@ def test_valid_payload_parses() -> None:
 )
 def test_invalid_payloads_rejected(overrides: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        RegisterRequest(**_valid(**overrides))  # type: ignore[arg-type]
+        RegisterRequest(**_valid(**overrides))
 
 
 def test_missing_field_rejected() -> None:
     with pytest.raises(ValidationError):
-        RegisterRequest(email="alice@example.com", password="secret123")  # type: ignore[call-arg]
+        RegisterRequest(email="alice@example.com", password="secret123")  # type: ignore[call-arg]  # invalid keyword on purpose: the test checks the runtime rejection
 
 
 def test_display_name_is_trimmed() -> None:
-    req = RegisterRequest(**_valid(display_name="  Alice  "))  # type: ignore[arg-type]
+    req = RegisterRequest(**_valid(display_name="  Alice  "))
     assert req.display_name == "Alice"
 
 

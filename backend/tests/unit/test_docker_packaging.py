@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
-import yaml
+import yaml  # type: ignore[import-untyped]  # PyYAML has no stubs in the dev group
 
 _ROOT = Path(__file__).resolve().parents[3]
 _COMPOSE = _ROOT / "docker-compose.prod.yml"
@@ -25,18 +26,19 @@ _SECRET_HINT = ("password", "secret", "api_key", "apikey", "token")
 
 
 @pytest.fixture(scope="module")
-def compose() -> dict:
-    return yaml.safe_load(_COMPOSE.read_text("utf-8"))
+def compose() -> dict[str, Any]:
+    data: dict[str, Any] = yaml.safe_load(_COMPOSE.read_text("utf-8"))
+    return data
 
 
-def test_expected_services_present(compose: dict) -> None:
+def test_expected_services_present(compose: dict[str, Any]) -> None:
     services = compose["services"]
     assert {"postgres", "redis", "backend", "worker", "frontend"} <= set(services)
     # Collab is in-app (no separate process) — see the ADR.
     assert "collab" not in services
 
 
-def test_only_frontend_exposes_a_port_under_a_managed_proxy(compose: dict) -> None:
+def test_only_frontend_exposes_a_port_under_a_managed_proxy(compose: dict[str, Any]) -> None:
     # Under a managed proxy (Coolify/Traefik) the host's :80/:443 belong to that
     # proxy, so no service publishes a host `ports:` mapping — the frontend only
     # `expose`s :80 on the internal network for the proxy to route to.
@@ -46,7 +48,7 @@ def test_only_frontend_exposes_a_port_under_a_managed_proxy(compose: dict) -> No
         assert "ports" not in services[name], f"{name} must not host-publish a port"
 
 
-def test_long_running_services_restart_and_healthcheck(compose: dict) -> None:
+def test_long_running_services_restart_and_healthcheck(compose: dict[str, Any]) -> None:
     services = compose["services"]
     for name in ("postgres", "redis", "backend", "worker", "frontend"):
         svc = services[name]
@@ -54,7 +56,7 @@ def test_long_running_services_restart_and_healthcheck(compose: dict) -> None:
         assert "healthcheck" in svc and "test" in svc["healthcheck"], name
 
 
-def test_app_services_use_env_file_and_wait_for_deps(compose: dict) -> None:
+def test_app_services_use_env_file_and_wait_for_deps(compose: dict[str, Any]) -> None:
     services = compose["services"]
     for name in ("backend", "worker"):
         assert services[name].get("env_file") == ".env", name
@@ -63,7 +65,7 @@ def test_app_services_use_env_file_and_wait_for_deps(compose: dict) -> None:
         assert deps["redis"]["condition"] == "service_healthy"
 
 
-def test_no_inline_secret_literals(compose: dict) -> None:
+def test_no_inline_secret_literals(compose: dict[str, Any]) -> None:
     # Every secret-ish env value must be a ${VAR} reference, never a baked literal.
     for name, svc in compose["services"].items():
         env = svc.get("environment", {})
@@ -74,14 +76,14 @@ def test_no_inline_secret_literals(compose: dict) -> None:
                 assert "${" in value or value == "", f"{name}.{key} bakes a secret literal: {value!r}"
 
 
-def test_expected_named_volumes_declared(compose: dict) -> None:
+def test_expected_named_volumes_declared(compose: dict[str, Any]) -> None:
     volumes = compose.get("volumes", {})
     assert {"pgdata", "uploads", "tectonic-cache"} <= set(volumes)
     # Ephemeral per-compile workdirs must NOT be a shared named volume.
     assert "compiles" not in volumes and "workdir" not in volumes
 
 
-def test_packages_toml_baked_into_image_and_tectonic_cache_mounted(compose: dict) -> None:
+def test_packages_toml_baked_into_image_and_tectonic_cache_mounted(compose: dict[str, Any]) -> None:
     # packages.toml is baked into the image (a bind mount breaks Coolify, which has
     # no repo checkout at deploy time); the Tectonic cache is still a named volume
     # shared by backend + worker so the format/bundle warmup persists across runs.

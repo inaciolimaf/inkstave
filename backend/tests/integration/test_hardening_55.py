@@ -51,7 +51,7 @@ async def test_agent_job_binds_and_clears_context(monkeypatch: pytest.MonkeyPatc
 
 
 async def test_auth_limiter_sets_ttl_on_first_hit(redis: Any) -> None:
-    settings = Settings(_env_file=None, rate_limit_refresh="5/60")  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, rate_limit_refresh="5/60")
     dep = rate_limit("refresh")
     req = SimpleNamespace(headers={}, client=SimpleNamespace(host="1.2.3.4"))
     await dep(req, redis, settings)
@@ -177,6 +177,6 @@ def test_request_models_forbid_extra_fields() -> None:
     offenders = [
         m.__name__
         for m in _request_models()
-        if m.model_config.get("extra") != "forbid"  # type: ignore[attr-defined]
+        if m.model_config.get("extra") != "forbid"  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     ]
     assert offenders == [], f"request models missing extra='forbid': {offenders}"

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from inkstave.modules.compile.running.runner import LocalTectonicRunner
 
 
@@ -32,7 +34,7 @@ def test_argv_is_a_no_shell_list_targeting_output_dir() -> None:
     assert "--only-cached" not in cmd.argv
 
 
-def test_compile_sandbox_no_shell_escape_no_inherited_secrets(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_compile_sandbox_no_shell_escape_no_inherited_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     # spec 52 §5.4: shell-escape/\write18 is off (Tectonic has no such flag) and the
     # compile env never inherits application secrets.
     monkeypatch.setenv("JWT_SECRET", "super-secret-value")

@@ -23,7 +23,7 @@ pytestmark = pytest.mark.integration
 
 
 def _settings(*, viewers_compile: bool) -> Settings:
-    return Settings(_env_file=None, compile_allowed_for_viewers=viewers_compile)  # type: ignore[call-arg]
+    return Settings(_env_file=None, compile_allowed_for_viewers=viewers_compile)
 
 
 async def _project_with_viewer(db_session: AsyncSession) -> tuple[Any, Any, Any]:

@@ -7,8 +7,8 @@ response until the body ends, and a live stream never ends on its own.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
-from typing import Any
+from collections.abc import AsyncGenerator, AsyncIterator
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -75,7 +75,7 @@ async def test_member_receives_chat_events_live(
         await post_message(async_client, owner_h, pid, "Oi")
         frames = await read_frames_until(stream, b"event: chat.message_created")
     finally:
-        await stream.aclose()
+        await cast(AsyncGenerator[bytes, None], stream).aclose()
 
     event_frame = frames[-1]
     assert event_frame.startswith(b"id: 1\nevent: chat.message_created\ndata: ")

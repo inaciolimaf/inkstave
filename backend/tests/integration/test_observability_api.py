@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 import pytest
+from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,7 +37,7 @@ class _AccessLog:
         self._logger.setLevel(logging.DEBUG)
         # The test harness disables existing loggers (dictConfig); re-enable for capture.
         self._logger.disabled = False
-        logging.Logger.manager._clear_cache()
+        logging.Logger.manager._clear_cache()  # type: ignore[attr-defined]  # private CPython API, needed to re-enable capture
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -117,7 +118,9 @@ async def test_authenticated_finish_log_auto_propagates_user_id(
     assert f["request_id"] == "auth-req-9"  # consistent correlation id
 
 
-async def test_finish_log_http_path_is_route_template_not_raw_id(app: Any, async_client: AsyncClient) -> None:
+async def test_finish_log_http_path_is_route_template_not_raw_id(
+    app: FastAPI, async_client: AsyncClient
+) -> None:
     """Spec 55 §5.1: http.path is the matched route template, never the raw id-bearing
     URL (a cardinality/PII risk). Register a parameterized route on the app under test."""
     from uuid import uuid4

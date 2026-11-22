@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 from annotated_types import MaxLen, MinLen
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from inkstave.modules.projects.schemas.tree import CreateEntityIn, RenameEntityIn
 from inkstave.modules.projects.tree.safe_path import MAX_TREE_ENTITY_NAME_LENGTH
@@ -38,7 +38,7 @@ def test_valid_names_accepted() -> None:
 
 
 @pytest.mark.parametrize("model", [CreateEntityIn, RenameEntityIn])
-def test_schema_limit_matches_service_constant(model: type) -> None:
+def test_schema_limit_matches_service_constant(model: type[BaseModel]) -> None:
     meta = model.model_fields["name"].metadata
     assert any(isinstance(m, MaxLen) and m.max_length == MAX_TREE_ENTITY_NAME_LENGTH for m in meta)
     assert any(isinstance(m, MinLen) and m.min_length == 1 for m in meta)

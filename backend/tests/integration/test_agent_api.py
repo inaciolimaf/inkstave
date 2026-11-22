@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -117,7 +117,7 @@ async def test_list_sessions_http(
 
     async def _create(title: str) -> dict[str, Any]:
         r = await async_client.post(f"{base}/sessions", json={"title": title}, headers=seed.headers)
-        return r.json()
+        return cast(dict[str, Any], r.json())
 
     s1 = await _create("A")
     s2 = await _create("B")

@@ -8,7 +8,7 @@ from inkstave.modules.agent.context import (
     locate_section,
     parse_latex_structure,
 )
-from inkstave.modules.agent.context.models import StructureKind
+from inkstave.modules.agent.context.models import ProjectMap, StructureKind, StructureNode
 
 _DOC = "\n".join(
     [
@@ -30,8 +30,8 @@ _DOC = "\n".join(
 )
 
 
-def _sections(nodes):
-    out = []
+def _sections(nodes: list[StructureNode]) -> list[StructureNode]:
+    out: list[StructureNode] = []
     for n in nodes:
         if n.kind == StructureKind.SECTIONING:
             out.append(n)
@@ -145,7 +145,7 @@ def test_verbatim_percent_does_not_swallow_rest_of_file() -> None:
     assert "One" in titles and "Two" in titles  # Two is not swallowed by verbatim
 
 
-def _map(text: str):
+def _map(text: str) -> ProjectMap:
     return build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
 
 
@@ -208,8 +208,8 @@ def test_project_map_caching_is_transparent() -> None:  # AC8
     assert off.model_dump() == first.model_dump()  # identical results with/without cache
 
 
-def _all(nodes):
-    out = []
+def _all(nodes: list[StructureNode]) -> list[StructureNode]:
+    out: list[StructureNode] = []
     for n in nodes:
         out.append(n)
         out.extend(_all(n.children))

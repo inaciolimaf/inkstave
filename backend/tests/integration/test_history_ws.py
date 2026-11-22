@@ -14,7 +14,8 @@ from inkstave.modules.auth.credentials.tokens import build_token_service
 from inkstave.modules.history.models import HistoryUpdate
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.content.documents import set_content_from_collab
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import ASGIWebSocketClient, install_collab, make_update
 from tests.factories import UserFactory
@@ -22,7 +23,7 @@ from tests.factories import UserFactory
 pytestmark = pytest.mark.integration
 
 
-async def _setup(db_session: AsyncSession):
+async def _setup(db_session: AsyncSession) -> tuple[Project, TreeEntity, str]:
     user = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, user.id, "P")

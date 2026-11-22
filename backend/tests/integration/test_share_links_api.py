@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -40,7 +40,7 @@ SHARE_LINKS = "/api/v1/share-links"
 async def _create_link(client: AsyncClient, headers: dict[str, str], pid: str, role: str) -> dict[str, Any]:
     r = await client.post(f"{PROJECTS}/{pid}/share-links", json={"role": role}, headers=headers)
     assert r.status_code == 201, r.text
-    return r.json()
+    return cast(dict[str, Any], r.json())
 
 
 def _error(r: Any) -> dict[str, Any]:

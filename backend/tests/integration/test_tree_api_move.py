@@ -21,10 +21,10 @@ async def test_move_cycle_and_non_folder(async_client: AsyncClient, db_session: 
         headers,
         type_="folder",
         name="B",
-        parent_id=a["json"]["id"],  # type: ignore[index]
+        parent_id=a["json"]["id"],
     )
-    a_id = a["json"]["id"]  # type: ignore[index]
-    b_id = b["json"]["id"]  # type: ignore[index]
+    a_id = a["json"]["id"]
+    b_id = b["json"]["id"]
 
     # Move A into its descendant B -> cycle.
     cycle = await async_client.patch(
@@ -41,8 +41,8 @@ async def test_move_cycle_and_non_folder(async_client: AsyncClient, db_session: 
     d1 = await _create(async_client, pid, headers, type_="doc", name="d1.tex")
     d2 = await _create(async_client, pid, headers, type_="doc", name="d2.tex")
     bad = await async_client.patch(
-        f"{_tree(pid)}/entities/{d1['json']['id']}/move",  # type: ignore[index]
-        json={"new_parent_id": d2["json"]["id"]},  # type: ignore[index]
+        f"{_tree(pid)}/entities/{d1['json']['id']}/move",
+        json={"new_parent_id": d2["json"]["id"]},
         headers=headers,
     )
     assert bad.status_code == 422
@@ -55,12 +55,12 @@ async def test_move_success(async_client: AsyncClient, db_session: AsyncSession)
     folder = await _create(async_client, pid, headers, type_="folder", name="dest")
     doc = await _create(async_client, pid, headers, type_="doc", name="m.tex")
     moved = await async_client.patch(
-        f"{_tree(pid)}/entities/{doc['json']['id']}/move",  # type: ignore[index]
-        json={"new_parent_id": folder["json"]["id"]},  # type: ignore[index]
+        f"{_tree(pid)}/entities/{doc['json']['id']}/move",
+        json={"new_parent_id": folder["json"]["id"]},
         headers=headers,
     )
     assert moved.status_code == 200
-    assert moved.json()["parent_id"] == folder["json"]["id"]  # type: ignore[index]
+    assert moved.json()["parent_id"] == folder["json"]["id"]
     assert moved.json()["path"] == "dest/m.tex"
 
 
@@ -76,8 +76,8 @@ async def test_move_to_cross_project_parent_is_404(
     other_folder = await _create(async_client, other_pid, headers, type_="folder", name="dest")
 
     resp = await async_client.patch(
-        f"{_tree(pid)}/entities/{doc['json']['id']}/move",  # type: ignore[index]
-        json={"new_parent_id": other_folder["json"]["id"]},  # type: ignore[index]
+        f"{_tree(pid)}/entities/{doc['json']['id']}/move",
+        json={"new_parent_id": other_folder["json"]["id"]},
         headers=headers,
     )
     assert resp.status_code == 404
@@ -99,14 +99,14 @@ async def test_move_name_collision_at_destination_is_409(
         headers,
         type_="doc",
         name="dup.tex",
-        parent_id=dest["json"]["id"],  # type: ignore[index]
+        parent_id=dest["json"]["id"],
     )
     # A second "dup.tex" at the root, which we then try to move into the destination.
     moving = await _create(async_client, pid, headers, type_="doc", name="dup.tex")
 
     resp = await async_client.patch(
-        f"{_tree(pid)}/entities/{moving['json']['id']}/move",  # type: ignore[index]
-        json={"new_parent_id": dest["json"]["id"]},  # type: ignore[index]
+        f"{_tree(pid)}/entities/{moving['json']['id']}/move",
+        json={"new_parent_id": dest["json"]["id"]},
         headers=headers,
     )
     assert resp.status_code == 409

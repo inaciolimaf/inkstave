@@ -11,6 +11,7 @@ using the CLI's injectable probes/sender so no real Redis/SMTP is required.
 from __future__ import annotations
 
 import asyncio
+import sys
 
 import pytest
 from sqlalchemy import text
@@ -138,5 +139,5 @@ def test_resolve_admin_credentials_from_env(monkeypatch: pytest.MonkeyPatch) -> 
 def test_resolve_admin_credentials_missing_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("INKSTAVE_ADMIN_EMAIL", raising=False)
     monkeypatch.delenv("INKSTAVE_ADMIN_PASSWORD", raising=False)
-    monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
     assert cli._resolve_admin_credentials() is None

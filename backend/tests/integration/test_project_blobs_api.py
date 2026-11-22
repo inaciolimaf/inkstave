@@ -7,6 +7,7 @@ logged and never turns the delete into an error: the row is already gone.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -58,7 +59,7 @@ async def wait_until_gone(store: InMemoryObjectStore, key: str) -> None:
 
 
 @pytest.fixture
-def store(app: Any) -> InMemoryObjectStore:
+def store(app: Any) -> Iterator[InMemoryObjectStore]:
     fake = InMemoryObjectStore()
     app.dependency_overrides[get_object_store] = lambda: fake
     yield fake

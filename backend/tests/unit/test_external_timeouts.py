@@ -34,7 +34,7 @@ async def test_redis_client_carries_both_timeouts() -> None:
 async def test_collab_reader_survives_a_quiet_channel_polling_below_the_socket_timeout() -> None:
     reached_the_message = asyncio.Event()
     stop = asyncio.Event()
-    socket_timeout = Settings(_env_file=None).redis_socket_timeout_s  # type: ignore[call-arg]
+    socket_timeout = Settings(_env_file=None).redis_socket_timeout_s
 
     class PollingPubSub:
         def __init__(self) -> None:
@@ -48,8 +48,8 @@ async def test_collab_reader_survives_a_quiet_channel_polling_below_the_socket_t
             await stop.wait()
             return None
 
-    bridge = RedisBridge(SimpleNamespace(), "instance", "collab:")  # type: ignore[arg-type]
-    task = asyncio.create_task(bridge._reader(PollingPubSub(), None))  # type: ignore[arg-type]
+    bridge = RedisBridge(SimpleNamespace(), "instance", "collab:")  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
+    task = asyncio.create_task(bridge._reader(PollingPubSub(), None))  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     async with asyncio.timeout(1):
         await reached_the_message.wait()
     task.cancel()
@@ -74,22 +74,22 @@ async def test_smtp_send_has_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_settings_reach_the_smtp_sender() -> None:
-    settings = Settings(_env_file=None, email_backend="smtp", smtp_timeout_s=9.0)  # type: ignore[call-arg]
-    assert get_email_sender(settings)._timeout_s == 9.0  # type: ignore[attr-defined]
+    settings = Settings(_env_file=None, email_backend="smtp", smtp_timeout_s=9.0)
+    assert get_email_sender(settings)._timeout_s == 9.0  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
 
 
 def test_s3_client_gets_explicit_timeouts() -> None:
-    settings = Settings(  # type: ignore[call-arg]
+    settings = Settings(
         _env_file=None, file_storage_backend="s3", s3_bucket="b", s3_connect_timeout_s=2, s3_read_timeout_s=8
     )
-    config = get_object_store(settings)._client_kwargs["config"]  # type: ignore[attr-defined]
+    config = get_object_store(settings)._client_kwargs["config"]  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert config.connect_timeout == 2
     assert config.read_timeout == 8
     assert config.retries["total_max_attempts"] == 2
 
 
 def test_idle_limit_stays_above_the_slowest_call_inside_a_request() -> None:
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None)
     per_attempt = settings.s3_connect_timeout_s + settings.s3_read_timeout_s
     assert settings.db_idle_in_transaction_timeout_s > per_attempt * 2
 
@@ -105,7 +105,7 @@ async def test_the_compile_ends_its_transaction_before_tectonic_runs(tmp_path: P
         events.append("tectonic")
         return await original_run(**kwargs)
 
-    runner.run = run  # type: ignore[method-assign]
+    runner.run = run  # type: ignore[method-assign]  # replaces a method with a test double
     service = build_service(tmp_path, runner, [("main.tex", "hi")])
 
     async def assembled() -> None:
@@ -132,7 +132,7 @@ async def test_the_agent_turn_raises_its_idle_limit_first(monkeypatch: pytest.Mo
     deps = SimpleNamespace(settings=SimpleNamespace(agent_job_timeout_s=600))
 
     with pytest.raises(StopError):
-        await agent_runner.run_turn(session=None, user_message="hi", deps=deps, db=None)  # type: ignore[arg-type]
+        await agent_runner.run_turn(session=None, user_message="hi", deps=deps, db=None)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
 
     assert seen == [600]
 

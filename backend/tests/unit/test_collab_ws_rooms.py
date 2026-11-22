@@ -76,11 +76,11 @@ def test_local_broadcast_reports_overflow() -> None:
 async def test_force_close_is_idempotent() -> None:
     conn = _conn(uuid4(), "a")
     await _force_close(conn, CLOSE_SLOW_CONSUMER)
-    assert conn.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]
+    assert conn.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert conn.closed is True
-    conn.websocket.closed = None  # type: ignore[attr-defined]
+    conn.websocket.closed = None  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     await _force_close(conn, CLOSE_SLOW_CONSUMER)  # already closed -> no-op
-    assert conn.websocket.closed is None  # type: ignore[attr-defined]
+    assert conn.websocket.closed is None  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
 
 
 async def test_enqueue_timed_succeeds_within_grace_window() -> None:
@@ -120,7 +120,7 @@ async def test_broadcast_timed_consumes_setting_and_reports_overflow() -> None:
     assert overflowed == [slow]
 
     await _force_close(overflowed[0], CLOSE_SLOW_CONSUMER)
-    assert slow.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]
+    assert slow.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
 
 
 async def test_forwarder_closes_slow_consumer_without_stalling_others() -> None:
@@ -135,11 +135,11 @@ async def test_forwarder_closes_slow_consumer_without_stalling_others() -> None:
     components.rooms.join(healthy)
     slow.try_enqueue(b"fill")  # slow consumer's queue is now full
 
-    forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]
+    forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     await forwarder(b"broadcast", None, False)
     await asyncio.sleep(0.02)  # let the scheduled close run
 
-    assert slow.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]
+    assert slow.websocket.closed == CLOSE_SLOW_CONSUMER  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert healthy.send_queue.get_nowait() == b"broadcast"  # healthy member still served
 
 
@@ -162,11 +162,11 @@ async def test_forwarder_applies_slow_client_grace_window() -> None:
         slow.send_queue.get_nowait()
 
     drainer = asyncio.create_task(drain())
-    forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]
+    forwarder = _make_forwarder(components, doc)  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     await forwarder(b"broadcast", None, False)
     await drainer
     await asyncio.sleep(0.02)
 
-    assert slow.websocket.closed is None  # type: ignore[attr-defined]
+    assert slow.websocket.closed is None  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
     assert slow.send_queue.get_nowait() == b"broadcast"
     assert healthy.send_queue.get_nowait() == b"broadcast"

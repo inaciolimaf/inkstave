@@ -57,7 +57,7 @@ async def _set_version(comp: Any, pid: UUID, doc_id: UUID, text: str, author_id:
 
 
 @pytest.fixture
-async def hist(app: Any, async_client: AsyncClient, db_session: AsyncSession, redis: Any):
+async def hist(app: Any, async_client: AsyncClient, db_session: AsyncSession, redis: Any) -> SimpleNamespace:
     comp = install_collab(app, db_session, redis, history_debounce_ms=10_000_000)
     owner, owner_h = await _user(db_session)
     project = await create_project(db_session, owner.id, "P")

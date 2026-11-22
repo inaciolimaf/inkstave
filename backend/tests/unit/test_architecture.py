@@ -61,8 +61,11 @@ def _is_model_file(path: Path) -> bool:
 
 
 def _docstrings(tree: ast.AST) -> set[int]:
-    bodies = [n for n in ast.walk(tree) if isinstance(n, ast.Module | ast.ClassDef | ast.FunctionDef)]
-    bodies += [n for n in ast.walk(tree) if isinstance(n, ast.AsyncFunctionDef)]
+    bodies: list[ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef] = [
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+    ]
     return {
         id(node.body[0].value)
         for node in bodies
@@ -103,8 +106,12 @@ def test_no_sql_in_string_literals() -> None:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         docstrings = _docstrings(tree)
         for node in ast.walk(tree):
-            is_string = isinstance(node, ast.Constant) and isinstance(node.value, str)
-            if is_string and id(node) not in docstrings and SQL_STATEMENT.match(node.value.strip()):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and id(node) not in docstrings
+                and SQL_STATEMENT.match(node.value.strip())
+            ):
                 offenders.append(f"{_relative(path)}:{node.lineno}")
     assert offenders == []
 

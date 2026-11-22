@@ -123,7 +123,7 @@ def test_decode_accepts_a_previous_secret_during_rotation() -> None:
     # in jwt_secret_previous; the new secret is used for signing.
     old_secret = "retired-secret-0123456789abcdef-rotation"
     rotated = Settings(
-        _env_file=None,  # type: ignore[call-arg]
+        _env_file=None,
         jwt_secret="brand-new-current-secret-0123456789abcdef",
         jwt_secret_previous=[old_secret],
     )

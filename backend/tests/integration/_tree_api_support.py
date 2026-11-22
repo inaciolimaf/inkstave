@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,7 +72,7 @@ async def _create(
     type_: str = "folder",
     name: str,
     parent_id: str | None = None,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     body: dict[str, object] = {"type": type_, "name": name}
     if parent_id is not None:
         body["parent_id"] = parent_id

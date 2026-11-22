@@ -13,10 +13,12 @@ from inkstave.core.config.settings import Settings, get_settings
 from inkstave.infra.deps import get_object_store
 from inkstave.infra.storage.local import LocalObjectStore
 from inkstave.modules.auth.credentials.tokens import build_token_service
+from inkstave.modules.compile.models.compile import Compile
 from inkstave.modules.compile.outputs.repository import OutputRepository
 from inkstave.modules.compile.outputs.store import OutputStore
 from inkstave.modules.compile.queue.repository import CompileRepository
 from inkstave.modules.compile.running.result import CompileArtifact, CompileResult, CompileStatus
+from inkstave.modules.projects.models.project import Project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -70,7 +72,7 @@ async def _seed_compile(
     owner_id: str,
     *,
     with_pdf: bool = True,
-):
+) -> tuple[Project, Compile]:
     from uuid import UUID
 
     project = await __import__(
@@ -82,7 +84,7 @@ async def _seed_compile(
     store = OutputStore(
         storage=backend,
         repo=OutputRepository(db_session),
-        settings=Settings(_env_file=None),  # type: ignore[call-arg]
+        settings=Settings(_env_file=None),
     )
     await store.persist(row.id, project.id, _result(tmp_path, with_pdf=with_pdf))
     return project, row

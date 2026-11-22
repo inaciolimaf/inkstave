@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from inkstave.core.config.settings import get_settings
+from inkstave.core.config.settings import Settings, get_settings
 from inkstave.infra.mailer.sender import (
     ConsoleEmailSender,
     FileEmailSender,
@@ -19,7 +20,7 @@ from inkstave.infra.mailer.sender import (
 from inkstave.infra.mailer.templates import UnknownTemplateError, render_email
 
 
-def _settings(**over: object):
+def _settings(**over: Any) -> Settings:
     return get_settings().model_copy(update=over)
 
 

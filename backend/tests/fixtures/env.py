@@ -146,11 +146,11 @@ def _no_real_compile() -> Iterator[None]:
         )
 
     original = LocalTectonicRunner.run
-    LocalTectonicRunner.run = _blocked  # type: ignore[method-assign]
+    LocalTectonicRunner.run = _blocked  # type: ignore[method-assign, assignment]  # test stub: looser signature on purpose
     try:
         yield
     finally:
-        LocalTectonicRunner.run = original  # type: ignore[method-assign]
+        LocalTectonicRunner.run = original  # type: ignore[method-assign]  # replaces a method with a test double
 
 
 @pytest.fixture(autouse=True)
@@ -180,11 +180,11 @@ def _no_real_network() -> Iterator[None]:
             )
         return real_getaddrinfo(host, *args, **kwargs)
 
-    socket.getaddrinfo = guarded  # type: ignore[assignment]
+    socket.getaddrinfo = guarded
     try:
         yield
     finally:
-        socket.getaddrinfo = real_getaddrinfo  # type: ignore[assignment]
+        socket.getaddrinfo = real_getaddrinfo
 
 
 @pytest.fixture

@@ -20,7 +20,7 @@ def _settings(**over: Any) -> Settings:
     # localhost default as "unset" in prod, so the "prod boots" case below needs a
     # real-looking value to exercise the JWT/CORS guards rather than tripping REDIS.
     base = {"jwt_secret": "x" * 40, "redis_url": "redis://redis:6379/0"}
-    return Settings(**{**base, **over})  # type: ignore[arg-type]
+    return Settings(**{**base, **over})
 
 
 @pytest.mark.integration

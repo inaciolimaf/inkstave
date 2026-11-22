@@ -7,13 +7,14 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from inkstave.modules.auth.models.user import User
 from inkstave.modules.notifications.inbox.service import NotificationNotFoundError, NotificationService
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
 
 
-async def _user(db_session: AsyncSession):
+async def _user(db_session: AsyncSession) -> User:
     user = await UserFactory.create(db_session)
     await db_session.flush()
     return user

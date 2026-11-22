@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -13,6 +14,7 @@ from inkstave.modules.agent.diffs.compute import (
     compute_diff,
     content_hash,
 )
+from inkstave.modules.agent.diffs.models import ProposedDiff
 from inkstave.modules.agent.graph.edits import StagedEdit
 
 
@@ -90,7 +92,7 @@ def test_full_file_replacement_has_hunks() -> None:
 
 
 def test_is_stale_on_version_or_hash_change() -> None:
-    diff = SimpleNamespace(base_version="3", base_hash=content_hash("abc"))
+    diff = cast(ProposedDiff, SimpleNamespace(base_version="3", base_hash=content_hash("abc")))
     assert is_stale(diff, "abc", 3) is False  # AC6: unchanged
     assert is_stale(diff, "abc", 4) is True  # version changed
     assert is_stale(diff, "abcX", 3) is True  # hash changed

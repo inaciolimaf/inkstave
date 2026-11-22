@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -16,7 +16,7 @@ def _openapi() -> dict[str, Any]:
 
 
 def _components() -> dict[str, Any]:
-    return _openapi()["components"]["schemas"]
+    return cast(dict[str, Any], _openapi()["components"]["schemas"])
 
 
 def _enum(schema: dict[str, Any]) -> set[str]:
@@ -48,7 +48,7 @@ def test_closed_fields_publish_their_values(model: str, field: str, values: set[
 
 def _array_item(schema: dict[str, Any]) -> str:
     array = next(option for option in schema["anyOf"] if option.get("type") == "array")
-    return array["items"]["$ref"].rsplit("/", 1)[-1]
+    return cast(str, array["items"]["$ref"].rsplit("/", 1)[-1])
 
 
 def test_tool_calls_and_hunks_have_a_shape() -> None:

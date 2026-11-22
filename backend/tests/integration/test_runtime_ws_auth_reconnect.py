@@ -26,7 +26,8 @@ from inkstave.modules.collab.models import CrdtUpdate
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.content.documents import set_content_from_collab
 from inkstave.modules.projects.models.membership import MembershipRole, MembershipStatus, ProjectMembership
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree.service import create_entity
 from tests.collab_ws_harness import ASGIWebSocketClient, install_collab, make_update
 from tests.factories import UserFactory
@@ -47,7 +48,7 @@ def _path(project_id: Any, document_id: Any) -> str:
     return f"/ws/collab/projects/{project_id}/documents/{document_id}"
 
 
-async def _setup(db_session: AsyncSession):
+async def _setup(db_session: AsyncSession) -> tuple[Project, TreeEntity, dict[str, str]]:
     owner = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, owner.id, "P")
@@ -136,9 +137,7 @@ async def test_expired_token_rejected_4401(app: Any, db_session: AsyncSession, r
     await db_session.flush()
     # Sign with the app's real secret but an already-elapsed TTL so the claim's
     # `exp` is in the past — the server decode rejects it via TokenError → 4401.
-    expired_service = build_token_service(
-        Settings(_env_file=None, access_token_ttl_seconds=-1)  # type: ignore[call-arg]
-    )
+    expired_service = build_token_service(Settings(_env_file=None, access_token_ttl_seconds=-1))
     expired_token, _ = expired_service.create_access_token(user)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={expired_token}") as ws:
         await ws.expect_accept()
@@ -225,7 +224,7 @@ async def test_viewer_write_dropped_but_reads(app: Any, db_session: AsyncSession
     path = _path(project.id, entity.id)
 
     async def _count() -> int:
-        return await db_session.scalar(  # type: ignore[return-value]
+        return await db_session.scalar(  # type: ignore[return-value]  # the query result is Optional; the test expects a row
             select(func.count()).select_from(CrdtUpdate).where(CrdtUpdate.document_id == entity.id)
         )
 

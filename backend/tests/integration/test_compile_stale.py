@@ -41,7 +41,7 @@ class FakeEnqueuer:
 
 
 def _settings(**over: Any) -> Settings:
-    return Settings(_env_file=None, **over)  # type: ignore[call-arg]
+    return Settings(_env_file=None, **over)
 
 
 async def _seed(db_session: AsyncSession) -> tuple[Any, Any]:

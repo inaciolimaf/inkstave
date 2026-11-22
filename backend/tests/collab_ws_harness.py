@@ -4,7 +4,7 @@ and helpers to wire the per-instance collab components onto the app."""
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,7 +42,7 @@ def session_factory(db_session: AsyncSession) -> Any:
 def install_collab(app: Any, db_session: AsyncSession, redis: Any, **overrides: Any) -> Any:
     """Build collab components bound to the test session + redis and set them on
     ``app.state.collab``. Returns the components for direct inspection."""
-    settings = Settings(_env_file=None, **overrides)  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, **overrides)
     components = build_collab_components(
         redis=redis,
         session_factory=session_factory(db_session),
@@ -123,7 +123,7 @@ class ASGIWebSocketClient:
     async def receive_bytes(self, timeout: float = 2.0) -> bytes:
         message = await self.receive(timeout)
         assert message["type"] == "websocket.send", message
-        return message["bytes"]
+        return cast(bytes, message["bytes"])
 
     async def close_code(self, timeout: float = 2.0) -> int:
         message = await self.receive(timeout)

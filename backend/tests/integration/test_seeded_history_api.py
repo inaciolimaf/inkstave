@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -21,7 +21,7 @@ SECOND = FIRST.replace("First edit", "Second edit")
 
 @pytest.fixture
 def components(app: Any, db_session: AsyncSession, redis: Any) -> CollabComponents:
-    return install_collab(app, db_session, redis, history_debounce_ms=10_000_000)
+    return cast(CollabComponents, install_collab(app, db_session, redis, history_debounce_ms=10_000_000))
 
 
 def _url(lived: LivedInProject, suffix: str) -> str:

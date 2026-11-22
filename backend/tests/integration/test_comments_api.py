@@ -39,7 +39,7 @@ def _comments(pid: str) -> str:
 async def _doc(client: AsyncClient, pid: str, headers: dict[str, str], name: str = "main.tex") -> str:
     created = await _create(client, pid, headers, type_="doc", name=name)
     assert created["status"] == 201, created
-    return str(created["json"]["id"])  # type: ignore[index]
+    return str(created["json"]["id"])
 
 
 async def _room(client: AsyncClient, db_session: AsyncSession) -> dict[str, Any]:
@@ -165,7 +165,7 @@ async def test_only_text_documents_take_comments(async_client: AsyncClient, db_s
     room = await _room(async_client, db_session)
     pid, owner_h = room["pid"], room["owner"][1]
     folder = await _create(async_client, pid, owner_h, type_="folder", name="figures")
-    folder_id = str(folder["json"]["id"])  # type: ignore[index]
+    folder_id = str(folder["json"]["id"])
 
     response = await async_client.post(_comments(pid), json=_new_thread(folder_id), headers=owner_h)
     assert response.status_code == 422

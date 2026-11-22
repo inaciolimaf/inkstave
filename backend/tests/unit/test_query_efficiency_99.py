@@ -9,10 +9,11 @@ status are covered by the integration suite.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.modules.projects.tree.service import TreeTooLargeError, get_tree
 
@@ -39,19 +40,19 @@ def _entities(n: int) -> list[Any]:
 
 async def test_get_tree_returns_rows_within_cap() -> None:
     items = _entities(2)
-    assert await get_tree(FakeSession(items), uuid4(), max_nodes=2) == items
+    assert await get_tree(cast(AsyncSession, FakeSession(items)), uuid4(), max_nodes=2) == items
 
 
 async def test_get_tree_returns_rows_below_cap() -> None:
     items = _entities(1)
-    assert await get_tree(FakeSession(items), uuid4(), max_nodes=5) == items
+    assert await get_tree(cast(AsyncSession, FakeSession(items)), uuid4(), max_nodes=5) == items
 
 
 async def test_get_tree_raises_when_over_cap() -> None:
     # Real DB fetches limit(cap+1); cap+1 rows materialised → over the limit.
     items = _entities(3)
     with pytest.raises(TreeTooLargeError):
-        await get_tree(FakeSession(items), uuid4(), max_nodes=2)
+        await get_tree(cast(AsyncSession, FakeSession(items)), uuid4(), max_nodes=2)
 
 
 def test_tree_too_large_error_shape_and_export() -> None:
@@ -79,7 +80,7 @@ async def test_compile_entities_by_id_uses_get_tree(monkeypatch: pytest.MonkeyPa
         return ents
 
     monkeypatch.setattr(sources, "get_tree", fake_get_tree)
-    result = await sources._entities_by_id(object(), uuid4())
+    result = await sources._entities_by_id(cast(AsyncSession, object()), uuid4())
     assert result == {e.id: e for e in ents}
 
 
@@ -93,4 +94,4 @@ async def test_compile_entities_by_id_propagates_tree_too_large(
 
     monkeypatch.setattr(sources, "get_tree", fake_get_tree)
     with pytest.raises(TreeTooLargeError):
-        await sources._entities_by_id(object(), uuid4())
+        await sources._entities_by_id(cast(AsyncSession, object()), uuid4())

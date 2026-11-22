@@ -14,14 +14,15 @@ from inkstave.modules.projects.content.documents import (
     get_document,
     replace_content,
 )
-from inkstave.modules.projects.models.tree_entity import TreeEntityType
+from inkstave.modules.projects.models.project import Project
+from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree.service import create_entity, ensure_root
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
 
 
-async def _doc_entity(db_session: AsyncSession) -> tuple:
+async def _doc_entity(db_session: AsyncSession) -> tuple[Project, TreeEntity]:
     user = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, user.id, "P")

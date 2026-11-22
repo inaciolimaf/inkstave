@@ -89,7 +89,7 @@ def _ctx(
     settings: Settings | None = None,
 ) -> dict[str, Any]:
     return {
-        "settings": settings or Settings(_env_file=None),  # type: ignore[call-arg]
+        "settings": settings or Settings(_env_file=None),
         "redis": redis,
         "session_factory": lambda: _SessionCtx(db_session),
         "make_compile_service": lambda _session: service,

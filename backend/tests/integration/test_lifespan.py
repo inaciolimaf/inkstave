@@ -46,9 +46,10 @@ async def test_lifespan_opens_and_disposes(_template_db: str, monkeypatch: pytes
         assert app.state.db_sessionmaker is not None
 
     assert fake.closed is True
-    assert app.state.redis is None
-    assert app.state.db_engine is None
-    assert app.state.db_sessionmaker is None
+    state: Any = app.state
+    assert state.redis is None
+    assert state.db_engine is None
+    assert state.db_sessionmaker is None
 
 
 async def test_lifespan_disposes_redis_when_db_wiring_fails(

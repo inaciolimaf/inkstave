@@ -6,7 +6,7 @@ fake email enqueuer and fake Redis.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -173,7 +173,8 @@ async def test_change_email_then_confirm(
     confirmed = await async_client.post(f"{USERS}/confirm-email-change", json={"token": token})
     assert confirmed.status_code == 200 and confirmed.json()["email"] == "new@example.com"
     await db_session.refresh(user)
-    assert user.email == "new@example.com" and user.pending_email is None
+    # The refresh reloaded the row; the narrowing from the asserts above is not the database state.
+    assert user.email == "new@example.com" and cast(str | None, user.pending_email) is None
 
     # Single-use: the same token cannot be replayed.
     replay = await async_client.post(f"{USERS}/confirm-email-change", json={"token": token})

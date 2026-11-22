@@ -65,7 +65,8 @@ def _headers(user: User) -> dict[str, str]:
 
 async def _issue_reset_link(client: AsyncClient, emails: FakeEmailEnqueuer, email: str) -> str:
     assert (await client.post(f"{AUTH}/forgot-password", json={"email": email})).status_code == 202
-    return emails.calls[-1]["context"]["reset_url"].split("token=", 1)[1]
+    typed_result: str = emails.calls[-1]["context"]["reset_url"].split("token=", 1)[1]
+    return typed_result
 
 
 async def _reset(client: AsyncClient, token: str) -> int:

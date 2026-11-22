@@ -218,6 +218,8 @@ E2E: a test that needs a signed-in browser or API client gets the worker's sign-
 one login per worker and user); only a test that changes the session (logout, register, login) signs in on its own.
 Playwright retries are 0 everywhere, CI included: fix a flaky test, do not retry it. CI uses the system Chrome.
 
+Tests are type-checked by `make types` too (strict mypy, `tests` in `backend/pyproject.toml` `[tool.mypy] files`). A `# type: ignore[code]` in a test carries its reason on the same line, and a fake that stands in for a real object is `cast` to the type it replaces.
+
 ## Workflow
 
 1. Read the domain's `docs/system/` file.

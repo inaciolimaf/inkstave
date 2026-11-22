@@ -32,7 +32,7 @@ async def test_workdir_removed_when_service_raises(
 ) -> None:
     """Regression (spec 25): a service exception must not orphan the workdir."""
     cid = await _new_compile(db_session)
-    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))
     service = WorkdirCreatingService(tmp_path, raises=RuntimeError("kaboom"))
 
     async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None: ...
@@ -50,7 +50,7 @@ async def test_workdir_removed_on_persistence_failure(
 ) -> None:
     """Regression (spec 25): a persistence failure must not orphan the workdir."""
     cid = await _new_compile(db_session)
-    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))  # type: ignore[call-arg]
+    settings = Settings(_env_file=None, compile_workdir_root=str(tmp_path))
     service = WorkdirCreatingService(tmp_path, result=_success())
 
     async def persist(s: Any, c: UUID, p: UUID, r: CompileResult) -> None:

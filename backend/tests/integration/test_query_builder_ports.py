@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from inkstave.core.db.ownership import get_owned
 from inkstave.core.errors import NotFoundError
 from inkstave.modules.agent.models import AgentSession
+from inkstave.modules.auth.models.user import User
 from inkstave.modules.compile.models.compile import Compile
 from inkstave.modules.compile.models.compile_output import CompileOutput, OutputKind
 from inkstave.modules.compile.outputs.repository import OutputRepository
 from inkstave.modules.projects.catalog.service import create_project, get_project_name
+from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree import service as tree_service
 from tests.factories import UserFactory
@@ -22,13 +24,15 @@ from tests.factories import UserFactory
 pytestmark = pytest.mark.integration
 
 
-async def _project(session: AsyncSession):
+async def _project(session: AsyncSession) -> tuple[User, Project]:
     owner = await UserFactory.create(session)
     await session.flush()
     return owner, await create_project(session, owner.id, "P")
 
 
-async def _compile(session: AsyncSession, project, owner, *, age_days: int, outputs: bool = True) -> Compile:
+async def _compile(
+    session: AsyncSession, project: Project, owner: User, *, age_days: int, outputs: bool = True
+) -> Compile:
     row = Compile(
         project_id=project.id,
         requested_by=owner.id,
@@ -83,7 +87,7 @@ async def test_retention_respects_the_batch(db_session: AsyncSession) -> None:
     assert ids == [oldest.id]
 
 
-async def _folder(session: AsyncSession, project_id, name: str, parent_id) -> TreeEntity:
+async def _folder(session: AsyncSession, project_id: UUID, name: str, parent_id: UUID | None) -> TreeEntity:
     return await tree_service.create_entity(session, project_id, TreeEntityType.folder, name, parent_id)
 
 

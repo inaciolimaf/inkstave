@@ -9,7 +9,7 @@ session revocation are all asserted end to end.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
@@ -61,7 +61,7 @@ async def _user(db: AsyncSession, *, email: str = "owner@example.com", confirmed
 
 def _token_from(call: dict[str, Any], url_key: str) -> str:
     url = call["context"][url_key]
-    return url.split("token=", 1)[1]
+    return cast(str, url.split("token=", 1)[1])
 
 
 async def _expire_all(db: AsyncSession) -> None:

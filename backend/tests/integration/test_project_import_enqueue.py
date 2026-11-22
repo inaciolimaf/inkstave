@@ -62,12 +62,12 @@ async def test_job_is_enqueued_after_the_commit(
         events.append("commit")
         await commit()
 
-    db_session.commit = recording_commit  # type: ignore[method-assign]
+    db_session.commit = recording_commit  # type: ignore[method-assign]  # replaces a method with a test double
     try:
         headers = await auth(db_session)
         resp = await post_import(async_client, headers, make_zip({"main.tex": b"\\documentclass{a}"}))
     finally:
-        db_session.commit = commit  # type: ignore[method-assign]
+        db_session.commit = commit  # type: ignore[method-assign]  # replaces a method with a test double
     assert resp.status_code == 202
     assert events.index("commit") < events.index("enqueue")
     # The job id is stored on the row the job reads.
@@ -91,7 +91,7 @@ async def test_enqueue_failure_marks_the_import_error_and_drops_the_blob(
     assert row.error_type == "enqueue_failed"
     # The staged archive goes in the background, after the commit: poll with a deadline.
     for _ in range(500):
-        if not [key for key in store._d if key.startswith("imports/")]:  # type: ignore[attr-defined]
+        if not [key for key in store._d if key.startswith("imports/")]:  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare
             break
         await asyncio.sleep(0.01)
-    assert not [key for key in store._d if key.startswith("imports/")]  # type: ignore[attr-defined]
+    assert not [key for key in store._d if key.startswith("imports/")]  # type: ignore[attr-defined]  # reads a private or fake attribute that the real type does not declare

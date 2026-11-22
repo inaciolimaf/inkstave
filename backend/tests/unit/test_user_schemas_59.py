@@ -33,14 +33,14 @@ def test_font_size_within_range_unchanged() -> None:
 
 def test_theme_and_keymap_enum_rejected() -> None:
     with pytest.raises(ValidationError):
-        EditorPreferences(theme="solarized")  # type: ignore[arg-type]
+        EditorPreferences(theme="solarized")
     with pytest.raises(ValidationError):
-        EditorPreferences(keymap="sublime")  # type: ignore[arg-type]
+        EditorPreferences(keymap="sublime")
 
 
 def test_editor_preferences_forbids_extra_fields() -> None:
     with pytest.raises(ValidationError):
-        EditorPreferences(font_size=14, bogus=True)  # type: ignore[call-arg]
+        EditorPreferences(font_size=14, bogus=True)  # type: ignore[call-arg]  # invalid keyword on purpose: the test checks the runtime rejection
 
 
 def test_display_name_is_trimmed() -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from dulwich.errors import SendPackError
@@ -63,8 +63,9 @@ def _commit(repo: Repo, files: dict[bytes, bytes], parents: list[ObjectID], ref:
 
 
 def _files_of(repo: Repo) -> dict[bytes, bytes]:
-    tree = repo[repo[repo.refs[MAIN_REF]].tree]
-    return {entry.path: bytes(repo[entry.sha].data) for entry in tree.items()}
+    commit = cast(Commit, repo[repo.refs[MAIN_REF]])
+    tree = cast(Tree, repo[commit.tree])
+    return {entry.path: bytes(cast(Blob, repo[entry.sha]).data) for entry in tree.items()}
 
 
 async def _clone(client: AsyncClient, world: GitWorld, target: Path) -> Repo:

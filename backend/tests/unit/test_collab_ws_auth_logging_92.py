@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import logging
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
+from fastapi import WebSocket
 
 from inkstave.modules.auth.deps import NotAuthenticatedError
 from inkstave.modules.collab.ws import router as ws_router
@@ -63,7 +64,7 @@ async def test_ws_auth_failure_logs_warning_and_closes(
     token = "bad-token-secret-value"
 
     with caplog.at_level(logging.WARNING):
-        await ws_router.collab_ws(ws, pid, did, token=token)
+        await ws_router.collab_ws(cast(WebSocket, ws), pid, did, token=token)
 
     assert ws.closed_code == CLOSE_UNAUTHORIZED  # close behaviour unchanged
     warnings = [
@@ -86,6 +87,6 @@ async def test_ws_non_auth_error_propagates(monkeypatch: pytest.MonkeyPatch) -> 
     ws = _ws()
 
     with pytest.raises(ValueError):
-        await ws_router.collab_ws(ws, uuid4(), uuid4(), token="x")
+        await ws_router.collab_ws(cast(WebSocket, ws), uuid4(), uuid4(), token="x")
     # The non-auth error surfaced; it was NOT masked as a 4401 close.
     assert ws.closed_code is None

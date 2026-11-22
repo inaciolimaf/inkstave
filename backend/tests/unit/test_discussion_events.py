@@ -52,7 +52,7 @@ async def test_publish_failure_is_logged_not_raised(caplog: pytest.LogCaptureFix
         async def incr(self, *_args: object) -> int:
             raise ConnectionError("redis is down")
 
-    await _publish_quietly(BrokenRedis(), uuid4(), "chat.message_created", {})  # type: ignore[arg-type]
+    await _publish_quietly(BrokenRedis(), uuid4(), "chat.message_created", {})  # type: ignore[arg-type]  # a stand-in for the real argument; the test exercises the runtime path
     assert "project event publish failed" in caplog.text
 
 

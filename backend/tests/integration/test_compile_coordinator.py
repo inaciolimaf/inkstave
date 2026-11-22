@@ -7,6 +7,7 @@ The coordinator's concurrency caps and coalescing are expressed entirely through
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -14,10 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import Settings
 from inkstave.core.db.session import run_after_commit
+from inkstave.modules.auth.models.user import User
 from inkstave.modules.compile.models.compile import CompileJobStatus
 from inkstave.modules.compile.queue.coordinator import CompileConcurrencyError, CompileCoordinator
 from inkstave.modules.compile.queue.repository import CompileRepository
 from inkstave.modules.projects.catalog.service import create_project
+from inkstave.modules.projects.models.project import Project
 from tests.factories import UserFactory
 
 pytestmark = pytest.mark.integration
@@ -32,8 +35,8 @@ class FakeEnqueuer:
         return f"job-{compile_id}"
 
 
-def _settings(**over: object) -> Settings:
-    return Settings(_env_file=None, **over)  # type: ignore[call-arg]
+def _settings(**over: Any) -> Settings:
+    return Settings(_env_file=None, **over)
 
 
 def test_job_timeout_must_exceed_engine_timeout() -> None:
@@ -45,7 +48,7 @@ def test_job_timeout_must_exceed_engine_timeout() -> None:
         _settings(tectonic_compile_timeout_s=120, compile_job_timeout_s=120)
 
 
-async def _seed(db_session: AsyncSession):
+async def _seed(db_session: AsyncSession) -> tuple[User, Project]:
     user = await UserFactory.create(db_session)
     await db_session.flush()
     project = await create_project(db_session, user.id, "P")
