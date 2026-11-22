@@ -131,10 +131,19 @@ def _tool_call(name: str, args: dict[str, object], usage: LLMUsage) -> LLMRespon
     )
 
 
+_FRAME = re.compile(r"^<untrusted_tool_result>\n(.*)\n</untrusted_tool_result>$", re.DOTALL)
+
+
 def _read_content(read_result: LLMMessage) -> str:
-    """The `content` of a `read_file` result (the text as it was read), or "" when unreadable."""
+    """The `content` of a `read_file` result (the text as it was read), or "" when unreadable.
+
+    The graph frames tool results as untrusted text before the provider sees them (spec 49), so the
+    JSON comes wrapped in that frame; unwrap it the way the provider would read it.
+    """
+    raw = read_result.content or "{}"
+    framed = _FRAME.match(raw)
     try:
-        data = json.loads(read_result.content or "{}").get("data") or {}
+        data = json.loads(framed.group(1) if framed else raw).get("data") or {}
     except (json.JSONDecodeError, AttributeError):
         return ""
     content = data.get("content")
