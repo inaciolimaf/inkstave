@@ -58,7 +58,7 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "lib0": "^0.2.117",
     "lucide-react": "^0.469.0",
-    "mathlive": "0.111.1",
+    "mathlive": "0.111.4",
     "pdfjs-dist": "^4.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
