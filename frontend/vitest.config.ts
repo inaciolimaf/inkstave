@@ -12,7 +12,10 @@ export default defineConfig({
   },
   test: {
     environment: "./src/test/jsdom-environment.ts",
-    globals: true,
+    // Explicit imports from "vitest" in every test file; no ambient globals.
+    globals: false,
+    // Stylesheets are not needed to assert on behaviour, and skipping them keeps the run faster.
+    css: false,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
     coverage: {

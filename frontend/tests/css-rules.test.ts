@@ -26,3 +26,10 @@ it("draws the edge of every form control with the control-edge token", () => {
   );
   expect(missing).toEqual([]);
 });
+
+it("turns every animation and transition into an instant swap under reduced motion", () => {
+  const css = readFileSync("src/index.css", "utf-8");
+  const block = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+  expect(block).toMatch(/\*,\s*\*::before,\s*\*::after\s*\{[^}]*animation-duration:\s*0\.01ms/);
+  expect(block).toMatch(/transition-duration:\s*0\.01ms/);
+});

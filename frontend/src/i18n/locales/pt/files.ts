@@ -28,6 +28,7 @@ const dict: Dict = {
     folderTitle: "Nova pasta",
     fileTitle: "Novo arquivo",
     nameLabel: "Nome",
+    description: "Digite um nome para o novo item.",
     defaultFolderName: "Nova pasta",
     defaultFileName: "untitled.tex",
   },

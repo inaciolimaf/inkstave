@@ -12,7 +12,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +58,7 @@ export function CreateEntityDialog({
           <DialogTitle>
             {type === "folder" ? t("createDialog.folderTitle") : t("createDialog.fileTitle")}
           </DialogTitle>
+          <DialogDescription>{t("createDialog.description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3" noValidate>
           <div className="space-y-1">

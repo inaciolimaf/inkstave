@@ -27,6 +27,7 @@ const dict = {
     folderTitle: "New folder",
     fileTitle: "New file",
     nameLabel: "Name",
+    description: "Enter a name for the new item.",
     defaultFolderName: "New folder",
     defaultFileName: "untitled.tex",
   },

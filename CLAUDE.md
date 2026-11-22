@@ -208,7 +208,8 @@ goes through i18n, in both languages. Screens must fit 390 px. A new `fontSize` 
 
 Pyramid: unit (no database; a unit test that uses it fails collection), integration (marker
 `integration`, one transaction per test with rollback), golden (real SyncTeX and LaTeX logs),
-Vitest, Playwright. A bug comes with a test. Slow work is marked `@slow` and stays out of the
+Vitest, Playwright. Vitest imports `describe`/`it`/`expect` from `vitest` (no globals), and a test that writes to
+`console.error` or `console.warn` fails unless it calls `allowConsole` (`frontend/src/test/console-guard.ts`). A bug comes with a test. Slow work is marked `@slow` and stays out of the
 default run. Details: `docs/system/overview.md`.
 Stateful features get a **"do it again" test**: the action run twice in a row, again after a reload
 (remount from the server's state), and again after switching document (`*.again.test.ts(x)`, e.g.

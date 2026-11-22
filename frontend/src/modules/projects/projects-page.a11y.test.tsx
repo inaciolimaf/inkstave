@@ -14,27 +14,34 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({
-            items: [
-              {
-                id: "1",
-                name: "Alpha",
-                owner_id: "u",
-                root_doc_id: null,
-                created_at: "2026-01-01T00:00:00Z",
-                updated_at: "2026-01-01T00:00:00Z",
-                role: "owner",
-                owner: { id: "u", display_name: "Me" },
-              },
-            ],
-            total: 1,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
-    ),
+    vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("/notifications/unread-count")) {
+        return new Response(JSON.stringify({ count: 0 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      const projects = {
+        items: [
+          {
+            id: "1",
+            name: "Alpha",
+            owner_id: "u",
+            root_doc_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            role: "owner",
+            owner: { id: "u", display_name: "Me" },
+          },
+        ],
+        total: 1,
+      };
+      return new Response(JSON.stringify(projects), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
   );
 });
 afterEach(() => vi.unstubAllGlobals());

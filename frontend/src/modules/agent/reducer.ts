@@ -50,7 +50,7 @@ function applyToken(base: AgentRunState, event: AgentEvent): AgentRunState {
   if (idx === -1) {
     items.push({
       kind: "message",
-      id: `a-${event.seq ?? items.length}`,
+      id: `a-${items.length}`,
       role: "assistant",
       text: event.text ?? "",
       status: "streaming",
@@ -137,7 +137,7 @@ function applyDone(base: AgentRunState, event: AgentEvent): AgentRunState {
   } else if (event.final_text) {
     items.push({
       kind: "message",
-      id: `a-${event.seq}`,
+      id: `a-${items.length}`,
       role: "assistant",
       text: event.final_text,
       status: "complete",
@@ -146,7 +146,7 @@ function applyDone(base: AgentRunState, event: AgentEvent): AgentRunState {
   return { ...base, phase: "done", error: undefined };
 }
 
-function applyCancelled(base: AgentRunState, event: AgentEvent): AgentRunState {
+function applyCancelled(base: AgentRunState): AgentRunState {
   const { items } = base;
   const idx = openAssistant(items);
   if (idx !== -1) {
@@ -158,7 +158,7 @@ function applyCancelled(base: AgentRunState, event: AgentEvent): AgentRunState {
     // stopped, not a silent transcript (spec 46 §8c).
     items.push({
       kind: "message",
-      id: `a-${event.seq ?? items.length}`,
+      id: `a-${items.length}`,
       role: "assistant",
       text: "",
       status: "cancelled",
@@ -169,11 +169,11 @@ function applyCancelled(base: AgentRunState, event: AgentEvent): AgentRunState {
 
 function applyError(base: AgentRunState, event: AgentEvent): AgentRunState {
   const code = event.code ?? "internal";
-  if (code === "cancelled") return applyCancelled(base, event);
+  if (code === "cancelled") return applyCancelled(base);
   const message = friendlyError(code, event.message ?? "");
   const retryable = RETRYABLE.has(code);
   closeAssistant(base.items); // the partial reply stops streaming; the next run opens a new bubble
-  base.items.push({ kind: "error", id: `e-${event.seq ?? base.items.length}`, code, message, retryable });
+  base.items.push({ kind: "error", id: `e-${base.items.length}`, code, message, retryable });
   return { ...base, phase: "error", error: { code, message, retryable } };
 }
 

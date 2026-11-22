@@ -424,10 +424,15 @@ Newsreader from Google Fonts on every page. The landing respects `prefers-reduce
 ### Tests
 
 `frontend/vitest.config.ts` runs Vitest in the custom environment `frontend/src/test/jsdom-environment.ts`, which keeps Node's
-`AbortController` for React Router under jsdom. `frontend/src/test/setup.ts` adds jest-dom, loads i18n and stubs
-the browser APIs that Radix, CodeMirror and PDF.js expect.
+`AbortController` for React Router under jsdom. `frontend/src/test/setup.ts` adds jest-dom (`/vitest` entry), loads i18n and stubs
+the browser APIs that Radix, CodeMirror and PDF.js expect. Globals are off: every test file imports from `vitest`.
+`asyncUtilTimeout` is 3 s, set once there. CSS files are not processed (`css: false`).
 
-- 128 test files: 121 next to the code in `frontend/src` and 7 in `frontend/tests`.
+- Console guard (`frontend/src/test/console-guard.ts`): a test fails when it writes to `console.error` or
+  `console.warn` (React act and key warnings, missing accessible descriptions, react-query misuse, missing i18n
+  keys). A test that expects a message calls `allowConsole(pattern)`; the permanent allow-list is `ALLOWED` in
+  that file, with its reason. Unmounting runs after the guard's check, so a failed test leaves no DOM behind.
+- 196 test files: 189 next to the code in `frontend/src` and 7 in `frontend/tests`.
 - `frontend/tests/router.test.tsx` runs the real router and providers over `fakeApi` from
   `frontend/tests/helpers/screen.tsx`.
 - `frontend/tests/module-boundaries.test.ts` fails on an import cycle between modules.
