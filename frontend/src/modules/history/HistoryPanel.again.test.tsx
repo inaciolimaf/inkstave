@@ -51,9 +51,7 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 function panel(docId: string, open: boolean, onOpenChange = vi.fn()) {
-  return (
-    <HistoryPanel projectId="p1" docId={docId} open={open} onOpenChange={onOpenChange} />
-  );
+  return <HistoryPanel projectId="p1" docId={docId} open={open} onOpenChange={onOpenChange} />;
 }
 
 /** The timeline row for one version; its aria-pressed says whether it is selected. */

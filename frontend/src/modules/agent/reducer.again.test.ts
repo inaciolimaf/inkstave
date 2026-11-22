@@ -102,12 +102,26 @@ describe("agent reducer, do it again", () => {
     // After a reload: the same turn, rebuilt from the stored messages and proposals.
     const messages: WireMessage[] = [
       { id: "m1", seq: 0, role: "user", content: "change it", tool_calls: null, tool_call_id: null },
-      { id: "m2", seq: 1, role: "assistant", content: "Here is the edit", tool_calls: null, tool_call_id: null },
+      {
+        id: "m2",
+        seq: 1,
+        role: "assistant",
+        content: "Here is the edit",
+        tool_calls: null,
+        tool_call_id: null,
+      },
       { id: "m3", seq: 2, role: "user", content: "and again", tool_calls: null, tool_call_id: null },
       { id: "m4", seq: 3, role: "assistant", content: "Done", tool_calls: null, tool_call_id: null },
     ];
     const diffs = [
-      { id: "d1", message_id: "m2", doc_id: "doc", path: "main.tex", status: "proposed", stats: { hunk_count: 1 } },
+      {
+        id: "d1",
+        message_id: "m2",
+        doc_id: "doc",
+        path: "main.tex",
+        status: "proposed",
+        stats: { hunk_count: 1 },
+      },
     ];
     const reloaded = historyToItems(messages, diffs);
     const ids = reloaded.map((i) => (i.kind === "diff-proposal" ? "proposal" : i.id));
@@ -119,7 +133,9 @@ describe("agent reducer, do it again", () => {
       { id: "m1", seq: 0, role: "user", content: "a", tool_calls: null, tool_call_id: null },
       { id: "m2", seq: 1, role: "assistant", content: "b", tool_calls: null, tool_call_id: null },
     ];
-    const diffs = [{ id: "orphan", message_id: "gone", doc_id: "doc", path: "x.tex", status: "proposed", stats: {} }];
+    const diffs = [
+      { id: "orphan", message_id: "gone", doc_id: "doc", path: "x.tex", status: "proposed", stats: {} },
+    ];
     const items = historyToItems(messages, diffs);
     expect(items.at(-1)).toMatchObject({ kind: "diff-proposal", proposalId: "orphan" });
   });

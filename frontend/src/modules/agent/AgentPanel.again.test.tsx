@@ -116,7 +116,9 @@ describe("AgentPanel, do it again", () => {
     renderPanel();
     const failing = await sendText("first try");
     failing.emit({ type: "error", seq: 0, code: "llm_error", message: "upstream failed" });
-    await waitFor(() => expect(transcript().getByText("The AI service is temporarily unavailable.")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(transcript().getByText("The AI service is temporarily unavailable.")).toBeInTheDocument(),
+    );
     await expectIdle();
 
     const ok = await sendText("second try");
@@ -164,9 +166,23 @@ describe("AgentPanel, do it again", () => {
       session: OLD,
       messages: [
         { id: "m1", seq: 0, role: "user", content: "first ask", tool_calls: null, tool_call_id: null },
-        { id: "m2", seq: 1, role: "assistant", content: "First answer", tool_calls: null, tool_call_id: null },
+        {
+          id: "m2",
+          seq: 1,
+          role: "assistant",
+          content: "First answer",
+          tool_calls: null,
+          tool_call_id: null,
+        },
         { id: "m3", seq: 2, role: "user", content: "second ask", tool_calls: null, tool_call_id: null },
-        { id: "m4", seq: 3, role: "assistant", content: "Second answer", tool_calls: null, tool_call_id: null },
+        {
+          id: "m4",
+          seq: 3,
+          role: "assistant",
+          content: "Second answer",
+          tool_calls: null,
+          tool_call_id: null,
+        },
       ],
       diffs: [
         {

@@ -25,12 +25,7 @@ export function HistoryPanel(props: PanelProps) {
   return <HistoryPanelBody key={props.docId} {...props} />;
 }
 
-function HistoryPanelBody({
-  projectId,
-  docId,
-  open,
-  onOpenChange,
-}: ComponentProps<typeof HistoryPanel>) {
+function HistoryPanelBody({ projectId, docId, open, onOpenChange }: ComponentProps<typeof HistoryPanel>) {
   const { t } = useTranslation("history");
   const perms = usePermissions(projectId);
   const canWrite = hasCapability(perms.data, "doc_write");
