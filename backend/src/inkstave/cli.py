@@ -24,8 +24,13 @@ from typing import TYPE_CHECKING
 
 from inkstave.core.config.settings import get_settings
 from inkstave.core.db.engine import create_engine_and_sessionmaker
+from inkstave.core.errors import ConflictError
 from inkstave.modules.admin.provisioning.admin import ensure_initial_admin
-from inkstave.modules.admin.provisioning.config_check import format_config_problems, validate_config
+from inkstave.modules.admin.provisioning.config_check import (
+    format_config_problems,
+    redact_url,
+    validate_config,
+)
 from inkstave.modules.admin.provisioning.migrate import run_upgrade
 from inkstave.modules.admin.provisioning.seed import seed_demo
 from inkstave.modules.auth.accounts.account import deactivate_account
@@ -117,16 +122,15 @@ async def _cmd_doctor(
     else:
         print("config: PASS")
 
-    # Build settings for the default probes (only if a real probe will run).
+    # Settings name the URLs in the output (masked) and build the default probes.
     settings: Settings | None = None
-    if db_check is None or redis_check is None:
-        try:
-            settings = get_settings()
-        except Exception:  # broad on purpose: config errors are already reported above
-            settings = None
+    try:
+        settings = get_settings()
+    except Exception:  # broad on purpose: config errors are already reported above
+        settings = None
 
-    db_label = (settings.database_url if settings else None) or "<unset>"
-    redis_label = settings.redis_url if settings else "<unset>"
+    db_label = redact_url(settings.database_url) if settings and settings.database_url else "<unset>"
+    redis_label = redact_url(settings.redis_url) if settings else "<unset>"
 
     if db_check is None:
         db_check = (lambda: _default_db_check(settings)) if settings else _unreachable
@@ -254,7 +258,11 @@ async def _cmd_deactivate_user(email: str) -> int:
             if user is None:
                 print(f"no user with email {email}", file=sys.stderr)
                 return 1
-            await deactivate_account(session, user)
+            try:
+                await deactivate_account(session, user)
+            except ConflictError as exc:
+                print(f"deactivate-user: FAIL — {exc}", file=sys.stderr)
+                return 1
             await session.commit()
         print(f"deactivated: {email}")
         return 0

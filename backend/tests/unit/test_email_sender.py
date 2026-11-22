@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -39,6 +40,22 @@ async def test_file_sender_writes_one_file(tmp_path: Path) -> None:
 
 async def test_console_sender_does_not_raise() -> None:
     await ConsoleEmailSender("from@x").send(OutgoingEmail(to="a@x", subject="s", text_body="b"))
+
+
+async def test_console_sender_logs_the_body_only_at_debug(caplog: pytest.LogCaptureFixture) -> None:
+    # The body carries the link token: it must not reach the INFO log that production keeps.
+    email = OutgoingEmail(to="a@x", subject="Reset", text_body="Open https://app/reset?token=SECRET-TOKEN-1")
+    sender = ConsoleEmailSender("from@x")
+
+    caplog.set_level(logging.INFO, logger="inkstave.mailer")
+    await sender.send(email)
+    assert "SECRET-TOKEN-1" not in caplog.text
+    assert "a@x" in caplog.text
+
+    caplog.clear()
+    caplog.set_level(logging.DEBUG, logger="inkstave.mailer")
+    await sender.send(email)
+    assert "SECRET-TOKEN-1" in caplog.text
 
 
 def test_project_invite_template() -> None:

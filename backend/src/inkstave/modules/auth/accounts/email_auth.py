@@ -173,9 +173,13 @@ async def complete_password_reset(
 
     Validates the new password (spec-06 rule), confirms the email (the link proves
     inbox ownership) and signs out every existing session (spec 07/08 revocation).
+    A link is bound to the address it was sent to: after an e-mail change it is
+    refused, as it is for a deactivated account.
     """
     token = await consume_token(session, raw_token=raw_token, purpose="password_reset", clock=clock)
     user = await _load_user(session, token.user_id)
+    if user.email.lower() != token.email.lower() or not user.is_active:
+        raise BadRequestError("Invalid or already-used link.")
     _validate_new_password(user, new_password)
     user.hashed_password = await asyncio.to_thread(hasher.hash, new_password)
     if not user.email_confirmed:

@@ -143,7 +143,7 @@ raises `UnknownTemplateError`.
 | `resend` | `ResendEmailSender` | Posts to `/emails` with httpx, 10 s timeout, default base `https://api.resend.com`. Logs and raises on a transport error or status 400 and above. Never logs the key. An httpx transport can be injected for tests |
 | `smtp` | `SmtpEmailSender` | `aiosmtplib.send` with `start_tls=SMTP_USE_TLS`, timeout `SMTP_TIMEOUT_S`. Empty user or password means no login. Raises on failure |
 | `file` | `FileEmailSender` | One JSON file per message, written through `asyncio.to_thread` |
-| `console` | `ConsoleEmailSender` | Logs the message at INFO on `inkstave.mailer`. Sends nothing |
+| `console` | `ConsoleEmailSender` | Logs the envelope at INFO and the body at DEBUG on `inkstave.mailer`. Sends nothing; `check-config` flags it in production |
 
 ### `send-test-email`
 
@@ -235,9 +235,9 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 - **`send-test-email` gaps.** `_test_email_context` claims to cover every template's keys but has no
   `magic_url`, so `--template magic_login` reports `FAIL` with a `KeyError`. Its `accept_url` has the
   shape `/invite?token=`, not the real route. Sending the invite template is a transport test only.
-- **Secrets in logs.** `ConsoleEmailSender`, the default backend, logs the full text body at INFO, which
-  includes tokens in links. `check-config` does not flag `console` in production, so a deployment that
-  keeps the default sends nothing and logs live links. `send_email_job` and the Resend sender also log the
+- **Secrets in logs.** `ConsoleEmailSender`, the default backend, logs the envelope (recipient, subject) at INFO
+  and the text body, which includes tokens in links, at DEBUG only. `check-config` flags `console` in production,
+  because that backend sends nothing. `send_email_job` and the Resend sender also log the
   recipient address.
 - **SMTP port 465.** `.env.example` offers 465 for Resend, but `SmtpEmailSender` passes only `start_tls`
   and never enables implicit TLS, which that port expects.

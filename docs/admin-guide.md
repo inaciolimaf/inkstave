@@ -68,7 +68,9 @@ it refuses a database that is not at the latest migration.
 `ANTHROPIC_API_KEY` is **not** a boot refusal, because nothing says a deployment
 uses the agent. `python -m inkstave.cli check-config` reports it, along with the
 always-required `JWT_SECRET`, `DATABASE_URL` and `REDIS_URL`, and the e-mail settings.
-Run it before deploying.
+In production it also reports `EMAIL_BACKEND=console` (the default): that backend sends
+nothing, so set `smtp` or `resend`. Run it before deploying. `doctor` prints the
+configured URLs with their passwords masked.
 
 **Deadlines.** Every Postgres connection runs with `DB_LOCK_TIMEOUT_S`,
 `DB_STATEMENT_TIMEOUT_S` and `DB_IDLE_IN_TRANSACTION_TIMEOUT_S` (migrations are
@@ -79,7 +81,9 @@ timeout above the S3 and SMTP timeouts.
 **Login limits.** `RATE_LIMIT_AUTH_LOGIN` counts wrong passwords per e-mail and
 `RATE_LIMIT_LOGIN_IP` per client IP. Behind a proxy, set `TRUST_PROXY_HEADERS=true`:
 without it every request appears to come from the proxy, so the per-IP limit stands
-down and only the per-e-mail limit applies.
+down and only the per-e-mail limit applies. The same holds for `refresh`, `reset-password`
+and the first-admin setup, which have no e-mail to fall back on: behind an untrusted proxy
+they are not limited at all, so set `TRUST_PROXY_HEADERS=true` when a proxy is in front.
 
 The table below documents **every** variable in `.env.example`, including the commented ones. Variables prefixed
 `POSTGRES_`/`REDIS_`/`DATABASE_`/`REDIS_URL` configure data stores; `JWT_`/`ARGON2_`/

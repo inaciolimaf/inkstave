@@ -31,6 +31,20 @@ def _scheme(url: str) -> str:
     return url.split("://", 1)[0] if "://" in url else url
 
 
+def redact_url(url: str) -> str:
+    """Show a connection URL without its password: ``scheme://user:***@host/...``.
+
+    Used wherever a DSN is printed (``doctor``), so a terminal or a CI log never holds a secret.
+    """
+    scheme, sep, rest = url.partition("://")
+    authority, slash, path = rest.partition("/")
+    userinfo, at, hostport = authority.rpartition("@")
+    if not sep or not at or ":" not in userinfo:
+        return url
+    user = userinfo.split(":", 1)[0]
+    return f"{scheme}{sep}{user}:***@{hostport}{slash}{path}"
+
+
 def validate_required_runtime(env: Mapping[str, str] | None = None) -> list[str]:
     """Check the always-required runtime vars; return ``"<VAR>: <reason>"`` lines.
 
@@ -102,6 +116,9 @@ def _agent_problems(settings: Settings) -> list[str]:
 
 def _email_problems(settings: Settings) -> list[str]:
     """Email-backend-gated secrets (spec 103): the selected backend must be usable."""
+    if settings.environment == "prod" and settings.email_backend == "console":
+        # The console backend logs the rendered mail, link tokens included, and delivers nothing.
+        return ["EMAIL_BACKEND: console is for development only; use smtp or resend in production"]
     if settings.email_backend == "resend" and not settings.resend_api_key.strip():
         return ["RESEND_API_KEY: required when EMAIL_BACKEND=resend"]
     if settings.email_backend == "smtp" and not settings.smtp_host.strip():

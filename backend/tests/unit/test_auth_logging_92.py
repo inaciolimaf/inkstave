@@ -254,7 +254,8 @@ async def test_rate_limit_body_parse_fallback_logs_and_uses_ip(
         async def json(self) -> Any:
             raise ValueError("not json")
 
-    settings = get_settings().model_copy(update={"trust_proxy_headers": False})
+    # Trusted headers make the IP count, so the IP-only fallback applies (no stand-down).
+    settings = get_settings().model_copy(update={"trust_proxy_headers": True})
     with caplog.at_level(logging.DEBUG, logger="inkstave.ratelimit"):
         identity = await _identity(BadRequest(), "register", settings)
     assert identity == "203.0.113.7"  # IP-only fallback, behaviour unchanged

@@ -11,7 +11,7 @@ from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.errors import ConflictError
 from inkstave.core.schemas import StrictModel
 from inkstave.modules.admin.provisioning.admin import admin_exists, ensure_initial_admin
-from inkstave.modules.auth import PasswordHasher, RegisterRequest, UserPublic, get_password_hasher
+from inkstave.modules.auth import PasswordHasher, RegisterRequest, UserPublic, get_password_hasher, rate_limit
 
 router = APIRouter(prefix="/api/setup", tags=["setup"])
 
@@ -30,6 +30,7 @@ async def setup_status(session: AsyncSession = UNIT_OF_WORK) -> SetupStatus:
     response_model=UserPublic,
     status_code=status.HTTP_201_CREATED,
     summary="Create the first admin (locked once one exists)",
+    dependencies=[Depends(rate_limit("setup_admin"))],
 )
 async def create_first_admin(
     data: RegisterRequest,
