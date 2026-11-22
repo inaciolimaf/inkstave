@@ -78,7 +78,9 @@ collaboration channel, and a file operation runs in the backend only from the us
 columns with no foreign key, so audit rows outlive their session.
 
 Redis, all short-lived: `agent:run:{run_id}` (pub/sub channel), `agent:run:{run_id}:last` (terminal event)
-and `agent:cancel:{run_id}` (cancel flag), both for `AGENT_RUN_TTL_S`; `agent:rl:user:{id}:{minute}` and
+and `agent:cancel:{run_id}` (cancel flag), both for `AGENT_RUN_TTL_S`; `agent:run:{run_id}:beat` (progress marker,
+refreshed by every event and by enqueue, expires after `AGENT_RUN_STALL_TIMEOUT_S`; its absence means the run
+stalled) and `agent:run:{run_id}:slot` (the run holds one of its user's concurrency slots, 3600 s); `agent:rl:user:{id}:{minute}` and
 `agent:rl:proj:{id}:{minute}` (runs per minute, 120 s); `agent:conc:user:{id}` (in flight, 3600 s);
 `agent:day:proj:{id}:{day}:tokens` and `agent:day:user:{id}:{day}:microusd` (per UTC day, 2 days).
 
@@ -97,9 +99,9 @@ project, is a 404.
 | `POST /sessions` | Create a session, 201. `model` is the current `AGENT_MODEL` | `not_project_member` |
 | `GET /sessions` | The caller's sessions, newest first. `limit` 1–100, default 50 | `not_project_member` |
 | `GET /sessions/{session_id}` | Session, messages, the diffs that are not superseded (a decided one keeps its status) without hunks, and file operations | `not_project_member` |
-| `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent` | 400 `message_too_long` with `details: [{max_chars}]`, 409 `run_active` |
-| `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202 | `not_project_member` |
-| `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=` | 401 when no valid token, `not_project_member` |
+| `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent`. A stalled active run is reaped first | 400 `message_too_long` with `details: [{max_chars}]`, 409 `run_active` |
+| `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202. The run must be the session's active run or have audit rows in it | 404 `run_not_found`, `not_project_member` |
+| `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=`. Same run check as cancel | 401 when no valid token, 404 `run_not_found`, `not_project_member` |
 | `GET /sessions/{session_id}/diffs` | All the session's diffs. `?status=` filters, `?include=hunks` adds hunks | 422 on an unknown status |
 | `POST /sessions/{session_id}/diffs/{diff_id}/outcome` | Records which hunks the user accepted, rejected or found stale (`{accepted, rejected, stale}`, each hunk id once). The status becomes `applied`, `partially_applied`, `rejected` or `stale`. Needs `DOC_WRITE`; audits `proposal_decided` | 403 `diff_forbidden`, 404 `diff_not_found` or `project_not_found`, 409 `already_decided` with the stored `status`, 422 `invalid_outcome` |
 | `GET /sessions/{session_id}/file-ops` | The session's file operations with `content`, without superseded ones | `not_project_member` |
@@ -134,11 +136,14 @@ new bubble instead of joining the failed one (found by `reducer.props.test.ts`).
    Any other 4xx at this step shows under its error type, and a 5xx or network failure as `internal`.
 2. The browser opens `EventSource` on `stream_url`. `sse_stream` subscribes before it looks for a stored
    terminal event, so it cannot miss one.
-3. The worker runs `run_agent_turn`, which binds log context and calls `_run_agent_turn`. That resolves
-   settings, the sink and the LLM, then `_run_scoped` runs `precheck_run` (rate limit, then day budget).
-   A block emits a terminal `error`, audits and sets `run_state` to `error`.
-4. `acquire_run` counts the run. `_execute_turn` commits `running`, audits `run_start`, builds `AgentDeps`
-   and calls `run_turn`.
+3. The worker runs `run_agent_turn`, which binds log context and calls `_run_agent_turn`. A job whose run is
+   no longer the session's `active_run_id` (reaped while queued) returns at once. Otherwise `_start_run`
+   resolves the LLM and the run's caps; a failure there settles the run. `_run_scoped` then runs
+   `precheck_run` (rate limit, then day budget). A block emits a terminal `error`, audits and sets
+   `run_state` to `error`. Any exception in this part also settles the run, so the session is never left
+   `queued`.
+4. `acquire_run` counts the run and `claim_slot` marks it. `_execute_turn` commits `running`, audits
+   `run_start`, builds `AgentDeps` and calls `run_turn`.
 5. `run_turn` raises the idle-in-transaction limit with `allow_idle`, builds the transcript (fresh system
    prompt, stored history, new message), inserts the user message and runs the graph.
 6. Back in `run_turn`, the messages the turn produced are stored, and `materialize_diffs` turns staged
@@ -146,12 +151,19 @@ new bubble instead of joining the failed one (found by `reducer.props.test.ts`).
    turn, so edits staged before the stop are kept.
 7. `persist_results` writes tool audit rows, emits `diff_proposed` and audits `proposal_created` for each
    diff, and records usage. `emit_terminal` emits `done` or `error`. Then `run_stop` is audited, `run_state`
-   is set, `active_run_id` is cleared and the transaction commits. `release_run` frees the slot.
+   is set, `active_run_id` is cleared and the transaction commits. `release_slot` frees the slot once.
 
 The turn is one transaction from step 5 to step 7, so a failed turn leaves no messages or diffs.
-`_settle_error` rolls back, emits a terminal error, sets `run_state` to `error` and audits. An exception
-becomes code `internal`; `asyncio.CancelledError` from ARQ's timeout becomes code `timeout`, settled under
-`asyncio.shield` and re-raised. Raw error strings are logged, never sent to the client.
+`_settle_error` rolls back, emits a terminal error (a failing Redis emit is logged, not raised), sets `run_state`
+to `error` and audits. An exception becomes code `internal`; `asyncio.CancelledError` from ARQ's timeout becomes
+code `timeout`, settled under `asyncio.shield` and re-raised. Raw error strings are logged, never sent to the client.
+
+**Stalled runs (`runs/stall.py`).** Every event refreshes the run's `beat` key. A session whose active run has no
+beat is stalled: a crashed worker, or a job that never started. The next message (`post_message`) reaps it:
+the slot is released if the run claimed one, the run gets a terminal `timeout` error for any open panel, the
+session becomes `error` and the audit row carries `reason: stalled`, then the message starts a new run. Reaping is
+lazy, on the next message only; a stalled session shows its old state until then. The default stall timeout
+is `AGENT_JOB_TIMEOUT_S` + `AGENT_REQUEST_TIMEOUT_S` (720 s): a live worker always ends a run by its job timeout.
 
 ### The graph
 
@@ -308,6 +320,11 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | Exhausted day budget refuses the run | `backend/tests/integration/test_agent_safety_api.py::test_day_budget_preflight_refusal` |
 | An over-budget step never runs and the sentinel stays out of the transcript | `backend/tests/integration/test_agent_safety_api.py::test_midrun_budget_stops_over_budget_step` |
 | A run has audit rows, without document bodies | `backend/tests/integration/test_agent_safety_api.py::test_audit_rows_for_a_full_run` |
+| A run id from another session is 404 for cancel and events | `backend/tests/integration/test_agent_run_binding.py::test_cancel_and_events_of_another_sessions_run_are_404` |
+| A missing API key or Redis failure before the turn settles the run and frees the session | `backend/tests/integration/test_agent_run_lifecycle.py::test_missing_llm_key_fails_the_run_and_shows_an_error`, `backend/tests/integration/test_agent_run_lifecycle.py::test_redis_failure_before_the_run_settles_the_session` |
+| The next message reaps a stalled run, and a live run still blocks | `backend/tests/integration/test_agent_run_lifecycle.py::test_a_queued_run_without_progress_is_reaped_by_the_next_message`, `backend/tests/integration/test_agent_run_lifecycle.py::test_a_run_with_recent_progress_still_blocks_a_message` |
+| A reaped run frees its concurrency slot; a late job for a reaped run does nothing | `backend/tests/integration/test_agent_run_lifecycle.py::test_reaping_a_crashed_run_frees_its_concurrency_slot`, `backend/tests/integration/test_agent_run_lifecycle.py::test_a_job_for_a_run_that_is_no_longer_active_does_nothing` |
+| Default per-run token and cost caps stop a turn | `backend/tests/integration/test_agent_budget_defaults.py`, `backend/tests/unit/test_agent_config_caps.py` |
 | A cancelled run ends in `error` with code `cancelled` | `backend/tests/integration/test_agent_api_streaming.py::test_cancellation` |
 | SSE requires auth and membership at connect | `backend/tests/integration/test_agent_api_sse.py::test_sse_events_route_requires_auth` |
 | A revoked session cannot open a new SSE stream | `backend/tests/integration/test_session_revocation.py::test_websocket_and_sse_paths_refuse_a_revoked_session` |
@@ -338,13 +355,13 @@ Defaults are from `backend/src/inkstave/core/config/agent.py`, and `.env.example
 | Group | Variables |
 |---|---|
 | Provider | `AGENT_LLM_PROVIDER` `anthropic`; `ANTHROPIC_API_KEY` empty, needed when the real client is built; `AGENT_MODEL` `claude-haiku-5-5`; `OPENROUTER_API_KEY` empty, needed with `openrouter`; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_TEMPERATURE` 0.2, OpenRouter only; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
-| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 50; `AGENT_MAX_TOTAL_TOKENS` 1000000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
+| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 50; `AGENT_MAX_TOTAL_TOKENS` 2000000, backstop above the per-run cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
 | Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000; `AGENT_TOOL_IMAGE_MAX_BYTES` 3750000 |
 | Diffs | `AGENT_DIFF_CONTEXT_LINES` 3; `AGENT_DIFF_MAX_DOC_CHARS` 400000 |
-| Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_STREAM_TRANSPORT` `sse`, unused |
+| Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_RUN_STALL_TIMEOUT_S` 0, derives job + request timeout (720 s); `AGENT_STREAM_TRANSPORT` `sse`, unused |
 | Context | `AGENT_CONTEXT_CACHE` `memory`, and `redis` behaves like `off`; `AGENT_SECTION_EXTRA_COMMANDS` empty; `AGENT_CONTEXT_TOKEN_BUDGET` 8000 and `AGENT_CONTEXT_SURROUNDING_LINES` 40, both unused |
 | Limits, 0 disables | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` 10; `AGENT_MAX_CONCURRENT_RUNS_PER_USER` 2; `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` 20 |
-| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30. A user whose e-mail is in `AGENT_BUDGET_EXEMPT_EMAILS` runs with all four at 0 (`is_budget_exempt`, `without_budget_caps`, applied in `_run_agent_turn`); rate limits still apply |
+| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30. A user whose e-mail is in `AGENT_BUDGET_EXEMPT_EMAILS` runs with all four at 0 and the soft backstop `AGENT_MAX_TOTAL_TOKENS` at 0 (`is_budget_exempt`, `without_budget_caps`, applied in `_run_agent_turn`); rate limits still apply |
 | Safety | `AGENT_MODEL_COST_TABLE` Claude Haiku 5.5 rates first (they price any model not listed), then gpt-4o-mini, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
 
 Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false),
@@ -360,15 +377,13 @@ decided (`docs/known-gaps.md`). `rejected` also comes from an edit whose `old_te
 
 **Timeouts.** `AGENT_REQUEST_TIMEOUT_S` bounds one LLM request. `AGENT_JOB_TIMEOUT_S` is the ARQ `timeout` for the whole turn, and `run_turn` passes the same value to `allow_idle`, because the transaction stays open across model calls. Fifty plan steps at 120 s far exceed 600 s, and the SDK's default two retries are not disabled, so one call can take three times the request timeout. The job timeout is the real ceiling and a slow multi-step turn can hit it.
 
-**The per-run token cap is unreachable with defaults.** `route_after_plan` stops at 1000000 and the budget check runs at the start of `plan`, which is reached only through that router, so the per-run cap, also 1000000, never fires. The total counts every resent transcript, so it grows with the square of the steps: a turn that reads ten files reaches 256000 in under twenty steps. The cost cap is out of reach too at the default rates. They bite only when set below the soft cap, as the tests do. `AgentDeps.run_token_budget`, `run_cost_budget_usd` and `cost_per_1k` are set and never read; `_budget_exceeded` reads settings directly.
+**The caps and their order.** The per-run token cap is checked at the start of each plan step (`agent_budget_exceeded`). The soft backstop `AGENT_MAX_TOTAL_TOKENS` (`route_after_plan`, 2000000) sits above it, so the per-run cap fires first; it ends the turn `done` with a partial note. Both count the same total, which includes every resent transcript, so it grows with the square of the steps. Exempt users skip both. The cost cap uses the price table: at the default `claude-haiku-5-5` rates (0.0001 USD per 1K input, 0.0005 USD per 1K output) a turn of 1000000 tokens costs at most 0.50 USD, all output, and reaches the 0.30 USD cap only with about 600000 output tokens in one turn, so in practice the token cap fires first. A run split 50/50 between prompt and completion at the token cap costs exactly 0.30 USD. `AgentDeps.run_token_budget`, `run_cost_budget_usd` and `cost_per_1k` are set and never read; `_budget_exceeded` reads settings directly.
 
 **Day counters miss failed runs.** `record_usage` runs in `persist_results`, so a timed-out or crashed turn adds nothing, though the provider billed it. An unknown model is priced with the first table entry.
 
-**Runs can wedge.** Nothing resets `run_state`. `_resolve_llm` and `precheck_run` run outside any `try`, and the comment in `_run_scoped` says `acquire_run` is inside the `try` when it is before it. A missing `OPENROUTER_API_KEY`, or Redis failing there, fails the job with no terminal event: the session stays `queued`, each new message gets 409 `run_active`, and the SSE stream pings until the client leaves. So does a worker killed mid-turn, which also holds a concurrency slot for up to an hour. The key is checked only by the production config check in `backend/src/inkstave/modules/admin/provisioning/config_check.py`.
+**A stalled run is found only on the next message.** The reaper (see above) runs lazily, so a session whose worker died shows its stale state until the user sends a message. A missing `OPENROUTER_API_KEY` is found when the run starts, not at boot; the key is checked only by the production config check in `backend/src/inkstave/modules/admin/provisioning/config_check.py`.
 
 **Open SSE streams survive revocation.** `sse_user` runs once, at connect. `sse_stream` reads Redis until a terminal event and never re-checks the token, session or membership. Logout, deactivation or removal from the project does not close an open stream, and the run goes on: only tools re-check, through `authorize`.
-
-**`run_id` is not tied to the session.** `run_events` and `cancel_run` verify the session, not that `run_id` belongs to it, and `cancel_run` sets the flag before comparing `active_run_id`. Holding some other run's UUID is enough to read or cancel it. UUIDs are unguessable, so this is defence in depth.
 
 **Events go out before the commit.** `diff_proposed` and `done` are published before the final commit. A client acting on them instantly can miss the row or get 409. A commit failure after `done` produces a second terminal event.
 

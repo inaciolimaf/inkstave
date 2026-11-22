@@ -32,8 +32,9 @@ def _make_router(deps: AgentDeps) -> Callable[[AgentState], Literal["act", "resp
             return "respond"
         if state.get("iterations", 0) >= settings.agent_max_iterations:
             return "respond"
-        if state.get("total_tokens", 0) >= settings.agent_max_total_tokens:
-            return "respond"
+        cap = settings.agent_max_total_tokens
+        if cap > 0 and state.get("total_tokens", 0) >= cap:
+            return "respond"  # soft backstop: a partial answer, run still done
         return "act"
 
     return route_after_plan

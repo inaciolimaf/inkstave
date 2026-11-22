@@ -191,6 +191,7 @@ are English-only today ([known gaps](known-gaps.md)).
 | Agent | module `agent` | "Agente de IA" |
 | Session (conversation) | `AgentSession`, `ChatSession` | "Sessões", "Conversa" |
 | Run | `run_agent_turn`, `AgentRunState` | "execução" |
+| Stalled run | `reap_if_stalled`, `beat_key` | "Execução parada" |
 | Proposed changes | `ProposedDiff` | "Mudanças propostas" |
 | Stage an edit | `StagedEdit`, `propose_edit` | "Propôs uma edição" |
 | Review | `useInlineReview`, `ReviewBar` | "Revisar mudanças" |
