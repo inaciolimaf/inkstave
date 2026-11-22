@@ -51,7 +51,7 @@ def _is_transient(exc: BaseException) -> bool:
 
 def _retry_delay(job_try: int) -> int:
     """Backoff for the attempt that just failed: 30 s, 60 s, 120 s, ..."""
-    return RETRY_BASE_DELAY_S * 2 ** max(job_try - 1, 0)
+    return RETRY_BASE_DELAY_S << max(job_try - 1, 0)  # a shift keeps it int; `2 ** n` types as Any
 
 
 async def send_email_job(
