@@ -60,7 +60,6 @@ async def get_db_session(
         await run_after_commit(session)
     except Exception:
         await session.rollback()
-        session.info.pop(_AFTER_COMMIT, None)
         raise
     finally:
         await session.close()

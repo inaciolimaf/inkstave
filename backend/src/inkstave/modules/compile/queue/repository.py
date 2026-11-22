@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, select, update
 
 from inkstave.core.db.session import after_commit as register_after_commit
 from inkstave.modules.compile.models.compile import Compile, CompileJobStatus
@@ -115,9 +115,7 @@ class CompileRepository:
         count and the insert one step for everyone who asks for the same project or user.
         """
         for key in (f"compile:project:{project_id}", f"compile:user:{user_id}"):
-            await self._session.execute(
-                text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": key}
-            )
+            await self._session.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(key, 0))))
 
     def after_commit(self, action: Callable[[], Awaitable[object]]) -> None:
         """Run ``action`` after the request's transaction commits, such as the enqueue of its job."""

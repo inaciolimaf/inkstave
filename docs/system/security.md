@@ -86,7 +86,8 @@ JSON fields with 422.
 ### Rate limiting
 
 Three mechanisms, all fixed-window counters in Redis, all bypassed by `RATE_LIMIT_ENABLED=false`.
-All fail open: a limiter outage allows the request.
+All fail open: a limiter outage allows the request, except the daily compile quota (`compile_daily`), which
+refuses with 503 so an outage cannot lift an anti-abuse cap (`_FAIL_CLOSED` in `auth/throttling/policies.py`).
 
 | Mechanism | Redis key | Identity | Applied to | Outage signal |
 |---|---|---|---|---|

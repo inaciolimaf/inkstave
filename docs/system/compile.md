@@ -67,24 +67,31 @@ All under `/api/v1/projects/{project_id}`. Errors use the `ErrorEnvelope` body; 
 | `GET /compile/{compile_id}/outputs` | `OutputSummary` list | 404 `compile_not_found` |
 | `GET /compile/{compile_id}/output.pdf` | Streams the PDF. `Range` gives 206, a bad range 416, a matching `If-None-Match` 304 | 404 `compile_not_found` |
 | `GET /compile/{compile_id}/output.log` | Streams the full log as text | 404 `compile_not_found` |
-| `GET /compile/{compile_id}/events` | SSE status stream. Accepts the `Authorization` header or `?access_token=` (`sse_user`) | 401, 404 `project_not_found`, 404 `compile_not_found` |
+| `GET /compile/{compile_id}/events` | SSE status stream. Accepts the `Authorization` header or `?access_token=` (`sse_user`) | 401, 403 `insufficient_role`, 404 `project_not_found`, 404 `compile_not_found` |
 | `GET /compiles/{compile_id}/problems` | Parsed log. `compile_id` may be `latest` | 404 `log_unavailable` |
 | `GET /synctex/code-to-pdf` | Query `file`, `line`, `column?`, `compile_id?` | 404 `synctex_unavailable`, 404 `synctex_no_match`, 422 `validation_error` |
 | `GET /synctex/pdf-to-code` | Query `page`, `h`, `v`, `compile_id?` | same |
 
 The compile routes require `Capability.COMPILE`; SyncTeX and problems require `Capability.PROJECT_READ`.
-`compile_allowed_for_viewers` removes `COMPILE` from viewers, which then get 403. The SSE route authorizes
-inline with `role_for`, so any member may read events regardless of that setting.
+`compile_allowed_for_viewers` removes `COMPILE` from viewers, which then get 403. The SSE route cannot use the
+header dependency (EventSource sends no headers), so `_authorize_events` applies the same rule inline: non-members
+get 404, members without `COMPILE` get 403. The job applies the same setting when it re-checks the requester.
 
 ## How it works
 
 **Request.** `enqueue_compile` runs the two rate-limit dependencies, then `flush_open_project_docs` so the
 worker sees current text and not the debounced `documents.content`. `CompileCoordinator.request_compile`:
 
-1. Unless `force` is set or `compile_debounce_coalesce` is off, returns the project's active compile if any.
-2. Counts queued plus running rows for the project and the user. Over either cap raises
+1. `lock_for_request` takes two transaction-level Postgres advisory locks, the project first and then the user.
+   Requests for the same project or user run one at a time, so the checks below see each other.
+2. Unless `force` is set or `compile_debounce_coalesce` is off, returns the project's active compile if any.
+   Stale rows are ignored (see Reaper).
+3. Counts fresh queued plus running rows for the project and the user. Over either cap raises
    `CompileConcurrencyError` (429, `Retry-After: 5`).
-3. Inserts the row, calls `ArqEnqueuer.enqueue`, stores `job_id`. The session commits when the route ends.
+4. Inserts the row with `id` = `job_id` = a new UUID, and registers the enqueue with `after_commit`. The session
+   dependency commits when the route ends, then runs the enqueue (`get_db_session` calls `run_after_commit`). A
+   worker therefore never runs a job whose row is not committed. If the enqueue fails after the commit, the request
+   returns 500, the row stays `queued`, and the reaper settles it.
 
 The frontend calls `requestCompile(projectId)` with no options, so it always sends `main_file: null` (the
 backend then uses `main.tex`) and never `force`. `useCompile` ignores clicks while a compile is active.
@@ -93,7 +100,8 @@ backend then uses `main.tex`) and never `force`. `useCompile` ignores clicks whi
 
 1. Loads the row. A missing row returns a summary with `status: error` and writes nothing.
 2. `_settle_if_cancelled`: a terminal row is returned as is; a set flag settles the row `cancelled`.
-3. `_settle_if_unauthorized`: rechecks `Capability.COMPILE`. A requester who lost access gets `error`.
+3. `_settle_if_unauthorized`: rechecks `Capability.COMPILE` with `COMPILE_ALLOWED_FOR_VIEWERS`. A requester who lost
+   access gets `error`.
 4. Sets `running`, commits, publishes.
 5. `_compile_with_cancel` starts `_cancel_watcher`, which polls the flag every 50 ms and trips the
    `CancelToken`, and calls `CompileService.compile` with `keep_workdir=True`.
@@ -115,7 +123,9 @@ failed: ...`. `_run_compile_body` removes the workdir in a `finally` as a backst
    `\documentclass`, or the first `.tex` by depth then path. No `.tex` at all is `failure`.
 4. `on_assembled` commits the session, so no transaction stays open while Tectonic runs.
 5. The runner runs. `_build_result` collects outputs, reads `<stem>.log` (or stdout) up to
-   `compile_max_log_bytes`, and sets the status: cancelled, then timed out, then `success` if exit code 0 and a
+   `compile_max_log_bytes`. If the outputs together exceed `COMPILE_MAX_OUTPUT_BYTES`, the result is `system_error`
+   with no artifacts, so nothing oversized is read into memory for persistence; the log text starts with
+   `output too large`. Otherwise it sets the status: cancelled, then timed out, then `success` if exit code 0 and a
    PDF exists, otherwise `failure`.
 
 A catch-all in `compile` turns any other exception, including a `validate_main_file` rejection or a missing
@@ -146,6 +156,15 @@ runner passes the whole argv.
 **Outputs.** `OutputStore.persist` reads each artifact into memory, hashes it, writes it to storage and upserts
 its row, before the terminal event. Artifacts are stored for every run, including failures and cancels.
 
+**Reaper.** `reap_stale_compiles` (`queue/reaper.py`) is an ARQ cron every five minutes. `stale_cutoffs` (`queue/stale.py`)
+sets the deadlines from `COMPILE_JOB_TIMEOUT_S`: a `running` row is stale once its `started_at` is older than the job
+timeout plus 120 s (ARQ kills the job at the timeout); a `queued` row is stale once its `created_at` is older than five
+job timeouts (queue wait is not bounded by the job). `reap_stale` settles every stale row in one `UPDATE` as `timeout`
+with `error_message` "compile did not finish in time: ..." and publishes the status, so open SSE streams close.
+Coalescing and the caps use `fresh_active_clause`, so a stale row never answers a request even before the reaper runs.
+The reaper is cron, not lazy like the agent's (`modules/agent/runs/stall.py`), because an SSE client needs a terminal
+event that a lazy reaper cannot send. The job id equals the compile id, so a repeated enqueue cannot queue two jobs.
+
 **Retention.** `cleanup_compile_outputs` is an ARQ cron; `_sweep_minutes` turns `COMPILE_RETENTION_SWEEP_S` into
 cron minutes. `list_compiles_for_retention` selects compiles with outputs that fall past
 `compile_retain_per_project` or are older than `compile_retention_max_age_s`, up to `compile_retention_batch`.
@@ -157,7 +176,8 @@ does not cascade.
 `CompileStatusResponse`, plus a `: keep-alive` comment every `compile_sse_keepalive_s`. It closes on a terminal
 status.
 
-**SyncTeX.** `SyncTexIndex` parses the gzip text directly, without the `synctex` binary. `normalise_path` turns
+**SyncTeX.** `SyncTexIndex` parses the gzip text directly, without the `synctex` binary. It inflates in 64 KiB chunks and stops
+with `SyncTexTooLargeError` past `SYNCTEX_MAX_TEXT_BYTES`, which the service reports as `synctex_unavailable`. `normalise_path` turns
 each `Input:` into a project path, dropping the compile folder or the sandbox's `/work`; an absolute path left
 is outside the project, so it is not indexed, and `inverse` ignores its boxes. Log paths use the same function. Coordinates are PDF
 points, origin top-left, y downward. `forward` returns the boxes of the first indexed line at or after the
@@ -224,6 +244,12 @@ Playwright runs with `COMPILE_MODE=mock`, set in `frontend/playwright.config.ts`
 | The real runner cannot run in a fast tier | `backend/tests/unit/test_compile_speed_guard.py::test_real_runner_is_blocked_in_fast_tier` |
 | Log parser order, rules and file attribution on a full log | `backend/tests/golden/test_logparse_sample.py::test_sample_log_counts_and_order` |
 | SyncTeX forward then inverse is stable | `backend/tests/golden/test_synctex_parser.py::test_forward_inverse_round_trip_is_stable` |
+| The job and the SSE route apply `COMPILE_ALLOWED_FOR_VIEWERS` | `backend/tests/integration/test_compile_viewer_gate.py::test_job_refuses_a_viewer_when_viewers_cannot_compile`, `backend/tests/integration/test_compile_viewer_gate.py::test_sse_refuses_a_viewer_when_viewers_cannot_compile` |
+| Enqueue happens after commit; a stale row never coalesces or holds a cap; the reaper settles stale rows | `backend/tests/integration/test_compile_stale.py::test_enqueue_waits_for_the_commit`, `backend/tests/integration/test_compile_stale.py::test_stale_queued_row_is_not_coalesced`, `backend/tests/integration/test_compile_stale.py::test_stale_rows_do_not_hold_the_concurrency_caps`, `backend/tests/integration/test_compile_stale.py::test_reaper_settles_stale_rows_and_keeps_fresh_ones` |
+| Requests take the project and user advisory locks before counting | `backend/tests/integration/test_compile_stale.py::test_request_takes_a_transaction_lock_before_counting` |
+| Outputs over `COMPILE_MAX_OUTPUT_BYTES` fail the compile and keep no artifacts | `backend/tests/unit/test_compile_output_cap.py::test_outputs_over_the_cap_fail_the_compile` |
+| The SyncTeX gunzip stops at `SYNCTEX_MAX_TEXT_BYTES` | `backend/tests/unit/test_synctex_gzip_bound.py::test_decompression_bomb_is_refused_once_it_passes_the_limit`, `backend/tests/unit/test_synctex_service.py::test_decompression_bomb_is_unavailable_not_parsed` |
+| The daily quota fails closed when Redis is down | `backend/tests/unit/test_compile_daily_quota.py::test_daily_quota_fails_closed_when_redis_is_down` |
 | The job rechecks access; enqueue flushes CRDT rooms; `_sweep_minutes` | no dedicated test |
 
 ## Settings
@@ -240,7 +266,7 @@ Defined in `backend/src/inkstave/core/config/groups.py`. Names are the upper cas
 | `TECTONIC_COMPILE_TIMEOUT_S`, `COMPILE_JOB_TIMEOUT_S` | `60`, `120` | Wall clock; ARQ timeout. `backend/src/inkstave/core/config/settings.py` requires the second to be larger |
 | `COMPILE_WORKDIR_ROOT` | `/tmp/inkstave-compiles` | Scratch root |
 | `COMPILE_MAX_INPUT_FILES`, `COMPILE_MAX_INPUT_BYTES` | `2000`, `104857600` | Assembly caps |
-| `COMPILE_MAX_OUTPUT_BYTES` | `104857600` | Not enforced |
+| `COMPILE_MAX_OUTPUT_BYTES` | `104857600` | Cap on all collected outputs together; over it the compile is `error` |
 | `COMPILE_MAX_LOG_BYTES`, `COMPILE_MAX_STDOUT_BYTES` | `2097152`, `262144` | Text kept in the result |
 | `COMPILE_CPU_SECONDS`, `COMPILE_ADDRESS_SPACE_BYTES` | `60`, `2147483648` | Local rlimits; the second is also the sandbox `--memory`. Empty disables |
 | `COMPILE_KEEP_WORKDIR_ON_FAILURE` | `false` | Honoured by the service, undone by the job |
@@ -252,8 +278,8 @@ Defined in `backend/src/inkstave/core/config/groups.py`. Names are the upper cas
 | `COMPILE_QUEUE_NAME` | `compiles` | ARQ queue, shared with all jobs |
 | `COMPILE_SSE_KEEPALIVE_S`, `COMPILE_CANCEL_FLAG_TTL_S` | `15`, `300` | Keep-alive; cancel flag TTL |
 | `COMPILE_ALLOWED_FOR_VIEWERS` | `true` | Viewers hold `COMPILE` |
-| `RATE_LIMIT_COMPILE`, `RATE_LIMIT_COMPILE_DAILY` | `20/60`, `30/86400` | Per user, fixed window |
-| `SYNCTEX_MAX_GZ_BYTES`, `SYNCTEX_INDEX_CACHE_SIZE` | `33554432`, `16` | Size refusal; 0 disables the cache |
+| `RATE_LIMIT_COMPILE`, `RATE_LIMIT_COMPILE_DAILY` | `20/60`, `30/86400` | Per user, fixed window. The daily one fails closed (503) when Redis is down; the per-minute one fails open |
+| `SYNCTEX_MAX_GZ_BYTES`, `SYNCTEX_MAX_TEXT_BYTES`, `SYNCTEX_INDEX_CACHE_SIZE` | `33554432`, `268435456`, `16` | Compressed size refusal; decompressed size refusal; 0 disables the cache |
 | `LOGPARSE_MAX_LOG_BYTES`, `LOGPARSE_WRAP_WIDTH`, `LOGPARSE_MAX_PROBLEMS` | `8388608`, `79`, `1000` | Tail kept; de-wrap width; cap |
 
 ## Points of attention
@@ -280,35 +306,27 @@ are all in `_sandbox_flags`.
 
 **Other sandbox limits.**
 - `/out` is a writable bind mount with no size cap, so a compile can fill the worker's disk until the
-  timeout. `COMPILE_MAX_OUTPUT_BYTES` does not help, see below.
+  timeout. `COMPILE_MAX_OUTPUT_BYTES` only checks after the run, so it does not help during the run.
 - `COMPILE_ADDRESS_SPACE_BYTES` has a default, so `COMPILE_SANDBOX_MEMORY_MB` is ignored unless that is
   emptied. `COMPILE_CPU_SECONDS` has no effect on a container.
 - `validate_main_file` rejects spaces and non-ASCII, so `café.tex` is an `error` in sandbox mode and
   fine in local mode.
 - A container has no deadline of its own. If the worker dies, nothing kills it.
 
-**Stuck compiles block a project, and nothing clears them.** There is no reaper. A row that never reaches a
-terminal status holds the per-project cap, and coalescing hands that row back on every request. `force` then
-gets 429 under the default cap of 1. Three ways to get there:
-- The job is enqueued before the API commits. A worker that picks it up first finds no row and returns; the
-  row then commits as `queued` and stays there.
-- A worker crash leaves `running`, and `max_tries=1` means no retry.
-- The ARQ timeout cancels the job, which skips `_outcome_fields`. The cleanup `finally` runs, the row does
-  not change. The Tectonic process is not killed by that path.
+**Stuck compiles are reaped within minutes.** A row whose job was lost (enqueue failed after commit, a dead
+worker, an ARQ timeout) stays active until the reaper marks it `timeout`, at most `COMPILE_JOB_TIMEOUT_S` plus 120 s
+after it started, or five job timeouts after it was queued. The ARQ timeout cancels the job without running
+`_outcome_fields`, and the Tectonic process is not killed by that path; the sandbox runner is not proven anyway.
 
-An SSE client on such a row never gets a terminal event. `cancel` clears a stuck `queued` row. A stuck
-`running` row has no way out through the API: the flag it sets has no worker to read it.
-
-**The caps are checked, not locked.** `request_compile` counts and then inserts without a lock or unique
-index, so simultaneous requests can pass both the coalesce and the caps.
+**The caps are serialised, not counted-then-hoped.** `lock_for_request` holds the advisory locks until the
+request's transaction commits. A caller on the same project or user waits for that commit before counting.
 
 **The daily quota counts requests.** Dependencies run first, so coalesced requests, cancelled compiles and
 concurrency 429s all spend it. It is a fixed window from the first hit, not 24 rolling hours. It applies with
-either runner, and it fails open when Redis is down. `RATE_LIMIT_ENABLED=false` removes it.
+either runner. When Redis is down it refuses (503) instead of failing open, because the quota exists to stop abuse.
+`RATE_LIMIT_ENABLED=false` removes it.
 
 **Settings and config that do nothing.**
-- `COMPILE_MAX_OUTPUT_BYTES` is copied into `ResourceLimits` and never read. The README's "output cap" for
-  local mode and the security checklist's size limit are not true of the code.
 - From `infra/tectonic/packages.toml`, only `[bundle] format` reaches a runner, and it is stored in
   `_format` and not used; `--outfmt pdf` is hard-coded. `allow_network_fetch`, `[bundle] url`, `[cache] dir`
   and `prewarm` are parsed and tested, then ignored. `--only-cached` follows `TECTONIC_OFFLINE`. The
@@ -322,9 +340,6 @@ uses `input_dir / main_file`. An absolute path such as `/etc/passwd` passes `is_
 hands it to Tectonic. Local mode already trusts its users, since `\input` can read the same files, but the
 API does not reject it.
 
-**Viewer setting gaps.** With `COMPILE_ALLOWED_FOR_VIEWERS=false`, the job's recheck calls `capabilities_for`
-with its default of `True`, so it does not apply the setting. The route does.
-
 **A fallback root misleads log parsing.** `_resolve_root` does not update `row.main_file`, so
 `parse_latex_log` seeds the wrong root file when the fallback fired, and unattributed problems name a file
 that does not exist. The frontend always sends `main.tex`, so any project with another root takes this path.
@@ -336,6 +351,6 @@ remove the last good PDF. Age wins over the window, so an idle project loses its
 - `has_pdf` is true only on `success`, but `output.pdf` serves any stored PDF row, so a failed compile that
   left a PDF would return it.
 - `problems_for` and `load_index` load the whole object into memory. `SYNCTEX_MAX_GZ_BYTES` bounds the
-  compressed size only; `gzip.decompress` has no output limit.
+  compressed size and `SYNCTEX_MAX_TEXT_BYTES` the inflated text; the object itself is still read whole.
 - `infra/README.md` cites `compile/runner.py` for the sandbox runner. It lives in
   `backend/src/inkstave/modules/compile/running/sandbox.py`.
