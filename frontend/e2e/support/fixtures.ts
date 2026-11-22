@@ -2,20 +2,23 @@
  * Shared test fixtures (spec 54).
  *
  * - `runContext`: the two seeded users from global setup.
- * - `apiA` / `apiB`: API clients logged in as User A / User B for fast seeding.
+ * - `apiA` / `apiB`: API clients for User A / User B for fast seeding. They reuse the worker's
+ *   sign-in (`signedInA` / `signedInB`), so a test does not hash a password to start.
  * - `seedProject`: create a project owned by A with a single `main.tex` whose
  *   content contains "Introduction" (so the agent stub's search finds it).
  *
- * Specs that aren't testing login start from a `storageState` (set per Playwright
- * project), so the browser is already authenticated as User A unless overridden.
+ * Specs that aren't testing login get the browser already authenticated as User A (the
+ * `page` fixture, from the worker's chain in `session.ts`). Specs that test login use the
+ * base test instead (see `flows/auth.spec.ts`).
  */
 import { readFile } from "node:fs/promises";
 
 import { test as base, type Page } from "@playwright/test";
 
 import { ApiClient } from "./api";
-import { injectAuth } from "./auth";
+import { seedRefreshToken } from "./auth";
 import { RUN_CONTEXT_FILE, type RunContext } from "./env";
+import { readRefreshToken, type SignedIn, WorkerSessions } from "./session";
 
 export const SEED_DOC_CONTENT =
   "\\documentclass{article}\n" +
@@ -32,33 +35,50 @@ export interface SeededProject {
 
 interface Fixtures {
   runContext: RunContext;
+  signedInA: SignedIn;
+  signedInB: SignedIn;
   apiA: ApiClient;
   apiB: ApiClient;
   seedProject: (name?: string) => Promise<SeededProject>;
   page: Page;
 }
 
-export const test = base.extend<Fixtures>({
+interface WorkerFixtures {
+  /** One chain of refresh tokens per user for this worker (see session.ts). */
+  sessions: WorkerSessions;
+}
+
+export const test = base.extend<Fixtures, WorkerFixtures>({
+  sessions: [
+    // eslint-disable-next-line no-empty-pattern -- a worker fixture with no dependencies
+    async ({}, use) => {
+      await use(new WorkerSessions());
+    },
+    { scope: "worker" },
+  ],
   // eslint-disable-next-line no-empty-pattern -- a fixture with no dependencies
   runContext: async ({}, use) => {
     const ctx = JSON.parse(await readFile(RUN_CONTEXT_FILE, "utf-8")) as RunContext;
     await use(ctx);
   },
-  // The default page starts authenticated as User A with a fresh refresh token
-  // (its own family). The auth journey overrides this with an empty storage state.
-  page: async ({ page, context, runContext }, use) => {
-    await injectAuth(context, runContext.userA.email);
+  signedInA: async ({ sessions, runContext }, use) => {
+    await use(await sessions.begin(runContext.userA.email));
+  },
+  signedInB: async ({ sessions, runContext }, use) => {
+    await use(await sessions.begin(runContext.userB.email));
+  },
+  // The default page starts authenticated as User A, with this test's token from the worker's chain.
+  // After the test the token the app holds is kept, so the worker's next test starts from it.
+  page: async ({ page, context, sessions, runContext, signedInA }, use) => {
+    await seedRefreshToken(context, signedInA.refreshToken);
     await use(page);
+    sessions.keep(runContext.userA.email, await readRefreshToken(page));
   },
-  apiA: async ({ runContext }, use) => {
-    const client = new ApiClient();
-    await client.login(runContext.userA.email);
-    await use(client);
+  apiA: async ({ signedInA }, use) => {
+    await use(new ApiClient(undefined, signedInA.accessToken));
   },
-  apiB: async ({ runContext }, use) => {
-    const client = new ApiClient();
-    await client.login(runContext.userB.email);
-    await use(client);
+  apiB: async ({ signedInB }, use) => {
+    await use(new ApiClient(undefined, signedInB.accessToken));
   },
   seedProject: async ({ apiA }, use) => {
     await use(async (name = "Paper") => {

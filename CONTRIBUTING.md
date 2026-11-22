@@ -42,9 +42,9 @@ docker compose -f docker-compose.test.yml up -d
 cd frontend && pnpm exec playwright test --project=smoke
 ```
 
-**The 2-minute budget is a hard rule.** The whole suite (unit + integration +
-e2e) must finish in **under 120 seconds**; CI measures and enforces it
-(`backend/scripts/check_test_budget.py`). Slow work (LaTeX/LLM) belongs in async
+**The 3-minute budget is a hard rule.** The whole CI run must finish in **at most
+180 seconds**, from its first job's start to its last job's end; CI's `gate` job
+measures and enforces it, and `docs/system/overview.md` lists how the suite stays there. Slow work (LaTeX/LLM) belongs in async
 jobs and must be stubbed in the fast tiers. Mark genuinely heavy tests `@slow`
 (excluded by default).
 

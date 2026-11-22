@@ -64,15 +64,14 @@ def _slow_messages(slowest: list[dict[str, Any]]) -> tuple[bool, list[str]]:
 
 
 def evaluate(timing: dict[str, Any]) -> GateResult:
-    total = float(timing.get("total_s", 0))
-    header = (
-        f"Suite time: {total:.1f}s "
-        f"(backend {timing.get('backend_s', 0)}s, frontend {timing.get('frontend_s', 0)}s, "
-        f"e2e {timing.get('e2e_s', 0)}s)"
-    )
-    total_ok, total_messages = _total_messages(total)
+    """Gate the per-test limit, and the whole-run wall clock when the timing carries one.
+
+    CI's timing (``build_test_timing.py``) has no ``total_s``: CI's ``gate`` job measures the run's
+    wall clock itself. ``run_timed.sh`` measures the whole local run and passes it in.
+    """
+    total_ok, total_messages = (True, []) if "total_s" not in timing else _total_messages(timing["total_s"])
     slow_ok, slow_messages = _slow_messages(timing.get("slowest", []))
-    return GateResult(ok=total_ok and slow_ok, messages=[header, *total_messages, *slow_messages])
+    return GateResult(ok=total_ok and slow_ok, messages=[*total_messages, *slow_messages])
 
 
 def main(argv: list[str]) -> int:

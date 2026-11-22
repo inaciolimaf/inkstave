@@ -16,6 +16,10 @@ import { e2e } from "./e2e/support/env";
  * (`make e2e-all`): a bare `playwright test` runs the slices on top of `smoke`.
  */
 
+// CI runs the system Chrome the runner image ships (no browser download, see docs/system/overview.md).
+// Locally Playwright uses its own Chromium, installed by `make e2e-install`.
+const systemChrome = process.env.CI ? { channel: "chrome" as const } : {};
+
 // Backend env, injected into the bring-up command (nothing hard-coded per machine).
 const backendEnv: Record<string, string> = {
   DATABASE_URL:
@@ -79,15 +83,23 @@ export default defineConfig({
     {
       name: "smoke",
       grepInvert: /@full/,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], ...systemChrome },
     },
-    { name: "routes", testMatch: /\/routes\.spec\.ts$/, use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", testMatch: /\/mobile\.spec\.ts$/, use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "routes",
+      testMatch: /\/routes\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], ...systemChrome },
+    },
+    {
+      name: "mobile",
+      testMatch: /\/mobile\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], ...systemChrome },
+    },
     {
       name: "flows",
       testMatch: /\/flows\/.*\.spec\.ts$/,
       grepInvert: /@full/,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], ...systemChrome },
     },
     // The full tier (opt-in, `@full`) covers edge cases beyond the happy path AND
     // a second browser engine (spec 54 §8 item 4): it runs on Firefox so we catch

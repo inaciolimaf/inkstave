@@ -223,7 +223,7 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 | Default backend | `addopts`: `-m 'not slow and not e2e and not live'`, `-n auto` | Postgres for the integration part | `make test` |
 | Unit | `UNIT_MARKERS` in `Makefile` | nothing | `make test-unit` |
 | Integration | `INTEGRATION_MARKERS` in `Makefile`, the `integration` marker | Postgres; Redis is faked | `make test-integration` |
-| E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs |
+| E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs, in two shards |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
 ### Lived-in projects
@@ -291,8 +291,27 @@ state left over from the previous action (a seen-event set, the transcript order
 dependent test skips and the run stays green. Each xdist worker uses its own database, migrated once
 and rolled back per test. `backend/tests/fixtures/env.py` strips the machine's settings before
 collection and points `DATABASE_URL` at a refused port, so a test that did not ask for the database
-cannot find one. CI runs unit, integration and e2e in parallel and enforces a 180 s budget on the slowest (`make budget`) and an
-80% coverage floor on unit plus integration (`make coverage-combine`).
+cannot find one.
+
+**CI runs in about 180 s, and the `gate` job measures it.** Lint, typecheck, unit, integration and the
+two e2e shards (`make e2e-smoke E2E_ARGS=--shard=N/2`) run side by side, with no `needs` between them.
+`budget` (after unit and integration) gates the per-test limit from the JUnit files (`make budget`) and
+the 80% coverage floor on unit plus integration (`make coverage-combine`). `gate` needs every one of
+them: it fails when a job did not succeed, and when the run's wall clock, from the start of the run's
+first job, passes 180 s (queue time included). The whole-run check was a stage maximum before; the
+clock replaces it, so the stages no longer report their seconds. The `budget` step keeps the per-test
+limit; `scripts/run_timed.sh` (`just test-timed`) still gates the total of a local run against
+`SUITE_BUDGET_SECONDS`.
+
+**CI speed settings, and why.** Postgres (integration) runs on tmpfs with a 2 s health interval; the
+Python jobs set `COVERAGE_CORE=sysmon`; `setup-uv` keeps its cache (`prune-cache: false`, the prune took
+up to 108 s); every job has `timeout-minutes`; Node is 25, as the frontend image. The e2e jobs use the
+Google Chrome of the runner (`channel: "chrome"`, only when `CI` is set), so they download no browser.
+Playwright runs with **0 retries** everywhere (`E2E_RETRIES` overrides it for a diagnosis run): a flaky
+test is fixed, not retried. Each e2e test reuses its worker's sign-in: a worker logs in once per user and
+keeps its own refresh-token chain (`frontend/e2e/support/session.ts`), so the refresh-token rotation and
+its reuse detection are untouched; the tests that change the session (logout, `auth.spec.ts`) log in on
+their own.
 
 ## Rules and guarantees
 
