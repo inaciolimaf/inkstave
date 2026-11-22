@@ -172,7 +172,10 @@ writes state, bumps `seq` and deletes log rows up to `last_update_id` in one tra
 
 `_do_flush_text` copies the text under the lock, clears `dirty_text`, then calls `ContentBridge.flush_text`
 (`set_content_from_collab`, a direct column write that emits no CRDT update) and
-`CrdtStore.mark_text_synced`. Callers:
+`CrdtStore.mark_text_synced`. The write stays under the per-document lock, so two flushes reach the column in the
+order they copied the text (an older copy written last would leave the agent and compile on stale text). Edits
+wait for that write, which is one short commit.
+`flush_text_if_dirty` is the debounced path without a forced write. Callers:
 
 - `release` at refcount zero (forced);
 - `flush_open_project_docs`, from the compile route, the agent run route and the zip export route, which calls
@@ -207,6 +210,12 @@ with a pong, throttles awareness, and reconnects with full-jitter backoff. On 44
 It stops and goes to `closed` when the refresh fails, when a second 4401 comes before the session syncs, or on
 4403 and 4404, which are terminal. `useCollabDoc` supplies the refresh.
 
+`flush()` is the ack for the edits sent so far: it sends a SyncStep1 and resolves on the server's SyncStep2
+reply to that step1. The server handles each socket's frames in order, so the reply proves the earlier updates
+were applied, and the flush then reaches `DocumentManager` before the HTTP request that starts a run or a compile.
+It resolves at once when no socket is open, and when the socket closes first. Callers add their own deadline
+(`flushWithDeadline`, 3 s, in `frontend/src/modules/editor/workspace-hooks.ts`).
+
 ## Rules and guarantees
 
 | Invariant | Test |
@@ -232,6 +241,10 @@ It stops and goes to `closed` when the refresh fails, when a second 4401 comes b
 | The last release persists the final edit | `backend/tests/integration/test_collab_refactor.py::test_flush_on_release_persists_final_edit` |
 | A forced flush writes content and emits no CRDT update | `backend/tests/integration/test_collab_manager.py::test_flush_bridges_text_to_spec13`, `backend/tests/integration/test_collab_manager.py::test_bridge_write_does_not_create_crdt_update` |
 | The debounced flush writes content while the room stays open | `backend/tests/unit/test_collab_debounced_flush.py::test_the_debounced_flush_writes_the_text_while_the_room_stays_open` |
+| A newer flush is not overwritten by an older write still in progress; `flush_text_if_dirty` writes once | `backend/tests/unit/test_collab_flush_order.py` |
+| An agent run or a compile is queued with the text typed before it (unflushed room edit) | `backend/tests/integration/test_flush_before_reads.py` |
+| `flush()` resolves only on the server's reply to its own SyncStep1, at once with no socket, and on close | `frontend/src/modules/collab/InkstaveWsProvider.flush.test.ts` |
+| A send, or a compile, waits for the open session's flush; a flush that never resolves stops being waited for after 3 s | `frontend/src/modules/editor/workspace-hooks.test.ts`, `frontend/src/modules/agent/useRunActions.flush.test.ts` |
 | An empty CRDT seeds from existing content | `backend/tests/integration/test_collab_manager.py::test_seeds_crdt_from_spec13_content` |
 | Text frame or oversize frame closes 4400; oversize update closes 4400 | `backend/tests/integration/test_collab_ws_api.py::test_text_frame_closes_4400`, `backend/tests/integration/test_collab_ws_api.py::test_oversize_frame_closes_4400`, `backend/tests/unit/test_collab_ws_dispatch.py::test_oversize_update_closes_4400` |
 | Message flood closes 4429 | `backend/tests/integration/test_collab_ws_api.py::test_rate_limit_closes_4429` |
@@ -315,9 +328,8 @@ writes the empty text first, but not after a crash, given the flush problem abov
 **Each editor connection writes one update.** The browser answers the server's step 1 with step 2 even when it
 has nothing to add, and `_handle_update` treats that as an edit: a `crdt_update` row, a relay and a history capture.
 
-**Dead or partial code.** `DocumentManager.flush_text_if_dirty` calls itself and would recurse without end; its
-only reference is a `callable` check in `backend/tests/unit/test_keyword_only_signatures_96.py`. `CLOSE_NORMAL` is
-unused. `crdt_document_state.text_synced_seq` is written but nothing reads it for recovery.
+**Dead or partial code.** `DocumentManager.flush_text_if_dirty` is only referenced by a `callable` check in
+`backend/tests/unit/test_keyword_only_signatures_96.py`. `CLOSE_NORMAL` is unused. `crdt_document_state.text_synced_seq` is written but nothing reads it for recovery.
 
 **Failure in `_join_room`.** It runs before the `try` in `_serve`, so a failed Redis subscribe leaves the refcount
 held and the room registered.

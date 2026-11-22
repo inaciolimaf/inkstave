@@ -80,6 +80,11 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
   private _ws: WebSocket | null = null;
   private _status: ProviderStatus = "idle";
   private _synced = false;
+  // Acks for flush(): every SyncStep1 we send gets exactly one SyncStep2 reply, and the server handles a
+  // connection's frames in order, so a reply proves every update sent before that step1 was applied.
+  private _step1Sent = 0;
+  private _step2Received = 0;
+  private _ackWaiters: { upTo: number; resolve: () => void }[] = [];
   private _destroyed = false;
   private _stopped = false; // terminal close (4401/4403/4404): no more reconnects
   private _authRetried = false; // a refresh after 4401 is pending or spent until the session syncs
@@ -148,10 +153,27 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
     this._reconnectAttempt = 0;
     this._setStatus("connected");
     // Re-run the Yjs sync handshake on every (re)connect from the current state.
+    this._sendStep1();
+  }
+
+  /** Send a SyncStep1 and return its ordinal on this socket (see `flush`). */
+  private _sendStep1(): number {
+    this._step1Sent += 1;
+    const ordinal = this._step1Sent;
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, MESSAGE_SYNC);
     syncProtocol.writeSyncStep1(encoder, this.doc);
     this._send(encoding.toUint8Array(encoder));
+    return ordinal;
+  }
+
+  /** Release every flush waiting on this socket: its replies can no longer arrive. */
+  private _settleAcks(): void {
+    const waiters = this._ackWaiters;
+    this._ackWaiters = [];
+    this._step1Sent = 0;
+    this._step2Received = 0;
+    for (const waiter of waiters) waiter.resolve();
   }
 
   private _onMessage(data: ArrayBuffer): void {
@@ -165,9 +187,19 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
       const syncType = syncProtocol.readSyncMessage(decoder, encoder, this.doc, this);
       if (encoding.length(encoder) > 1) this._send(encoding.toUint8Array(encoder));
       // The server's Step 2 (reply to our Step 1) completes the initial sync.
-      if (syncType === syncProtocol.messageYjsSyncStep2) this._onSynced();
+      if (syncType === syncProtocol.messageYjsSyncStep2) {
+        this._acknowledge();
+        this._onSynced();
+      }
     } else if (messageType === MESSAGE_AWARENESS) {
       applyAwarenessUpdate(this.awareness, decoding.readVarUint8Array(decoder), this);
+    }
+  }
+
+  private _acknowledge(): void {
+    this._step2Received += 1;
+    while (this._ackWaiters.length > 0 && this._ackWaiters[0].upTo <= this._step2Received) {
+      this._ackWaiters.shift()?.resolve();
     }
   }
 
@@ -181,6 +213,7 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
 
   private _onClose(code?: number): void {
     this._ws = null;
+    this._settleAcks();
     if (this._destroyed) {
       this._setStatus("closed");
       return;
@@ -283,18 +316,26 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
     }
   }
 
-  /** Resolve once pending local updates have been flushed to the socket (for compile). */
-  async flush(): Promise<void> {
-    await Promise.resolve(); // let any queued doc-update handlers run
-    while (this._ws && this._ws.bufferedAmount > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
+  /**
+   * Resolve once the server has applied the local updates sent so far. It sends a SyncStep1 and waits for the
+   * reply; the reply comes after those updates on the same socket. Resolves at once when no socket is open
+   * (nothing can reach the server), and when the socket closes first. Callers add their own deadline.
+   */
+  flush(): Promise<void> {
+    const ws = this._ws;
+    if (!ws || ws.readyState !== WS_OPEN) return Promise.resolve();
+    return new Promise((resolve) => {
+      // Register before sending: a reply can arrive synchronously (an in-process server).
+      this._ackWaiters.push({ upTo: this._step1Sent + 1, resolve });
+      this._sendStep1();
+    });
   }
 
   destroy(): void {
     if (this._destroyed) return; // safe to call twice (React StrictMode teardown)
     this._destroyed = true;
     this._flushAwareness.cancel();
+    this._settleAcks();
     if (this._reconnectTimer !== null) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = null;
