@@ -92,7 +92,8 @@ which `get_email_enqueuer` creates on first use.
 ### Application lifecycle
 
 `create_app()` does no network I/O. Middleware order, outermost first: `RequestContextMiddleware`,
-`SecurityHeadersMiddleware`, `BodySizeLimitMiddleware`, `CORSMiddleware`. Routers: the root probes,
+`SecurityHeadersMiddleware`, `CORSMiddleware`, `BodySizeLimitMiddleware`, `UnhandledErrorMiddleware`.
+Routers: the root probes,
 `/api/setup` (not versioned), `/api/v1`, then the collaboration WebSocket at the root.
 
 `lifespan` on startup:
@@ -127,14 +128,18 @@ ARQ kills the job.
 
 ### Errors
 
-Feature code raises `AppError` subclasses. `register_exception_handlers` installs three handlers.
+Feature code raises `AppError` subclasses. `register_exception_handlers` installs four handlers, and
+`UnhandledErrorMiddleware` answers uncaught exceptions. Starlette's own `HTTPException` (an unknown
+route, a wrong method) becomes `not_found` 404, `method_not_allowed` 405 (keeps `Allow`), or
+`http_error` for any other status.
 
 Each subclass fixes a status and an `error.type`: `BadRequestError` 400 `bad_request`,
 `UnauthorizedError` 401 `unauthorized` (adds `WWW-Authenticate: Bearer`), `ForbiddenError` 403
 `forbidden`, `NotFoundError` 404 `not_found`, `ConflictError` 409 `conflict`, `GoneError` 410 `gone`,
 `RateLimitError` 429 `rate_limited` (adds `Retry-After`, `X-RateLimit-*`), `ServiceUnavailableError`
 503 `service_unavailable`. `RequestValidationError` becomes 422 `validation_error` with `details`.
-Any other `Exception` becomes 500 `internal_error`: the traceback is logged, never returned.
+Any other `Exception` becomes 500 `internal_error`: the traceback is logged, never returned. The 500
+carries the request id, `X-Request-ID`, the security headers and CORS headers.
 
 The body is `{"error": {"type", "message", "details", "request_id"}}`. Domains subclass these with
 their own `error_type`. With `DEBUG=true` a 500 message adds the exception class name.
@@ -221,9 +226,39 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 | E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
+### Property tests
+
+Property tests check invariants over generated inputs on the pure seams of the stateful cores. They
+run in the unit tier, need no database, and share one Hypothesis profile (`inkstave` in
+`backend/tests/conftest.py`: `derandomize=True`, `max_examples=50`, `deadline=1000` ms). Fast-check
+tests run in Vitest with 50 to 100 runs each.
+
+| Property | File | Budget (measured) |
+|---|---|---|
+| A version reconstructs to its text; restore then diff is empty; an unchanged update changes no state | `backend/tests/unit/test_props_history.py` | ~0.6 s |
+| Replicas converge (FIFO inboxes, random interleaving) and the merged log flushes to the same text | `backend/tests/unit/test_props_collab.py` | ~0.3 s |
+| Applying the hunks of `diff_text(a, b)` gives b and back; any hunk subset applies deterministically | `backend/tests/unit/test_props_diff.py` | ~0.1 s |
+| The LaTeX log parser never raises; SyncTeX raises only `SyncTexParseError` | `backend/tests/unit/test_props_parsers.py` | ~0.2 s |
+| Agent reducer: repeated events change nothing; every run's text shows once and no run stays streaming | `frontend/src/modules/agent/reducer.props.test.ts` | ~0.5 s |
+| The minimal edit turns the current text into the target | `frontend/src/modules/diff-review/hunks.props.test.ts` | ~0.1 s |
+
+Budget: at most 8 s for the backend properties and 5 s for the Vitest properties, checked with
+`pytest --durations` and the Vitest verbose reporter. Collab delivery is FIFO per inbox on purpose:
+pycrdt does not converge when a delete set arrives before its items and the updates are shuffled
+(about 45% of random orders diverged in a measurement), and the server relays one causally ordered
+log, so that order does not occur.
+
 The tiers are chosen by marker, not by folder. `backend/tests/conftest.py` adds one structural rule:
 a test under `backend/tests/unit` that reaches the `_template_db` fixture fails collection with
 `pytest.UsageError`.
+
+**Stateful features get a "do it again" test.** Anything that keeps state between actions (an agent
+chat, a review, a session, a panel's selection, a compile result) needs a test that does the action
+twice in a row, again after a simulated reload (remount from the server's state), and again after
+switching document. The Vitest files are `*.again.test.ts(x)` next to the module: `agent/reducer.again`,
+`agent/AgentPanel.again`, `diff-review/use-inline-review.again`, `editor/CollabEditor.again`,
+`history/HistoryPanel.again`, `pdf-preview/hooks/useCompile.again`. Each bug of this kind so far came from
+state left over from the previous action (a seen-event set, the transcript order, a view kept after a switch).
 
 **Integration tests skip when Postgres is unreachable.** `_template_db` in
 `backend/tests/fixtures/database.py` catches the connection failure and calls `pytest.skip`, so every
@@ -271,10 +306,6 @@ cannot find one. CI runs unit, integration and e2e in parallel and enforces a 18
 
 ## Points of attention
 
-- **Not every error uses the envelope.** No handler covers Starlette's `HTTPException`, so an unknown
-  route or a 405 answers `{"detail": ...}`. The middleware's 413 has its own shape; see
-  [security.md](security.md). A 500 carries `request_id: null`: see
-  [observability.md](observability.md).
 - **A database that is down at startup still aborts it.** `check_db` only warns, but
   `_ensure_migrations` then calls `current_revision`, whose `engine.connect()` sits outside its
   `try`. Only Redis failures are truly tolerated at boot.

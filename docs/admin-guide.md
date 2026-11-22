@@ -220,8 +220,8 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `COLLAB_WS_SEND_QUEUE_MAX` | No | `256` | bounded per-connection send buffer | collab/websocket |
 | `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS` | No | `2000` | slow-consumer enqueue timeout | collab/websocket |
 | `COLLAB_WS_MAX_MSGS_PER_SEC` | No | `200` | inbound message rate guard per connection | collab/websocket |
-| `COLLAB_WS_PING_INTERVAL_SECONDS` | No | `25` | idle ping interval (delegated to the ASGI server) | collab/websocket |
-| `COLLAB_WS_PONG_TIMEOUT_SECONDS` | No | `10` | pong timeout before close (delegated to the ASGI server) | collab/websocket |
+| `COLLAB_WS_PING_INTERVAL_SECONDS` | No | `25` | keepalive ping every N seconds; `0` disables it | collab/websocket |
+| `COLLAB_WS_PONG_TIMEOUT_SECONDS` | No | `10` | extra silence allowed before a peer is closed (4000) | collab/websocket |
 | `COLLAB_REDIS_CHANNEL_PREFIX` | No | `collab:doc:` | Redis pub/sub channel prefix (one per document) | collab/websocket |
 | `FRONTEND_URL` | No | `http://localhost:5173` | base for invite (/invite/{token}) and share-link (/join/{token}) URLs | backend |
 | `INVITE_TTL_DAYS` | No | `14` | pending invite lifetime | backend |
@@ -245,10 +245,11 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `OPENROUTER_BASE_URL` | No | `https://openrouter.ai/api/v1` | OpenAI-SDK base URL | backend, worker |
 | `AGENT_TEMPERATURE` | No | `0.2` | OpenRouter only; current Claude models reject it | backend, worker |
 | `AGENT_MAX_ITERATIONS` | No | `50` | hard cap on plan loops per turn | backend, worker |
-| `AGENT_MAX_TOTAL_TOKENS` | No | `1000000` | hard cap on accumulated tokens per turn | backend, worker |
+| `AGENT_MAX_TOTAL_TOKENS` | No | `2000000` | backstop on a turn's accumulated tokens; the run ends `done` with a partial note. Keep it above `AGENT_MAX_TOKENS_PER_RUN`; `0` disables it. Exempt e-mails skip it | backend, worker |
 | `AGENT_MAX_TOKENS_PER_CALL` | No | `32000` | max_tokens per LLM call | backend, worker |
 | `AGENT_REQUEST_TIMEOUT_S` | No | `120` | per-call timeout for the real client | backend, worker |
 | `AGENT_JOB_TIMEOUT_S` | No | `600` | ARQ timeout for one whole agent run; keep above the per-call timeout | backend, worker |
+| `AGENT_RUN_STALL_TIMEOUT_S` | No | `0` | seconds of silence after which an agent run is settled as timed out on the next message; `0` derives job timeout + request timeout (720 s) | backend, worker |
 | `AGENT_HTTP_REFERER` | No | `https://inkstave.local` | OpenRouter HTTP-Referer header | backend, worker |
 | `AGENT_APP_TITLE` | No | `Inkstave` | OpenRouter X-Title header | backend, worker |
 | `AGENT_TOOL_READ_MAX_CHARS` | No | `40000` | char cap for read_file output (spec 42) | backend, worker |
@@ -262,14 +263,14 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_STREAM_HEARTBEAT_S` | No | `15` | SSE heartbeat interval | backend |
 | `AGENT_RUN_TTL_S` | No | `900` | TTL for per-run last-event + cancel keys | backend, worker |
 | `AGENT_MAX_MESSAGE_CHARS` | No | `40000` | max user message length | backend |
-| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | select_context token budget (spec 48) | backend, worker |
+| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | No effect: `select_context` was removed (see agent docs) | backend, worker |
 | `AGENT_CONTEXT_SURROUNDING_LINES` | No | `40` | context lines around a located section | backend, worker |
 | `AGENT_SECTION_EXTRA_COMMANDS` | No | `—` | extra sectioning command names (comma-separated) | backend, worker |
 | `AGENT_CONTEXT_CACHE` | No | `memory` | memory \| redis \| off | backend, worker |
 | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` | No | `10` | per-user agent run-rate cap (runs per minute) | backend, worker |
 | `AGENT_MAX_CONCURRENT_RUNS_PER_USER` | No | `2` | max simultaneous agent runs per user | backend, worker |
 | `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` | No | `20` | per-project agent run-rate cap (runs per minute) | backend, worker |
-| `AGENT_MAX_TOKENS_PER_RUN` | No | `1000000` | hard token cap for a single agent run | backend, worker |
+| `AGENT_MAX_TOKENS_PER_RUN` | No | `1000000` | hard token cap for a single agent run; the cap that stops a turn first | backend, worker |
 | `AGENT_MAX_COST_PER_RUN_USD` | No | `0.30` | hard USD cost cap for a single agent run | backend, worker |
 | `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` | No | `2000000` | daily token budget per project | backend, worker |
 | `AGENT_MAX_COST_PER_DAY_PER_USER_USD` | No | `0.30` | daily USD cost budget per user | backend, worker |

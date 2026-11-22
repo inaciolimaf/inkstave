@@ -8,13 +8,12 @@ specs 52 and 55.
 
 | File | Role |
 |---|---|
-| `backend/src/inkstave/core/observability/log.py` | `JsonLogFormatter`, `ConsoleFormatter`, `redact`, `configure_logging` (the one in use) |
+| `backend/src/inkstave/core/observability/log.py` | `JsonLogFormatter`, `ConsoleFormatter`, `build_formatter` (`LOG_JSON` and `LOG_FORMAT`), `redact`, `configure_logging` |
 | `backend/src/inkstave/core/observability/context.py` | Correlation context vars, `bind_context`, `clear_context`, `current_context` |
 | `backend/src/inkstave/core/observability/middleware.py` | `RequestContextMiddleware`: request id, finish log, HTTP metrics |
 | `backend/src/inkstave/core/observability/metrics.py` | Metric catalogue and helpers |
 | `backend/src/inkstave/core/observability/tracing.py` | Optional OpenTelemetry setup, `current_trace_id` |
-| `backend/src/inkstave/core/logging.py` | `get_request_id`, `set_request_id`; also a legacy `configure_logging` |
-| `backend/src/inkstave/core/http/middleware.py` | Legacy `RequestIdMiddleware`, not wired into the app |
+| `backend/src/inkstave/core/logging.py` | `get_request_id`, `set_request_id` over the shared context var |
 | `backend/src/inkstave/modules/admin/routes/health.py` | Probes and `/metrics` |
 | `backend/tests/unit/test_observability.py` | Redaction, formatter, context, metrics helpers |
 | `backend/tests/integration/test_observability_api.py` | The HTTP surface |
@@ -56,7 +55,8 @@ handler. Repeated calls do not stack.
 | call-site `extra` | Any non-reserved attribute on the record |
 | `error.type`, `error.stack` | With `exc_info`; the stack only with `LOG_STACKS=true` |
 
-`LOG_FORMAT=console` prints level, logger, request id and message, for development.
+`LOG_FORMAT=console` prints level, logger, request id and message, for development. `LOG_JSON=false`
+selects the same console output; JSON is used only when both settings allow it.
 
 ### Correlation
 
@@ -103,7 +103,7 @@ exposition.
 | `inkstave_ws_messages` | Counter | `direction`, `kind` | nothing |
 | `inkstave_build_info` | Gauge | `version`, `git_sha` | API, `set_build_info` |
 | `inkstave_rate_limit_errors` | Counter | `policy` | API, `inc_rate_limit_error` |
-| `inkstave_job_queue_depth` | Gauge | `queue` | API, `sample_queue_depth` at scrape time |
+| `inkstave_job_queue_depth` | Gauge | `queue` | API, `sample_queue_depth` at scrape time, on `COMPILE_QUEUE_NAME` |
 | `inkstave_compile_duration_seconds` | Histogram | `engine`, `status` | Worker, `observe_compile` |
 | `inkstave_compile` | Counter | `status` | Worker, `observe_compile` |
 | `inkstave_job_duration_seconds` | Histogram | `job_name`, `status` | Worker, `track_job` |
@@ -144,7 +144,10 @@ otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and c
 | `/ready` ignores the database | `backend/tests/integration/test_health.py::test_ready_ignores_broken_db` |
 | `/readyz` answers 503 on a broken database | `backend/tests/integration/test_health.py::test_readyz_503_when_db_broken` |
 | nginx blocks `/metrics` with no upstream | `backend/tests/unit/test_docker_packaging.py::test_nginx_blocks_metrics_without_upstream` |
-| A 500 has no request id | no test asserts it; `backend/tests/integration/test_error_envelope_runtime.py::test_500_envelope_does_not_leak_internals` passes `require_request_id=False` |
+| A 500 carries the request id, `X-Request-ID`, security and CORS headers | `backend/tests/integration/test_app.py::test_unhandled_error_carries_request_id_and_headers` |
+| Unknown route and wrong method answer the envelope | `backend/tests/integration/test_app.py::test_unknown_route_404_uses_the_envelope`, `backend/tests/integration/test_app.py::test_wrong_method_405_uses_the_envelope_and_keeps_allow` |
+| The queue-depth gauge reads `COMPILE_QUEUE_NAME` | `backend/tests/integration/test_observability_api.py::test_queue_depth_samples_the_compile_queue` |
+| `LOG_JSON=false` selects the console formatter | `backend/tests/unit/test_observability.py::test_log_json_false_selects_the_console_formatter` |
 
 ## Settings
 
@@ -161,7 +164,7 @@ otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and c
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTLP target |
 | `OTEL_SERVICE_NAME` | `inkstave-backend` | Resource name |
 | `READINESS_CHECK_TIMEOUT_S` | `2.0` | Per-check bound of `/readyz` and `doctor` |
-| `LOG_JSON` | `true` | No effect; see below |
+| `LOG_JSON` | `true` | `false` selects console output, as `LOG_FORMAT=console` does |
 
 ## Points of attention
 
@@ -174,27 +177,15 @@ otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and c
   no `start_http_server`. `/metrics` on the API serves these names with no samples.
   `backend/tests/integration/test_observability_api.py::test_metrics_endpoint` only checks that the
   names appear.
-- **`inkstave_job_queue_depth` reads the wrong key.** `sample_queue_depth` defaults to `arq:queue`,
-  the only way `health.py` calls it. `WorkerSettings.queue_name` is `COMPILE_QUEUE_NAME`, default
-  `compiles`, so the gauge stays 0.
 - **`inkstave_ws_messages` is never incremented.**
-- **A 500 has no correlation.** The `Exception` handler runs in Starlette's `ServerErrorMiddleware`,
-  outside every user middleware. By then `RequestContextMiddleware` has cleared the context. Verified
-  by a probe: the body has `request_id: null` and the response has no `X-Request-ID`, no security
-  headers and no CORS headers. The finish log does carry the id, so correlate from there.
+- **A 500 is logged as `request`, not `request failed`.** `UnhandledErrorMiddleware` answers the 500
+  and does not re-raise, so the finish log carries the status and the request id. The traceback is in
+  the `inkstave.error` log line.
 - **Redaction looks at keys only.** A secret inside a message string, or a key without a listed
   substring (for example `token`), is logged as is. `ConsoleFormatter` does not redact at all.
 - **The WebSocket token is in the URL.** The collab handshake passes `?token=`. `http.path` is safe,
   but nginx's default access log records the request line with the query string. See
   [collab.md](collab.md).
-- **Two logging modules.** `configure_logging` and `RequestIdFilter` in
-  `backend/src/inkstave/core/logging.py` are called by nothing in `backend/src`; only
-  `backend/tests/unit/test_logging.py` uses them. `LOG_JSON` feeds only that dead path, yet
-  `docker-compose.prod.yml` sets it, and `python-json-logger` is a runtime dependency only for it.
-  Use `LOG_FORMAT`.
-- **`RequestIdMiddleware` is dead code.** `backend/src/inkstave/core/http/middleware.py` says so
-  itself; only `backend/tests/unit/test_request_id_middleware.py` imports it. Unlike the real
-  middleware, it accepts any inbound id without validation.
 - **Uvicorn logs too.** Its own access log is separate from `inkstave.access` and is not JSON.
 - **`/ready` and `/readyz` differ on purpose.** `/ready` stays Redis-only with a fixed 0.5 s bound
   (`READY_TIMEOUT_SECONDS`), kept from spec 02.

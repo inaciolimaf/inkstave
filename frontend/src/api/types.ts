@@ -2140,10 +2140,23 @@ export interface components {
             /** Quoted Text */
             quoted_text: string;
         };
-        /** CommentThreadList */
+        /**
+         * CommentThreadList
+         * @description One page of threads. Pass ``next_cursor`` back as ``after`` to read the next page.
+         */
         CommentThreadList: {
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
             /** Items */
             items: components["schemas"]["CommentThreadRead"][];
+            /**
+             * Next Cursor
+             * @description Opaque; send it as `after` for the next page
+             */
+            next_cursor?: string | null;
         };
         /** CommentThreadRead */
         CommentThreadRead: {
@@ -5840,6 +5853,10 @@ export interface operations {
                 /** @description Only the threads of this document */
                 document_id?: string | null;
                 status?: "open" | "resolved" | "all";
+                /** @description Threads per page */
+                limit?: number;
+                /** @description The next_cursor of the previous page */
+                after?: string | null;
             };
             header?: never;
             path: {

@@ -13,51 +13,52 @@ from inkstave.modules.agent.diffs.compute import (
     compute_diff,
     content_hash,
 )
-from inkstave.modules.agent.graph.edits import EditMode, StagedEdit
+from inkstave.modules.agent.graph.edits import StagedEdit
 
 
-def _edit(mode: str, new_text: str, start: int | None = None, end: int | None = None) -> StagedEdit:
+def _edit(old_text: str, new_text: str) -> StagedEdit:
     return StagedEdit(
-        edit_id="e",
-        doc_id="d",
-        path="f.tex",
-        base_version="1",
-        mode=EditMode(mode),
-        new_text=new_text,
-        start_line=start,
-        end_line=end,
+        edit_id="e", doc_id="d", path="f.tex", base_version="1", old_text=old_text, new_text=new_text
     )
 
 
-def test_full_replacement() -> None:
-    assert apply_staged_edits("old\ntext\n", [_edit("full", "brand\nnew\n")]) == "brand\nnew\n"
+def test_single_replacement_keeps_the_rest_of_the_text() -> None:
+    assert apply_staged_edits("a\nb\nc\nd\n", [_edit("b\n", "B\n")]) == "a\nB\nc\nd\n"
 
 
-def test_single_range_replacement() -> None:
-    out = apply_staged_edits("a\nb\nc\nd\n", [_edit("range", "B", start=1, end=2)])
-    assert out == "a\nB\nc\nd\n"
+def test_replacement_may_span_and_change_line_breaks() -> None:
+    assert apply_staged_edits("a\nb\nc\n", [_edit("b\nc", "x")]) == "a\nx\n"
 
 
-def test_multiple_non_overlapping_ranges_applied_bottom_up() -> None:
-    # AC3: replacing [1,2) and [3,4) must not drift indices.
-    edits = [_edit("range", "X", start=1, end=2), _edit("range", "Y", start=3, end=4)]
-    assert apply_staged_edits("a\nb\nc\nd\ne\n", edits) == "a\nX\nc\nY\ne\n"
+def test_empty_old_text_fills_an_empty_file() -> None:
+    assert apply_staged_edits("", [_edit("", "new\n")]) == "new\n"
 
 
-def test_overlapping_ranges_raise_conflict() -> None:
-    edits = [_edit("range", "X", start=1, end=3), _edit("range", "Y", start=2, end=4)]
-    with pytest.raises(DiffConflictError):  # AC4
-        apply_staged_edits("a\nb\nc\nd\ne\n", edits)
+def test_empty_old_text_is_refused_for_a_non_empty_file() -> None:
+    with pytest.raises(DiffConflictError):
+        apply_staged_edits("a\n", [_edit("", "new\n")])
 
 
-def test_full_wins_over_range() -> None:
-    edits = [_edit("range", "X", start=0, end=1), _edit("full", "whole\n")]
-    assert apply_staged_edits("a\nb\n", edits) == "whole\n"
+def test_old_text_absent_raises_conflict() -> None:
+    with pytest.raises(DiffConflictError):
+        apply_staged_edits("a\nb\n", [_edit("zzz", "y")])
 
 
-def test_trailing_newline_preserved_and_absent() -> None:
-    assert apply_staged_edits("a\nb", [_edit("range", "B", start=1, end=2)]) == "a\nB"
-    assert apply_staged_edits("a\nb\n", [_edit("range", "B", start=1, end=2)]) == "a\nB\n"
+def test_old_text_repeated_raises_conflict() -> None:
+    with pytest.raises(DiffConflictError):  # never guesses which occurrence was meant
+        apply_staged_edits("x\nx\n", [_edit("x", "y")])
+
+
+def test_successive_edits_apply_to_the_text_the_previous_one_left() -> None:
+    # The second edit's old_text exists only after the first has run.
+    edits = [_edit("alpha", "beta"), _edit("beta gamma", "delta")]
+    assert apply_staged_edits("alpha gamma\n", edits) == "delta\n"
+
+
+def test_second_edit_that_no_longer_fits_raises_conflict() -> None:
+    edits = [_edit("alpha", "beta"), _edit("alpha", "gamma")]
+    with pytest.raises(DiffConflictError):
+        apply_staged_edits("alpha\n", edits)
 
 
 def test_compute_diff_headers_and_ops() -> None:

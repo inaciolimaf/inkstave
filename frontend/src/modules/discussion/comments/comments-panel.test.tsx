@@ -16,7 +16,7 @@ const api = vi.hoisted(() => ({
   editMessage: vi.fn(),
   deleteMessage: vi.fn(),
   setThreadResolved: vi.fn(),
-  fetchThreads: vi.fn(),
+  fetchThreadPage: vi.fn(),
 }));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<object>()), ...api }));
 vi.mock("@/modules/auth/auth-context", () => ({
@@ -81,7 +81,7 @@ function renderPanel(overrides: Partial<CommentsPanelProps> & { threads: Comment
 
 beforeEach(() => {
   installFakeEventSource();
-  api.fetchThreads.mockResolvedValue([]);
+  api.fetchThreadPage.mockResolvedValue({ items: [], nextCursor: null });
 });
 
 afterEach(() => {
@@ -171,5 +171,28 @@ describe("CommentsPanel", () => {
     renderPanel({ threads: [thread("one", ytext, "results")], ytext, wide: false });
     await waitFor(() => expect(screen.getByRole("dialog", { name: "Comments" })).toBeInTheDocument());
     expect(within(screen.getByRole("dialog")).getByText("Comment one")).toBeInTheDocument();
+  });
+
+  it("offers to load more threads while the server has more, and asks for them on click", async () => {
+    const user = userEvent.setup();
+    const ytext = new Y.Doc().getText("content");
+    ytext.insert(0, BODY);
+    const onLoadMore = vi.fn();
+    renderPanel({ threads: [thread("one", ytext, "results")], ytext, hasMore: true, onLoadMore });
+
+    await user.click(screen.getByRole("button", { name: "Load more comments" }));
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the load-more control on the last page and shows it as busy while loading", () => {
+    const ytext = new Y.Doc().getText("content");
+    ytext.insert(0, BODY);
+    const { unmount } = renderPanel({ threads: [thread("one", ytext, "results")], ytext, hasMore: false });
+    expect(screen.queryByRole("button", { name: "Load more comments" })).not.toBeInTheDocument();
+    unmount();
+
+    renderPanel({ threads: [thread("one", ytext, "results")], ytext, hasMore: true, loadingMore: true });
+    expect(screen.getByRole("button", { name: "Loading comments…" })).toBeDisabled();
   });
 });

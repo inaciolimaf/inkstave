@@ -56,6 +56,8 @@ const dict: Dict = {
       all: "Todos os arquivos",
     },
     empty: "Nenhum comentário aqui.",
+    loadMore: "Carregar mais comentários",
+    loadingMore: "Carregando comentários…",
     thread: {
       label: "Conversa do comentário",
       messages: "Mensagens",

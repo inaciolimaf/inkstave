@@ -53,6 +53,28 @@ async def test_exempt_user_runs_past_the_day_and_run_caps(
     assert all(e.get("code") != "agent_budget_exceeded" for e in sink.events)
 
 
+async def test_exempt_user_skips_the_soft_backstop_too(
+    seed: SimpleNamespace, db_session: AsyncSession, redis: Any
+) -> None:
+    settings = AgentSettings(
+        agent_max_total_tokens=50,  # the soft backstop, far below the steps' total
+        agent_budget_exempt_emails=seed.owner.email,
+    )
+    sink = InMemoryEventSink(str(seed.run_id))
+    steps = [_tool_call("read_file", {"doc_id": str(seed.main_id)}, usage=100)] * 2
+    llm = FakeLLM(script=[*steps, FakeLLM.respond_text("done")])
+
+    await run_agent_turn(
+        _ctx(db_session, redis, llm, sink, settings),
+        session_id=str(seed.session.id),
+        run_id=str(seed.run_id),
+        user_message="x",
+    )
+
+    assert len(llm.calls) == 3  # not cut off after the first step
+    assert sink.events[-1]["type"] == "done"
+
+
 async def test_a_user_not_listed_keeps_the_caps(
     seed: SimpleNamespace, db_session: AsyncSession, redis: Any
 ) -> None:
