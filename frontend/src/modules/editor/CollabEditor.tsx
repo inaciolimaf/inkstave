@@ -84,7 +84,7 @@ export function CollabEditor({
         {/* The binding is fixed for the life of a view, so a new session needs a new view. */}
         <CodeMirrorEditor
           key={session.ydoc.guid}
-          doc=""
+          doc={session.text.toString()}
           settings={settings}
           dark={dark}
           editable={editable}
