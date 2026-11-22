@@ -235,6 +235,9 @@ class CompileSettingsMixin:
     llm_stub: bool = False
     # Pause before each stub reply, so a run stays in flight long enough to be stopped.
     llm_stub_delay_ms: int = Field(default=0, ge=0, le=5_000)
+    # Which scripted run the stub plays (test only): ``happy``, or one scenario with a mistake in it
+    # (``scripted/scenarios.py``). An unknown name stops the worker at start.
+    llm_stub_scenario: str = "happy"
     tectonic_bin: str = "tectonic"
     tectonic_cache_dir: str = "/var/cache/tectonic"
     tectonic_bundle_url: str = ""

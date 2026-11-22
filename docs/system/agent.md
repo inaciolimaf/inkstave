@@ -26,7 +26,8 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/llm/anthropic_client.py` | `AnthropicLLMClient`, the default and the only `anthropic` import |
 | `backend/src/inkstave/modules/agent/llm/openrouter.py` | `OpenRouterLLMClient`, the only `openai` import |
 | `backend/src/inkstave/modules/agent/llm/factory.py` | `build_llm_client`, picks the client from `AGENT_LLM_PROVIDER` |
-| `backend/src/inkstave/modules/agent/llm/stub.py`, `backend/src/inkstave/modules/agent/llm/fake.py` | `StubAgentLLM` for e2e, scripted `FakeLLM` for tests |
+| `backend/src/inkstave/modules/agent/llm/stub.py`, `backend/src/inkstave/modules/agent/llm/fake.py` | `StubAgentLLM` for e2e (plays the scripted run named by `LLM_STUB_SCENARIO`), scripted `FakeLLM` for tests |
+| `backend/src/inkstave/modules/agent/scripted/steps.py`, `backend/src/inkstave/modules/agent/scripted/scenarios.py` | `ScriptedLLM` plays one step per model call (`Reply`, `Calls`, `Stream`, `Do`, `Compute`); `scenario_steps`, the named scenarios of the e2e stub, one model mistake each |
 | `backend/src/inkstave/modules/agent/tools/base.py` | `Tool`, `ToolContext`, `ToolResult`, `ToolRegistry`, `authorize` |
 | `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages an exact-text replacement after a read, never applies |
 | `backend/src/inkstave/modules/agent/tools/search_project.py`, `backend/src/inkstave/modules/agent/tools/read_file.py`, `backend/src/inkstave/modules/agent/tools/list_tree.py`, `backend/src/inkstave/modules/agent/tools/locate_section.py` | The read tools |
@@ -61,6 +62,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `frontend/src/modules/diff-review/editor-bridge.ts`, `frontend/src/modules/diff-review/crdt-apply.ts` | Writes through a short-lived collab provider |
 | `backend/tests/agent_evals/test_agent_evals.py` | Deterministic eval suite, `FakeLLM` only |
 | `backend/tests/unit/test_agent_egress_lock.py` | Static guard: tools import no network client |
+| `backend/tests/agent_scenarios/` | Scenario library: hand-written model mistakes run through the real graph, job and persistence (edits, tool errors, provider failures, long conversations). Integration tier, no network |
 
 ## Data
 
@@ -192,11 +194,14 @@ when set and otherwise calls `build_llm_client`, so changing provider is a setti
 `ANTHROPIC_API_KEY` and runs `claude-haiku-5-5`. `openrouter` builds `OpenRouterLLMClient`, an `AsyncOpenAI`
 with `OPENROUTER_BASE_URL` that needs `OPENROUTER_API_KEY` and a matching `AGENT_MODEL`. With `LLM_STUB=true`
 the worker sets `ctx["llm_client"]` to `StubAgentLLM`, which walks `search_project`, `read_file`,
-`propose_edit`, then a fixed reply, deriving its step from the count of tool messages.
+`propose_edit`, then a fixed reply. It counts the steps of the current turn only (the tool results after the
+last user message), so every message of a session gets the whole script. `LLM_STUB_SCENARIO` (test only)
+picks another scripted run from `scripted/scenarios.py`: `happy` is the default described here.
 
 `_parse_tool_calls` keeps a malformed call as `{"_raw": ...}` and sets `finish_reason="error"`. `_run_tool`
 then fails validation and the model sees `invalid_args`. A response with `finish_reason="tool_calls"` and no
-parsed call also becomes `"error"`, and with no call to run `plan` ends the turn with `TOOL_CALL_UNPARSED`.
+parsed call also becomes `"error"`, and with no call to run `plan` ends the turn with `TOOL_CALL_UNPARSED`. A reply with
+neither text nor a call ends the turn with `EMPTY_REPLY` (an error, not a capped answer, which would read as partial work).
 
 `AnthropicLLMClient` differs in four ways. `complete` always streams and returns the final message, since one
 call can write a whole document. It sends no `temperature`, which Claude Haiku 5.5 rejects, so `AGENT_TEMPERATURE`
@@ -328,6 +333,10 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | A cancelled run ends in `error` with code `cancelled` | `backend/tests/integration/test_agent_api_streaming.py::test_cancellation` |
 | SSE requires auth and membership at connect | `backend/tests/integration/test_agent_api_sse.py::test_sse_events_route_requires_auth` |
 | A revoked session cannot open a new SSE stream | `backend/tests/integration/test_session_revocation.py::test_websocket_and_sse_paths_refuse_a_revoked_session` |
+| A model that edits without reading, or with text not in the document, is refused and retries; two files in one run make one proposal each | `backend/tests/agent_scenarios/test_edit_mistakes.py` |
+| A tool error (bad arguments, unknown id or tool, broken JSON, a step loop) goes back to the model and the run goes on | `backend/tests/agent_scenarios/test_tool_mistakes.py` |
+| A rate limit is retried by the SDK; one that outlasts the retries, or a failure after some text, ends the run as an error | `backend/tests/agent_scenarios/test_provider_failures.py` |
+| Three messages in a row, a message during a run and reloads during and after it keep each proposal on its own message | `backend/tests/agent_scenarios/test_long_conversation.py` |
 | A new proposal supersedes the old one for the same document | `backend/tests/integration/test_agent_diffs.py::test_superseding_prior_proposal` |
 | An edit whose `old_text` no longer fits is rejected, never mis-applied | `backend/tests/integration/test_agent_diffs.py::test_edit_that_no_longer_fits_is_rejected` |
 | `propose_edit` refuses a document not read in this turn, or changed since the read | `backend/tests/integration/test_agent_propose_edit.py::test_propose_without_reading_is_refused`, `backend/tests/integration/test_agent_propose_edit.py::test_change_since_read_is_refused`, `backend/tests/agent_evals/test_agent_evals.py::test_eval_a_collaborator_edit_after_the_read_is_refused` |
@@ -364,7 +373,7 @@ Defaults are from `backend/src/inkstave/core/config/agent.py`, and `.env.example
 | Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30. A user whose e-mail is in `AGENT_BUDGET_EXEMPT_EMAILS` runs with all four at 0 and the soft backstop `AGENT_MAX_TOTAL_TOKENS` at 0 (`is_budget_exempt`, `without_budget_caps`, applied in `_run_agent_turn`); rate limits still apply |
 | Safety | `AGENT_MODEL_COST_TABLE` Claude Haiku 5.5 rates first (they price any model not listed), then gpt-4o-mini, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
 
-Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false),
+Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false), `LLM_STUB_SCENARIO` (`happy`),
 `VITE_AGENT_ENABLED` (shows the panel).
 
 ## Points of attention
@@ -391,7 +400,7 @@ decided (`docs/known-gaps.md`). `rejected` also comes from an edit whose `old_te
 
 **Edits and drift.** A collaborator's edit between the read and the proposal is refused at stage time (the version check). An edit that was staged before a later collaborator edit is matched again at the end of the turn against the text then, so it becomes a `rejected` row if its `old_text` no longer fits; the browser's own rebase (`rebaseHunks`) handles drift in the hunks that do apply. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
 
-**Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result, and the next turn replays it. OpenAI-style APIs may reject that; not verified against a provider.
+**Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result. The next turn drops those calls before it replays the history (`_answered_calls_only` in `runner.py`), so no provider sees an unanswered call; the scenario tests in `backend/tests/agent_scenarios` pin it.
 
 **Unused code.** `select_context` was removed; `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES` have no effect, and the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
 

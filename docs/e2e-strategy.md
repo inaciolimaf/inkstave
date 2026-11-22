@@ -56,7 +56,8 @@ flags.
   `\inkstaveforceerror` (or `% INKSTAVE_E2E_COMPILE_ERROR`) yields a realistic
   LaTeX error log so the compile journey can assert log + problem annotations.
 - **`LLM_STUB=true`** → `StubAgentLLM` drives the agent graph through a fixed
-  `search_project → read_file → propose_edit` tool sequence and a fixed reply,
+  `search_project → read_file → propose_edit` tool sequence and a fixed reply (`LLM_STUB_SCENARIO`, test only, picks one scripted run with a model mistake
+  in it instead; see [agent](system/agent.md)),
   producing a deterministic per-file diff against the seeded document — no network.
 
 The ARQ worker (`backend/src/inkstave/worker.py`) selects these at startup based on the flags.
