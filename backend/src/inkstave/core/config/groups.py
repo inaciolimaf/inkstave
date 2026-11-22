@@ -365,8 +365,8 @@ class CollabSettingsMixin:
     collab_ws_send_queue_max: int = 256  # bounded per-connection send buffer
     collab_ws_slow_client_timeout_ms: int = 2000  # slow-consumer enqueue timeout
     collab_ws_max_msgs_per_sec: int = 200  # inbound rate guard per connection
-    collab_ws_ping_interval_seconds: float = 25.0  # (delegated to the ASGI server)
-    collab_ws_pong_timeout_seconds: float = 10.0  # (delegated to the ASGI server)
+    collab_ws_ping_interval_seconds: float = 25.0  # app-level keepalive ping; 0 disables it
+    collab_ws_pong_timeout_seconds: float = 10.0  # extra silence allowed before a peer is closed (4000)
     collab_redis_channel_prefix: str = "collab:doc:"  # one pub/sub channel per document
 
 

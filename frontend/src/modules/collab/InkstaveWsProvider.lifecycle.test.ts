@@ -74,6 +74,97 @@ describe("InkstaveWsProvider lifecycle", () => {
   });
 });
 
+// --- terminal close codes: the server closes after accept, so the browser sees them #
+
+describe("InkstaveWsProvider auth close handling (4401 / 4403 / 4404)", () => {
+  afterEach(() => {
+    ControllableWS.instances = [];
+    vi.useRealTimers();
+  });
+
+  /** A provider whose token is replaced by `refreshToken`, which reports success or failure. */
+  function makeRefreshingProvider(refreshOk: boolean) {
+    let token = "old-token";
+    const refreshToken = vi.fn(async () => {
+      if (refreshOk) token = "new-token";
+      return refreshOk;
+    });
+    const made = makeBareProvider({ getToken: () => token, refreshToken });
+    return { ...made, refreshToken };
+  }
+
+  it("refreshes the token once after 4401 and reconnects with the new one", async () => {
+    vi.useFakeTimers();
+    const { provider, refreshToken } = makeRefreshingProvider(true);
+    await vi.advanceTimersByTimeAsync(0);
+    ControllableWS.instances[0].open();
+    ControllableWS.instances[0].fail(4401);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(ControllableWS.instances.length).toBe(2);
+    expect(ControllableWS.instances[1].url).toContain("token=new-token");
+    provider.destroy();
+  });
+
+  it("stops when the refresh after 4401 fails", async () => {
+    vi.useFakeTimers();
+    const { provider, refreshToken } = makeRefreshingProvider(false);
+    await vi.advanceTimersByTimeAsync(0);
+    ControllableWS.instances[0].open();
+    ControllableWS.instances[0].fail(4401);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(ControllableWS.instances.length).toBe(1);
+    expect(provider.status).toBe("closed");
+    provider.destroy();
+  });
+
+  it("does not refresh a second time when 4401 comes again before the session syncs", async () => {
+    vi.useFakeTimers();
+    const { provider, refreshToken } = makeRefreshingProvider(true);
+    await vi.advanceTimersByTimeAsync(0);
+    ControllableWS.instances[0].open();
+    ControllableWS.instances[0].fail(4401);
+    await vi.advanceTimersByTimeAsync(0);
+    ControllableWS.instances[1].open();
+    ControllableWS.instances[1].fail(4401); // refreshed token refused as well
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(ControllableWS.instances.length).toBe(2);
+    expect(provider.status).toBe("closed");
+    provider.destroy();
+  });
+
+  it.each([4403, 4404])("stops on %i without asking for a token refresh", async (code) => {
+    vi.useFakeTimers();
+    const { provider, refreshToken } = makeRefreshingProvider(true);
+    await vi.advanceTimersByTimeAsync(0);
+    ControllableWS.instances[0].open();
+    ControllableWS.instances[0].fail(code);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(refreshToken).not.toHaveBeenCalled();
+    expect(ControllableWS.instances.length).toBe(1);
+    provider.destroy();
+  });
+
+  it("answers a heartbeat ping with a pong (keepalive, COLLAB_WS_PING_INTERVAL_SECONDS)", async () => {
+    vi.useFakeTimers();
+    const { provider } = makeBareProvider();
+    await vi.advanceTimersByTimeAsync(0);
+    const ws = ControllableWS.instances[0];
+    ws.open();
+    ws.sent.length = 0;
+    ws.onmessage?.({ data: new Uint8Array([2]).buffer }); // server ping: tag 2
+
+    expect(ws.sent.map((frame) => Array.from(frame))).toEqual([[3]]); // pong: tag 3
+    provider.destroy();
+  });
+});
+
 // --- awareness throttle integration over the wire (spec 32 §8) -------------- #
 
 describe("InkstaveWsProvider awareness throttle (spec 32 §8 / AC5)", () => {

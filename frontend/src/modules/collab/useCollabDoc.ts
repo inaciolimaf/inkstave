@@ -12,6 +12,7 @@ import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 
 import { config } from "@/config";
+import { refreshTokens } from "@/lib/api-client";
 
 import { InkstaveWsProvider, type ProviderStatus } from "./InkstaveWsProvider";
 import { remoteCursorTheme } from "./remote-cursors";
@@ -103,6 +104,8 @@ export function useCollabDoc(options: UseCollabDocOptions): CollabDocSession | n
       ydoc,
       awareness,
       getToken: () => getTokenRef.current(),
+      // A 4401 from the server means the access token expired: refresh it, as every REST call does.
+      refreshToken: refreshTokens,
       awarenessThrottleMs: CURSOR_THROTTLE_MS,
     });
     // `y-codemirror.next` scopes undo/redo to the local user via the undo manager, and renders remote
