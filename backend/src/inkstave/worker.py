@@ -178,7 +178,9 @@ async def startup(ctx: dict[str, Any]) -> None:
         # e2e/test only (spec 54): deterministic agent LLM, no network.
         from inkstave.modules.agent.llm.stub import StubAgentLLM
 
-        ctx["llm_client"] = StubAgentLLM(delay_s=settings.llm_stub_delay_ms / 1000)
+        ctx["llm_client"] = StubAgentLLM(
+            delay_s=settings.llm_stub_delay_ms / 1000, scenario=settings.llm_stub_scenario
+        )
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
