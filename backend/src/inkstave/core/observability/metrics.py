@@ -28,7 +28,6 @@ _MODEL_ALLOWLIST = {
     "openai/gpt-4o",
     "anthropic/claude-3.5-sonnet",
 }
-_ARQ_QUEUE_KEY = "arq:queue"
 
 
 def _metric(cls: type, name: str, documentation: str, **kwargs: Any) -> Any:
@@ -130,8 +129,12 @@ async def track_job(job_name: str) -> AsyncIterator[None]:
         job_duration.labels(job_name=job_name, status=status).observe(perf_counter() - start)
 
 
-async def sample_queue_depth(redis: Redis, queue: str = _ARQ_QUEUE_KEY) -> None:
-    """Update the queue-depth gauge at scrape time; fail soft if Redis is unreachable."""
+async def sample_queue_depth(redis: Redis, queue: str) -> None:
+    """Update the queue-depth gauge at scrape time; fail soft if Redis is unreachable.
+
+    ``queue`` is the ARQ queue name the worker reads (``COMPILE_QUEUE_NAME``): ARQ keeps
+    the queue under that key, and every job type shares it.
+    """
     try:
         depth = await redis.zcard(queue)
         if not depth:

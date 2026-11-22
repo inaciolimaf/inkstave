@@ -85,7 +85,8 @@ async def _force_close(conn: Connection, code: int) -> None:
 
 def _make_forwarder(components: CollabComponents, document_id: UUID) -> OnMessage:
     async def on_message(payload: bytes, exclude: str | None) -> None:
-        overflowed = components.rooms.local_broadcast(document_id, payload, exclude)
+        # Honours COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS: a full queue gets that grace window first.
+        overflowed = await components.rooms.local_broadcast_timed(document_id, payload, exclude)
         for conn in overflowed:
             spawn(_force_close(conn, CLOSE_SLOW_CONSUMER), name="collab-force-close")
 

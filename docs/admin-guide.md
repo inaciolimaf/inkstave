@@ -216,8 +216,8 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `COLLAB_WS_SEND_QUEUE_MAX` | No | `256` | bounded per-connection send buffer | collab/websocket |
 | `COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS` | No | `2000` | slow-consumer enqueue timeout | collab/websocket |
 | `COLLAB_WS_MAX_MSGS_PER_SEC` | No | `200` | inbound message rate guard per connection | collab/websocket |
-| `COLLAB_WS_PING_INTERVAL_SECONDS` | No | `25` | idle ping interval (delegated to the ASGI server) | collab/websocket |
-| `COLLAB_WS_PONG_TIMEOUT_SECONDS` | No | `10` | pong timeout before close (delegated to the ASGI server) | collab/websocket |
+| `COLLAB_WS_PING_INTERVAL_SECONDS` | No | `25` | keepalive ping every N seconds; `0` disables it | collab/websocket |
+| `COLLAB_WS_PONG_TIMEOUT_SECONDS` | No | `10` | extra silence allowed before a peer is closed (4000) | collab/websocket |
 | `COLLAB_REDIS_CHANNEL_PREFIX` | No | `collab:doc:` | Redis pub/sub channel prefix (one per document) | collab/websocket |
 | `FRONTEND_URL` | No | `http://localhost:5173` | base for invite (/invite/{token}) and share-link (/join/{token}) URLs | backend |
 | `INVITE_TTL_DAYS` | No | `14` | pending invite lifetime | backend |
@@ -258,7 +258,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_STREAM_HEARTBEAT_S` | No | `15` | SSE heartbeat interval | backend |
 | `AGENT_RUN_TTL_S` | No | `900` | TTL for per-run last-event + cancel keys | backend, worker |
 | `AGENT_MAX_MESSAGE_CHARS` | No | `40000` | max user message length | backend |
-| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | select_context token budget (spec 48) | backend, worker |
+| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | No effect: `select_context` was removed (see agent docs) | backend, worker |
 | `AGENT_CONTEXT_SURROUNDING_LINES` | No | `40` | context lines around a located section | backend, worker |
 | `AGENT_SECTION_EXTRA_COMMANDS` | No | `—` | extra sectioning command names (comma-separated) | backend, worker |
 | `AGENT_CONTEXT_CACHE` | No | `memory` | memory \| redis \| off | backend, worker |

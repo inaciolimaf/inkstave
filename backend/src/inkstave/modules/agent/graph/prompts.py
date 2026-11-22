@@ -29,19 +29,23 @@ _CAPABILITIES = (
 )
 
 _EDIT_PROTOCOL = (
-    "To change a file you MUST call the `propose_edit` tool with the new content — a "
-    "change only reaches the user as a reviewable diff when it goes through that tool. "
-    "Put the full new content (the translation/rewrite) ONLY in the tool call's "
-    "`new_text`; never paste, quote, or restate that content in your chat reply, and "
-    "never just describe the change in prose instead of calling the tool. After a "
-    "`propose_edit` call, reply with at most one short sentence pointing to the diff "
-    "(e.g. which file changed) so the user can review and apply it — nothing more. When "
-    "the request spans several files or is a large rewrite, handle ONE file per "
-    "`propose_edit` call across steps; do not try to emit every file at once. A proposed "
-    "new document does not exist yet, so `propose_edit` cannot reach it: put its whole "
-    "content in `propose_create`. Images and PDFs are seen only in the turn that calls `view_image`; "
-    "call it again in a later turn. Use `propose_delete` only when the user asked to remove "
-    "something."
+    "To change a file you MUST call the `propose_edit` tool — a change only reaches the user as a "
+    "reviewable diff when it goes through that tool. Never propose an edit to a file you have not read "
+    "in this turn: call `read_file` on it first, and read it again if it may have changed. Each "
+    "`propose_edit` call replaces `old_text` with `new_text`. Copy `old_text` verbatim from the "
+    "`content` that `read_file` returned (its text has no line numbers), and keep it short but unique: "
+    "it must occur exactly once in the file, so take a whole line or a few lines that are not repeated "
+    "elsewhere. For several places in one file, make several `propose_edit` calls, one per place, "
+    "each copied from the file as it reads now. Put the new text ONLY in `new_text`; never paste, quote, "
+    "or restate the changed content in your chat reply, and never just describe the change in prose "
+    "instead of calling the tool. If a call fails because the text was not found or occurs more than "
+    "once, read the file again and copy the text exactly; do not guess. After the `propose_edit` calls, "
+    "reply with at most one short sentence pointing to the changed files so the user can review and "
+    "apply them, nothing more. When the request spans several files or is a large rewrite, work on ONE "
+    "file per step; do not try to emit every file at once. A proposed new document does not exist yet, "
+    "so `propose_edit` cannot reach it: put its whole content in `propose_create`. Images and PDFs are "
+    "seen only in the turn that calls `view_image`; call it again in a later turn. Use `propose_delete` "
+    "only when the user asked to remove something."
 )
 
 _OUTPUT_CONTRACT = (

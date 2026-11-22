@@ -7,7 +7,7 @@
 import { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
 
-import { InkstaveWsProvider } from "./InkstaveWsProvider";
+import { InkstaveWsProvider, type ProviderOptions } from "./InkstaveWsProvider";
 import { makeFakeCollabServer } from "./collab-test-utils";
 
 /** A live client wired to the in-process fake collab server. */
@@ -66,7 +66,7 @@ export class ControllableWS {
   }
 }
 
-export function makeBareProvider() {
+export function makeBareProvider(overrides: Partial<ProviderOptions> = {}) {
   const ydoc = new Y.Doc();
   const provider = new InkstaveWsProvider({
     url: "ws://test/doc",
@@ -75,6 +75,7 @@ export function makeBareProvider() {
     awareness: new Awareness(ydoc),
     getToken: () => "tok",
     WebSocketImpl: ControllableWS as unknown as typeof WebSocket,
+    ...overrides,
   });
   return { ydoc, provider };
 }

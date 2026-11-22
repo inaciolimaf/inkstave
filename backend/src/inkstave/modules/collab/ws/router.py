@@ -29,6 +29,7 @@ from inkstave.core.observability.metrics import track_ws
 from inkstave.modules.auth import NotAuthenticatedError, authenticate_ws_token, build_token_service
 from inkstave.modules.collab.crdt.protocol import encode_awareness, encode_sync_step1
 from inkstave.modules.collab.ws.connection import _authorize, _cleanup, _force_close, _make_forwarder, _writer
+from inkstave.modules.collab.ws.heartbeat import _heartbeat
 from inkstave.modules.collab.ws.messaging import _dispatch, _receive_loop
 from inkstave.modules.collab.ws.rooms import CLOSE_DEAD, CLOSE_UNAUTHORIZED, Connection
 
@@ -101,10 +102,22 @@ async def _handshake(components: CollabComponents, conn: Connection, handle: Ope
         conn.try_enqueue(encode_awareness(snapshot))
 
 
+async def _reject(websocket: WebSocket, code: int) -> None:
+    """Refuse the socket with an application close code the browser can read.
+
+    Closing before ``accept()`` makes uvicorn answer the handshake with HTTP 403, and the
+    browser then sees 1006 and cannot tell an auth failure from a dropped network. Accepting
+    first lets the close frame carry the code. Nothing of the room is sent before the close.
+    """
+    await websocket.accept()
+    await websocket.close(code=code)
+
+
 async def _serve(components: CollabComponents, conn: Connection) -> None:
     """Run one accepted connection to completion, always cleaning it up."""
     handle = await _join_room(components, conn)
     writer = asyncio.create_task(_writer(conn))
+    keepalive = asyncio.create_task(_heartbeat(conn, components.ws_settings))
     try:
         await _handshake(components, conn, handle)
         await _receive_loop(conn, components, components.ws_settings)
@@ -114,9 +127,10 @@ async def _serve(components: CollabComponents, conn: Connection) -> None:
         logger.debug("collab session ended abnormally", exc_info=True)
     finally:
         conn.closed = True
-        writer.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await writer
+        for task in (writer, keepalive):
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
         await _cleanup(components, conn)
 
 
@@ -129,15 +143,15 @@ async def collab_ws(
 ) -> None:
     components: CollabComponents | None = getattr(websocket.app.state, "collab", None)
     if components is None:
-        await websocket.close(code=CLOSE_DEAD)
+        await _reject(websocket, CLOSE_DEAD)
         return
     if not token:
-        await websocket.close(code=CLOSE_UNAUTHORIZED)
+        await _reject(websocket, CLOSE_UNAUTHORIZED)
         return
 
     admitted = await _admit(websocket, components, project_id, document_id, token)
     if isinstance(admitted, int):
-        await websocket.close(code=admitted)
+        await _reject(websocket, admitted)
         return
     user, can_write = admitted
 
