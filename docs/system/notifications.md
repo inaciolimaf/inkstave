@@ -199,7 +199,7 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 | `FRONTEND_URL` | `http://localhost:5173` | Base of every link in e-mail |
 | `APP_BASE_URL` | `http://localhost` | Used only by the `send-test-email` placeholders |
 | `NOTIFICATION_INVITE_TTL_DAYS` | `30` | Lifetime of an invite notification |
-| `NOTIFICATION_SWEEP_INTERVAL_S` | `3600` | Read by nothing; see below |
+| `NOTIFICATION_SWEEP_INTERVAL_S` | `3600` | Sets the sweep cron minutes in `backend/src/inkstave/worker.py`; see below |
 | `VITE_NOTIFICATIONS_POLL_INTERVAL_MS` | `60000` | Frontend poll of the unread count |
 
 ## Points of attention
@@ -232,8 +232,9 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 - **Comment e-mails wait for the commit.** The mention e-mail goes out as a background task after the
   commit, through `CommentPublisher` (`comments/publish.py`). That is the opposite of the invite, so a rolled-back
   mention sends nothing. The bell row is in the same transaction as the comment.
-- **`NOTIFICATION_SWEEP_INTERVAL_S` has no effect.** The cron is fixed to hourly. A comment in
-  `backend/src/inkstave/worker.py` says the setting only documents intent.
+- **`NOTIFICATION_SWEEP_INTERVAL_S` is read.** `_cron_jobs` in `backend/src/inkstave/worker.py` passes it
+  to `_sweep_minutes`, so a value under an hour gives several sweeps an hour. Values of an hour or more run
+  once an hour, since the cron cannot express longer gaps.
 - **`APP_BASE_URL` is misdescribed.** `.env.example` calls it the base for e-mail URLs. All real links
   use `FRONTEND_URL`.
 - **`send-test-email` gaps.** `_test_email_context` claims to cover every template's keys but has no

@@ -260,7 +260,7 @@ Defined in `backend/src/inkstave/core/config/groups.py`. Names are the upper cas
 |---|---|---|
 | `COMPILE_MODE`, `COMPILE_RUNNER` | `real`, `local` | `mock` selects the stub and wins; `sandbox` selects containers |
 | `COMPILE_SANDBOX_DOCKER_BIN`, `_IMAGE`, `_RUNTIME` | `docker`, `inkstave-tectonic`, `runsc` | Client, image, `--runtime` |
-| `COMPILE_SANDBOX_MEMORY_MB`, `_CPUS`, `_PIDS_LIMIT`, `_TMPFS_MB` | `2048`, `1.0`, `256`, `256` | Container caps. Memory applies only when `COMPILE_ADDRESS_SPACE_BYTES` is unset |
+| `COMPILE_SANDBOX_MEMORY_MB`, `_CPUS`, `_PIDS_LIMIT`, `_TMPFS_MB` | `2048`, `1.0`, `256`, `256` | Container caps. The memory cap is also the default address space (see below) |
 | `TECTONIC_BIN`, `TECTONIC_CACHE_DIR` | `tectonic`, `/var/cache/tectonic` | Local runner |
 | `TECTONIC_BUNDLE_URL`, `TECTONIC_OFFLINE` | empty, `false` | `--bundle` and `--only-cached`, local runner |
 | `TECTONIC_COMPILE_TIMEOUT_S`, `COMPILE_JOB_TIMEOUT_S` | `60`, `120` | Wall clock; ARQ timeout. `backend/src/inkstave/core/config/settings.py` requires the second to be larger |
@@ -268,7 +268,7 @@ Defined in `backend/src/inkstave/core/config/groups.py`. Names are the upper cas
 | `COMPILE_MAX_INPUT_FILES`, `COMPILE_MAX_INPUT_BYTES` | `2000`, `104857600` | Assembly caps |
 | `COMPILE_MAX_OUTPUT_BYTES` | `104857600` | Cap on all collected outputs together; over it the compile is `error` |
 | `COMPILE_MAX_LOG_BYTES`, `COMPILE_MAX_STDOUT_BYTES` | `2097152`, `262144` | Text kept in the result |
-| `COMPILE_CPU_SECONDS`, `COMPILE_ADDRESS_SPACE_BYTES` | `60`, `2147483648` | Local rlimits; the second is also the sandbox `--memory`. Empty disables |
+| `COMPILE_CPU_SECONDS`, `COMPILE_ADDRESS_SPACE_BYTES` | `60`, unset | Local rlimits. Unset, the address space is `COMPILE_SANDBOX_MEMORY_MB` MiB; an explicit value wins. Empty disables |
 | `COMPILE_KEEP_WORKDIR_ON_FAILURE` | `false` | Honoured by the service, undone by the job |
 | `COMPILE_OUTPUT_PREFIX`, `COMPILE_PDF_CACHE_MAX_AGE_S` | `compiles`, `60` | Storage prefix; `Cache-Control` max-age |
 | `COMPILE_RETAIN_PER_PROJECT`, `COMPILE_RETENTION_MAX_AGE_S` | `10`, `2592000` | Keep window, 30 days |
@@ -307,8 +307,9 @@ are all in `_sandbox_flags`.
 **Other sandbox limits.**
 - `/out` is a writable bind mount with no size cap, so a compile can fill the worker's disk until the
   timeout. `COMPILE_MAX_OUTPUT_BYTES` only checks after the run, so it does not help during the run.
-- `COMPILE_ADDRESS_SPACE_BYTES` has a default, so `COMPILE_SANDBOX_MEMORY_MB` is ignored unless that is
-  emptied. `COMPILE_CPU_SECONDS` has no effect on a container.
+- `COMPILE_SANDBOX_MEMORY_MB` takes effect unless `COMPILE_ADDRESS_SPACE_BYTES` is set explicitly:
+  `Settings._derive_address_space` derives the address space from it, and the sandbox then passes that
+  as `--memory`. `COMPILE_CPU_SECONDS` has no effect on a container.
 - `validate_main_file` rejects spaces and non-ASCII, so `café.tex` is an `error` in sandbox mode and
   fine in local mode.
 - A container has no deadline of its own. If the worker dies, nothing kills it.
@@ -327,10 +328,12 @@ either runner. When Redis is down it refuses (503) instead of failing open, beca
 `RATE_LIMIT_ENABLED=false` removes it.
 
 **Settings and config that do nothing.**
-- From `infra/tectonic/packages.toml`, only `[bundle] format` reaches a runner, and it is stored in
-  `_format` and not used; `--outfmt pdf` is hard-coded. `allow_network_fetch`, `[bundle] url`, `[cache] dir`
-  and `prewarm` are parsed and tested, then ignored. `--only-cached` follows `TECTONIC_OFFLINE`. The
-  instructions in that file to set `allow_network_fetch = false` have no effect.
+- What `infra/tectonic/packages.toml` does, key by key (the file's header says the same):
+  `[bundle] format` is passed to the runner, stored in `_format` and not used; `--outfmt pdf` is hard-coded.
+  `[bundle] url`, `[cache] dir`, `[cache] prewarm_on_build` and `[policy] allow_network_fetch` are parsed by
+  `load_package_config` and never used: the worker reads `TECTONIC_BUNDLE_URL`, `TECTONIC_CACHE_DIR` and
+  `TECTONIC_OFFLINE`. `[packages] prewarm` is read only by `scripts/build_completion_packages.py`, the
+  completion list; the Docker warm-up has its own copy. `--only-cached` follows `TECTONIC_OFFLINE`.
 - `build_prewarm_document` has no caller. The package list in `infra/tectonic/Dockerfile` is maintained by
   hand. `backend/Dockerfile` warms only a trivial document.
 - `COMPILE_KEEP_WORKDIR_ON_FAILURE` is undone by the job's cleanup, and the job is the only caller.

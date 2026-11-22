@@ -85,19 +85,3 @@ class SectionMatch(BaseModel):
     node: StructureNode
     score: float
     reason: str
-
-
-class ContextChunk(BaseModel):
-    kind: str  # "outline" | "section" | "surrounding" | "search"
-    file_path: str | None = None
-    title: str | None = None
-    text: str
-    priority: int  # lower = kept first
-    truncated: bool = False
-
-
-class ContextBundle(BaseModel):
-    goal: str
-    chunks: list[ContextChunk] = Field(default_factory=list)
-    estimated_tokens: int = 0
-    budget_tokens: int = 0

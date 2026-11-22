@@ -112,6 +112,18 @@ class Settings(
         return value
 
     @model_validator(mode="after")
+    def _derive_address_space(self) -> Settings:
+        """An unset COMPILE_ADDRESS_SPACE_BYTES follows COMPILE_SANDBOX_MEMORY_MB.
+
+        Both defaults are 2 GiB. Deriving the address space from the sandbox memory cap makes
+        COMPILE_SANDBOX_MEMORY_MB take effect; an explicit value, or an empty one that disables
+        the rlimit, is kept as given.
+        """
+        if "compile_address_space_bytes" not in self.model_fields_set:
+            self.compile_address_space_bytes = self.compile_sandbox_memory_mb * 1024 * 1024
+        return self
+
+    @model_validator(mode="after")
     def _guard_production_secret(self) -> Settings:
         """Refuse to boot in production with a missing/weak/example JWT secret (spec 52).
 

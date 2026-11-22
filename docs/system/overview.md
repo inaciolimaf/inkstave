@@ -344,8 +344,9 @@ cannot find one. CI runs unit, integration and e2e in parallel and enforces a 18
   skipped.
 - **Tier selection trusts the marker.** A file in `backend/tests/integration` without the
   `integration` marker runs in the unit tier. No test currently carries `slow`, `e2e` or `live`.
-- **`HISTORY_COMPACT_INTERVAL_S` and `NOTIFICATION_SWEEP_INTERVAL_S` drive nothing.** The cron
-  entries are fixed. Only `COMPILE_RETENTION_SWEEP_S` takes effect, read at worker import.
+- **The sweep intervals are read at worker import.** `COMPILE_RETENTION_SWEEP_S`,
+  `HISTORY_COMPACT_INTERVAL_S` and `NOTIFICATION_SWEEP_INTERVAL_S` set the cron minutes through
+  `_cron_jobs`. Intervals of an hour or more run hourly.
 - **`app.state.arq_pool` is never closed** by the lifespan.
 - **`docs/adr/0057-cicd-bootstrap.md` describes a CD workflow that does not exist.** It cites a
   `cd.yml`; `.github/workflows/ci.yml` is the only workflow. It also cites pre-move paths.

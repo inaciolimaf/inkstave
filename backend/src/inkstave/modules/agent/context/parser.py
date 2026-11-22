@@ -19,18 +19,36 @@ from inkstave.modules.agent.context.models import (
     StructureNode,
 )
 
-_SECTION_RE = re.compile(r"\\(part|chapter|section|subsection|subsubsection|paragraph|subparagraph)(\*)?")
+_SECTION_NAMES = ("part", "chapter", "section", "subsection", "subsubsection", "paragraph", "subparagraph")
 _BEGIN_RE = re.compile(r"\\begin\s*\{([^}]*)\}")
 _END_RE = re.compile(r"\\end\s*\{([^}]*)\}")
 _INPUT_RE = re.compile(r"\\(input|include|subfile)\s*\{([^}]*)\}")
 _LABEL_RE = re.compile(r"\\label\s*\{([^}]*)\}")
-_TOKEN_RE = re.compile(
-    r"\\(?:part|chapter|section|subsection|subsubsection|paragraph|subparagraph)\*?"
+_STRUCTURE_ALTERNATIVES = (
     r"|\\begin\s*\{[^}]*\}"
     r"|\\end\s*\{[^}]*\}"
     r"|\\(?:input|include|subfile)\s*\{[^}]*\}"
     r"|\\label\s*\{[^}]*\}"
 )
+
+
+def _section_names(extra_commands: Sequence[str]) -> tuple[str, ...]:
+    """The standard sectioning names plus AGENT_SECTION_EXTRA_COMMANDS (spec 48)."""
+    return (*_SECTION_NAMES, *(name for name in extra_commands if name not in _SECTION_NAMES))
+
+
+def _alternation(names: Sequence[str]) -> str:
+    return "|".join(re.escape(name) for name in names)
+
+
+def _section_re(names: Sequence[str]) -> re.Pattern[str]:
+    """Matches one sectioning token; use ``fullmatch`` so ``\\sec`` never matches ``\\section``."""
+    return re.compile(rf"\\({_alternation(names)})(\*)?")
+
+
+def _token_re(names: Sequence[str]) -> re.Pattern[str]:
+    # The lookahead makes a token a whole command name: \partial is not \part.
+    return re.compile(rf"\\(?:{_alternation(names)})(?![A-Za-z])\*?" + _STRUCTURE_ALTERNATIVES)
 
 
 def _strip_comment(line: str) -> str:
@@ -115,6 +133,7 @@ class _Scan:
     file_path: str
     line_starts: list[int]
     extra_levels: dict[str, int]
+    section_re: re.Pattern[str] = field(default_factory=lambda: _section_re(_SECTION_NAMES))
     secs: list[_Sec] = field(default_factory=list)
     envs: list[StructureNode] = field(default_factory=list)
     inputs: list[StructureNode] = field(default_factory=list)
@@ -147,7 +166,7 @@ class _Scan:
         start_char = self.char_at(line_idx, tok.start())
         end_char = self.char_at(line_idx, tok.end()) - 1
 
-        sec_m = _SECTION_RE.match(piece)
+        sec_m = self.section_re.fullmatch(piece)
         if sec_m:
             self._section(sec_m.group(1), code, tok.end(), line_no, start_char)
             return
@@ -247,7 +266,9 @@ def parse_latex_structure(
     text: str, file_path: str, extra_commands: Sequence[str] = ()
 ) -> list[StructureNode]:
     lines = text.split("\n")
-    scan = _Scan(file_path, _line_starts(lines), dict.fromkeys(extra_commands, 1))
+    names = _section_names(extra_commands)
+    scan = _Scan(file_path, _line_starts(lines), dict.fromkeys(extra_commands, 1), _section_re(names))
+    token_re = _token_re(names)
 
     for line_idx, raw in enumerate(lines):
         line_no = line_idx + 1
@@ -255,7 +276,7 @@ def parse_latex_structure(
             scan.close_verbatim(line_idx, raw, line_no)
             continue
         code = _strip_comment(raw)
-        for tok in _TOKEN_RE.finditer(code):
+        for tok in token_re.finditer(code):
             scan.token(code, tok, line_idx, line_no)
 
     _close_section_ranges(scan.secs, len(lines), len(text))
