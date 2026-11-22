@@ -1,5 +1,5 @@
 /** The History side panel: timeline + diff + restore (spec 38). */
-import { useEffect, useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -13,17 +13,24 @@ import { HistoryTimeline } from "./HistoryTimeline";
 import { RestoreVersionButton } from "./RestoreVersionButton";
 import { useHistoryMutations, useVersions } from "./useHistory";
 
-export function HistoryPanel({
-  projectId,
-  docId,
-  open,
-  onOpenChange,
-}: {
+type PanelProps = {
   projectId: string;
   docId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}) {
+};
+
+/** The selection belongs to one document: a body per document starts with none, in the same render. */
+export function HistoryPanel(props: PanelProps) {
+  return <HistoryPanelBody key={props.docId} {...props} />;
+}
+
+function HistoryPanelBody({
+  projectId,
+  docId,
+  open,
+  onOpenChange,
+}: ComponentProps<typeof HistoryPanel>) {
   const { t } = useTranslation("history");
   const perms = usePermissions(projectId);
   const canWrite = hasCapability(perms.data, "doc_write");
@@ -31,10 +38,6 @@ export function HistoryPanel({
 
   const [primary, setPrimary] = useState<number | null>(null);
   const [compare, setCompare] = useState<number | null>(null);
-  useEffect(() => {
-    setPrimary(null);
-    setCompare(null);
-  }, [docId]);
 
   const onSelect = (version: number, extend: boolean) => {
     if (extend && primary !== null && version !== primary) {
