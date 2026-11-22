@@ -38,15 +38,19 @@ from __future__ import annotations
 
 import contextlib
 import gzip
+import io
 import os
 import posixpath
 import re
+import zlib
 from bisect import bisect_left
 from dataclasses import dataclass, field
 
 from inkstave.modules.compile.synctex.models import ForwardResult, InverseResult, SyncTexBox
 
 _SP_PER_PT = 65536.0
+_DEFAULT_MAX_TEXT_BYTES = 256 * 1024 * 1024  # matches SYNCTEX_MAX_TEXT_BYTES
+_GUNZIP_CHUNK = 64 * 1024
 
 # <type><tag>,<line>[,<column>]:<h>,<v>[:<W>,<H>,<D>] — anchored at the line start;
 # trailing data (e.g. a kern's single width value) is intentionally not captured.
@@ -55,6 +59,24 @@ _RECORD_RE = re.compile(r"^([\[(hvxkg$])(\d+),(\d+)(?:,(\d+))?:(-?\d+),(-?\d+)(?
 
 class SyncTexParseError(ValueError):
     """Raised only when the SyncTeX preamble itself cannot be read."""
+
+
+class SyncTexTooLargeError(ValueError):
+    """The SyncTeX text would expand past the allowed size (a decompression bomb, or simply huge)."""
+
+
+def _gunzip_bounded(data: bytes, max_bytes: int) -> bytes:
+    """Decompress gzip data (several members allowed), refusing output past ``max_bytes``.
+
+    Reads in chunks, so the decompressed output is never held beyond the limit plus one chunk.
+    """
+    out = bytearray()
+    with gzip.GzipFile(fileobj=io.BytesIO(data)) as reader:
+        while chunk := reader.read(_GUNZIP_CHUNK):
+            out += chunk
+            if len(out) > max_bytes:
+                raise SyncTexTooLargeError(f"synctex text exceeds {max_bytes} bytes")
+    return bytes(out)
 
 
 # Tectonic can record absolute paths, and the compile's folder means nothing to the project.
@@ -269,13 +291,16 @@ class SyncTexIndex:
     version: str = field(default="")
 
     @classmethod
-    def from_gz_bytes(cls, data: bytes) -> SyncTexIndex:
+    def from_gz_bytes(cls, data: bytes, *, max_bytes: int = _DEFAULT_MAX_TEXT_BYTES) -> SyncTexIndex:
+        """Parse a ``synctex.gz``; raises :class:`SyncTexTooLargeError` past ``max_bytes`` of text."""
         try:
-            text = gzip.decompress(data).decode("utf-8", "replace")
-        except (OSError, EOFError):
+            raw = _gunzip_bounded(data, max_bytes)
+        except (OSError, EOFError, zlib.error):
             # Tolerate an already-decompressed (plain text) synctex file.
-            text = data.decode("utf-8", "replace")
-        return cls._parse(text)
+            raw = data
+        if len(raw) > max_bytes:
+            raise SyncTexTooLargeError(f"synctex text exceeds {max_bytes} bytes")
+        return cls._parse(raw.decode("utf-8", "replace"))
 
     @classmethod
     def from_gz_path(cls, path: str | os.PathLike[str]) -> SyncTexIndex:

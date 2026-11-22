@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 from collections.abc import AsyncIterator
 from uuid import uuid4
 
@@ -79,6 +80,14 @@ async def test_no_synctex_artifact_is_unavailable() -> None:
 async def test_oversize_synctex_is_refused() -> None:
     big = _FakeStored(gz(SINGLE_FILE), size=10_000_000)
     service = _service(_FakeStore(big), synctex_max_gz_bytes=1)
+    with pytest.raises(SyncTexNotAvailableError):
+        await service.load_index(uuid4(), None)
+
+
+async def test_decompression_bomb_is_unavailable_not_parsed() -> None:
+    # A small archive that expands past SYNCTEX_MAX_TEXT_BYTES is refused while it inflates.
+    bomb = _FakeStored(gzip.compress(b"A" * (20 * 1024 * 1024), compresslevel=9), etag="bomb")
+    service = _service(_FakeStore(bomb), synctex_max_text_bytes=1024 * 1024)
     with pytest.raises(SyncTexNotAvailableError):
         await service.load_index(uuid4(), None)
 

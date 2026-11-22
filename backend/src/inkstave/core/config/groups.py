@@ -346,6 +346,7 @@ class CollabSettingsMixin:
 
     # SyncTeX source <-> PDF sync (spec 26).
     synctex_max_gz_bytes: int = 33_554_432  # 32 MiB; larger files are refused
+    synctex_max_text_bytes: int = 268_435_456  # 256 MiB; the decompressed text is capped at this
     synctex_index_cache_size: int = 16  # parsed indices kept in process (0 disables)
 
     # LaTeX log -> structured problems parsing (spec 27).

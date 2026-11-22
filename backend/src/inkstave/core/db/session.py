@@ -12,7 +12,7 @@ first, or open a short one from :func:`get_session_factory`.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 from fastapi import Depends, Request
 from sqlalchemy import func, select
@@ -32,6 +32,23 @@ def get_session_factory(request: Request) -> async_sessionmaker[AsyncSession]:
     return sessionmaker
 
 
+_AFTER_COMMIT = "inkstave_after_commit"
+
+
+def after_commit(session: AsyncSession, action: Callable[[], Awaitable[object]]) -> None:
+    """Run ``action`` once the session's transaction has committed (for example, an enqueue).
+
+    Actions run in registration order, after the commit, and only on a successful commit.
+    """
+    session.info.setdefault(_AFTER_COMMIT, []).append(action)
+
+
+async def run_after_commit(session: AsyncSession) -> None:
+    """Run and clear the actions registered with :func:`after_commit`. Call after a commit."""
+    for action in session.info.pop(_AFTER_COMMIT, []):
+        await action()
+
+
 async def get_db_session(
     factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> AsyncIterator[AsyncSession]:
@@ -40,8 +57,10 @@ async def get_db_session(
     try:
         yield session
         await session.commit()
+        await run_after_commit(session)
     except Exception:
         await session.rollback()
+        session.info.pop(_AFTER_COMMIT, None)
         raise
     finally:
         await session.close()

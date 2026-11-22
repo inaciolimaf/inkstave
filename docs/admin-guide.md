@@ -203,6 +203,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `PROJECT_EVENTS_KEEPALIVE_S` | No | `15` | project event stream keep-alive; membership is re-checked at each one (spec 117) | backend |
 | `COMPILE_CANCEL_FLAG_TTL_S` | No | `300` | TTL for the Redis cancel flag | backend, worker |
 | `SYNCTEX_MAX_GZ_BYTES` | No | `33554432` | refuse to parse synctex.gz larger than this (32 MiB) | backend |
+| `SYNCTEX_MAX_TEXT_BYTES` | No | `268435456` | refuse a synctex.gz whose decompressed text passes this (256 MiB) | backend |
 | `SYNCTEX_INDEX_CACHE_SIZE` | No | `16` | parsed synctex indices cached per process (0 disables) | backend |
 | `LOGPARSE_MAX_LOG_BYTES` | No | `8388608` | tail-truncate logs larger than this before parsing (8 MiB) | backend |
 | `LOGPARSE_WRAP_WIDTH` | No | `79` | TeX log hard-wrap width used for de-wrapping | backend |
