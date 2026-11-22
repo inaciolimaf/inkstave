@@ -54,7 +54,11 @@ class CommentThreadRead(BaseModel):
 
 
 class CommentThreadList(BaseModel):
+    """One page of threads. Pass ``next_cursor`` back as ``after`` to read the next page."""
+
     items: list[CommentThreadRead]
+    has_more: bool = False
+    next_cursor: str | None = Field(default=None, description="Opaque; send it as `after` for the next page")
 
 
 class CommentThreadCreate(BaseModel):

@@ -560,13 +560,31 @@
         "type": "object"
       },
       "CommentThreadList": {
+        "description": "One page of threads. Pass ``next_cursor`` back as ``after`` to read the next page.",
         "properties": {
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/CommentThreadRead"
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; send it as `after` for the next page",
+            "title": "Next Cursor"
           }
         },
         "required": [
@@ -7293,6 +7311,38 @@
               ],
               "title": "Status",
               "type": "string"
+            }
+          },
+          {
+            "description": "Threads per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Threads per page",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The next_cursor of the previous page",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The next_cursor of the previous page",
+              "title": "After"
             }
           }
         ],

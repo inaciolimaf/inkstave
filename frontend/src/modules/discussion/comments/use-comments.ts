@@ -3,29 +3,42 @@
  * that change them. Every write refetches the list, so the author sees the result even if the event
  * was lost; every `comment.*` event refetches it for the other members.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type InfiniteData, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
+  type CommentThread,
   createThread,
   deleteMessage,
   editMessage,
-  fetchThreads,
+  fetchThreadPage,
   type NewThread,
   replyToThread,
   setThreadResolved,
+  type ThreadPage,
 } from "./api";
 import { useProjectEvents } from "../use-project-events";
 
 export const commentsKey = (projectId: string) => ["discussion", "comments", projectId] as const;
 
+/** The loaded pages as one list, in page order. A stable reference, so the query does not re-select. */
+const allThreads = (data: InfiniteData<ThreadPage>): CommentThread[] =>
+  data.pages.flatMap((page) => page.items);
+
+/**
+ * The project's threads, loaded a page at a time: `data` is every loaded thread, and `fetchNextPage`
+ * loads the next page on demand. A comment event refetches the loaded pages.
+ */
 export function useCommentThreads(projectId: string) {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: commentsKey(projectId),
-    queryFn: () => fetchThreads(projectId),
+    queryFn: ({ pageParam }) => fetchThreadPage(projectId, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    select: allThreads,
   });
   const refresh = useCallback(
     () => void queryClient.invalidateQueries({ queryKey: commentsKey(projectId) }),

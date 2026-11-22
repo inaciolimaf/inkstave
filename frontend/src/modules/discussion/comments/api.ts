@@ -16,8 +16,17 @@ export interface NewThread {
   mentions: string[];
 }
 
-export async function fetchThreads(projectId: string): Promise<CommentThread[]> {
-  return (await apiClient.get<Schemas["CommentThreadList"]>(`${base(projectId)}?status=all`)).items;
+/** One page of threads; `nextCursor` is null on the last page. */
+export interface ThreadPage {
+  items: CommentThread[];
+  nextCursor: string | null;
+}
+
+export async function fetchThreadPage(projectId: string, after?: string): Promise<ThreadPage> {
+  const query = new URLSearchParams({ status: "all" });
+  if (after) query.set("after", after);
+  const body = await apiClient.get<Schemas["CommentThreadList"]>(`${base(projectId)}?${query.toString()}`);
+  return { items: body.items, nextCursor: body.next_cursor ?? null };
 }
 
 export function createThread(projectId: string, thread: NewThread): Promise<CommentThread> {

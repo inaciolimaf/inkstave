@@ -56,6 +56,8 @@ const dict = {
       all: "All files",
     },
     empty: "No comments here.",
+    loadMore: "Load more comments",
+    loadingMore: "Loading comments…",
     thread: {
       label: "Comment thread",
       messages: "Messages",

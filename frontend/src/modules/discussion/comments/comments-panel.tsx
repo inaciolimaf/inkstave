@@ -45,6 +45,10 @@ export interface CommentsPanelProps {
   onDraftCancel: () => void;
   /** The Suggestions tab (spec 119); null where the document has no collaborative text. */
   suggestions?: SuggestionsTabProps | null;
+  /** The server has threads past the loaded pages. */
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 /** The two tabs of the review column (spec 119). */
@@ -195,6 +199,18 @@ function PanelBody(props: CommentsPanelProps & { ranges: Map<string, ResolvedRan
             />
           </div>
         ))}
+        {props.hasMore && (
+          <div className="flex justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={props.loadingMore}
+              onClick={() => props.onLoadMore?.()}
+            >
+              {t(props.loadingMore ? "comments.loadingMore" : "comments.loadMore")}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
