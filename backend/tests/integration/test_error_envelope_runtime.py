@@ -26,25 +26,14 @@ pytestmark = pytest.mark.integration
 _LEAK = "super-secret-internal-detail-do-not-leak"
 
 
-def _assert_envelope(
-    body: dict[str, Any], *, expect_type: str | None = None, require_request_id: bool = True
-) -> None:
-    """Assert ``body`` matches ``ErrorEnvelope`` ``{error: {type, message, ...}}``.
-
-    ``require_request_id`` is relaxed for the 500 path: Starlette routes the
-    catch-all ``Exception`` handler through ``ServerErrorMiddleware``, which sits
-    *outside* ``RequestContextMiddleware``, so the request-id context is already
-    unwound when the body is built. The representative typed errors below still
-    carry a non-empty request id.
-    """
+def _assert_envelope(body: dict[str, Any], *, expect_type: str | None = None) -> None:
+    """Assert ``body`` matches ``ErrorEnvelope`` ``{error: {type, message, ...}}``, with a request id."""
     assert set(body.keys()) == {"error"}, body
     err = body["error"]
     assert isinstance(err["type"], str) and err["type"]
     assert isinstance(err["message"], str) and err["message"]
     assert "details" in err  # key always present (may be null)
-    assert "request_id" in err
-    if require_request_id:
-        assert isinstance(err["request_id"], str) and err["request_id"]
+    assert isinstance(err["request_id"], str) and err["request_id"]
     if expect_type is not None:
         assert err["type"] == expect_type
 
@@ -124,7 +113,7 @@ async def test_500_envelope_does_not_leak_internals(app: Any, async_client: Asyn
     r = await async_client.get("/__test__/boom")
     assert r.status_code == 500
     body = r.json()
-    _assert_envelope(body, expect_type="internal_error", require_request_id=False)
+    _assert_envelope(body, expect_type="internal_error")
     # The internal exception text and any traceback must never reach the client.
     assert _LEAK not in r.text
     assert "Traceback" not in r.text

@@ -23,15 +23,19 @@ import { throttle, type Throttled } from "./throttle";
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
+// Keepalive, outside y-protocols: the server pings, the provider answers (spec 29).
+const MESSAGE_HEARTBEAT_PING = 2;
+const MESSAGE_HEARTBEAT_PONG = 3;
 
 const RECONNECT_BASE_MS = 500;
 const RECONNECT_CAP_MS = 15_000;
 
 const WS_OPEN = 1;
 
-// Spec-29 application close codes that will never recover by retrying — a bad/
-// expired token (4401), a non-member/removed collaborator (4403), or a deleted
-// project/document (4404). Reconnecting on these would spin forever (spec 35).
+// Spec-29 application close codes. 4401 (bad or expired token) can recover once the
+// token is refreshed; 4403 (not a collaborator) and 4404 (deleted project or document)
+// never do. Reconnecting after any of them would spin forever (spec 35).
+const CLOSE_UNAUTHORIZED = 4401;
 const TERMINAL_CLOSE_CODES = new Set([4401, 4403, 4404]);
 
 export type ProviderStatus = "idle" | "connecting" | "connected" | "reconnecting" | "closed";
@@ -43,6 +47,12 @@ export interface ProviderOptions {
   ydoc: Y.Doc;
   awareness: Awareness;
   getToken: () => string | Promise<string>;
+  /**
+   * Refresh the access token after a 4401 close. Resolves `true` when a new token is
+   * stored, so `getToken` returns it. Without it, or when it resolves `false`, a 4401 stops
+   * the provider. A 4401 that repeats before the session syncs also stops it.
+   */
+  refreshToken?: () => Promise<boolean>;
   /** Inject a WebSocket implementation (tests pass a fake). Defaults to the global. */
   WebSocketImpl?: typeof WebSocket;
   /** Connect immediately (default true). */
@@ -64,13 +74,20 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
 
   private readonly _url: string;
   private readonly _getToken: () => string | Promise<string>;
+  private readonly _refreshToken: (() => Promise<boolean>) | undefined;
   private readonly _WebSocket: typeof WebSocket;
 
   private _ws: WebSocket | null = null;
   private _status: ProviderStatus = "idle";
   private _synced = false;
+  // Acks for flush(): every SyncStep1 we send gets exactly one SyncStep2 reply, and the server handles a
+  // connection's frames in order, so a reply proves every update sent before that step1 was applied.
+  private _step1Sent = 0;
+  private _step2Received = 0;
+  private _ackWaiters: { upTo: number; resolve: () => void }[] = [];
   private _destroyed = false;
   private _stopped = false; // terminal close (4401/4403/4404): no more reconnects
+  private _authRetried = false; // a refresh after 4401 is pending or spent until the session syncs
   private _reconnectAttempt = 0;
   private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly _awarenessThrottleMs: number;
@@ -84,6 +101,7 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
     this.documentId = opts.documentId;
     this._url = opts.url;
     this._getToken = opts.getToken;
+    this._refreshToken = opts.refreshToken;
     this._WebSocket = opts.WebSocketImpl ?? (globalThis.WebSocket as typeof WebSocket);
     this._awarenessThrottleMs = opts.awarenessThrottleMs ?? 0;
     this._flushAwareness = throttle(() => this._flushPendingAwareness(), this._awarenessThrottleMs);
@@ -135,46 +153,107 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
     this._reconnectAttempt = 0;
     this._setStatus("connected");
     // Re-run the Yjs sync handshake on every (re)connect from the current state.
+    this._sendStep1();
+  }
+
+  /** Send a SyncStep1 and return its ordinal on this socket (see `flush`). */
+  private _sendStep1(): number {
+    this._step1Sent += 1;
+    const ordinal = this._step1Sent;
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, MESSAGE_SYNC);
     syncProtocol.writeSyncStep1(encoder, this.doc);
     this._send(encoding.toUint8Array(encoder));
+    return ordinal;
+  }
+
+  /** Release every flush waiting on this socket: its replies can no longer arrive. */
+  private _settleAcks(): void {
+    const waiters = this._ackWaiters;
+    this._ackWaiters = [];
+    this._step1Sent = 0;
+    this._step2Received = 0;
+    for (const waiter of waiters) waiter.resolve();
   }
 
   private _onMessage(data: ArrayBuffer): void {
     const decoder = decoding.createDecoder(new Uint8Array(data));
     const messageType = decoding.readVarUint(decoder);
-    if (messageType === MESSAGE_SYNC) {
+    if (messageType === MESSAGE_HEARTBEAT_PING) {
+      this._send(Uint8Array.of(MESSAGE_HEARTBEAT_PONG));
+    } else if (messageType === MESSAGE_SYNC) {
       const encoder = encoding.createEncoder();
       encoding.writeVarUint(encoder, MESSAGE_SYNC);
       const syncType = syncProtocol.readSyncMessage(decoder, encoder, this.doc, this);
       if (encoding.length(encoder) > 1) this._send(encoding.toUint8Array(encoder));
       // The server's Step 2 (reply to our Step 1) completes the initial sync.
-      if (syncType === syncProtocol.messageYjsSyncStep2 && !this._synced) {
-        this._synced = true;
-        this.emit("synced", [{ synced: true }]);
+      if (syncType === syncProtocol.messageYjsSyncStep2) {
+        this._acknowledge();
+        this._onSynced();
       }
     } else if (messageType === MESSAGE_AWARENESS) {
       applyAwarenessUpdate(this.awareness, decoding.readVarUint8Array(decoder), this);
     }
   }
 
+  private _acknowledge(): void {
+    this._step2Received += 1;
+    while (this._ackWaiters.length > 0 && this._ackWaiters[0].upTo <= this._step2Received) {
+      this._ackWaiters.shift()?.resolve();
+    }
+  }
+
+  private _onSynced(): void {
+    // The server accepted this token, so a later 4401 may refresh again.
+    this._authRetried = false;
+    if (this._synced) return;
+    this._synced = true;
+    this.emit("synced", [{ synced: true }]);
+  }
+
   private _onClose(code?: number): void {
     this._ws = null;
+    this._settleAcks();
     if (this._destroyed) {
       this._setStatus("closed");
       return;
     }
+    if (code === CLOSE_UNAUTHORIZED && this._refreshToken && !this._authRetried) {
+      void this._retryWithFreshToken(this._refreshToken);
+      return;
+    }
     if (code !== undefined && TERMINAL_CLOSE_CODES.has(code)) {
       // Auth/permission/not-found close: stop retrying (it cannot recover).
-      this._stopped = true;
-      this._setStatus("closed");
-      this.emit("connection-error", [{ error: new Error(`connection closed (${code})`) }]);
+      this._stop(code);
       return;
     }
     // `synced` stays true once achieved: edits remain allowed while reconnecting.
     this._setStatus("reconnecting");
     this._scheduleReconnect();
+  }
+
+  /** After a 4401: refresh the token once and reconnect with it, or stop if the refresh fails. */
+  private async _retryWithFreshToken(refresh: () => Promise<boolean>): Promise<void> {
+    this._authRetried = true;
+    this._setStatus("reconnecting");
+    let refreshed = false;
+    try {
+      refreshed = await refresh();
+    } catch {
+      refreshed = false;
+    }
+    if (this._destroyed) return;
+    if (!refreshed) {
+      this._stop(CLOSE_UNAUTHORIZED);
+      return;
+    }
+    void this.connect();
+  }
+
+  private _stop(code: number): void {
+    this._stopped = true;
+    this._setStatus("closed");
+    this.emit("connection-error", [{ error: new Error(`connection closed (${code})`) }]);
   }
 
   private _scheduleReconnect(): void {
@@ -237,18 +316,26 @@ export class InkstaveWsProvider extends ObservableV2<ProviderEvents> {
     }
   }
 
-  /** Resolve once pending local updates have been flushed to the socket (for compile). */
-  async flush(): Promise<void> {
-    await Promise.resolve(); // let any queued doc-update handlers run
-    while (this._ws && this._ws.bufferedAmount > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
+  /**
+   * Resolve once the server has applied the local updates sent so far. It sends a SyncStep1 and waits for the
+   * reply; the reply comes after those updates on the same socket. Resolves at once when no socket is open
+   * (nothing can reach the server), and when the socket closes first. Callers add their own deadline.
+   */
+  flush(): Promise<void> {
+    const ws = this._ws;
+    if (!ws || ws.readyState !== WS_OPEN) return Promise.resolve();
+    return new Promise((resolve) => {
+      // Register before sending: a reply can arrive synchronously (an in-process server).
+      this._ackWaiters.push({ upTo: this._step1Sent + 1, resolve });
+      this._sendStep1();
+    });
   }
 
   destroy(): void {
     if (this._destroyed) return; // safe to call twice (React StrictMode teardown)
     this._destroyed = true;
     this._flushAwareness.cancel();
+    this._settleAcks();
     if (this._reconnectTimer !== null) {
       clearTimeout(this._reconnectTimer);
       this._reconnectTimer = null;

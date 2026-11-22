@@ -82,5 +82,5 @@ async def metrics_endpoint(request: Request) -> Response:
         return Response(status_code=404)
     redis = getattr(request.app.state, "redis", None)
     if redis is not None:
-        await metrics.sample_queue_depth(redis)
+        await metrics.sample_queue_depth(redis, get_settings().compile_queue_name)
     return Response(content=metrics.render_latest(), media_type=metrics.CONTENT_TYPE)

@@ -50,6 +50,9 @@ class ToolContext:
     settings: AgentSettings
     staged_edits: list[StagedEdit] = field(default_factory=list)
     staged_file_ops: list[StagedFileOp] = field(default_factory=list)
+    # doc_id -> the version `read_file` last returned for it in this turn. `propose_edit`
+    # refuses a document the model has not read, or one changed since it was read.
+    read_versions: dict[str, str] = field(default_factory=dict)
     object_store: ObjectStore | None = None
     # Safety (spec 49): audit events collected during a turn + injection flagging toggle.
     audit_events: list[dict[str, Any]] = field(default_factory=list)
