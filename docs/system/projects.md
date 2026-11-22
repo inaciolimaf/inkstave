@@ -25,7 +25,9 @@ The module is `backend/src/inkstave/modules/projects/`.
 | `backend/src/inkstave/modules/projects/deps.py` | `get_import_enqueuer` |
 | `backend/src/inkstave/modules/projects/transfer/export.py` | Export plan and streaming zip writer |
 | `backend/src/inkstave/modules/projects/transfer/jobs.py` | `import_project_zip` ARQ job |
-| `backend/src/inkstave/modules/projects/transfer/enqueuer.py` | `ImportEnqueuer`, faked in tests |
+| `backend/src/inkstave/modules/projects/transfer/enqueuer.py` | `ImportEnqueuer`, faked in tests; `ImportServices`; `dispatch_import`, the background enqueue after the commit |
+| `backend/src/inkstave/modules/projects/blobs.py` | `purge_file_blobs_for_deleted` (tree listener), `purge_file_blobs_for_project`: file blobs removed after the commit |
+| `backend/src/inkstave/infra/storage/after_commit.py` | `schedule_delete_after_commit`: the after-commit delete queue, shared with history |
 | `backend/src/inkstave/modules/projects/transfer/repository.py` | `ProjectImportRepository` |
 | `backend/src/inkstave/modules/projects/transfer/stream.py` | Redis pub/sub and SSE frames for import status |
 | `backend/src/inkstave/modules/projects/transfer/zip_import/plan.py` | Central-directory validation, `TEXT_EXTENSIONS`, zip error types |
@@ -44,6 +46,8 @@ The module is `backend/src/inkstave/modules/projects/`.
 | `frontend/src/modules/file-tree/` | Tree panel, drag and drop, uploads |
 
 Tests live in `backend/tests/integration/test_projects_api.py`,
+`backend/tests/integration/test_project_blobs_api.py`, `backend/tests/integration/test_document_content_limits.py`,
+`backend/tests/integration/test_project_import_enqueue.py`, `backend/tests/unit/test_email_retry.py`,
 `backend/tests/integration/test_project_service.py`, `backend/tests/integration/test_tree_api.py`,
 `backend/tests/integration/test_tree_api_move.py`, `backend/tests/integration/test_tree_api_delete.py`,
 `backend/tests/integration/test_project_import_api.py`,
@@ -141,9 +145,15 @@ inside one transaction.
 
 `delete_project` calls `soft_delete_project`, which sets `deleted_at`. It then invalidates the cache
 and builds an `OutputStore` to call `delete_for_project`, which removes compile output blobs and rows.
-Nothing else is removed. There is no purge job, no restore route and no trash. No code clears
-`deleted_at` and nothing reads soft-deleted rows back to the user. The tree, documents and file blobs
-stay in place indefinitely. The UI text is "Isso não pode ser desfeito."
+The route then calls `purge_file_blobs_for_project` (`blobs.py`), which queues the project's file blobs
+on the session. They are deleted after the commit, through `backend/src/inkstave/infra/storage/after_commit.py`: a rolled-back
+delete keeps them, and a failed delete is logged. Documents live in the database and stay. There is no purge
+job, no restore route and no trash. No code clears `deleted_at` and nothing reads soft-deleted rows back
+to the user, so the rows stay. The UI text is "Isso não pode ser desfeito."
+
+Deleting a tree entity (a folder or a file, through the tree route or the file route) does the same for
+the files it removes: the `on_entities_deleted` listener `purge_file_blobs_for_deleted` queues their blobs,
+and the composition root (`app.py`) connects it, alongside the history listener.
 
 ### Cross-module imports
 
@@ -167,8 +177,9 @@ come from the upload path.
 or as a stem (`con.txt`).
 
 `move_entity` rejects the root, checks the new parent, uses `is_descendant` (a recursive CTE, `_subtree`)
-to refuse a cycle, then checks for a sibling name clash at the destination. `delete_entity` collects
-`File.storage_key` over the subtree, deletes the row (cascade does the rest), then deletes each blob.
+to refuse a cycle, then checks for a sibling name clash at the destination. `delete_entity` runs the
+`on_entities_deleted` listeners with the subtree's ids, then deletes the row (cascade does the rest). The
+file blobs are removed by the projects listener after the commit (see Delete), not here.
 
 `get_tree` fetches at most `tree_max_nodes + 1` rows and raises `TreeTooLargeError` over the cap.
 `build_tree` sorts folders first, then by lower-cased name. Tree mutation routes call `get_tree` again
@@ -195,8 +206,8 @@ header with ASCII and RFC 5987 forms.
 
 1. The extension must be `.zip`. The declared type must be a zip type, or the first chunk must start with the `PK\x03\x04` magic. Otherwise 415.
 2. `_stage_upload` streams to object storage, enforcing `import_max_zip_bytes`. On overflow the staged key is deleted and the route answers 413.
-3. `_create_import` creates the project (`_effective_name`: the form name, else the sanitized file stem, else `Imported project`), the `project_imports` row, then enqueues. On any failure the staged blob is deleted.
-4. The route answers 202 with `ProjectImportRead`.
+3. `_create_import` creates the project (`_effective_name`: the form name, else the sanitized file stem, else `Imported project`) and the `project_imports` row. The route never commits. On any failure the staged blob is deleted.
+4. The route answers 202 with `ProjectImportRead`, and adds `dispatch_import` as a background task. Background tasks run after the response, when the session dependency has committed, so the job always finds its row. `dispatch_import` opens its own session, enqueues, and stores `job_id`. If the enqueue raises, the row ends `error` with `error_type` `enqueue_failed`, and the staged blob is queued for deletion.
 
 The form field `source` is validated as an enum before the upload is read, so an unknown value is a 422.
 
@@ -254,6 +265,11 @@ pattern marks a file reference, which `missing_file` checks against the project'
 | A folder cannot move into its own subtree; a parent must be a folder | `backend/tests/integration/test_tree_api_move.py::test_move_cycle_and_non_folder` |
 | The root cannot be renamed, moved or deleted | `backend/tests/integration/test_tree_api_delete.py::test_root_is_immutable` |
 | Deleting a folder removes its subtree | `backend/tests/integration/test_tree_api_delete.py::test_delete_recursive` |
+| Deleting a project removes its file blobs, after the commit | `backend/tests/integration/test_project_blobs_api.py::test_deleting_a_project_removes_its_file_blobs` |
+| A failing blob delete does not fail a project or file delete | `backend/tests/integration/test_project_blobs_api.py::test_failing_blob_delete_does_not_fail_the_project_delete`; `::test_failing_blob_delete_does_not_fail_the_file_delete` |
+| The import job is enqueued after the commit; an enqueue failure ends the import `error` | `backend/tests/integration/test_project_import_enqueue.py` |
+| A document of exactly `MAX_DOCUMENT_BYTES` is accepted; one byte more is `content_too_large` | `backend/tests/integration/test_document_content_limits.py` |
+| Content is stored byte-for-byte, whitespace included | `backend/tests/integration/test_document_content_limits.py::test_content_is_stored_byte_for_byte` |
 | Deleting a file entity through the tree removes its blob | `backend/tests/integration/test_tree_api_delete.py::test_delete_via_tree_api_removes_blob` |
 | Unsafe names are rejected | `backend/tests/unit/test_safe_path.py::test_invalid_names` |
 | Export has a fixed order, timestamps and complete content | `backend/tests/integration/test_project_export_api.py::test_export_returns_zip_with_complete_ordered_tree` |
@@ -309,7 +325,8 @@ only stores the choice and never sees the text.
 
 ## Points of attention
 
-- Import is exposed to a race. `_create_import` enqueues before the unit of work commits. A worker that picks the job up first finds no row, returns, and with `max_tries=1` the row stays `queued` and the staged blob stays. No test covers this, since tests use a fake enqueuer.
+- A crash between the commit and the background `dispatch_import` leaves the row `queued` with no job, and with `max_tries=1` nothing re-enqueues it. The window is small, but nothing sweeps it.
+- A commit failure after `_stage_upload` (the unit of work fails at teardown) leaves the staged archive behind: the route's cleanup only covers its own `except`.
 - A case-only clash between text entries (`A.tex`, `a.tex`) still ends a plain zip's import `error`: `_import_text` lets `NameConflictError` escape. A template renames the second entry. The same clash for binaries is a skip.
 - In `_ensure_folder`, when a path segment clashes with an existing non-folder, `_find_child_folder` returns `None`, and `None` means root. Entries below it land in the project root.
 - A rollback in `_import_archive` drops rows, but blobs already written by `upload_file` stay as orphans.
@@ -323,6 +340,7 @@ only stores the choice and never sees the text.
 - `IMPORT_MAX_ENTRIES` counts leaf entries only, though its comment says folders too. `TEXT_EXTENSIONS` wins over `IMPORT_ALLOWED_EXTENSIONS`, so removing `.tex` from the setting changes nothing.
 - `EXPORT_ASYNC_ENABLED=true` does not start a job. No async path exists; the flag only disables the 413, so the export streams regardless of size. Its comment in `backend/src/inkstave/core/config/groups.py` promises an ARQ artifact.
 - `BodySizeLimitMiddleware` in `backend/src/inkstave/core/http/body_limit.py` caps `/import` at `MAX_UPLOAD_BYTES`. Raising `IMPORT_MAX_ZIP_BYTES` above it has no effect.
+- The document content route (`PUT /projects/{id}/documents/{entity}`) has its own body cap: `MAX_DOCUMENT_BYTES` times 6, plus 4 KiB (about 12 MB by default). The JSON body of a document can be up to 6 times its bytes (control characters become `\u00XX`), so the cap never rejects a document the size rule allows. The whole body is read into memory before the route runs.
 - `EXPORT_MAX_TOTAL_BYTES` is larger than the import caps, so a large export may not re-import. A round trip also changes kinds: a `.tex` or `.svg` stored as a `file` comes back a `doc`, and a `doc` with no extension is skipped.
 - Export is streamed by the server, but all document text is in memory first, and `downloadProjectZip` buffers the whole archive in the browser.
 - `root_doc_id` is only written by the import job. No route sets it, it has no FK, deleting that document leaves it dangling, and the frontend does not read it. The compile entry point comes from the compile request's `main_file`.

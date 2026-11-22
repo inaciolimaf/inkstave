@@ -20,6 +20,10 @@ class DocumentContentRead(BaseModel):
 
 
 class DocumentContentReplace(StrictModel):
+    # Stored byte-for-byte: leading and trailing whitespace is part of a LaTeX document, so the
+    # schema's str_strip_whitespace (on for every other request body) is switched off here.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
+
     content: str
     # The version the client edited from; must match the server's current version.
     base_version: int = Field(ge=0)

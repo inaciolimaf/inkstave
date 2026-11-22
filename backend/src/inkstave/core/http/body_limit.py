@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from starlette.datastructures import Headers
@@ -32,7 +33,8 @@ class BodySizeLimitMiddleware:
     """Abort with 413 when Content-Length exceeds the cap, or while streaming past it.
 
     Binary-upload routes (``/files`` for blob uploads, ``/import`` for project zips)
-    use the larger upload cap; everything else the JSON cap. The import route then
+    use the larger upload cap; a document's content route uses a cap derived from
+    MAX_DOCUMENT_BYTES; everything else the JSON cap. The import route then
     enforces its own precise ``import_max_zip_bytes`` while streaming the body.
     """
 
@@ -42,17 +44,26 @@ class BodySizeLimitMiddleware:
     _UPLOAD_SUFFIXES = ("/files", "/import", "/git-upload-pack")
     # A Git push is a pack: its own cap (GIT_MAX_PUSH_BYTES, spec 121), larger than JSON.
     _PUSH_SUFFIX = "/git-receive-pack"
+    # PUT /projects/{id}/documents/{entity}: a JSON body that carries a whole document. It is sized
+    # by MAX_DOCUMENT_BYTES, the rule the route enforces, not by the 1 MiB JSON cap.
+    _DOCUMENT_PATH = re.compile(r"/projects/[^/]+/documents/[^/]+$")
+    # Worst-case JSON expansion of a UTF-8 byte: a control character becomes \u00XX (6 bytes).
+    _JSON_EXPANSION = 6
+    _JSON_ENVELOPE_BYTES = 4096
 
     def __init__(self, app: ASGIApp, settings: Settings) -> None:
         self.app = app
         self.json_cap = settings.max_request_body_bytes
         self.upload_cap = settings.max_upload_bytes
         self.push_cap = settings.git_max_push_bytes
+        self.document_cap = settings.max_document_bytes * self._JSON_EXPANSION + self._JSON_ENVELOPE_BYTES
 
     def _cap(self, path: str) -> int:
         stripped = path.rstrip("/")
         if stripped.endswith(self._PUSH_SUFFIX):
             return self.push_cap
+        if self._DOCUMENT_PATH.search(stripped):
+            return self.document_cap
         is_upload = any(stripped.endswith(suffix) for suffix in self._UPLOAD_SUFFIXES)
         return self.upload_cap if is_upload else self.json_cap
 

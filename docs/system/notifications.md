@@ -118,8 +118,11 @@ Handlers never send inline.
 2. `enqueue_email(template, to, context)` enqueues `send_email_job` on the queue named by
    `COMPILE_QUEUE_NAME`. All jobs share that queue and worker.
 3. `send_email_job` renders with `render_email`, takes `ctx["email_sender"]` or `get_email_sender(settings)`,
-   and sends an `OutgoingEmail`. It logs and re-raises on a send error. It returns
-   `{"status": "sent", "template", "to"}` on success.
+   and sends an `OutgoingEmail`. It logs a send error. A transient one (`httpx.TransportError`, a 429 or
+   5xx `HTTPStatusError`, an SMTP 4xx, a dropped SMTP connection, a timeout, `ConnectionError`) raises
+   `arq.Retry` with a backoff of 30 s, doubling per attempt (`job_try` from the ARQ context); a permanent
+   one is re-raised as is and ends the job. ARQ retries only on `Retry`, and `max_tries=3` is set on the
+   function in `worker.py`. It returns `{"status": "sent", "template", "to"}` on success.
 
 | Template | Sent by | Context | Subject |
 |---|---|---|---|
@@ -165,6 +168,7 @@ any exception.
 | An invite to an account creates a row and an e-mail | `backend/tests/integration/test_invite_notification_hook.py::test_invite_existing_user_creates_notification_and_email` |
 | An invite to an unknown address sends only the e-mail | `backend/tests/integration/test_invite_notification_hook.py::test_invite_unknown_user_email_only` |
 | The job renders and sends through the injected sender | `backend/tests/unit/test_email_job.py::test_job_renders_and_sends_via_injected_sender` |
+| A transient send failure asks ARQ to retry, with a growing backoff; a permanent one does not | `backend/tests/unit/test_email_retry.py` |
 | The job re-raises a send failure | `backend/tests/unit/test_email_job.py::test_job_reraises_on_send_failure`; asserts the raise, not a retry |
 | User values are escaped in HTML | `backend/tests/unit/test_email_sender.py::test_project_invite_html_is_escaped` |
 | An unknown template raises | `backend/tests/unit/test_email_sender.py::test_unknown_template_raises` |

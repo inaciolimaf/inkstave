@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from uuid import uuid4
 
@@ -68,6 +69,11 @@ async def test_delete_via_tree_api_removes_blob(
 
         deleted = await async_client.delete(f"{_tree(pid)}/entities/{eid}", headers=headers)
         assert deleted.status_code == 204
+        # The blob goes after the commit, in the background: wait for it with a deadline.
+        for _ in range(500):
+            if not await store.exists(key):
+                break
+            await asyncio.sleep(0.01)
         assert await store.exists(key) is False
     finally:
         app.dependency_overrides.pop(get_object_store, None)

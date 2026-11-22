@@ -34,12 +34,15 @@ from inkstave.modules.admin.routes import health, setup
 from inkstave.modules.collab.ws import router as collab_ws
 from inkstave.modules.collab.ws.components import build_collab_components
 from inkstave.modules.history import purge_blobs_for_deleted
+from inkstave.modules.projects.blobs import purge_file_blobs_for_deleted
 from inkstave.modules.projects.tree.service import on_entities_deleted
 from inkstave.router import api_v1
 
 # Deleting a document purges its offloaded history blobs. projects cannot import history (module
-# order), so the composition root connects the two once, at import.
+# order), so the composition root connects the two once, at import. Deleting a tree entity also
+# purges the blobs of the files it removes.
 on_entities_deleted(purge_blobs_for_deleted)
+on_entities_deleted(purge_file_blobs_for_deleted)
 
 logger = logging.getLogger("inkstave.app")
 

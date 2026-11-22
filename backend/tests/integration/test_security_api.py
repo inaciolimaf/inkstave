@@ -60,6 +60,7 @@ async def test_body_size_limit_returns_413() -> None:
         max_request_body_bytes = 16
         max_upload_bytes = 16
         git_max_push_bytes = 16
+        max_document_bytes = 16
 
     app.add_middleware(BodySizeLimitMiddleware, settings=_Cap())
     transport = ASGITransport(app=app)

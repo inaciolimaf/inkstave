@@ -12,13 +12,12 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Form, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from inkstave.core.db.session import UNIT_OF_WORK, get_session_factory
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import ErrorEnvelope, NotFoundError
-from inkstave.infra.deps import get_object_store
 from inkstave.modules.auth import get_current_user, rate_limit_named, sse_user
 from inkstave.modules.projects.access.capabilities import Capability
 from inkstave.modules.projects.access.deps import require_capability
@@ -27,10 +26,10 @@ from inkstave.modules.projects.catalog import service as project_service
 from inkstave.modules.projects.catalog.service import ProjectNotFoundError
 from inkstave.modules.projects.content.files import FileTooLargeError, UnsupportedMediaTypeError
 from inkstave.modules.projects.content.uploads import extension_of, sanitize_filename
-from inkstave.modules.projects.deps import get_import_enqueuer
+from inkstave.modules.projects.deps import get_import_services
 from inkstave.modules.projects.models.project_import import ImportSource
 from inkstave.modules.projects.schemas.project_import import ProjectImportRead
-from inkstave.modules.projects.transfer.enqueuer import ImportEnqueuer
+from inkstave.modules.projects.transfer.enqueuer import ImportServices, dispatch_import
 from inkstave.modules.projects.transfer.names import default_import_name
 from inkstave.modules.projects.transfer.repository import ProjectImportRepository
 from inkstave.modules.projects.transfer.stream import sse_stream
@@ -127,19 +126,17 @@ async def _stage_upload(
 
 async def _create_import(
     session: AsyncSession,
-    enqueuer: ImportEnqueuer,
     user: User,
     file: UploadFile,
     form: ImportForm,
     staged: tuple[str, int],
 ) -> ProjectImport:
-    """One transaction: create the NEW project, the import row, then enqueue."""
+    """The request's transaction: create the NEW project and the import row. The job is enqueued later."""
     source_key, source_bytes = staged
     project = await project_service.create_project(
         session, user.id, _effective_name(form.name, file.filename)
     )
-    repo = ProjectImportRepository(session)
-    row = await repo.create(
+    return await ProjectImportRepository(session).create(
         project_id=project.id,
         requested_by=user.id,
         source_key=source_key,
@@ -147,10 +144,6 @@ async def _create_import(
         original_filename=sanitize_filename(file.filename) if file.filename else None,
         source=form.source.value,
     )
-    job_id = await enqueuer.enqueue(row.id)
-    if job_id is not None:
-        await repo.update(row, job_id=job_id)
-    return row
 
 
 @router.post(
@@ -163,12 +156,12 @@ async def _create_import(
 )
 async def import_project(
     file: UploadFile,
+    background: BackgroundTasks,
     form: ImportForm = Depends(import_form),
     user: User = Depends(get_current_user),
     session: AsyncSession = UNIT_OF_WORK,
     settings: Settings = Depends(get_settings_dep),
-    store: ObjectStore = Depends(get_object_store),
-    enqueuer: ImportEnqueuer = Depends(get_import_enqueuer),
+    services: ImportServices = Depends(get_import_services),
 ) -> ProjectImportRead:
     # Cheap synchronous validation before any heavy work (no full read).
     if extension_of(file.filename or "") != ".zip":
@@ -178,12 +171,16 @@ async def import_project(
     if not _looks_like_zip(file.content_type, head):
         raise UnsupportedMediaTypeError()
 
+    store = services.store
     source_key, source_bytes = await _stage_upload(file, head, store, settings)
     try:
-        row = await _create_import(session, enqueuer, user, file, form, (source_key, source_bytes))
+        row = await _create_import(session, user, file, form, (source_key, source_bytes))
     except Exception:
         await store.delete(source_key)  # best-effort: no orphan blob on a DB failure
         raise
+    # Background tasks run after the response, and the session dependency has committed by then,
+    # so the job always finds its row. The route itself never commits.
+    background.add_task(dispatch_import, services, row.id, source_key)
     return ProjectImportRead.model_validate(row)
 
 
