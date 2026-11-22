@@ -12,7 +12,7 @@ from inkstave.core.config.agent import get_agent_settings
 from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_redis, get_settings_dep
 from inkstave.core.errors import AppError, ConflictError, ErrorEnvelope
-from inkstave.modules.agent.access import owned_session, require_member
+from inkstave.modules.agent.access import owned_run, owned_session, require_member
 from inkstave.modules.agent.deps import get_agent_enqueuer
 from inkstave.modules.agent.diffs import repository as diff_repo
 from inkstave.modules.agent.diffs.models import ProposedDiffStatus
@@ -26,7 +26,8 @@ from inkstave.modules.agent.file_ops import repo as file_op_repo
 from inkstave.modules.agent.file_ops.schemas import ProposedFileOpOut
 from inkstave.modules.agent.graph import repository as agent_repo
 from inkstave.modules.agent.models import AgentRunState
-from inkstave.modules.agent.runs.events import request_cancel
+from inkstave.modules.agent.runs.events import record_progress, request_cancel
+from inkstave.modules.agent.runs.stall import ACTIVE_RUN_STATES, reap_if_stalled
 from inkstave.modules.agent.runs.stream import sse_stream
 from inkstave.modules.agent.safety import AgentAuditAction, AuditSubject, audit
 from inkstave.modules.agent.schemas import (
@@ -68,18 +69,6 @@ class RunActiveError(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("A run is already active for this session.")
-
-
-# States in which a run is genuinely in flight, so a new message must wait. The
-# terminal states (``done``/``error``) and the initial ``idle`` all permit a
-# fresh turn — otherwise a session would refuse every message after its first.
-_ACTIVE_RUN_STATES = frozenset(
-    {
-        AgentRunState.queued.value,
-        AgentRunState.running.value,
-        AgentRunState.cancelling.value,
-    }
-)
 
 
 class MessageTooLongError(AppError):
@@ -177,16 +166,20 @@ async def post_message(
 ) -> PostMessageOut:
     await require_member(session, project_id, user.id)
     row = await owned_session(session, project_id, session_id, user.id)
-    max_chars = get_agent_settings().agent_max_message_chars
+    redis = get_redis(request)
+    agent_settings = get_agent_settings()
+    max_chars = agent_settings.agent_max_message_chars
     if len(body.content) > max_chars:
         raise MessageTooLongError(max_chars)
-    if row.run_state in _ACTIVE_RUN_STATES:
-        raise RunActiveError()  # 409 — one active run per session
+    # One active run per session (409). A run that stopped making progress is settled here first.
+    if row.run_state in ACTIVE_RUN_STATES and not await reap_if_stalled(session, redis, row, agent_settings):
+        raise RunActiveError()
 
     run_id = uuid4()
     row.run_state = AgentRunState.queued.value
     row.active_run_id = run_id
     await session.flush()
+    await record_progress(redis, run_id, agent_settings.stall_timeout_s())
     # Materialise any open CRDT rooms so the worker's tools read current text, not
     # the debounced-stale documents.content column (spec 28/42).
     await flush_open_project_docs(getattr(request.app.state, "collab", None), session, project_id)
@@ -210,7 +203,7 @@ async def cancel_run(
     redis: Redis = Depends(get_redis),
 ) -> dict[str, str]:
     await require_member(session, project_id, user.id)
-    row = await owned_session(session, project_id, session_id, user.id)
+    row = await owned_run(session, project_id, session_id, run_id, user.id)
     await request_cancel(redis, run_id, get_agent_settings().agent_run_ttl_s)
     if row.active_run_id == run_id and row.run_state in (
         AgentRunState.queued.value,
@@ -231,7 +224,7 @@ async def run_events(
     redis: Redis = Depends(get_redis),
 ) -> StreamingResponse:
     await require_member(session, project_id, user.id)
-    await owned_session(session, project_id, session_id, user.id)
+    await owned_run(session, project_id, session_id, run_id, user.id)
     return StreamingResponse(
         sse_stream(redis, run_id, get_agent_settings().agent_stream_heartbeat_s),
         media_type="text/event-stream",

@@ -51,6 +51,9 @@ class AgentSettings(BaseSettings):
     agent_stream_transport: str = "sse"
     agent_stream_heartbeat_s: int = 15
     agent_run_ttl_s: int = 900
+    # Silence after which a run with no progress counts as dead (its worker crashed). 0 derives it:
+    # AGENT_JOB_TIMEOUT_S + AGENT_REQUEST_TIMEOUT_S, since a live worker always ends a run by its job timeout.
+    agent_run_stall_timeout_s: int = 0
     # Same size as one read_file result, so a pasted file costs what reading it would.
     agent_max_message_chars: int = 40000
 
@@ -64,11 +67,12 @@ class AgentSettings(BaseSettings):
     agent_max_runs_per_minute_per_user: int = 10
     agent_max_concurrent_runs_per_user: int = 2
     agent_max_runs_per_minute_per_project: int = 20
-    agent_max_tokens_per_run: int = 1000000
-    # Per-run cap is kept ≤ the per-day-per-user cap below, so a single run can never
-    # blow a user's whole daily budget in one shot (the daily gate only blocks the
-    # *next* run once the counter is exhausted).
-    agent_max_cost_per_run_usd: float = 0.30
+    # Per-run caps sit below the soft cap agent_max_total_tokens, which counts the same tokens: otherwise
+    # the soft cap ends every run first and these never fire. The cost cap is set so that a run at the
+    # token cap, split evenly between prompt and completion, reaches it. It stays ≤ the per-day-per-user cap
+    # below, so a single run can never blow a user's whole daily budget in one shot.
+    agent_max_tokens_per_run: int = 500000
+    agent_max_cost_per_run_usd: float = 0.05
     agent_max_tokens_per_day_per_project: int = 2000000
     agent_max_cost_per_day_per_user_usd: float = 0.30  # ~R$0.50/day per user
     # Comma-separated e-mails whose runs skip every token and cost cap above (rate limits still apply).
@@ -81,6 +85,12 @@ class AgentSettings(BaseSettings):
     )
     agent_audit_retention_days: int = 90
     agent_injection_guard: str = "on"  # on | off
+
+    def stall_timeout_s(self) -> int:
+        """Seconds of silence after which a run is considered dead (see ``agent_run_stall_timeout_s``)."""
+        if self.agent_run_stall_timeout_s > 0:
+            return self.agent_run_stall_timeout_s
+        return self.agent_job_timeout_s + self.agent_request_timeout_s
 
 
 @lru_cache
