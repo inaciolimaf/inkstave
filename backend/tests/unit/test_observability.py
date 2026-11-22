@@ -10,9 +10,10 @@ import pytest
 from fastapi import FastAPI
 from prometheus_client import REGISTRY
 
+from inkstave.core.config.settings import get_settings
 from inkstave.core.observability import metrics
 from inkstave.core.observability.context import bind_context, clear_context, current_context
-from inkstave.core.observability.log import JsonLogFormatter, redact
+from inkstave.core.observability.log import ConsoleFormatter, JsonLogFormatter, build_formatter, redact
 from inkstave.core.observability.metrics import track_job, track_ws
 from inkstave.core.observability.middleware import _UNMATCHED, _route_template
 
@@ -163,3 +164,11 @@ def test_agent_token_helper_increments_with_model_allowlist() -> None:
         REGISTRY.get_sample_value("inkstave_agent_tokens_total", {"direction": "prompt", "model": "other"})
         is not None
     )
+
+
+def test_log_json_false_selects_the_console_formatter() -> None:
+    # LOG_JSON=false is the documented switch to human-readable logs.
+    settings = get_settings()
+    assert isinstance(build_formatter(settings), JsonLogFormatter)
+    console = settings.model_copy(update={"log_json": False})
+    assert isinstance(build_formatter(console), ConsoleFormatter)

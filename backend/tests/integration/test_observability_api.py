@@ -161,3 +161,27 @@ async def test_metrics_survives_redis_down_at_scrape(app: Any, async_client: Asy
     app.state.redis = FakeRedisRaising()  # queue-depth sample must fail soft (AC12)
     resp = await async_client.get("/metrics")
     assert resp.status_code == 200
+
+
+class _RecordingRedis:
+    """Records the keys the queue-depth sample reads."""
+
+    def __init__(self) -> None:
+        self.keys: list[str] = []
+
+    async def zcard(self, key: str) -> int:
+        self.keys.append(key)
+        return 1  # non-empty, so the llen fallback is not read
+
+    async def llen(self, key: str) -> int:
+        self.keys.append(key)
+        return 0
+
+
+async def test_queue_depth_samples_the_compile_queue(app: Any, async_client: AsyncClient) -> None:
+    redis = _RecordingRedis()
+    app.state.redis = redis
+    resp = await async_client.get("/metrics")
+    assert resp.status_code == 200
+    # The worker enqueues on COMPILE_QUEUE_NAME; the gauge must read that key, not arq's default.
+    assert redis.keys == [get_settings().compile_queue_name]

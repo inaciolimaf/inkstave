@@ -68,6 +68,7 @@ async def test_body_size_limit_returns_413() -> None:
         big = await client.post("/x", content=b"x" * 64)
     assert small.status_code == 200
     assert big.status_code == 413
+    assert big.json()["error"]["type"] == "payload_too_large"
 
 
 async def test_extra_field_is_rejected_422(async_client: AsyncClient, db_session: AsyncSession) -> None:
