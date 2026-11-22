@@ -81,6 +81,9 @@ features, just bug-fixing, de-flaking and hardening, recorded under
   **shadcn/ui** components over hand-rolled CSS.
 - **Secrets** come from env / `.env` (git-ignored) — never hard-code them;
   `.env.example` documents every variable.
+- Commits follow Conventional Commits in English. A `fix` commit changes a test file, so the bug
+  cannot come back unnoticed: `make fix-tests` checks it and CI runs it. The scopes `deps`, `docker`,
+  `ci`, `deploy` and `docs` are exempt, and so is a body line `No-Test: <reason>` (a reason is required).
 - Design decisions are recorded as ADRs under [`docs/adr/`](docs/adr/).
 
 ## Originality — no Overleaf code (read this)
@@ -105,4 +108,5 @@ the PR description.
 - [ ] `docs/system/` updated in the same commit if behavior/config changed, and
       `make docs` passes (`docs/api/openapi.json` regenerated for API changes).
 - [ ] An Alembic migration accompanies any schema change.
+- [ ] A `fix` commit changes a test file (`make fix-tests`), or carries a `No-Test:` reason.
 - [ ] **No Overleaf code copied** — original work affirmed.

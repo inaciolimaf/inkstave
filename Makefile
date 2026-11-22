@@ -41,7 +41,7 @@ PLAYWRIGHT := pnpm -C frontend exec playwright test
         docker-up docker-down docker-logs db-test e2e-infra \
         install install-backend install-web e2e-install migrate \
         test test-unit test-integration coverage coverage-combine budget \
-        lint boundaries format types docs \
+        lint boundaries format types docs fix-tests \
         web-types web-types-check web-dev web-lint web-typecheck web-unit web-test \
         web-format web-coverage web-build web-budget e2e mobile e2e-flows e2e-smoke e2e-all
 
@@ -176,6 +176,13 @@ types: ## Type-check the backend with strict mypy
 
 docs: ## Check that docs/system matches the code
 	uv run --project backend python -m tools.docs_coverage
+
+# A `fix` commit must change a test file (scripts/check_fix_has_test.py). FIX_RANGE is the
+# commits to check; CI sets it to the pushed or pull-request range.
+FIX_RANGE ?= origin/main..HEAD
+
+fix-tests: ## Every `fix` commit in FIX_RANGE changes a test (default origin/main..HEAD)
+	$(PYTHON) scripts/check_fix_has_test.py $(FIX_RANGE)
 
 # --- Frontend ------------------------------------------------------------------ #
 

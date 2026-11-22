@@ -155,6 +155,7 @@ targets, so what passes here passes there.
 | `make format` | ruff format |
 | `make types` | strict mypy |
 | `make docs` | coverage and live paths of `docs/system/` |
+| `make fix-tests` | every `fix` commit in `FIX_RANGE` (default `origin/main..HEAD`) changes a test file; CI runs it on the pushed or PR range |
 | `make test` | backend unit + integration |
 | `make coverage` | the same, with the coverage floor |
 | `make test-unit` / `make test-integration` | the two tiers as CI splits them |
@@ -215,7 +216,8 @@ default run. Details: `docs/system/overview.md`.
 1. Read the domain's `docs/system/` file.
 2. Change + test + documentation (+ glossary if there is a new term).
 3. Run what you touched: `make lint types docs` + the area's tests.
-4. Commit a Conventional Commit in English that describes the behavior.
+4. Commit a Conventional Commit in English that describes the behavior. A `fix` commit changes a
+   test file (`make fix-tests`); the exemptions are in the Git commits section.
 
 **Large change** (more than ~15 files or more than one area): subagents in parallel by
 disjoint files (worktrees when they edit existing code); the main agent integrates and
@@ -257,6 +259,10 @@ Each one is deliberate. Remove the line when the deviation ends.
 - **Never add Claude Code (or any AI tool) as a co-author.** Do not append
   `Co-Authored-By` trailers or "Generated with Claude Code" lines to commits.
   Commits are authored solely by the human committer.
+- **A `fix` commit changes a test file.** `scripts/check_fix_has_test.py` (`make fix-tests`, in the
+  CI lint job) fails a `fix:` or `fix(scope):` commit that touches no file under `backend/tests/`,
+  `frontend/e2e/`, `frontend/tests/`, nor a `*.test.ts(x)` or `*.spec.ts`. Exempt: the scopes `deps`,
+  `docker`, `ci`, `deploy`, `docs`, and a body line `No-Test: <reason>` (the reason is required).
 
 ## Working a spec — checklist
 
