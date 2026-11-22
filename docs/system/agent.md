@@ -36,7 +36,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/file_ops/apply.py`, `backend/src/inkstave/modules/agent/file_ops/routes.py`, `backend/src/inkstave/modules/agent/file_ops/schemas.py`, `backend/src/inkstave/modules/agent/file_ops/paths.py` | Carrying out a proposal, its routes and models, pure path helpers |
 | `backend/src/inkstave/modules/agent/tools/_latex.py` | Regex heading scan, used only for `search_project` ranking |
 | `backend/src/inkstave/modules/agent/context/parser.py`, `backend/src/inkstave/modules/agent/context/project_map.py` | `parse_latex_structure`, `build_project_map` |
-| `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`; `select_context`, not wired to the turn |
+| `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`, token estimate; `select_context` was removed |
 | `backend/src/inkstave/modules/agent/diffs/__init__.py`, `backend/src/inkstave/modules/agent/diffs/compute.py` | `materialize_diffs`, `is_stale`; pure diff computation |
 | `backend/src/inkstave/modules/agent/diffs/models.py`, `backend/src/inkstave/modules/agent/diffs/repository.py` | `ProposedDiff`, `ProposedDiffStatus`, queries |
 | `backend/src/inkstave/modules/agent/diffs/outcome.py`, `backend/src/inkstave/modules/agent/diffs/schemas.py` | `record_outcome`, `outcome_status`, `check_outcome`; `DiffOutcomeIn` (spec 110) |
@@ -247,9 +247,6 @@ included outlines, with a cycle guard and a list of unresolved inputs.
 `locate_section` scores by exact title (1.0), label (0.95), ordinal such as "section 2" (0.92), synonym
 (0.9), substring (0.7), token overlap (up to 0.6). An ordinal match returns alone.
 
-`select_context` builds a `ContextBundle` within a token budget: target section with surrounding lines
-first, then an outline, then up to three related matches, truncating or dropping what does not fit. Tokens
-are estimated at four characters each. It is tested but nothing in the turn calls it.
 
 ### How a proposed edit reaches the user
 
@@ -372,6 +369,6 @@ decided (`docs/known-gaps.md`). `rejected` also comes from overlapping ranges, w
 
 **Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result, and the next turn replays it. OpenAI-style APIs may reject that; not verified against a provider.
 
-**Unused code.** `select_context`, `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES`: the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
+**Unused code.** `select_context` was removed; `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES` have no effect, and the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
 
 **Injection guard limits.** `flag_injection` only audits, it blocks nothing. `wrap_untrusted` frames tool messages sent to the model and the transcript stays raw. Protection against acting on injected text rests on every tool only proposing and on review by the user. Text inside an image is not scanned at all.

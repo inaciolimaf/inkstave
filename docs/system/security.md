@@ -13,7 +13,6 @@ in [compile.md](compile.md); agent safety is in [agent.md](agent.md). Specs 52, 
 | `backend/src/inkstave/core/http/headers.py` | `SecurityHeadersMiddleware` |
 | `backend/src/inkstave/core/http/body_limit.py` | `BodySizeLimitMiddleware` |
 | `backend/src/inkstave/core/http/sse.py` | Shared SSE plumbing (`Keepalive`, `event_pump`), not a security control |
-| `backend/src/inkstave/core/http/middleware.py` | Legacy request-id middleware, not wired in |
 | `backend/src/inkstave/core/config/settings.py` | Boot guards |
 | `backend/src/inkstave/modules/auth/throttling/limiter.py` | `client_ip`, scope limiter, `hit_window` |
 | `backend/src/inkstave/modules/auth/throttling/policies.py` | Named-policy limiter with `X-RateLimit-*` |
@@ -38,7 +37,7 @@ network with no published port.
 
 ### Security headers
 
-`SecurityHeadersMiddleware` runs on every HTTP response that passes through it, including 404 and 413.
+`SecurityHeadersMiddleware` runs on every HTTP response that passes through it, including 404, 405, 413 and 500.
 
 | Header | Value |
 |---|---|
@@ -68,7 +67,7 @@ Several layers, outermost first.
 | Layer | Limit | Default | Response |
 |---|---|---|---|
 | nginx, `location /api/` | `client_max_body_size` | 50 MiB | nginx 413 |
-| `BodySizeLimitMiddleware`, path ending `/files`, `/import` or `/git-upload-pack` | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `{"error":{"code":"payload_too_large",...}}` |
+| `BodySizeLimitMiddleware`, path ending `/files`, `/import` or `/git-upload-pack` | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `{"error":{"type":"payload_too_large",...}}` |
 | `BodySizeLimitMiddleware`, path ending `/git-receive-pack` | `GIT_MAX_PUSH_BYTES` | 50 MiB | same (spec 121; nginx's `client_max_body_size` must be at least this) |
 | `BodySizeLimitMiddleware`, any other path | `MAX_REQUEST_BODY_BYTES` | 1 MiB | same |
 | File upload, streaming | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `file_too_large` |
@@ -203,7 +202,7 @@ as Coolify. A standalone run needs a `ports:` entry added.
 | Invariant | Test |
 |---|---|
 | Security headers are on 200 and 404; no banner; no HSTS when off | `backend/tests/integration/test_security_api.py::test_security_headers_present_on_404_and_200` |
-| An oversize body gets 413 | `backend/tests/integration/test_security_api.py::test_body_size_limit_returns_413` |
+| An oversize body gets 413 | `backend/tests/integration/test_security_api.py::test_body_size_limit_returns_413`, `backend/tests/integration/test_app.py::test_body_limit_413_uses_the_envelope_with_request_id` |
 | An oversize upload gets `file_too_large` and leaves nothing behind | `backend/tests/integration/test_files_api_validation.py::test_size_limit` |
 | Disallowed MIME is refused | `backend/tests/integration/test_files_api_validation.py::test_disallowed_mime` |
 | Content must match the extension | `backend/tests/integration/test_files_api_validation.py::test_upload_content_extension_mismatch_is_415` |
@@ -275,18 +274,12 @@ as Coolify. A standalone run needs a `ports:` entry added.
 - **The SPA has no CSP at all.** The header is a comment in `infra/nginx/default.conf`. `CSP_POLICY`
   applies only to backend responses, which are JSON.
 - **HSTS is off by default**, and nothing in the guards forces it on in production.
-- **The middleware's 413 is not the envelope.** It answers `{"error":{"code":"payload_too_large",...}}`:
-  `code`, not `type`, and no `request_id`. A client parsing `error.type` gets nothing. No test
-  asserts the shape.
 - **Documents cap at 1 MiB, not 2 MB.** `PUT /api/v1/projects/{project_id}/documents/{entity_id}` is a
   JSON route, so `MAX_REQUEST_BODY_BYTES` rejects it well before `MAX_DOCUMENT_BYTES` applies.
 - **Raising an import limit needs three changes.** `IMPORT_MAX_ZIP_BYTES` above 50 MiB also needs
   `MAX_UPLOAD_BYTES` and nginx's `client_max_body_size` raised, the latter in the image.
 - **`_UPLOAD_SUFFIXES` is a path suffix match**, so any route ending in `/files` or `/import` gets the
   50 MiB cap. All such routes today are the upload and import ones.
-- **A 500 carries no security headers.** It leaves through `ServerErrorMiddleware`, outside
-  `SecurityHeadersMiddleware` and `CORSMiddleware`. A cross-origin client sees a CORS failure instead
-  of the status. See [observability.md](observability.md).
 - **`doctor` prints the database password.** `_cmd_doctor` uses `settings.database_url` as the probe
   label, in full, on stdout or stderr.
 - **`/docs` and `/redoc` default to on.** nginx does not route them, but port 8000 does, and
