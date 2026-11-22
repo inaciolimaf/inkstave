@@ -74,3 +74,14 @@ def test_format_has_summary_and_no_traceback() -> None:  # AC1/AC4 message shape
     assert lines[0] == "Configuration error: 2 problem(s)"
     assert all(line.startswith("  - ") for line in lines[1:])
     assert "Traceback" not in rendered
+
+
+def test_console_email_backend_is_flagged_in_production() -> None:  # auth audit
+    from inkstave.core.config.settings import get_settings
+    from inkstave.modules.admin.provisioning.config_check import _email_problems
+
+    prod = get_settings().model_copy(update={"environment": "prod", "email_backend": "console"})
+    problems = _email_problems(prod)
+    assert problems and problems[0].startswith("EMAIL_BACKEND:")
+    dev = get_settings().model_copy(update={"environment": "dev", "email_backend": "console"})
+    assert _email_problems(dev) == []

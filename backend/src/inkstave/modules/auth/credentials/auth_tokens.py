@@ -41,6 +41,29 @@ class IssuedToken:
     token: AuthToken  # the persisted row (hash only)
 
 
+async def revoke_outstanding(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    purpose: str,
+    clock: Clock = SYSTEM_CLOCK,
+) -> None:
+    """Spend every active token of ``(user_id, purpose)`` unused.
+
+    Used when the state a link was issued for has changed (a password change kills
+    the reset links issued before it); the links then answer as already used.
+    """
+    await session.execute(
+        update(AuthToken)
+        .where(
+            AuthToken.user_id == user_id,
+            AuthToken.purpose == purpose,
+            AuthToken.consumed_at.is_(None),
+        )
+        .values(consumed_at=clock.now())
+    )
+
+
 async def issue_token(
     session: AsyncSession,
     *,
@@ -61,15 +84,7 @@ async def issue_token(
 
     now = clock.now()
     # 1. Invalidate older active tokens of the same (user, purpose).
-    await session.execute(
-        update(AuthToken)
-        .where(
-            AuthToken.user_id == user_id,
-            AuthToken.purpose == purpose,
-            AuthToken.consumed_at.is_(None),
-        )
-        .values(consumed_at=now)
-    )
+    await revoke_outstanding(session, user_id=user_id, purpose=purpose, clock=clock)
 
     # 2. Insert the new row (hash only).
     raw = generate_token()

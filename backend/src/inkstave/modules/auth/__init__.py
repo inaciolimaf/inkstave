@@ -16,6 +16,7 @@ from inkstave.modules.auth.deps import (
     sse_user,
 )
 from inkstave.modules.auth.accounts.users import normalise_email
+from inkstave.modules.auth.throttling.limiter import rate_limit
 from inkstave.modules.auth.throttling.policies import rate_limit_named
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "get_token_service",
     "hash_token",
     "normalise_email",
+    "rate_limit",
     "rate_limit_named",
     "require_admin",
     "sse_user",

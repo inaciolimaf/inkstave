@@ -18,7 +18,6 @@ still slowed by Argon2.
 
 from __future__ import annotations
 
-import ipaddress
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -31,7 +30,12 @@ from inkstave.core.errors import RateLimitError
 from inkstave.core.observability.metrics import inc_rate_limit_error
 from inkstave.modules.auth.accounts.login import InvalidCredentialsError
 from inkstave.modules.auth.accounts.users import normalise_email
-from inkstave.modules.auth.throttling.limiter import client_ip, hit_window, parse_rate_limit
+from inkstave.modules.auth.throttling.limiter import (
+    client_ip,
+    hit_window,
+    is_public_address,
+    parse_rate_limit,
+)
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -41,20 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger("inkstave.ratelimit")
 
 
-def _is_public(ip: str) -> bool:
-    try:
-        return ipaddress.ip_address(ip).is_global
-    except ValueError:
-        return False
-
-
 class LoginThrottle:
     def __init__(self, redis: Redis, settings: Settings, ip: str) -> None:
         self._redis = redis
         self._enabled = settings.rate_limit_enabled
         self._ip_key = f"ratelimit:login:ip:{ip}"
         self._ip_limit = parse_rate_limit(settings.rate_limit_login_ip)
-        self._counts_ip = settings.trust_proxy_headers or _is_public(ip)
+        self._counts_ip = settings.trust_proxy_headers or is_public_address(ip)
         self._email_limit = parse_rate_limit(settings.rate_limit_login)
 
     @staticmethod

@@ -146,6 +146,7 @@ async def change_password(
     response_model=MessageResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Start an email change (confirmation sent to the new address)",
+    dependencies=[Depends(_auth_password_rate_limit())],
     responses=_UNAUTHORIZED,
 )
 async def change_email(
@@ -190,6 +191,7 @@ async def confirm_email_change(
     "/me",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete the account (hard delete; cascades owned projects)",
+    dependencies=[Depends(_auth_password_rate_limit())],
     responses=_UNAUTHORIZED,
 )
 async def delete_me(

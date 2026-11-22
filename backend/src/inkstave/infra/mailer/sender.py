@@ -36,19 +36,19 @@ class EmailSender(Protocol):
 
 
 class ConsoleEmailSender:
-    """Logs the rendered email at INFO; sends nothing."""
+    """Logs the envelope at INFO and the body at DEBUG; sends nothing.
+
+    The body carries the link tokens (reset, verify, invite), so it stays out of the
+    INFO log that production keeps. Use DEBUG only on a development machine.
+    """
 
     def __init__(self, default_from: str) -> None:
         self._default_from = default_from
 
     async def send(self, email: OutgoingEmail) -> None:
-        logger.info(
-            "email_console: from=%s to=%s subject=%r\n%s",
-            email.from_addr or self._default_from,
-            email.to,
-            email.subject,
-            email.text_body,
-        )
+        sender = email.from_addr or self._default_from
+        logger.info("email_console: from=%s to=%s subject=%r", sender, email.to, email.subject)
+        logger.debug("email_console body:\n%s", email.text_body)
 
 
 class FileEmailSender:

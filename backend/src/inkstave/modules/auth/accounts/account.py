@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from inkstave.core.db.session import allow_long_statements
 from inkstave.core.errors import BadRequestError, ConflictError, GoneError, UnauthorizedError
 from inkstave.core.time import SYSTEM_CLOCK, Clock
 from inkstave.modules.auth.accounts.users import email_exists, normalise_email
+from inkstave.modules.auth.credentials.auth_tokens import revoke_outstanding
 from inkstave.modules.auth.credentials.opaque_tokens import generate_token, hash_token
 from inkstave.modules.auth.credentials.password import PasswordHasher
 from inkstave.modules.auth.credentials.refresh_store import RefreshStore
@@ -73,12 +74,28 @@ async def change_password(
         raise BadRequestError("Password must not contain your email address.")
     user.hashed_password = await asyncio.to_thread(hasher.hash, new_password)
     end_every_session(user)
+    # A reset link issued under the old password must not reset the new one.
+    await revoke_outstanding(session, user_id=user.id, purpose="password_reset")
     await session.flush()
     await refresh_store.revoke_user(user.id)
 
 
+async def _refuse_last_active_admin(session: AsyncSession, user: User) -> None:
+    """Keep one active admin: with none left, public first-admin setup would reopen."""
+    if not (user.is_admin and user.is_active):
+        return
+    others = await session.scalar(
+        select(func.count())
+        .select_from(User)
+        .where(User.is_admin.is_(True), User.is_active.is_(True), User.id != user.id)
+    )
+    if not others:
+        raise ConflictError("The last active admin cannot be removed.")
+
+
 async def deactivate_account(session: AsyncSession, user: User) -> None:
     """Lock the account out: no new login, and every token already issued stops working."""
+    await _refuse_last_active_admin(session, user)
     user.is_active = False
     end_every_session(user)
     await session.flush()
@@ -126,6 +143,7 @@ async def confirm_email_change(session: AsyncSession, *, token: str, clock: Cloc
     user.email = user.pending_email
     user.email_confirmed = True
     _clear_email_change(user)
+    await revoke_outstanding(session, user_id=user.id, purpose="password_reset")
     try:
         await session.flush()
     except IntegrityError as exc:
@@ -152,6 +170,7 @@ async def delete_account(
     history, memberships, invites) cascade away via the DB FKs; all sessions are
     revoked. See docs/adr/0059."""
     await _require_password(hasher, user, password)
+    await _refuse_last_active_admin(session, user)
     user_id = user.id
     await allow_long_statements(session)  # the cascade reaches every project's history
     await session.delete(user)

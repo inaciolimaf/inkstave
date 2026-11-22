@@ -44,6 +44,9 @@ class _FakeSession:
     async def scalar(self, _stmt: Any) -> Any:
         return self._user
 
+    async def execute(self, _stmt: Any) -> None:
+        return None  # bulk token revocation: nothing to read back in this unit test
+
 
 class _FakeRefreshStore:
     def __init__(self) -> None:

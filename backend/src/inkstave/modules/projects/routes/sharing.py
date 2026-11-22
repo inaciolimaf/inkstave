@@ -16,7 +16,7 @@ from inkstave.core.db.session import UNIT_OF_WORK
 from inkstave.core.deps import get_settings_dep
 from inkstave.core.errors import ErrorEnvelope
 from inkstave.infra.deps import get_email_enqueuer
-from inkstave.modules.auth import get_current_user
+from inkstave.modules.auth import get_current_user, rate_limit_named
 from inkstave.modules.notifications import notify_invite
 from inkstave.modules.projects import sharing as sharing_service
 from inkstave.modules.projects.catalog.service import get_project_name
@@ -42,6 +42,8 @@ router = APIRouter(prefix="/projects", tags=["sharing"])
 invites_router = APIRouter(prefix="/invites", tags=["sharing"])
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope}}
+# Invite routes share the per-user share-link policy (RATE_LIMIT_SHARE_LINK).
+_INVITE_LIMIT = [Depends(rate_limit_named("share_link"))]
 
 
 def _member_read(info: sharing_service.MemberInfo) -> MemberRead:
@@ -116,6 +118,7 @@ async def list_invites(
     "/{project_id}/invites",
     status_code=status.HTTP_201_CREATED,
     response_model=InviteCreated,
+    dependencies=_INVITE_LIMIT,
     responses=_NOT_FOUND,
 )
 async def create_invite(
@@ -146,6 +149,7 @@ async def create_invite(
 @router.delete(
     "/{project_id}/invites/{invite_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=_INVITE_LIMIT,
     responses=_NOT_FOUND,
 )
 async def revoke_invite(
@@ -157,7 +161,9 @@ async def revoke_invite(
     await sharing_service.revoke_invite(session, project_id, user.id, invite_id)
 
 
-@invites_router.get("/{token}", response_model=InvitePreview, responses=_NOT_FOUND)
+@invites_router.get(
+    "/{token}", response_model=InvitePreview, dependencies=_INVITE_LIMIT, responses=_NOT_FOUND
+)
 async def get_invite_preview(
     token: str,
     _user: User = Depends(get_current_user),
@@ -173,7 +179,9 @@ async def get_invite_preview(
     )
 
 
-@invites_router.post("/{token}/accept", response_model=AcceptResponse, responses=_NOT_FOUND)
+@invites_router.post(
+    "/{token}/accept", response_model=AcceptResponse, dependencies=_INVITE_LIMIT, responses=_NOT_FOUND
+)
 async def accept_invite(
     token: str,
     user: User = Depends(get_current_user),
@@ -183,7 +191,12 @@ async def accept_invite(
     return AcceptResponse(project_id=project_id, role=role)
 
 
-@invites_router.post("/{token}/decline", status_code=status.HTTP_204_NO_CONTENT, responses=_NOT_FOUND)
+@invites_router.post(
+    "/{token}/decline",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=_INVITE_LIMIT,
+    responses=_NOT_FOUND,
+)
 async def decline_invite(
     token: str,
     _user: User = Depends(get_current_user),

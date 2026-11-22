@@ -84,3 +84,39 @@ async def test_limiter_fails_open_when_redis_errors() -> None:
     dep = rate_limit("refresh")
     # Must not raise — a limiter outage fails open.
     await dep(_request(), BrokenRedis(), settings)  # type: ignore[arg-type]
+
+
+async def test_behind_an_untrusted_private_peer_ip_scopes_stand_down(redis: Any) -> None:
+    # The peer is the reverse proxy, shared by every user: no counter may be keyed on it.
+    settings = _settings(rate_limit_refresh="1/60")
+    dep = rate_limit("refresh")
+    for _ in range(3):
+        await dep(_request(host="10.0.0.5"), redis, settings)  # never raises
+    assert await redis.keys("ratelimit:refresh:*") == []
+
+
+async def test_a_public_peer_is_limited_without_trusted_headers(redis: Any) -> None:
+    settings = _settings(rate_limit_refresh="1/60")
+    dep = rate_limit("refresh")
+    await dep(_request(host="8.8.8.8"), redis, settings)
+    with pytest.raises(RateLimitError):
+        await dep(_request(host="8.8.8.8"), redis, settings)
+
+
+async def test_behind_an_untrusted_proxy_forgot_password_keeps_the_per_address_limit(redis: Any) -> None:
+    settings = _settings(rate_limit_auth_password="1/60")
+    dep = rate_limit("forgot_password")
+
+    class JsonRequest:
+        def __init__(self, email: str) -> None:
+            self.headers: dict[str, str] = {}
+            self.client = SimpleNamespace(host="10.0.0.5")
+            self._email = email
+
+        async def json(self) -> Any:
+            return {"email": self._email}
+
+    await dep(JsonRequest("a@example.com"), redis, settings)  # type: ignore[arg-type]
+    await dep(JsonRequest("b@example.com"), redis, settings)  # type: ignore[arg-type]
+    with pytest.raises(RateLimitError):
+        await dep(JsonRequest("a@example.com"), redis, settings)  # type: ignore[arg-type]

@@ -19,7 +19,7 @@ here too. From specs 06–08, 10, 59, 63, 92, 104 and 113; setup and provisionin
 | `backend/src/inkstave/modules/auth/accounts/login.py` | Login, refresh, reuse detection, logout, `issue_token_pair` |
 | `backend/src/inkstave/modules/auth/accounts/email_auth.py` | Verification, magic link, password reset |
 | `backend/src/inkstave/modules/auth/accounts/account.py`, `backend/src/inkstave/modules/auth/accounts/users.py` | Profile, password, e-mail change, deactivation, deletion; registration, `normalise_email` |
-| `backend/src/inkstave/modules/auth/throttling/limiter.py` | Per-scope limiter, `client_ip`, `hit_window` |
+| `backend/src/inkstave/modules/auth/throttling/limiter.py` | Per-scope limiter, `client_ip`, `hit_window`, `peer_counts_ip` (the stand-down rule), `is_public_address` |
 | `backend/src/inkstave/modules/auth/throttling/login_attempts.py` | `LoginThrottle` |
 | `backend/src/inkstave/modules/auth/throttling/policies.py` | Named per-user policies (compile, agent, upload), `check_rate_limit` |
 | `backend/src/inkstave/modules/auth/accounts/dictionary.py` | Personal spell-check dictionary: `list_words`, `add_word` (idempotent, 5000-word cap), `remove_word` |
@@ -35,7 +35,7 @@ here too. From specs 06–08, 10, 59, 63, 92, 104 and 113; setup and provisionin
 | `frontend/src/modules/auth` | Login, register, link pages, `auth-context.tsx`, `setup/` |
 | `frontend/src/modules/settings` | Settings page and the e-mail change confirm page |
 | `frontend/src/lib/token-store.ts`, `frontend/src/lib/api-client.ts` | Access token in memory, refresh token in `localStorage`; refresh on 401, one in flight per tab |
-| `backend/tests/integration/test_session_revocation.py`, `backend/tests/integration/test_login_attempts.py`, `backend/tests/integration/test_auth.py`, `backend/tests/integration/test_email_auth_flows_104.py`, `backend/tests/integration/test_auth_tokens_104.py`, `backend/tests/integration/test_account_api_59.py`, `backend/tests/integration/test_bootstrap_57.py` | Revocation; login limits; login and refresh; link flows; link tokens; settings; setup |
+| `backend/tests/integration/test_session_revocation.py`, `backend/tests/integration/test_login_attempts.py`, `backend/tests/integration/test_auth.py`, `backend/tests/integration/test_email_auth_flows_104.py`, `backend/tests/integration/test_auth_tokens_104.py`, `backend/tests/integration/test_account_api_59.py`, `backend/tests/integration/test_bootstrap_57.py`, `backend/tests/integration/test_reset_token_binding.py`, `backend/tests/integration/test_last_admin_guard.py`, `backend/tests/integration/test_rate_limit_gaps.py`, `backend/tests/integration/test_proxy_stand_down.py` | Revocation; login limits; login and refresh; link flows; link tokens; settings; setup; reset-link binding; last admin; limits on the audit's routes; the proxy stand-down |
 
 ## Data
 
@@ -84,17 +84,17 @@ Every 401 is `unauthorized` with `WWW-Authenticate: Bearer`.
 | POST `/api/v1/auth/reset-password` | Spend the link, set the password, end every session | 400 `bad_request`, 410 `gone`, 429 `rate_limited` |
 | GET `/api/v1/users/me` | Own profile (`UserMe`) | 401 `unauthorized` |
 | PATCH `/api/v1/users/me` | Update `display_name`, `avatar_url` | 401 `unauthorized` |
-| DELETE `/api/v1/users/me` | Hard delete after password and `confirm: true` | 401 `unauthorized`, 422 |
+| DELETE `/api/v1/users/me` | Hard delete after password and `confirm: true`; refused for the last active admin | 401 `unauthorized`, 409 `conflict`, 422, 429 `rate_limited` |
 | PUT `/api/v1/users/me/editor-preferences` | Replace `theme`, `font_size`, `keymap`, `autocomplete` (boolean, default `true`: the LaTeX completion popup) | 401 `unauthorized` |
 | GET `/api/v1/me/dictionary` | The personal spell-check dictionary, `{"words": [...]}`, sorted without case | 401 `unauthorized` |
 | POST `/api/v1/me/dictionary` | Add a word, 201; a word already there (in any case) is a no-op | 401 `unauthorized`, 409 `dictionary_full` past 5000, 422 |
 | DELETE `/api/v1/me/dictionary/{word}` | Remove a word, 204; the path accepts `/` | 401 `unauthorized` |
 | POST `/api/v1/users/me/change-password` | New password, end every session | 400 `bad_request`, 401 `unauthorized`, 429 `rate_limited` |
-| POST `/api/v1/users/me/change-email` | Stage an e-mail change, 202 | 400 `bad_request`, 401 `unauthorized`, 409 `conflict` |
+| POST `/api/v1/users/me/change-email` | Stage an e-mail change, 202 | 400 `bad_request`, 401 `unauthorized`, 409 `conflict`, 429 `rate_limited` |
 | POST `/api/v1/users/confirm-email-change` | Unauthenticated; apply the change | 400 `bad_request`, 409 `conflict`, 410 `gone` |
 | GET `/api/v1/admin/ping` | `{"ok": true}`, the only admin route | 401 `unauthorized`, 403 `forbidden` |
 | GET `/api/setup/status` | `{"needs_setup": bool}` | none |
-| POST `/api/setup/admin` | Create the first admin | 409 `conflict` |
+| POST `/api/setup/admin` | Create the first admin | 409 `conflict`, 429 `rate_limited` |
 
 ## How it works
 
@@ -137,12 +137,18 @@ primary-key lookup per request.
 that does not decode, expired ones included, is a silent no-op. Any member of the family works, a rotated one too.
 
 **Password change.** `change_password` verifies the current password, refuses a password containing the
-e-mail local part, hashes off the event loop, calls `end_every_session`, then `revoke_user`. The
+e-mail local part, hashes off the event loop, calls `end_every_session`, spends the outstanding reset links,
+then `revoke_user`. The
 frontend then logs out (`frontend/src/modules/settings/PasswordSection.tsx`).
 
 **Deactivation.** `python -m inkstave.cli deactivate-user --email <address>` calls `deactivate_account`.
 No route exists. Exit code 1 for an unknown address. Undoing it is manual SQL:
 `UPDATE users SET is_active = true`. Old tokens stay dead afterwards because `session_version` moved.
+
+**Last admin.** `deactivate_account` and `delete_account` call `_refuse_last_active_admin` first: an admin
+who is active may leave only while another active admin exists, otherwise 409 `conflict`. Deactivated admins
+do not count. The CLI prints the refusal and exits 1. Keeping one active admin keeps `POST /api/setup/admin`
+closed, since that route only checks for `is_admin` rows. Demotion has no route at all.
 
 **Login limits.** `get_login_throttle` builds a `LoginThrottle` for `client_ip`. `attempt` wraps the
 login:
@@ -156,16 +162,20 @@ login:
    does not clear the IP counter, or one valid account would reset an attacker's allowance.
 
 The e-mail is normalised, so case does not dodge the counter. The per-IP limit applies only when
-`TRUST_PROXY_HEADERS` is true or the peer address is public (`ipaddress.is_global`). A private peer
-without trusted headers is the reverse proxy, shared by every user, so the per-IP limit stands down
-and only the per-e-mail one applies. A Redis failure in the throttle logs a warning, increments
-`inc_rate_limit_error("login")` and allows the attempt.
+`TRUST_PROXY_HEADERS` is true or the peer address is public (`ipaddress.is_global`, `is_public_address`
+in `throttling/limiter.py`). A private peer without trusted headers is the reverse proxy, shared by every
+user, so the per-IP limit stands down and only the per-e-mail one applies. A Redis failure in the throttle
+logs a warning, increments `inc_rate_limit_error("login")` and allows the attempt.
 
-**Other limits.** `rate_limit(scope)` is a fixed window, also failing open. `register`, `verify_email`
-and `magic_link` key on the pair IP and body `email` when one is present; their token-only callbacks key
-on IP. `refresh`, `forgot_password` and `reset_password` key on IP. Change-password uses
-`RATE_LIMIT_AUTH_PASSWORD` per user. Without an authenticated user it keys on the raw peer, ignoring
-`client_ip`.
+**Other limits.** `rate_limit(scope)` is a fixed window, also failing open. It uses the same stand-down
+rule as login (`peer_counts_ip`): behind an untrusted proxy no counter is keyed on the proxy's address.
+`register`, `verify_email`, `magic_link` and `forgot_password` key on the submitted `email` (with the IP
+when the IP counts; `forgot_password` otherwise keys on IP alone). Token-only callbacks key on IP and,
+behind an untrusted proxy, stand down. `refresh`, `reset_password` and `setup_admin` key on IP, so they
+stand down behind an untrusted proxy. `setup_admin` uses `RATE_LIMIT_REGISTER`.
+Change-password, change-email and `DELETE /users/me` use `RATE_LIMIT_AUTH_PASSWORD` per user, failed
+attempts included. Invite routes (create, revoke, preview, accept, decline) use `RATE_LIMIT_SHARE_LINK`
+per user. Without an authenticated user the password policy keys on the raw peer, ignoring `client_ip`.
 
 **E-mail link tokens.** `issue_token` marks older active tokens of the same user and purpose as consumed,
 then stores the SHA-256 of a 32-byte token. The raw value goes only into the URL. `consume_token`
@@ -177,13 +187,16 @@ later failure, such as a weak new password, rolls the spend back and the link st
   `confirm_email_verification` refuses if the address changed since the link was sent.
 - **Magic link.** `{FRONTEND_URL}/magic-link?token=`. `complete_magic_login` refuses an address change or
   an inactive account, confirms the e-mail and issues a pair.
-- **Password reset.** `{FRONTEND_URL}/reset-password?token=`. `complete_password_reset` re-validates
-  strength (the schema alone is not trusted here), confirms the e-mail and ends every session.
+- **Password reset.** `{FRONTEND_URL}/reset-password?token=`. `complete_password_reset` refuses a link whose
+  address no longer matches the account or an inactive account, re-validates strength (the schema alone is not
+  trusted here), confirms the e-mail and ends every session. A password change and a confirmed e-mail change
+  spend the account's outstanding reset links (`revoke_outstanding`), so a link issued before either is dead.
 
 **E-mail change.** It does not use `auth_tokens`. `start_email_change` needs the current password, stores
 `pending_email` plus the token hash on `users`, and mails `{FRONTEND_URL}/settings/confirm-email?token=`
 to the new address. The active e-mail is unchanged until `confirm_email_change`, which swaps it, sets
-`email_confirmed`, clears the pending fields and maps a late unique violation to 409. Sessions continue.
+`email_confirmed`, clears the pending fields, spends outstanding reset links and maps a late unique violation
+to 409. Sessions continue.
 
 **WebSocket entry point.** There is no ticket. The client puts the access JWT in `?token=` on
 `/ws/collab/projects/{project_id}/documents/{document_id}`
@@ -283,32 +296,32 @@ list and checks words against it; the server never sees the text it is checked i
   whatever the client sent. An attacker can rotate it to get a fresh per-IP counter on each request.
   The per-e-mail limit still holds; IP-keyed limits do not. `TRUST_PROXY_HEADERS=true` also skips
   the public-address test, so a spoofed value always counts as a key.
-- **Only login stands down behind a proxy.** With `TRUST_PROXY_HEADERS=false` behind a proxy, every
-  `rate_limit(scope)` key uses the proxy's address. `refresh` (30/300), `forgot_password` (5/3600) and
-  `reset_password` then share one counter across all users.
+- **Untrusted proxy means no IP limit on refresh and reset.** With `TRUST_PROXY_HEADERS=false` behind a proxy,
+  `refresh`, `reset_password` and `/api/setup/admin` stand down (no counter is keyed on the proxy's address),
+  as login's per-IP limit does. Nothing else limits them there; the reset and refresh tokens are unguessable.
+  Setting `TRUST_PROXY_HEADERS=true` restores the per-IP limit, but only behind a proxy that overwrites
+  `X-Forwarded-For`.
 - **Rotation is not atomic.** `get_refresh` and `rotate_refresh` are separate Redis calls, so two
   concurrent refreshes can both pass. `frontend/src/lib/api-client.ts` keeps one refresh in flight per
   tab, but tabs share one `localStorage` token. Two tabs refreshing one after the other replay it and
   trigger reuse detection, which signs that browser out.
-- **Password-reset links survive an e-mail change.** Verification and magic link compare `token.email`
-  to the current address; `complete_password_reset` does not. A link sent to the old address stays valid
-  until its TTL. Nothing notifies the old address of a change either. No sessions end on an e-mail change.
+- **No notice to the old address.** An e-mail change tells neither address, and no sessions end on it.
+  Reset links are refused after the change (see Password reset above).
 - **Change-password says less than it does.** The route summary and response say "Other sessions were
   signed out". The code ends every session, the caller's included, and the test asserts this.
 - **Redis outage.** The limiters fail open, but login and refresh do not: `store_refresh` and `get_refresh`
   have no fallback, so login fails anyway. `test_login_rate_limit_fails_open_when_redis_errors` breaks
   only `eval` and `incr`. A Redis flush drops every refresh record, reuse marker and user cutoff; refresh
   then fails with 401 for all sessions, while `sv` and `revoked_sessions` hold.
-- **Requests with no throttle.** `logout`, `change-email`, `confirm-email-change`, `DELETE /users/me` and
-  `/api/setup/admin` have no limit. The two re-auth routes verify a password with no attempt limit.
-- **Setup can reopen.** `admin_exists` counts `is_admin` rows. Deleting the last admin through `DELETE
-  /users/me` reopens `POST /api/setup/admin`, which is public. On a fresh deployment the first caller
-  becomes admin. A deactivated admin still counts as existing. There is no route or command to
-  promote an admin, or to reactivate a user. `ensure_initial_admin` hashes on the event loop, unlike
-  every other path.
+- **Requests with no throttle.** `logout` and `confirm-email-change` have no limit. Behind an untrusted proxy
+  `refresh`, `reset-password` and `/api/setup/admin` have none either (see above).
+- **Setup stays closed only while an admin exists.** `admin_exists` counts `is_admin` rows, so a deactivated
+  admin still closes it. The last active admin cannot be removed (see Last admin), but an admin set to
+  inactive by SQL and then the last one would reopen it. There is no route or command to promote an admin,
+  or to reactivate a user. `ensure_initial_admin` hashes on the event loop, unlike every other path.
 - **Registration is open** and reveals existing addresses with 409, unlike the link flows. No setting closes it.
-- **Reset ignores `is_active`.** A deactivated user can complete a reset. The password changes, the
-  account stays locked. `request_magic_login` also mails inactive users; the callback then refuses.
+- **Magic link mails inactive users.** `request_magic_login` sends to an inactive account; the callback then
+  refuses it.
 - **`auth_tokens` has no sweep.** Rows stay until the user is deleted.
 - **Tokens in URLs.** WebSocket and SSE carry the access JWT in the query string, so any log that records
   URLs records a live token. See the security file.

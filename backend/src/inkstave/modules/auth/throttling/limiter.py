@@ -8,6 +8,7 @@ Full hardening (sliding windows, abuse heuristics) is spec 52.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
@@ -26,10 +27,16 @@ logger = logging.getLogger("inkstave.ratelimit")
 
 # Scopes whose identity also includes the submitted email (credential stuffing).
 # The verify/magic request endpoints throttle per address AND per IP; their
-# token-only callbacks carry no email, so ``_identity`` falls back to IP for them.
+# token-only callbacks carry no email, so they fall back to IP (see ``_identity``).
 _EMAIL_SCOPES = {"register", "verify_email", "magic_link"}
+# Scopes that key on the submitted email when the IP cannot be counted (untrusted proxy).
+# Scopes not listed here stand down instead: refresh, reset and setup have no e-mail to key on.
+_EMAIL_KEYED_SCOPES = _EMAIL_SCOPES | {"forgot_password"}
 _SCOPE_SETTING = {
     "register": "rate_limit_register",
+    # First-admin setup is public and locked after one use: it shares the register
+    # policy (per IP), so no new setting is needed.
+    "setup_admin": "rate_limit_register",
     "refresh": "rate_limit_refresh",
     # Sensitive public auth endpoints (spec 52/103): forgot-password reuses the
     # per-user/IP change-password policy (default 5/hour).
@@ -74,18 +81,43 @@ def client_ip(request: Request, settings: Settings) -> str:
     return request.client.host if request.client else "unknown"
 
 
-async def _identity(request: Request, scope: str, settings: Settings) -> str:
+def is_public_address(ip: str) -> bool:
+    """True for a globally routable address; ``False`` for private, loopback or unparseable peers."""
+    try:
+        return ipaddress.ip_address(ip).is_global
+    except ValueError:
+        return False
+
+
+def peer_counts_ip(request: Request, settings: Settings) -> bool:
+    """Whether a per-IP counter may be keyed on this client's address.
+
+    Behind an untrusted reverse proxy the peer is the proxy, shared by every user, so an
+    IP counter would let one user lock out the others. The per-IP limits therefore stand
+    down unless proxy headers are trusted or the peer is public. Login uses the same rule.
+    """
+    return settings.trust_proxy_headers or is_public_address(client_ip(request, settings))
+
+
+async def _submitted_email(request: Request, scope: str) -> str:
+    try:
+        body = await request.json()
+        return str(body.get("email", "")).strip().lower()
+    except Exception:
+        # Degraded to IP-only identity — surface it (scope only, never the body).
+        logger.debug("rate-limit identity: body parse failed, using ip only (scope=%s)", scope)
+        return ""
+
+
+async def _identity(request: Request, scope: str, settings: Settings) -> str | None:
+    """The counter's identity, or ``None`` when this request must not be counted at all."""
     ip = client_ip(request, settings)
-    if scope in _EMAIL_SCOPES:
-        try:
-            body = await request.json()
-            email = str(body.get("email", "")).strip().lower()
-        except Exception:
-            # Degraded to IP-only identity — surface it (scope only, never the body).
-            logger.debug("rate-limit identity: body parse failed, using ip only (scope=%s)", scope)
-            email = ""
-        if email:
-            return f"{ip}:{email}"
+    email = await _submitted_email(request, scope) if scope in _EMAIL_KEYED_SCOPES else ""
+    if not peer_counts_ip(request, settings):
+        # Stand down on the IP; keep the per-e-mail limit where the request names one.
+        return f"email:{email}" if email else None
+    if scope in _EMAIL_SCOPES and email:
+        return f"{ip}:{email}"
     return ip
 
 
@@ -120,7 +152,10 @@ def rate_limit(scope: str) -> Callable[..., Awaitable[None]]:
         if not settings.rate_limit_enabled:
             return
         limit, window = parse_rate_limit(getattr(settings, _SCOPE_SETTING[scope]))
-        key = f"ratelimit:{scope}:{await _identity(request, scope, settings)}"
+        identity = await _identity(request, scope, settings)
+        if identity is None:
+            return  # behind an untrusted proxy with nothing else to key on: stand down
+        key = f"ratelimit:{scope}:{identity}"
         try:
             await _enforce(redis, key, limit, window)
         except RateLimitError:
