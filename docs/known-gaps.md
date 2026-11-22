@@ -148,22 +148,20 @@ run; the rest were read, not run.
 
 ### Data correctness
 
-- `PUT` on document content strips surrounding whitespace, through `str_strip_whitespace=True` on
-  `DocumentContentReplace` (reproduced).
 - History versions recorded before the seed fix, for documents that had content when first opened, reconstruct
   empty or wrong text; the document heals from its next edit, the old versions cannot be recovered.
 - Multiple backend replicas are unsafe for collaboration: the forwarder never applies updates to the receiving
   `YDocument`, and compaction then overwrites the snapshot with partial state.
-- Project blobs are orphaned on delete, and a Git push that deletes files orphans their offloaded history blobs
-  (`git/push/apply.py` `_detach` does not notify the `on_entities_deleted` listeners).
+- Offloaded history blobs are orphaned when a project is soft-deleted (nothing purges its history) and when a Git
+  push deletes files (`git/push/apply.py` `_detach` does not notify the `on_entities_deleted` listeners).
 
 ### Stuck work
 
 - If the compile enqueue fails after the request commits, the request answers 500 and the row stays `queued` until
   the reaper settles it (up to 10 minutes), blocking coalescing and the caps for that project meanwhile.
 - A stalled agent run is reaped lazily: the session shows its stale state until the user sends the next message.
-- Zip imports enqueue before commit, with `max_tries=1`.
-- E-mail retries never happen: ARQ retries only on `Retry`, so `max_tries=3` on `send_email_job` does nothing.
+- A crash between an import's commit and its `dispatch_import` leaves the import `queued` with no job; nothing
+  sweeps it. A commit failure after the upload is staged leaves the staged archive behind.
 
 ### Authorization and security
 
@@ -183,7 +181,6 @@ run; the rest were read, not run.
 
 - `/out` has no disk cap in the compile sandbox (`COMPILE_MAX_OUTPUT_BYTES` is checked only after the run).
 - The daily compile quota counts requests and is a fixed window.
-- The effective document size limit is `MAX_REQUEST_BODY_BYTES` (1 MiB), not `MAX_DOCUMENT_BYTES` (2 MB).
 - The editor's comment highlights and the editor-bar badge read only the loaded comment pages, so with more than
   50 threads they are incomplete until "Load more" (spec 118 paging).
 
