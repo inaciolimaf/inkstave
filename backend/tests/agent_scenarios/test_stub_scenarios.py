@@ -48,20 +48,7 @@ def test_an_unknown_scenario_name_is_refused_at_construction() -> None:
         StubAgentLLM(scenario="no_such_scenario")
 
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        pytest.param(
-            name,
-            marks=pytest.mark.xfail(
-                reason="known bug: an empty model reply ends as a capped answer (fixed next)", strict=True
-            ),
-        )
-        if name == "empty_reply"
-        else name
-        for name in SCENARIO_NAMES
-    ],
-)
+@pytest.mark.parametrize("name", SCENARIO_NAMES)
 async def test_a_stub_scenario_ends_as_its_name_says(name: str, db_session: AsyncSession, redis: Any) -> None:
     project: SimpleNamespace = await make_project(db_session)
     session = await new_session(db_session, project)

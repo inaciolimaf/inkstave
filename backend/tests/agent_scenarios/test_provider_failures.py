@@ -211,7 +211,6 @@ async def _assert_failed_mid_reply(
     assert await doc_text(db, project, project.main_id) == MAIN_TEX
 
 
-@pytest.mark.xfail(reason="known bug: an empty model reply ends as a capped answer (fixed next)", strict=True)
 async def test_an_empty_reply_is_reported_as_a_failure_not_as_a_capped_answer(
     project: SimpleNamespace, db_session: AsyncSession, redis: Any
 ) -> None:

@@ -200,7 +200,8 @@ picks another scripted run from `scripted/scenarios.py`: `happy` is the default 
 
 `_parse_tool_calls` keeps a malformed call as `{"_raw": ...}` and sets `finish_reason="error"`. `_run_tool`
 then fails validation and the model sees `invalid_args`. A response with `finish_reason="tool_calls"` and no
-parsed call also becomes `"error"`, and with no call to run `plan` ends the turn with `TOOL_CALL_UNPARSED`.
+parsed call also becomes `"error"`, and with no call to run `plan` ends the turn with `TOOL_CALL_UNPARSED`. A reply with
+neither text nor a call ends the turn with `EMPTY_REPLY` (an error, not a capped answer, which would read as partial work).
 
 `AnthropicLLMClient` differs in four ways. `complete` always streams and returns the final message, since one
 call can write a whole document. It sends no `temperature`, which Claude Haiku 5.5 rejects, so `AGENT_TEMPERATURE`
