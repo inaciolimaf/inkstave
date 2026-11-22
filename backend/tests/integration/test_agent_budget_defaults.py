@@ -31,8 +31,8 @@ async def test_default_per_run_token_cap_stops_the_turn(
 ) -> None:
     settings = AgentSettings()  # defaults, no test overrides
     sink = InMemoryEventSink(str(seed.run_id))
-    step = _tool_call("read_file", {"doc_id": str(seed.main_id)}, usage=300_000)
-    llm = FakeLLM(script=[step, step, FakeLLM.respond_text("done")])
+    step = _tool_call("read_file", {"doc_id": str(seed.main_id)}, usage=400_000)
+    llm = FakeLLM(script=[step, step, step, step, FakeLLM.respond_text("done")])
 
     await run_agent_turn(
         _ctx(db_session, redis, llm, sink, settings),
@@ -41,8 +41,9 @@ async def test_default_per_run_token_cap_stops_the_turn(
         user_message="x",
     )
 
+    # 400k, 800k, then 1.2M: the per-run cap (1M) fires before the soft backstop (2M) would.
     assert sink.events[-1]["code"] == "agent_budget_exceeded"
-    assert len(llm.calls) == 2  # the step that would cross the cap never ran
+    assert len(llm.calls) == 3  # the step after the one that crossed the cap never ran
 
 
 async def test_default_per_run_cost_cap_stops_the_turn(
@@ -50,9 +51,11 @@ async def test_default_per_run_cost_cap_stops_the_turn(
 ) -> None:
     settings = AgentSettings()  # defaults, no test overrides
     sink = InMemoryEventSink(str(seed.run_id))
-    # Output-heavy step: 110k tokens, but ~0.05 USD at the default Haiku rates.
-    step = _read_step(seed, LLMUsage(prompt=10_000, completion=100_000, total=110_000))
-    llm = FakeLLM(script=[step, step, FakeLLM.respond_text("done")])
+    # Output-heavy steps: 600k then 200k tokens. After the first, about 0.26 USD; after the second, 0.32,
+    # over the 0.30 default, while the total (800k) is still under the 1M token cap.
+    first = _read_step(seed, LLMUsage(prompt=100_000, completion=500_000, total=600_000))
+    second = _read_step(seed, LLMUsage(prompt=100_000, completion=100_000, total=200_000))
+    llm = FakeLLM(script=[first, second, FakeLLM.respond_text("done")])
 
     await run_agent_turn(
         _ctx(db_session, redis, llm, sink, settings),
@@ -62,4 +65,4 @@ async def test_default_per_run_cost_cap_stops_the_turn(
     )
 
     assert sink.events[-1]["code"] == "agent_budget_exceeded"
-    assert len(llm.calls) == 1
+    assert len(llm.calls) == 2

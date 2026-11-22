@@ -23,7 +23,9 @@ class AgentSettings(BaseSettings):
     agent_model: str = "claude-haiku-5-5"
     agent_temperature: float = 0.2  # OpenRouter only; current Claude models reject it
     agent_max_iterations: int = 50
-    agent_max_total_tokens: int = 1000000
+    # Backstop for a turn's accumulated tokens: ends the loop with a partial note, run still done. Keep it
+    # above AGENT_MAX_TOKENS_PER_RUN so that cap fires first; 0 disables it.
+    agent_max_total_tokens: int = 2000000
     # Output cap per LLM call. Must be large enough for a propose_edit whose
     # new_text is a whole document — too small truncates the tool-call JSON, which
     # then fails to parse (the "_raw" fallback) and the edit is rejected.
@@ -67,12 +69,10 @@ class AgentSettings(BaseSettings):
     agent_max_runs_per_minute_per_user: int = 10
     agent_max_concurrent_runs_per_user: int = 2
     agent_max_runs_per_minute_per_project: int = 20
-    # Per-run caps sit below the soft cap agent_max_total_tokens, which counts the same tokens: otherwise
-    # the soft cap ends every run first and these never fire. The cost cap is set so that a run at the
-    # token cap, split evenly between prompt and completion, reaches it. It stays ≤ the per-day-per-user cap
-    # below, so a single run can never blow a user's whole daily budget in one shot.
-    agent_max_tokens_per_run: int = 500000
-    agent_max_cost_per_run_usd: float = 0.05
+    # The per-run token cap is the one that stops a turn (agent_max_total_tokens is the backstop above it).
+    # The cost cap stays ≤ the per-day-per-user cap below, so one run can never use the whole daily budget.
+    agent_max_tokens_per_run: int = 1000000
+    agent_max_cost_per_run_usd: float = 0.30
     agent_max_tokens_per_day_per_project: int = 2000000
     agent_max_cost_per_day_per_user_usd: float = 0.30  # ~R$0.50/day per user
     # Comma-separated e-mails whose runs skip every token and cost cap above (rate limits still apply).

@@ -8,8 +8,8 @@ from inkstave.core.config.agent import AgentSettings
 from inkstave.modules.agent.safety.budget import cost_for
 
 
-def test_the_per_run_token_cap_stops_before_the_soft_cap() -> None:
-    # Both caps count the same total. The soft cap only ends the loop when the per-run cap is off.
+def test_the_soft_backstop_sits_above_the_per_run_token_cap() -> None:
+    # Both caps count the same total. The soft cap is only a backstop: the per-run cap must fire first.
     settings = AgentSettings()
     assert 0 < settings.agent_max_tokens_per_run < settings.agent_max_total_tokens
 
