@@ -34,16 +34,14 @@ async def test_propose_edit_stages_without_changing_doc(
     ctx = _ctx(db_session, seed.project_id, seed.owner.id)
     before = (await get_document(db_session, seed.project_id, seed.main_id)).content
     version = (await get_document(db_session, seed.project_id, seed.main_id)).version
+    await ReadFileTool().run(ReadFileArgs(doc_id=str(seed.main_id)), ctx)
 
     result = await ProposeEditTool().run(
-        ProposeEditArgs(
-            doc_id=str(seed.main_id), mode="range", new_text="rewritten", start_line=3, end_line=4
-        ),
-        ctx,
+        ProposeEditArgs(doc_id=str(seed.main_id), old_text="Methods", new_text="Approach"), ctx
     )
     assert result.ok and result.data is not None
     assert result.data["staged"] is True and result.data["base_version"] == str(version)  # AC5
-    assert len(ctx.staged_edits) == 1 and ctx.staged_edits[0].new_text == "rewritten"
+    assert len(ctx.staged_edits) == 1 and ctx.staged_edits[0].new_text == "Approach"
     # The document content is unchanged in the DB.
     after = (await get_document(db_session, seed.project_id, seed.main_id)).content
     assert after == before
@@ -52,7 +50,7 @@ async def test_propose_edit_stages_without_changing_doc(
 async def test_viewer_cannot_propose_but_can_read(seed: SimpleNamespace, db_session: AsyncSession) -> None:
     ctx = _ctx(db_session, seed.project_id, seed.viewer.id)
     denied = await ProposeEditTool().run(
-        ProposeEditArgs(doc_id=str(seed.main_id), mode="full", new_text="x"), ctx
+        ProposeEditArgs(doc_id=str(seed.main_id), old_text="Methods", new_text="x"), ctx
     )
     assert not denied.ok and denied.error is not None and denied.error.code == "forbidden"  # AC6
     # AC6: every read tool still succeeds for a viewer (not an authorization error).
@@ -77,16 +75,6 @@ async def test_cross_project_doc_is_not_found(seed: SimpleNamespace, db_session:
     read = await ReadFileTool().run(ReadFileArgs(doc_id=str(other_doc.id)), ctx)
     assert not read.ok and read.error is not None and read.error.code == "not_found"  # AC7
     edit = await ProposeEditTool().run(
-        ProposeEditArgs(doc_id=str(other_doc.id), mode="full", new_text="x"), ctx
+        ProposeEditArgs(doc_id=str(other_doc.id), old_text="x", new_text="y"), ctx
     )
     assert not edit.ok and edit.error is not None and edit.error.code == "not_found"
-
-
-async def test_propose_edit_range_out_of_bounds(seed: SimpleNamespace, db_session: AsyncSession) -> None:
-    ctx = _ctx(db_session, seed.project_id, seed.owner.id)
-    result = await ProposeEditTool().run(
-        ProposeEditArgs(doc_id=str(seed.main_id), mode="range", new_text="x", start_line=0, end_line=9999),
-        ctx,
-    )
-    assert not result.ok and result.error is not None
-    assert result.error.code == "invalid_args"  # AC10

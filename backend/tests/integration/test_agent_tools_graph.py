@@ -95,10 +95,11 @@ async def test_propose_edit_via_graph_stages_and_keeps_doc(
     deps = AgentDeps(
         llm=FakeLLM(
             script=[
+                _tool_call("read_file", {"doc_id": str(seed.main_id)}),
                 _tool_call(
                     "propose_edit",
-                    {"doc_id": str(seed.main_id), "mode": "full", "new_text": "brand new"},
-                )
+                    {"doc_id": str(seed.main_id), "old_text": before, "new_text": "brand new"},
+                ),
             ]
         ),
         settings=AgentSettings(),

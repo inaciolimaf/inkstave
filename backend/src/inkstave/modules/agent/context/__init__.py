@@ -12,7 +12,7 @@ from inkstave.modules.agent.context.models import (
 )
 from inkstave.modules.agent.context.parser import parse_latex_structure
 from inkstave.modules.agent.context.project_map import build_project_map
-from inkstave.modules.agent.context.select import estimate_tokens, select_context
+from inkstave.modules.agent.context.select import estimate_tokens
 
 __all__ = [
     "ContextBundle",
@@ -26,5 +26,4 @@ __all__ = [
     "estimate_tokens",
     "locate_section",
     "parse_latex_structure",
-    "select_context",
 ]

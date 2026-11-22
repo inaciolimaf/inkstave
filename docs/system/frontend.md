@@ -241,8 +241,9 @@ on screen with a notice.
   `frontend/src/modules/collab/suggestions/`; see `docs/system/collab.md`). Editing stays off until the first sync, and stays off for a
   viewer (`isReadOnly`).
 - Provider: it reconnects with backoff from 500 ms to 15 s. Close codes 4401, 4403 and 4404 are terminal.
-- Before a compile or an agent message, `flushBeforeCompile` should await the session's `flush`, but nothing
-  assigns its `flushRef`, so it does nothing today (`docs/known-gaps.md`).
+- Before a compile or an agent message, `flushBeforeCompile` (`workspace-hooks.ts`) waits for the open session's
+  `flush` (the server ack, see `docs/system/collab.md`). `EditorPane` registers it through `registerFlush` and
+  clears it on change and unmount. The wait is capped at `FLUSH_DEADLINE_MS` (3 s), and it never rejects.
 - SyncTeX and diagnostics: `useSyncTex` resolves both directions, and `jumpToSource` opens another document when
   needed. `useProblems` feeds the problems panel, and `applyDiagnostics` draws those of the open file.
 

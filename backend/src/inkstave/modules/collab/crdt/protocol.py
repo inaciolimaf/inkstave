@@ -8,6 +8,9 @@ Wire format (outer tag byte = var-uint message type):
 - ``MESSAGE_SYNC`` (0): var-uint sync-type, then a var-bytes payload
   (``SYNC_STEP_1`` + state vector, ``SYNC_STEP_2`` + update, ``SYNC_UPDATE`` + update).
 - ``MESSAGE_AWARENESS`` (1): a var-bytes awareness-update payload.
+- ``MESSAGE_HEARTBEAT_PING`` (2) and ``MESSAGE_HEARTBEAT_PONG`` (3): keepalive, no payload.
+  Not part of y-protocols: the server pings, the browser answers. Browsers cannot send
+  WebSocket control frames, so the answer has to be an application message.
 """
 
 from __future__ import annotations
@@ -18,6 +21,8 @@ from pycrdt import Decoder, write_message, write_var_uint
 
 MESSAGE_SYNC = 0
 MESSAGE_AWARENESS = 1
+MESSAGE_HEARTBEAT_PING = 2
+MESSAGE_HEARTBEAT_PONG = 3
 
 SYNC_STEP_1 = 0
 SYNC_STEP_2 = 1
@@ -104,3 +109,7 @@ def encode_update(update: bytes) -> bytes:
 
 def encode_awareness(awareness_update: bytes) -> bytes:
     return write_var_uint(MESSAGE_AWARENESS) + write_message(awareness_update)
+
+
+def encode_heartbeat_ping() -> bytes:
+    return write_var_uint(MESSAGE_HEARTBEAT_PING)

@@ -92,7 +92,8 @@ which `get_email_enqueuer` creates on first use.
 ### Application lifecycle
 
 `create_app()` does no network I/O. Middleware order, outermost first: `RequestContextMiddleware`,
-`SecurityHeadersMiddleware`, `BodySizeLimitMiddleware`, `CORSMiddleware`. Routers: the root probes,
+`SecurityHeadersMiddleware`, `CORSMiddleware`, `BodySizeLimitMiddleware`, `UnhandledErrorMiddleware`.
+Routers: the root probes,
 `/api/setup` (not versioned), `/api/v1`, then the collaboration WebSocket at the root.
 
 `lifespan` on startup:
@@ -127,14 +128,18 @@ ARQ kills the job.
 
 ### Errors
 
-Feature code raises `AppError` subclasses. `register_exception_handlers` installs three handlers.
+Feature code raises `AppError` subclasses. `register_exception_handlers` installs four handlers, and
+`UnhandledErrorMiddleware` answers uncaught exceptions. Starlette's own `HTTPException` (an unknown
+route, a wrong method) becomes `not_found` 404, `method_not_allowed` 405 (keeps `Allow`), or
+`http_error` for any other status.
 
 Each subclass fixes a status and an `error.type`: `BadRequestError` 400 `bad_request`,
 `UnauthorizedError` 401 `unauthorized` (adds `WWW-Authenticate: Bearer`), `ForbiddenError` 403
 `forbidden`, `NotFoundError` 404 `not_found`, `ConflictError` 409 `conflict`, `GoneError` 410 `gone`,
 `RateLimitError` 429 `rate_limited` (adds `Retry-After`, `X-RateLimit-*`), `ServiceUnavailableError`
 503 `service_unavailable`. `RequestValidationError` becomes 422 `validation_error` with `details`.
-Any other `Exception` becomes 500 `internal_error`: the traceback is logged, never returned.
+Any other `Exception` becomes 500 `internal_error`: the traceback is logged, never returned. The 500
+carries the request id, `X-Request-ID`, the security headers and CORS headers.
 
 The body is `{"error": {"type", "message", "details", "request_id"}}`. Domains subclass these with
 their own `error_type`. With `DEBUG=true` a 500 message adds the exception class name.
@@ -271,10 +276,6 @@ cannot find one. CI runs unit, integration and e2e in parallel and enforces a 18
 
 ## Points of attention
 
-- **Not every error uses the envelope.** No handler covers Starlette's `HTTPException`, so an unknown
-  route or a 405 answers `{"detail": ...}`. The middleware's 413 has its own shape; see
-  [security.md](security.md). A 500 carries `request_id: null`: see
-  [observability.md](observability.md).
 - **A database that is down at startup still aborts it.** `check_db` only warns, but
   `_ensure_migrations` then calls `current_revision`, whose `engine.connect()` sits outside its
   `try`. Only Redis failures are truly tolerated at boot.

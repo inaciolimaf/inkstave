@@ -6,7 +6,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from inkstave.modules.agent.tools._common import load_tree, resolve_document
+from inkstave.modules.agent.tools._common import (
+    edits_for,
+    load_tree,
+    resolve_document,
+    text_after_staged_edits,
+)
 from inkstave.modules.agent.tools.base import Tool, ToolContext, ToolResult, authorize
 from inkstave.modules.projects import TreeEntity, TreeEntityType
 
@@ -45,9 +50,16 @@ def _cap_to_chars(lines: list[str], cap: int) -> tuple[str, int, bool]:
     return "".join(kept), len(kept), truncated
 
 
+_DESCRIPTION = (
+    "Read a text document. `content` is the exact text, with no line numbers: copy old_text for "
+    "propose_edit from it verbatim. Optional 0-based [start_line, end_line) window. Read a document "
+    "before proposing an edit to it."
+)
+
+
 class ReadFileTool(Tool):
     name = "read_file"
-    description = "Read a text document's content (optionally a 0-based [start,end) line window)."
+    description = _DESCRIPTION
     Args = ReadFileArgs
 
     async def run(self, args: ReadFileArgs, ctx: ToolContext) -> ToolResult:  # type: ignore[override]
@@ -64,7 +76,10 @@ class ReadFileTool(Tool):
             return ToolResult(ok=False, error=resolved)
         _entity, document, path = resolved
 
-        lines = document.content.splitlines(keepends=True)
+        # Remember what the model read: propose_edit only works on a document read in this turn.
+        ctx.read_versions[doc_id] = str(document.version)
+        # Show the text the turn's staged edits leave, so old_text can match the next edit.
+        lines = text_after_staged_edits(ctx, doc_id, document.content).splitlines(keepends=True)
         window = _window(args, lines)
         if window is None:
             return ToolResult.failure("invalid_args", "start_line is past end of document.")
@@ -81,10 +96,21 @@ class ReadFileTool(Tool):
             "line_count": len(lines),
             "content": text,
             "truncated": truncated,
+            **_notes(ctx, doc_id, truncated),
         }
-        if truncated:
-            result["hint"] = "Output exceeds the size cap; request a smaller line range."
         return ToolResult.success(**result)
+
+
+def _notes(ctx: ToolContext, doc_id: str, truncated: bool) -> dict[str, object]:
+    """Optional result fields: the turn's earlier edits in this document, and a truncation hint."""
+    notes: dict[str, object] = {}
+    count = len(edits_for(ctx, doc_id))
+    if count:
+        notes["proposed_edits"] = count
+        notes["note"] = "content already includes the edits proposed earlier in this turn"
+    if truncated:
+        notes["hint"] = "Output exceeds the size cap; request a smaller line range."
+    return notes
 
 
 def _doc_id_for_path(entities: list[TreeEntity], paths: dict[UUID, str], path: str | None) -> str | None:
