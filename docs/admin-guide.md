@@ -258,7 +258,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_STREAM_HEARTBEAT_S` | No | `15` | SSE heartbeat interval | backend |
 | `AGENT_RUN_TTL_S` | No | `900` | TTL for per-run last-event + cancel keys | backend, worker |
 | `AGENT_MAX_MESSAGE_CHARS` | No | `40000` | max user message length | backend |
-| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | select_context token budget (spec 48) | backend, worker |
+| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | No effect: `select_context` was removed (see agent docs) | backend, worker |
 | `AGENT_CONTEXT_SURROUNDING_LINES` | No | `40` | context lines around a located section | backend, worker |
 | `AGENT_SECTION_EXTRA_COMMANDS` | No | `—` | extra sectioning command names (comma-separated) | backend, worker |
 | `AGENT_CONTEXT_CACHE` | No | `memory` | memory \| redis \| off | backend, worker |

@@ -7,7 +7,6 @@ from inkstave.modules.agent.context import (
     estimate_tokens,
     locate_section,
     parse_latex_structure,
-    select_context,
 )
 from inkstave.modules.agent.context.models import StructureKind
 
@@ -167,47 +166,7 @@ def test_locate_by_label() -> None:
     assert locate_section(pm, "intro")[0].reason in {"label", "synonym", "exact title"}
 
 
-def test_select_respects_budget_and_truncates() -> None:  # AC5
-    body = "\n".join(f"line {i}" for i in range(200))
-    text = f"\\section{{Introduction}}\n{body}\n\\section{{Methods}}\nm\n"
-    pm = build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
-    bundle = select_context(pm, {"main.tex": text}.get, "introduction", budget_tokens=40, surrounding_lines=5)
-    assert bundle.estimated_tokens <= 40  # never exceeds the budget
-    assert any(c.kind == "section" for c in bundle.chunks)
-    assert any(c.truncated for c in bundle.chunks)  # deterministic truncation
-    assert any("[truncated]" in c.text for c in bundle.chunks)
-
-
-def test_select_orders_sections_before_outline() -> None:  # issue 203
-    text = "\\section{Introduction}\nx\n\\section{Methods}\nm\n"
-    pm = build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
-    bundle = select_context(pm, {"main.tex": text}.get, "introduction", budget_tokens=8000)
-    outline_idx = next(i for i, c in enumerate(bundle.chunks) if c.kind == "outline")
-    section_idxs = [i for i, c in enumerate(bundle.chunks) if c.kind == "section"]
-    assert section_idxs  # there is at least one section chunk
-    # priority 0 (section) chunks all precede the priority 1 (outline) chunk.
-    assert all(i < outline_idx for i in section_idxs)
-
-
-def test_select_surrounding_lines_widens_window() -> None:  # issue 205
-    text = "\n".join(["pre2", "pre1", "\\section{Mid}", "m1", "m2", "\\section{End}", "e"])
-    pm = build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
-    narrow = select_context(pm, {"main.tex": text}.get, "mid", budget_tokens=8000, surrounding_lines=0)
-    wide = select_context(pm, {"main.tex": text}.get, "mid", budget_tokens=8000, surrounding_lines=3)
-    s0 = next(c for c in narrow.chunks if c.kind == "section").text
-    s3 = next(c for c in wide.chunks if c.kind == "section").text
-    assert len(s3) > len(s0)  # the larger config yields a strictly longer window
-    # boundary lines outside the section appear only with the wider window.
-    for boundary in ("pre1", "pre2", "\\section{End}"):
-        assert boundary not in s0
-        assert boundary in s3
-
-
-def test_select_includes_outline_summary() -> None:
-    text = "\\section{Introduction}\nx\n"
-    pm = build_project_map("p1", ["main.tex"], {"main.tex": text}.get)
-    bundle = select_context(pm, {"main.tex": text}.get, "introduction", budget_tokens=8000)
-    assert any(c.kind == "outline" for c in bundle.chunks)
+def test_estimate_tokens_is_about_one_token_per_four_characters() -> None:
     assert estimate_tokens("abcd") == 1
 
 

@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from starlette.requests import Request
 
 from inkstave.app import create_app
 from inkstave.core.config.settings import get_settings
@@ -27,6 +28,11 @@ def _attach_error_routes(app: Any) -> None:
     app.add_api_route("/_test/not-found", raise_not_found, methods=["GET"])
     app.add_api_route("/_test/boom", raise_boom, methods=["GET"])
     app.add_api_route("/_test/validate", needs_param, methods=["GET"])
+
+    async def echo(request: Request) -> dict[str, int]:
+        return {"length": len(await request.body())}
+
+    app.add_api_route("/_test/echo", echo, methods=["POST"])
 
 
 async def test_validation_error_envelope(app: Any, async_client: AsyncClient) -> None:
@@ -138,3 +144,50 @@ async def test_docs_toggle(monkeypatch: pytest.MonkeyPatch) -> None:
     disabled = create_app()
     async with AsyncClient(transport=ASGITransport(app=disabled), base_url="http://test") as c:
         assert (await c.get("/docs")).status_code == 404
+
+
+async def test_unhandled_error_carries_request_id_and_headers(app: Any, async_client: AsyncClient) -> None:
+    _attach_error_routes(app)
+    header = get_settings().request_id_header
+    resp = await async_client.get(
+        "/_test/boom", headers={header: "rid-500", "Origin": "http://localhost:5173"}
+    )
+    assert resp.status_code == 500
+    assert resp.json()["error"]["request_id"] == "rid-500"
+    assert resp.headers.get(header) == "rid-500"
+    assert resp.headers.get("x-frame-options") == "DENY"  # security headers reach the 500
+    assert resp.headers.get("content-security-policy")
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"  # CORS too
+
+
+async def test_unknown_route_404_uses_the_envelope(async_client: AsyncClient) -> None:
+    resp = await async_client.get("/_test/does-not-exist")
+    assert resp.status_code == 404
+    body = resp.json()
+    assert set(body) == {"error"}
+    assert body["error"]["type"] == "not_found"
+    assert body["error"]["request_id"]
+
+
+async def test_wrong_method_405_uses_the_envelope_and_keeps_allow(async_client: AsyncClient) -> None:
+    resp = await async_client.post("/health")
+    assert resp.status_code == 405
+    body = resp.json()
+    assert set(body) == {"error"}
+    assert body["error"]["type"] == "method_not_allowed"
+    assert "GET" in resp.headers.get("allow", "")
+
+
+async def test_body_limit_413_uses_the_envelope_with_request_id(app: Any, async_client: AsyncClient) -> None:
+    _attach_error_routes(app)
+    header = get_settings().request_id_header
+    too_big = b"x" * (get_settings().max_request_body_bytes + 1)
+    resp = await async_client.post(
+        "/_test/echo", content=too_big, headers={header: "rid-413", "Origin": "http://localhost:5173"}
+    )
+    assert resp.status_code == 413
+    body = resp.json()
+    assert set(body) == {"error"}
+    assert body["error"]["type"] == "payload_too_large"
+    assert body["error"]["request_id"] == "rid-413"
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"
