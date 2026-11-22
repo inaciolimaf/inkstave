@@ -148,10 +148,10 @@ run; the rest were read, not run.
   `DocumentContentReplace` (reproduced).
 - History versions recorded before the seed fix, for documents that had content when first opened, reconstruct
   empty or wrong text; the document heals from its next edit, the old versions cannot be recovered.
-- A failed history flush loses its buffer.
 - Multiple backend replicas are unsafe for collaboration: the forwarder never applies updates to the receiving
   `YDocument`, and compaction then overwrites the snapshot with partial state.
-- Offloaded history blobs and project blobs are orphaned on delete.
+- Project blobs are orphaned on delete, and a Git push that deletes files orphans their offloaded history blobs
+  (`git/push/apply.py` `_detach` does not notify the `on_entities_deleted` listeners).
 
 ### Stuck work
 
@@ -190,8 +190,8 @@ run; the rest were read, not run.
 - `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 1000000 soft cap stops
   first.
 - `gzip.decompress` on SyncTeX data has no output bound.
-- Comment threads are not paged. `GET /api/v1/projects/{id}/comments` returns every thread of the project with
-  all its messages, and the panel renders them all (spec 118).
+- The editor's comment highlights and the editor-bar badge read only the loaded comment pages, so with more than
+  50 threads they are incomplete until "Load more" (spec 118 paging).
 
 ### Settings with no effect
 
