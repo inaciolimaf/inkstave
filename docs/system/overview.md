@@ -313,6 +313,7 @@ cannot find one. CI runs unit, integration and e2e in parallel and enforces a 18
 | Models and migrations agree | `backend/tests/integration/test_migrations.py::test_autogenerate_is_empty` |
 | The 500 body does not leak internals | `backend/tests/integration/test_error_envelope_runtime.py::test_500_envelope_does_not_leak_internals` |
 | A spawned task is held and its failure logged | `backend/tests/unit/test_background.py::test_spawn_holds_the_task_until_it_finishes`, `backend/tests/unit/test_background.py::test_spawn_logs_a_failure` |
+| Every `fix` commit in the range changes a test file, or is exempt (`deps`, `docker`, `ci`, `deploy`, `docs`, or a `No-Test: <reason>` body line) | `backend/tests/unit/test_fix_has_test.py::test_fix_without_a_test_file_fails_and_names_the_commit`, `backend/tests/unit/test_fix_has_test.py::test_no_test_reason_passes` (script `scripts/check_fix_has_test.py`, `make fix-tests`, a step of the CI lint job, which checks out with `fetch-depth: 0`) |
 | The suite ignores the machine's `.env` and database | `backend/tests/unit/test_env_isolation.py::test_dotenv_is_not_read`, `backend/tests/unit/test_env_isolation.py::test_database_is_unreachable_unless_a_test_asks_for_it` |
 | `require()`, `RedisCache`, `get_owned`, `_sweep_minutes` | no dedicated test |
 
