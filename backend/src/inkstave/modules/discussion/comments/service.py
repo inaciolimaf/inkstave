@@ -24,6 +24,7 @@ from inkstave.modules.discussion.comments.errors import (
 )
 from inkstave.modules.discussion.comments.models import CommentMessage, CommentThread
 from inkstave.modules.discussion.comments.outcome import CommentOutcome, MentionMail, excerpt
+from inkstave.modules.discussion.comments.paging import DEFAULT_LIMIT, page_threads
 from inkstave.modules.discussion.comments.schemas import (
     CommentMessageRead,
     CommentMessageWrite,
@@ -101,18 +102,19 @@ class CommentService:
         self._session = session
 
     async def list_threads(
-        self, project_id: UUID, *, document_id: UUID | None, status: ThreadStatus
-    ) -> list[CommentThreadRead]:
-        statement = select(CommentThread).where(CommentThread.project_id == project_id)
-        if document_id is not None:
-            statement = statement.where(CommentThread.document_id == document_id)
-        if status == "open":
-            statement = statement.where(CommentThread.resolved_at.is_(None))
-        elif status == "resolved":
-            statement = statement.where(CommentThread.resolved_at.is_not(None))
-        statement = statement.order_by(CommentThread.created_at, CommentThread.id)
-        threads = list((await self._session.execute(statement)).scalars())
-        return await self._reads(threads)
+        self,
+        project_id: UUID,
+        *,
+        document_id: UUID | None,
+        status: ThreadStatus,
+        limit: int = DEFAULT_LIMIT,
+        after: str | None = None,
+    ) -> tuple[list[CommentThreadRead], str | None]:
+        """One page of threads, and the cursor of the next page (``None`` when there is none)."""
+        threads, next_cursor = await page_threads(
+            self._session, project_id, document_id=document_id, status=status, limit=limit, after=after
+        )
+        return await self._reads(threads), next_cursor
 
     async def create_thread(
         self, project: Project, author: User, payload: CommentThreadCreate

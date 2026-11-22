@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from inkstave.modules.collab import YDocument
@@ -25,6 +25,8 @@ class Pending:
     at: datetime
     project_id: UUID
     origin: str | None = None
+    # The unmerged updates, kept so that a failed flush can restore them.
+    raw: list[bytes] = field(default_factory=list)
 
 
 @dataclass(slots=True)
