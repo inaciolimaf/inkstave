@@ -16,7 +16,13 @@ import { MobileTabs, type MobileView } from "./mobile-tabs";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useEditorSelection, type EditorSelection } from "./use-editor-selection";
 import { useWorkspaceSide } from "./workspace-side";
-import { useAgentAsks, useFlushBeforeCompile, useSourceJumps, useWorkspaceTree } from "./workspace-hooks";
+import {
+  type FlushFn,
+  useAgentAsks,
+  useFlushBeforeCompile,
+  useSourceJumps,
+  useWorkspaceTree,
+} from "./workspace-hooks";
 import { Panes } from "./workspace-panes";
 import { WorkspaceDrawers } from "./workspace-drawers";
 import { useProposalReview } from "./use-proposal-review";
@@ -114,6 +120,7 @@ function WorkspaceContent({
   outline,
   reviewBar,
   comments,
+  registerFlush,
 }: {
   projectId: string;
   selected: TreeEntity | null;
@@ -129,6 +136,7 @@ function WorkspaceContent({
   reviewBar: ReactNode;
   /** The comments panel (a column beside the text on a wide screen) and the selection's Comment button. */
   comments: WorkspaceComments;
+  registerFlush: (flush: FlushFn | null) => void;
 }) {
   const { user } = useAuth();
   const pickFile = (entity: TreeEntity) => {
@@ -155,6 +163,7 @@ function WorkspaceContent({
               currentUser: user ? { id: user.id, name: user.display_name } : null,
               readOnly,
               statusSlot: slots.status,
+              registerFlush,
             }}
             filesOpen={filesOpen}
             onOpenFiles={() => setFilesOpen(true)}
@@ -200,7 +209,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
   const jumps = useSourceJumps(sync, setView);
   const comments = useWorkspaceComments(projectId, sync.editorView, selected, setSelected, chat.button);
 
-  const flushBeforeCompile = useFlushBeforeCompile();
+  const { flushBeforeCompile, registerFlush } = useFlushBeforeCompile();
   const outline = useWorkspaceOutline({ projectId, treeRoot, project, sync, jumps, setFilesOpen, readOnly });
 
   const content = (
@@ -218,6 +227,7 @@ export function EditorWorkspace({ projectId }: { projectId: string }) {
       outline={outline}
       reviewBar={proposals.reviewBar}
       comments={comments}
+      registerFlush={registerFlush}
     />
   );
 

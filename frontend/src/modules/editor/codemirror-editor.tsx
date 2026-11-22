@@ -37,8 +37,8 @@ export function CodeMirrorEditor({
   onView?: (view: EditorView | null) => void;
   /**
    * The `y-codemirror.next` collab binding (spec 31). When present the editor's
-   * content is owned by the CRDT, so `doc`/`onChange` are not used to seed or
-   * push text.
+   * content is owned by the CRDT: `doc` is the text it holds when the view is
+   * created, and later `doc` values neither seed nor push text.
    */
   collabExtension?: Extension;
   /** Spell check for this document; null while it is off (spec 113). */
@@ -64,8 +64,9 @@ export function CodeMirrorEditor({
   // Create the view exactly once; later changes go through compartments/dispatch.
   useEffect(() => {
     const state = EditorState.create({
-      // In collab mode the CRDT seeds the content; start empty.
-      doc: collabExtension ? "" : doc,
+      // In collab mode `doc` is the CRDT's current text: y-codemirror mirrors only later changes, so
+      // a view that starts empty would show a document that already has text as blank.
+      doc,
       extensions: editorExtensions({
         compartments: compartments.current,
         callbacks,

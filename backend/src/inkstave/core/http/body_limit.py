@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from starlette.datastructures import Headers
+
+from inkstave.core.errors import ErrorBody, ErrorEnvelope
+from inkstave.core.logging import get_request_id
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -14,14 +16,15 @@ if TYPE_CHECKING:
 
 
 def _too_large_response(limit: int) -> dict[str, object]:
-    body = json.dumps(
-        {
-            "error": {
-                "code": "payload_too_large",
-                "message": f"Request body exceeds the {limit}-byte limit.",
-            }
-        }
-    ).encode()
+    """The standard error envelope, carrying the request id bound by the outer middleware."""
+    envelope = ErrorEnvelope(
+        error=ErrorBody(
+            type="payload_too_large",
+            message=f"Request body exceeds the {limit}-byte limit.",
+            request_id=get_request_id(),
+        )
+    )
+    body = envelope.model_dump_json().encode()
     return {"body": body, "length": len(body)}
 
 

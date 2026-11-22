@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 
 from inkstave.modules.agent.models import AgentMessage, AgentSession
+from inkstave.modules.agent.safety.models import AgentAuditLog
 from inkstave.modules.projects import Project
 
 if TYPE_CHECKING:
@@ -39,6 +40,16 @@ async def create_session(
 
 async def project_is_live(db: AsyncSession, project_id: UUID) -> bool:
     found = await db.scalar(select(Project.id).where(Project.id == project_id, Project.deleted_at.is_(None)))
+    return found is not None
+
+
+async def run_belongs_to_session(db: AsyncSession, session_id: UUID, run_id: UUID) -> bool:
+    """Whether the audit trail records ``run_id`` under ``session_id`` (every run writes at least one row)."""
+    found = await db.scalar(
+        select(AgentAuditLog.id)
+        .where(AgentAuditLog.session_id == session_id, AgentAuditLog.run_id == run_id)
+        .limit(1)
+    )
     return found is not None
 
 

@@ -65,6 +65,25 @@ describe("agent reducer", () => {
     expect(state.error).toBeUndefined();
   });
 
+  it("closes the open reply on a failed run, so the next run starts its own bubble", () => {
+    // Regression (found by reducer.props.test.ts): the failed reply stayed "streaming" and the next
+    // run's tokens were appended to it.
+    const failed = feed([
+      { type: "token", seq: 0, text: "Half" },
+      { type: "error", seq: 1, code: "llm_error", message: "" },
+    ]);
+    expect(failed.items[0]).toMatchObject({ status: "complete", text: "Half" });
+    const next = feed(
+      [
+        { type: "token", seq: 0, text: "Second" },
+        { type: "done", seq: 1, final_text: "Second" },
+      ],
+      { ...failed, seenSeqs: [] },
+    );
+    const replies = next.items.flatMap((i) => (i.kind === "message" ? [i.text] : []));
+    expect(replies).toEqual(["Half", "Second"]);
+  });
+
   it("surfaces a non-cancel error with retryable flag (AC8)", () => {
     const state = feed([{ type: "error", seq: 0, code: "internal", message: "boom" }]);
     expect(state.phase).toBe("error");

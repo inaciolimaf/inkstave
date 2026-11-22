@@ -20,7 +20,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/graph/builder.py` | `build_graph`: plan, act, observe, respond |
 | `backend/src/inkstave/modules/agent/graph/nodes.py` | Node functions, tool dispatch, sentinels |
 | `backend/src/inkstave/modules/agent/graph/runner.py` | `run_turn`: one turn, one transaction |
-| `backend/src/inkstave/modules/agent/graph/state.py`, `backend/src/inkstave/modules/agent/graph/edits.py` | `AgentState`, `StagedEdit`, `EditMode` |
+| `backend/src/inkstave/modules/agent/graph/state.py`, `backend/src/inkstave/modules/agent/graph/edits.py` | `AgentState`, `StagedEdit` (exact-text replacement), `apply_edit`, `apply_edits` |
 | `backend/src/inkstave/modules/agent/graph/prompts.py`, `backend/src/inkstave/modules/agent/graph/agent_deps.py`, `backend/src/inkstave/modules/agent/graph/repository.py` | System prompt, injected `AgentDeps`, session and message queries |
 | `backend/src/inkstave/modules/agent/llm/base.py` | `LLMClient` protocol, message types, `LLMError` |
 | `backend/src/inkstave/modules/agent/llm/anthropic_client.py` | `AnthropicLLMClient`, the default and the only `anthropic` import |
@@ -28,7 +28,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/llm/factory.py` | `build_llm_client`, picks the client from `AGENT_LLM_PROVIDER` |
 | `backend/src/inkstave/modules/agent/llm/stub.py`, `backend/src/inkstave/modules/agent/llm/fake.py` | `StubAgentLLM` for e2e, scripted `FakeLLM` for tests |
 | `backend/src/inkstave/modules/agent/tools/base.py` | `Tool`, `ToolContext`, `ToolResult`, `ToolRegistry`, `authorize` |
-| `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages, never applies |
+| `backend/src/inkstave/modules/agent/tools/propose_edit.py` | `propose_edit`: stages an exact-text replacement after a read, never applies |
 | `backend/src/inkstave/modules/agent/tools/search_project.py`, `backend/src/inkstave/modules/agent/tools/read_file.py`, `backend/src/inkstave/modules/agent/tools/list_tree.py`, `backend/src/inkstave/modules/agent/tools/locate_section.py` | The read tools |
 | `backend/src/inkstave/modules/agent/tools/files/view_image.py` | `view_image`: hands an image or a PDF to the model |
 | `backend/src/inkstave/modules/agent/tools/files/propose.py` | `propose_create`, `propose_delete`, `propose_move`: stage, never apply |
@@ -36,7 +36,7 @@ collaboration channel, and a file operation runs in the backend only from the us
 | `backend/src/inkstave/modules/agent/file_ops/apply.py`, `backend/src/inkstave/modules/agent/file_ops/routes.py`, `backend/src/inkstave/modules/agent/file_ops/schemas.py`, `backend/src/inkstave/modules/agent/file_ops/paths.py` | Carrying out a proposal, its routes and models, pure path helpers |
 | `backend/src/inkstave/modules/agent/tools/_latex.py` | Regex heading scan, used only for `search_project` ranking |
 | `backend/src/inkstave/modules/agent/context/parser.py`, `backend/src/inkstave/modules/agent/context/project_map.py` | `parse_latex_structure`, `build_project_map` |
-| `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`; `select_context`, not wired to the turn |
+| `backend/src/inkstave/modules/agent/context/locate.py`, `backend/src/inkstave/modules/agent/context/select.py` | `locate_section`, token estimate; `select_context` was removed |
 | `backend/src/inkstave/modules/agent/diffs/__init__.py`, `backend/src/inkstave/modules/agent/diffs/compute.py` | `materialize_diffs`, `is_stale`; pure diff computation |
 | `backend/src/inkstave/modules/agent/diffs/models.py`, `backend/src/inkstave/modules/agent/diffs/repository.py` | `ProposedDiff`, `ProposedDiffStatus`, queries |
 | `backend/src/inkstave/modules/agent/diffs/outcome.py`, `backend/src/inkstave/modules/agent/diffs/schemas.py` | `record_outcome`, `outcome_status`, `check_outcome`; `DiffOutcomeIn` (spec 110) |
@@ -78,7 +78,9 @@ collaboration channel, and a file operation runs in the backend only from the us
 columns with no foreign key, so audit rows outlive their session.
 
 Redis, all short-lived: `agent:run:{run_id}` (pub/sub channel), `agent:run:{run_id}:last` (terminal event)
-and `agent:cancel:{run_id}` (cancel flag), both for `AGENT_RUN_TTL_S`; `agent:rl:user:{id}:{minute}` and
+and `agent:cancel:{run_id}` (cancel flag), both for `AGENT_RUN_TTL_S`; `agent:run:{run_id}:beat` (progress marker,
+refreshed by every event and by enqueue, expires after `AGENT_RUN_STALL_TIMEOUT_S`; its absence means the run
+stalled) and `agent:run:{run_id}:slot` (the run holds one of its user's concurrency slots, 3600 s); `agent:rl:user:{id}:{minute}` and
 `agent:rl:proj:{id}:{minute}` (runs per minute, 120 s); `agent:conc:user:{id}` (in flight, 3600 s);
 `agent:day:proj:{id}:{day}:tokens` and `agent:day:user:{id}:{day}:microusd` (per UTC day, 2 days).
 
@@ -97,9 +99,9 @@ project, is a 404.
 | `POST /sessions` | Create a session, 201. `model` is the current `AGENT_MODEL` | `not_project_member` |
 | `GET /sessions` | The caller's sessions, newest first. `limit` 1–100, default 50 | `not_project_member` |
 | `GET /sessions/{session_id}` | Session, messages, the diffs that are not superseded (a decided one keeps its status) without hunks, and file operations | `not_project_member` |
-| `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent` | 400 `message_too_long` with `details: [{max_chars}]`, 409 `run_active` |
-| `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202 | `not_project_member` |
-| `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=` | 401 when no valid token, `not_project_member` |
+| `POST /sessions/{session_id}/messages` | Start a run, 202 with `run_id` and `stream_url`. Named rate limit `agent`. A stalled active run is reaped first | 400 `message_too_long` with `details: [{max_chars}]`, 409 `run_active` |
+| `POST /sessions/{session_id}/runs/{run_id}/cancel` | Set the cancel flag, 202. The run must be the session's active run or have audit rows in it | 404 `run_not_found`, `not_project_member` |
+| `GET /sessions/{session_id}/runs/{run_id}/events` | SSE stream. Token in the header or in `?access_token=`. Same run check as cancel | 401 when no valid token, 404 `run_not_found`, `not_project_member` |
 | `GET /sessions/{session_id}/diffs` | All the session's diffs. `?status=` filters, `?include=hunks` adds hunks | 422 on an unknown status |
 | `POST /sessions/{session_id}/diffs/{diff_id}/outcome` | Records which hunks the user accepted, rejected or found stale (`{accepted, rejected, stale}`, each hunk id once). The status becomes `applied`, `partially_applied`, `rejected` or `stale`. Needs `DOC_WRITE`; audits `proposal_decided` | 403 `diff_forbidden`, 404 `diff_not_found` or `project_not_found`, 409 `already_decided` with the stored `status`, 422 `invalid_outcome` |
 | `GET /sessions/{session_id}/file-ops` | The session's file operations with `content`, without superseded ones | `not_project_member` |
@@ -119,6 +121,8 @@ Keep-alives are `: ping` comments.
 `seq` counts from 0 in every run. The panel's reducer drops an event whose `seq` it has already seen, so
 `send` in `frontend/src/modules/agent/useRunActions.ts` clears `seenSeqs` when a run starts; otherwise a
 second run in the same chat loses its first events and, when `done` is among them, never ends.
+An `error` that is not `cancelled` closes the open reply as complete, so the next run's tokens start a
+new bubble instead of joining the failed one (found by `reducer.props.test.ts`).
 
 ## How it works
 
@@ -132,11 +136,14 @@ second run in the same chat loses its first events and, when `done` is among the
    Any other 4xx at this step shows under its error type, and a 5xx or network failure as `internal`.
 2. The browser opens `EventSource` on `stream_url`. `sse_stream` subscribes before it looks for a stored
    terminal event, so it cannot miss one.
-3. The worker runs `run_agent_turn`, which binds log context and calls `_run_agent_turn`. That resolves
-   settings, the sink and the LLM, then `_run_scoped` runs `precheck_run` (rate limit, then day budget).
-   A block emits a terminal `error`, audits and sets `run_state` to `error`.
-4. `acquire_run` counts the run. `_execute_turn` commits `running`, audits `run_start`, builds `AgentDeps`
-   and calls `run_turn`.
+3. The worker runs `run_agent_turn`, which binds log context and calls `_run_agent_turn`. A job whose run is
+   no longer the session's `active_run_id` (reaped while queued) returns at once. Otherwise `_start_run`
+   resolves the LLM and the run's caps; a failure there settles the run. `_run_scoped` then runs
+   `precheck_run` (rate limit, then day budget). A block emits a terminal `error`, audits and sets
+   `run_state` to `error`. Any exception in this part also settles the run, so the session is never left
+   `queued`.
+4. `acquire_run` counts the run and `claim_slot` marks it. `_execute_turn` commits `running`, audits
+   `run_start`, builds `AgentDeps` and calls `run_turn`.
 5. `run_turn` raises the idle-in-transaction limit with `allow_idle`, builds the transcript (fresh system
    prompt, stored history, new message), inserts the user message and runs the graph.
 6. Back in `run_turn`, the messages the turn produced are stored, and `materialize_diffs` turns staged
@@ -144,12 +151,19 @@ second run in the same chat loses its first events and, when `done` is among the
    turn, so edits staged before the stop are kept.
 7. `persist_results` writes tool audit rows, emits `diff_proposed` and audits `proposal_created` for each
    diff, and records usage. `emit_terminal` emits `done` or `error`. Then `run_stop` is audited, `run_state`
-   is set, `active_run_id` is cleared and the transaction commits. `release_run` frees the slot.
+   is set, `active_run_id` is cleared and the transaction commits. `release_slot` frees the slot once.
 
 The turn is one transaction from step 5 to step 7, so a failed turn leaves no messages or diffs.
-`_settle_error` rolls back, emits a terminal error, sets `run_state` to `error` and audits. An exception
-becomes code `internal`; `asyncio.CancelledError` from ARQ's timeout becomes code `timeout`, settled under
-`asyncio.shield` and re-raised. Raw error strings are logged, never sent to the client.
+`_settle_error` rolls back, emits a terminal error (a failing Redis emit is logged, not raised), sets `run_state`
+to `error` and audits. An exception becomes code `internal`; `asyncio.CancelledError` from ARQ's timeout becomes
+code `timeout`, settled under `asyncio.shield` and re-raised. Raw error strings are logged, never sent to the client.
+
+**Stalled runs (`runs/stall.py`).** Every event refreshes the run's `beat` key. A session whose active run has no
+beat is stalled: a crashed worker, or a job that never started. The next message (`post_message`) reaps it:
+the slot is released if the run claimed one, the run gets a terminal `timeout` error for any open panel, the
+session becomes `error` and the audit row carries `reason: stalled`, then the message starts a new run. Reaping is
+lazy, on the next message only; a stalled session shows its old state until then. The default stall timeout
+is `AGENT_JOB_TIMEOUT_S` + `AGENT_REQUEST_TIMEOUT_S` (720 s): a live worker always ends a run by its job timeout.
 
 ### The graph
 
@@ -202,14 +216,16 @@ scoped to `ToolContext.project_id`.
 | `read_file` | Reads by `doc_id` or `path`, with an optional line window | `AGENT_TOOL_READ_MAX_CHARS` |
 | `list_tree` | Tree under a path, depth 1–10 | `AGENT_TOOL_TREE_MAX_NODES` |
 | `locate_section` | Resolves a human section name through the structure parser | Name up to 120 chars |
-| `propose_edit` | Stages a `StagedEdit`. `require_write=True`, so viewers get `forbidden` | `AGENT_TOOL_EDIT_MAX_CHARS` |
+| `propose_edit` | Stages `old_text` → `new_text`. `require_write=True`, so viewers get `forbidden`. Refused unless `read_file` returned the document in this turn and it has not changed since; `old_text` must occur exactly once in the text the turn's earlier edits leave | `AGENT_TOOL_EDIT_MAX_CHARS` |
 | `view_image` | Hands a PNG, JPEG, GIF, WebP or PDF to the model. The type comes from the bytes. A PDF goes to Claude as a `document` block and to OpenRouter as a `file` part, so the model reads its text and sees its pages; it rides in `LLMImage` with `media_type` `application/pdf` | `AGENT_TOOL_IMAGE_MAX_BYTES` |
 | `propose_create` | Stages a new document with its whole text, or a folder. Missing folders on the path are created on apply. `require_write=True` | `AGENT_TOOL_EDIT_MAX_CHARS` |
 | `propose_delete` | Stages a delete and records what it removes in `affected_paths`. `require_write=True` | — |
 | `propose_move` | Stages a rename, a move or both. `require_write=True` | — |
 
-A foreign or malformed id is `not_found`, a binary file is `unsupported`. `mode` is `full` or `range`
-(0-based, end exclusive). The tools added by spec 108 accept a path with a leading `/` or `./`; the older
+A foreign or malformed id is `not_found`, a binary file is `unsupported`. `read_file` returns the text with no
+line numbers, so `old_text` is copied from it verbatim; it records the document's version in `ToolContext.read_versions`
+for the read guard, and once the turn has staged edits on a document it returns the text they leave, flagged with
+`proposed_edits`. The model never gives line numbers to an edit. The tools added by spec 108 accept a path with a leading `/` or `./`; the older
 read tools still want it exactly as the tree spells it.
 
 ### Images
@@ -247,18 +263,17 @@ included outlines, with a cycle guard and a list of unresolved inputs.
 `locate_section` scores by exact title (1.0), label (0.95), ordinal such as "section 2" (0.92), synonym
 (0.9), substring (0.7), token overlap (up to 0.6). An ordinal match returns alone.
 
-`select_context` builds a `ContextBundle` within a token budget: target section with surrounding lines
-first, then an outline, then up to three related matches, truncating or dropping what does not fit. Tokens
-are estimated at four characters each. It is tested but nothing in the turn calls it.
 
 ### How a proposed edit reaches the user
 
-1. The model calls `propose_edit`. The tool validates and appends a `StagedEdit` to
-   `ToolContext.staged_edits`. The document is untouched and the result says `staged: true`.
+1. The model calls `propose_edit`. The tool checks the read guard, then that `old_text` occurs exactly once in the
+   text the turn's earlier edits to that document leave, and appends a `StagedEdit` to `ToolContext.staged_edits`.
+   The document is untouched and the result says `staged: true`. A refusal is a `ToolResult` error the model reads.
 2. At the end of the turn `materialize_diffs` groups edits by document and re-reads each one. It skips a
    missing document, one over `AGENT_DIFF_MAX_DOC_CHARS`, and a no-op.
-3. `apply_staged_edits` builds the proposed text in memory. `full` wins over `range`, with a note in the
-   rationale. Overlapping ranges raise `DiffConflictError` and store a `rejected` row with no hunks.
+3. `apply_staged_edits` replays the edits in order on the current text in memory, each `old_text` again required to
+   occur exactly once. One that no longer fits raises `DiffConflictError` and stores a `rejected` row with no hunks,
+   whose rationale says why.
 4. `compute_diff` uses `difflib` over lines and returns `diff_text`, hunks `h1`, `h2`… and `stats`.
 5. `_persist` moves earlier `proposed` rows for the same session and document to `superseded`, then inserts
    the new one with `base_version` and `base_hash`.
@@ -305,11 +320,19 @@ both as a function and as a cron at 03:30. Agent jobs share the compile queue: t
 | Exhausted day budget refuses the run | `backend/tests/integration/test_agent_safety_api.py::test_day_budget_preflight_refusal` |
 | An over-budget step never runs and the sentinel stays out of the transcript | `backend/tests/integration/test_agent_safety_api.py::test_midrun_budget_stops_over_budget_step` |
 | A run has audit rows, without document bodies | `backend/tests/integration/test_agent_safety_api.py::test_audit_rows_for_a_full_run` |
+| A run id from another session is 404 for cancel and events | `backend/tests/integration/test_agent_run_binding.py::test_cancel_and_events_of_another_sessions_run_are_404` |
+| A missing API key or Redis failure before the turn settles the run and frees the session | `backend/tests/integration/test_agent_run_lifecycle.py::test_missing_llm_key_fails_the_run_and_shows_an_error`, `backend/tests/integration/test_agent_run_lifecycle.py::test_redis_failure_before_the_run_settles_the_session` |
+| The next message reaps a stalled run, and a live run still blocks | `backend/tests/integration/test_agent_run_lifecycle.py::test_a_queued_run_without_progress_is_reaped_by_the_next_message`, `backend/tests/integration/test_agent_run_lifecycle.py::test_a_run_with_recent_progress_still_blocks_a_message` |
+| A reaped run frees its concurrency slot; a late job for a reaped run does nothing | `backend/tests/integration/test_agent_run_lifecycle.py::test_reaping_a_crashed_run_frees_its_concurrency_slot`, `backend/tests/integration/test_agent_run_lifecycle.py::test_a_job_for_a_run_that_is_no_longer_active_does_nothing` |
+| Default per-run token and cost caps stop a turn | `backend/tests/integration/test_agent_budget_defaults.py`, `backend/tests/unit/test_agent_config_caps.py` |
 | A cancelled run ends in `error` with code `cancelled` | `backend/tests/integration/test_agent_api_streaming.py::test_cancellation` |
 | SSE requires auth and membership at connect | `backend/tests/integration/test_agent_api_sse.py::test_sse_events_route_requires_auth` |
 | A revoked session cannot open a new SSE stream | `backend/tests/integration/test_session_revocation.py::test_websocket_and_sse_paths_refuse_a_revoked_session` |
 | A new proposal supersedes the old one for the same document | `backend/tests/integration/test_agent_diffs.py::test_superseding_prior_proposal` |
-| Overlapping ranges are rejected, never mis-applied | `backend/tests/integration/test_agent_diffs.py::test_overlapping_ranges_rejected` |
+| An edit whose `old_text` no longer fits is rejected, never mis-applied | `backend/tests/integration/test_agent_diffs.py::test_edit_that_no_longer_fits_is_rejected` |
+| `propose_edit` refuses a document not read in this turn, or changed since the read | `backend/tests/integration/test_agent_propose_edit.py::test_propose_without_reading_is_refused`, `backend/tests/integration/test_agent_propose_edit.py::test_change_since_read_is_refused`, `backend/tests/agent_evals/test_agent_evals.py::test_eval_a_collaborator_edit_after_the_read_is_refused` |
+| `old_text` must occur exactly once; an empty one only fills an empty file | `backend/tests/integration/test_agent_propose_edit.py::test_old_text_missing_is_refused`, `backend/tests/integration/test_agent_propose_edit.py::test_old_text_repeated_is_refused_with_the_count`, `backend/tests/unit/test_agent_diffs_unit.py::test_old_text_repeated_raises_conflict` |
+| Successive edits to one document apply in order and make one diff that applies to the current text | `backend/tests/integration/test_agent_propose_edit.py::test_the_proposed_diff_applies_to_the_current_text`, `backend/tests/agent_evals/test_agent_evals.py::test_eval_two_edits_in_one_run_make_one_applicable_diff` |
 | Oversized documents and no-ops create no row | `backend/tests/integration/test_agent_diffs.py::test_oversized_doc_is_skipped`, `backend/tests/integration/test_agent_diffs.py::test_noop_edit_creates_no_row` |
 | The turn raises its idle limit first | `backend/tests/unit/test_external_timeouts.py::test_the_agent_turn_raises_its_idle_limit_first` |
 | A timed-out job settles as `timeout` | no dedicated test |
@@ -332,13 +355,13 @@ Defaults are from `backend/src/inkstave/core/config/agent.py`, and `.env.example
 | Group | Variables |
 |---|---|
 | Provider | `AGENT_LLM_PROVIDER` `anthropic`; `ANTHROPIC_API_KEY` empty, needed when the real client is built; `AGENT_MODEL` `claude-haiku-5-5`; `OPENROUTER_API_KEY` empty, needed with `openrouter`; `OPENROUTER_BASE_URL` `https://openrouter.ai/api/v1`; `AGENT_TEMPERATURE` 0.2, OpenRouter only; `AGENT_HTTP_REFERER` `https://inkstave.local`; `AGENT_APP_TITLE` `Inkstave` |
-| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 50; `AGENT_MAX_TOTAL_TOKENS` 1000000, soft cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
+| Turn | `AGENT_MAX_TOKENS_PER_CALL` 32000, too small truncates a `propose_edit`; `AGENT_REQUEST_TIMEOUT_S` 120, per SDK call; `AGENT_JOB_TIMEOUT_S` 600, whole turn; `AGENT_MAX_ITERATIONS` 50; `AGENT_MAX_TOTAL_TOKENS` 2000000, backstop above the per-run cap, run still `done`; `AGENT_MAX_MESSAGE_CHARS` 40000 |
 | Tools | `AGENT_TOOL_READ_MAX_CHARS` 40000; `AGENT_TOOL_SEARCH_MAX_RESULTS` 50; `AGENT_TOOL_TREE_MAX_NODES` 500; `AGENT_TOOL_EDIT_MAX_CHARS` 200000; `AGENT_TOOL_IMAGE_MAX_BYTES` 3750000 |
 | Diffs | `AGENT_DIFF_CONTEXT_LINES` 3; `AGENT_DIFF_MAX_DOC_CHARS` 400000 |
-| Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_STREAM_TRANSPORT` `sse`, unused |
+| Stream | `AGENT_STREAM_HEARTBEAT_S` 15; `AGENT_RUN_TTL_S` 900; `AGENT_RUN_STALL_TIMEOUT_S` 0, derives job + request timeout (720 s); `AGENT_STREAM_TRANSPORT` `sse`, unused |
 | Context | `AGENT_CONTEXT_CACHE` `memory`, and `redis` behaves like `off`; `AGENT_SECTION_EXTRA_COMMANDS` empty; `AGENT_CONTEXT_TOKEN_BUDGET` 8000 and `AGENT_CONTEXT_SURROUNDING_LINES` 40, both unused |
 | Limits, 0 disables | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` 10; `AGENT_MAX_CONCURRENT_RUNS_PER_USER` 2; `AGENT_MAX_RUNS_PER_MINUTE_PER_PROJECT` 20 |
-| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30. A user whose e-mail is in `AGENT_BUDGET_EXEMPT_EMAILS` runs with all four at 0 (`is_budget_exempt`, `without_budget_caps`, applied in `_run_agent_turn`); rate limits still apply |
+| Budgets, 0 disables | `AGENT_MAX_TOKENS_PER_RUN` 1000000; `AGENT_MAX_COST_PER_RUN_USD` 0.30; `AGENT_MAX_TOKENS_PER_DAY_PER_PROJECT` 2000000; `AGENT_MAX_COST_PER_DAY_PER_USER_USD` 0.30. A user whose e-mail is in `AGENT_BUDGET_EXEMPT_EMAILS` runs with all four at 0 and the soft backstop `AGENT_MAX_TOTAL_TOKENS` at 0 (`is_budget_exempt`, `without_budget_caps`, applied in `_run_agent_turn`); rate limits still apply |
 | Safety | `AGENT_MODEL_COST_TABLE` Claude Haiku 5.5 rates first (they price any model not listed), then gpt-4o-mini, USD per 1K tokens; `AGENT_AUDIT_RETENTION_DAYS` 90, 0 keeps forever; `AGENT_INJECTION_GUARD` `on` |
 
 Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messages`), `LLM_STUB` (false),
@@ -349,29 +372,27 @@ Elsewhere: `RATE_LIMIT_AGENT` (`30/60`, per user, HTTP layer of `POST .../messag
 **The outcome is recorded once, when the last hunk is decided.** Until then the server knows nothing of a
 partial review: a reload in the middle of one shows the proposal as pending, and the hunks accepted before it
 are drawn again as blocked, since their old lines are gone. Only the browser's memory of this page keeps them
-decided (`docs/known-gaps.md`). `rejected` also comes from overlapping ranges, which store a row with no hunks.
+decided (`docs/known-gaps.md`). `rejected` also comes from an edit whose `old_text` no longer fits the file, which stores a row with no hunks.
 `is_stale` is used only by its test.
 
 **Timeouts.** `AGENT_REQUEST_TIMEOUT_S` bounds one LLM request. `AGENT_JOB_TIMEOUT_S` is the ARQ `timeout` for the whole turn, and `run_turn` passes the same value to `allow_idle`, because the transaction stays open across model calls. Fifty plan steps at 120 s far exceed 600 s, and the SDK's default two retries are not disabled, so one call can take three times the request timeout. The job timeout is the real ceiling and a slow multi-step turn can hit it.
 
-**The per-run token cap is unreachable with defaults.** `route_after_plan` stops at 1000000 and the budget check runs at the start of `plan`, which is reached only through that router, so the per-run cap, also 1000000, never fires. The total counts every resent transcript, so it grows with the square of the steps: a turn that reads ten files reaches 256000 in under twenty steps. The cost cap is out of reach too at the default rates. They bite only when set below the soft cap, as the tests do. `AgentDeps.run_token_budget`, `run_cost_budget_usd` and `cost_per_1k` are set and never read; `_budget_exceeded` reads settings directly.
+**The caps and their order.** The per-run token cap is checked at the start of each plan step (`agent_budget_exceeded`). The soft backstop `AGENT_MAX_TOTAL_TOKENS` (`route_after_plan`, 2000000) sits above it, so the per-run cap fires first; it ends the turn `done` with a partial note. Both count the same total, which includes every resent transcript, so it grows with the square of the steps. Exempt users skip both. The cost cap uses the price table: at the default `claude-haiku-5-5` rates (0.0001 USD per 1K input, 0.0005 USD per 1K output) a turn of 1000000 tokens costs at most 0.50 USD, all output, and reaches the 0.30 USD cap only with about 600000 output tokens in one turn, so in practice the token cap fires first. A run split 50/50 between prompt and completion at the token cap costs exactly 0.30 USD. `AgentDeps.run_token_budget`, `run_cost_budget_usd` and `cost_per_1k` are set and never read; `_budget_exceeded` reads settings directly.
 
 **Day counters miss failed runs.** `record_usage` runs in `persist_results`, so a timed-out or crashed turn adds nothing, though the provider billed it. An unknown model is priced with the first table entry.
 
-**Runs can wedge.** Nothing resets `run_state`. `_resolve_llm` and `precheck_run` run outside any `try`, and the comment in `_run_scoped` says `acquire_run` is inside the `try` when it is before it. A missing `OPENROUTER_API_KEY`, or Redis failing there, fails the job with no terminal event: the session stays `queued`, each new message gets 409 `run_active`, and the SSE stream pings until the client leaves. So does a worker killed mid-turn, which also holds a concurrency slot for up to an hour. The key is checked only by the production config check in `backend/src/inkstave/modules/admin/provisioning/config_check.py`.
+**A stalled run is found only on the next message.** The reaper (see above) runs lazily, so a session whose worker died shows its stale state until the user sends a message. A missing `OPENROUTER_API_KEY` is found when the run starts, not at boot; the key is checked only by the production config check in `backend/src/inkstave/modules/admin/provisioning/config_check.py`.
 
 **Open SSE streams survive revocation.** `sse_user` runs once, at connect. `sse_stream` reads Redis until a terminal event and never re-checks the token, session or membership. Logout, deactivation or removal from the project does not close an open stream, and the run goes on: only tools re-check, through `authorize`.
-
-**`run_id` is not tied to the session.** `run_events` and `cancel_run` verify the session, not that `run_id` belongs to it, and `cancel_run` sets the flag before comparing `active_run_id`. Holding some other run's UUID is enough to read or cancel it. UUIDs are unguessable, so this is defence in depth.
 
 **Events go out before the commit.** `diff_proposed` and `done` are published before the final commit. A client acting on them instantly can miss the row or get 409. A commit failure after `done` produces a second terminal event.
 
 **`hunks` and `stats` are separate.** `_diff_summary` in `backend/src/inkstave/modules/agent/routes.py` clears `hunks` unless asked. Commit b83e563 corrected it: `model_validate` already filled `hunks`, so the flag did nothing and lists always carried them. It changed what is sent, not how hunks are counted; `hunk_count` comes from `_stats` in `backend/src/inkstave/modules/agent/diffs/compute.py`. `test_listing_draws_hunks_only_when_asked` now asserts on `hunks` in both forms.
 
-**Edits and drift.** `StagedEdit.base_version` is recorded and never compared. `propose_edit` checks range bounds at stage time, but ranges apply to the text re-read at the end of the turn, so collaborator edits during the turn can shift them. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
+**Edits and drift.** A collaborator's edit between the read and the proposal is refused at stage time (the version check). An edit that was staged before a later collaborator edit is matched again at the end of the turn against the text then, so it becomes a `rejected` row if its `old_text` no longer fits; the browser's own rebase (`rebaseHunks`) handles drift in the hunks that do apply. `diff_proposed` also fires for a `rejected` row, with zero hunks, and that row still supersedes the previous proposal.
 
 **Replayed tool calls.** A capped or cancelled turn can store an assistant message with `tool_calls` and no tool result, and the next turn replays it. OpenAI-style APIs may reject that; not verified against a provider.
 
-**Unused code.** `select_context`, `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES`: the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
+**Unused code.** `select_context` was removed; `AGENT_CONTEXT_TOKEN_BUDGET` and `AGENT_CONTEXT_SURROUNDING_LINES` have no effect, and the model gets no pre-selected context and must call tools. Also `AGENT_STREAM_TRANSPORT`, `get_llm_client`, `get_agent_deps`, `list_open_for_project`, `ProposedDiffOut`, `section_range`, `match_score`, `serialize_state` outside its test. `AGENT_SECTION_EXTRA_COMMANDS` reaches the parser, but `_TOKEN_RE` lists fixed commands, so extra names produce no nodes. `PromptContext` is built with `project_id` only.
 
 **Injection guard limits.** `flag_injection` only audits, it blocks nothing. `wrap_untrusted` frames tool messages sent to the model and the transcript stays raw. Protection against acting on injected text rests on every tool only proposing and on review by the user. Text inside an image is not scanned at all.

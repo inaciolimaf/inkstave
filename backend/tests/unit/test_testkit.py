@@ -95,9 +95,14 @@ async def test_stub_llm_scripts_search_read_propose_reply() -> None:
     assert r1.tool_calls[0].name == "read_file"
     assert r1.tool_calls[0].arguments["doc_id"] == did
 
-    r2 = await stub.complete([search_result, _tool_msg('{"ok":true}')])
+    read_result = _tool_msg('{"ok":true,"data":{"doc_id":"' + did + '","content":"stored text\\n"}}')
+    r2 = await stub.complete([search_result, read_result])
     assert r2.tool_calls[0].name == "propose_edit"
-    assert r2.tool_calls[0].arguments == {"doc_id": did, "mode": "full", "new_text": PROPOSED_TEXT}
+    assert r2.tool_calls[0].arguments == {
+        "doc_id": did,
+        "old_text": "stored text\n",
+        "new_text": PROPOSED_TEXT,
+    }
 
     r3 = await stub.complete([search_result, _tool_msg("{}"), _tool_msg('{"staged":true}')])
     assert not r3.tool_calls and r3.content == FINAL_REPLY

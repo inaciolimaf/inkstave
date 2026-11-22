@@ -23,6 +23,7 @@ behaviour. The failure-mode fake classes are re-exported here so existing
 from __future__ import annotations
 
 import pytest
+from hypothesis import HealthCheck, settings
 
 from tests.fixtures.fakes import (
     FakeEngineBroken,
@@ -42,6 +43,18 @@ pytest_plugins = (
     "tests.fixtures.database",
     "tests.fixtures.services",
 )
+
+# Property tests (Hypothesis) run under one fixed profile: derandomized so a CI run and a
+# local run explore the same examples, and small enough to keep the property tests inside
+# their time budget (docs/system/overview.md, "Property tests"). Opt out per test with @settings.
+settings.register_profile(
+    "inkstave",
+    max_examples=50,
+    derandomize=True,
+    deadline=1000,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+settings.load_profile("inkstave")
 
 __all__ = [
     "_ALEMBIC_INI",
