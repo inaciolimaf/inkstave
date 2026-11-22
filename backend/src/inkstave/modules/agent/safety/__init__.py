@@ -3,7 +3,6 @@
 from inkstave.modules.agent.safety.audit import AuditSubject, AuditUsage, audit
 from inkstave.modules.agent.safety.budget import (
     BudgetDecision,
-    avg_rate_per_1k,
     cost_for,
     is_budget_exempt,
     precheck_day,
@@ -25,7 +24,6 @@ __all__ = [
     "RateDecision",
     "acquire_run",
     "audit",
-    "avg_rate_per_1k",
     "check_rate_limit",
     "cost_for",
     "flag_injection",

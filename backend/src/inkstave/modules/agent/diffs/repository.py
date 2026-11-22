@@ -60,16 +60,6 @@ async def list_for_session(db: AsyncSession, session_id: UUID) -> list[ProposedD
     return list(rows.scalars())
 
 
-async def list_open_for_project(db: AsyncSession, project_id: UUID) -> list[ProposedDiff]:
-    rows = await db.execute(
-        select(ProposedDiff).where(
-            ProposedDiff.project_id == project_id,
-            ProposedDiff.status == ProposedDiffStatus.proposed.value,
-        )
-    )
-    return list(rows.scalars())
-
-
 async def get_for_session(db: AsyncSession, session_id: UUID, diff_id: UUID) -> ProposedDiff | None:
     """The row, locked for the caller's transaction, if it belongs to ``session_id``."""
     row = await db.get(ProposedDiff, diff_id, with_for_update=True)

@@ -52,11 +52,6 @@ def cost_for(settings: AgentSettings, model: str, prompt: int, completion: int) 
     )
 
 
-def avg_rate_per_1k(settings: AgentSettings, model: str) -> float:
-    rates = model_rates(settings, model)
-    return (rates["input"] + rates["output"]) / 2
-
-
 def run_tokens_exceeded(total_tokens: int, settings: AgentSettings) -> bool:
     cap = settings.agent_max_tokens_per_run
     return cap > 0 and total_tokens >= cap

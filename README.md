@@ -46,7 +46,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 **`docker-compose.prod.yml` publishes no host port.** The `frontend` container only
 exposes port 80 on the compose network, for a managed proxy such as Coolify or Traefik
-to route a domain to it, and `PUBLIC_HTTP_PORT` is not read. To open it on
+to route a domain to it. To open it on
 `http://localhost` without a proxy, add a `ports` mapping in a compose file of your own:
 see [Deployment](docs/admin-guide.md#deployment). Put TLS in front of it for a public
 deployment. The full first-run flow, scaling, backups and troubleshooting are in the

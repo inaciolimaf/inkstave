@@ -22,7 +22,6 @@ from inkstave.modules.agent.graph.agent_deps import AgentDeps
 from inkstave.modules.agent.graph.runner import run_turn
 from inkstave.modules.agent.llm.base import LLMResponse, LLMUsage, ToolCall
 from inkstave.modules.agent.llm.fake import FakeLLM, ScriptItem
-from inkstave.modules.agent.safety import avg_rate_per_1k
 from inkstave.modules.agent.tools import default_registry
 from inkstave.modules.projects.catalog.service import create_project
 from inkstave.modules.projects.content.documents import get_document, set_content_from_collab
@@ -70,9 +69,6 @@ def _deps_for(llm: FakeLLM, **over: Any) -> AgentDeps:
         settings=settings,
         tools=default_registry(),
         injection_guard=settings.agent_injection_guard == "on",
-        run_token_budget=settings.agent_max_tokens_per_run,
-        run_cost_budget_usd=settings.agent_max_cost_per_run_usd,
-        cost_per_1k=avg_rate_per_1k(settings, "fake/model"),
     )
 
 

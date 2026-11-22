@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Literal
-from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from inkstave.core.schemas import StrictModel
 
@@ -30,25 +28,6 @@ class DiffStats(BaseModel):
     additions: int
     deletions: int
     hunk_count: int
-
-
-class ProposedDiffOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    session_id: UUID
-    message_id: UUID | None
-    project_id: UUID
-    doc_id: UUID
-    path: str
-    base_version: str
-    base_hash: str
-    diff_text: str
-    hunks: list[Hunk]
-    stats: DiffStats
-    status: str
-    rationale: str | None
-    created_at: datetime
 
 
 class DiffOutcomeIn(StrictModel):
