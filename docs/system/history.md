@@ -14,7 +14,7 @@ module is `backend/src/inkstave/modules/history`.
 | `backend/src/inkstave/modules/history/schemas.py` | Request and response models |
 | `backend/src/inkstave/modules/history/routes.py` | The REST routes |
 | `backend/src/inkstave/modules/history/versions/capture.py` | `HistoryCaptureService`: buffer, flush, chunks, replica |
-| `backend/src/inkstave/modules/history/blobs.py` | `purge_blobs_after_commit`, `purge_blobs_for_deleted`: the offloaded blobs of deleted documents, removed after the commit |
+| `backend/src/inkstave/modules/history/blobs.py` | `purge_blobs_after_commit`, `purge_blobs_for_deleted`: the offloaded blobs of deleted documents, queued on the shared after-commit delete queue (`backend/src/inkstave/infra/storage/after_commit.py`) |
 | `backend/src/inkstave/modules/history/versions/capture_values.py` | `Pending`, `UpdateEntry`, `Replica`: the values between buffering and writing |
 | `backend/src/inkstave/modules/history/versions/reconstruct.py` | `reconstruct_doc`, `reconstruct_state`, `load_live_state`, `load_current_state`, `current_text`, `text_from_state`, `is_binary` |
 | `backend/src/inkstave/modules/history/versions/read.py` | `list_versions`, `list_updates`, `get_diff`, `doc_belongs_to_project` |

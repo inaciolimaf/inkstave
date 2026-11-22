@@ -69,6 +69,7 @@ Several layers, outermost first.
 | nginx, `location /api/` | `client_max_body_size` | 50 MiB | nginx 413 |
 | `BodySizeLimitMiddleware`, path ending `/files`, `/import` or `/git-upload-pack` | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `{"error":{"type":"payload_too_large",...}}` |
 | `BodySizeLimitMiddleware`, path ending `/git-receive-pack` | `GIT_MAX_PUSH_BYTES` | 50 MiB | same (spec 121; nginx's `client_max_body_size` must be at least this) |
+| `BodySizeLimitMiddleware`, path `/projects/{id}/documents/{entity}` | `MAX_DOCUMENT_BYTES` × 6 + 4 KiB | about 12 MB | same (the JSON of a document can be up to 6 times its bytes) |
 | `BodySizeLimitMiddleware`, any other path | `MAX_REQUEST_BODY_BYTES` | 1 MiB | same |
 | File upload, streaming | `MAX_UPLOAD_BYTES` | 50 MiB | 413 `file_too_large` |
 | Project import, streaming | `IMPORT_MAX_ZIP_BYTES` | 50 MiB | see [projects.md](projects.md) |
@@ -274,8 +275,9 @@ as Coolify. A standalone run needs a `ports:` entry added.
 - **The SPA has no CSP at all.** The header is a comment in `infra/nginx/default.conf`. `CSP_POLICY`
   applies only to backend responses, which are JSON.
 - **HSTS is off by default**, and nothing in the guards forces it on in production.
-- **Documents cap at 1 MiB, not 2 MB.** `PUT /api/v1/projects/{project_id}/documents/{entity_id}` is a
-  JSON route, so `MAX_REQUEST_BODY_BYTES` rejects it well before `MAX_DOCUMENT_BYTES` applies.
+- **The document route is sized by `MAX_DOCUMENT_BYTES`.** `PUT /api/v1/projects/{project_id}/documents/{entity_id}`
+  is a JSON route with its own body cap (`MAX_DOCUMENT_BYTES` × 6 + 4 KiB), so `MAX_REQUEST_BODY_BYTES` does not
+  apply to it. The cap is the worst-case JSON expansion, so the size rule is the one that answers.
 - **Raising an import limit needs three changes.** `IMPORT_MAX_ZIP_BYTES` above 50 MiB also needs
   `MAX_UPLOAD_BYTES` and nginx's `client_max_body_size` raised, the latter in the image.
 - **`_UPLOAD_SUFFIXES` is a path suffix match**, so any route ending in `/files` or `/import` gets the

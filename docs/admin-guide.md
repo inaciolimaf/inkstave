@@ -142,7 +142,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `CORS_ORIGINS` | Yes | `http://localhost:5173` | CORS allow-list (CORS_ALLOWED_ORIGINS); never '*' with creds | backend |
 | `HSTS_ENABLED` | No | `false` | emit Strict-Transport-Security (true in prod) | backend |
 | `TRUST_PROXY_HEADERS` | No | `false` | trust X-Forwarded-For for client IP (only behind a proxy) | backend, collab/websocket |
-| `MAX_REQUEST_BODY_BYTES` | No | `1048576` | global JSON body cap (1 MiB) | backend |
+| `MAX_REQUEST_BODY_BYTES` | No | `1048576` | global JSON body cap (1 MiB); the document content route uses `MAX_DOCUMENT_BYTES` × 6 + 4 KiB instead | backend |
 | `MAX_UPLOAD_BYTES` | No | `52428800` | per-file upload cap (50 MiB) | backend |
 | `RATE_LIMIT_COMPILE` | No | `20/60` | per-user compile cap (limit/window_seconds) | backend |
 | `RATE_LIMIT_COMPILE_DAILY` | No | `30/86400` | per-user daily compile quota (anti-DoS, spec 105) | backend |

@@ -20,7 +20,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 
 from inkstave.core.config.settings import get_settings
-from inkstave.modules.projects.models.file import File
 from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
 from inkstave.modules.projects.tree.builder import build_tree, compute_path
 from inkstave.modules.projects.tree.errors import (
@@ -267,12 +266,6 @@ async def move_entity(
     return entity
 
 
-async def _file_keys_in_subtree(session: AsyncSession, project_id: UUID, entity_id: UUID) -> list[str]:
-    subtree = _subtree(project_id, entity_id)
-    rows = await session.scalars(select(File.storage_key).join(subtree, File.entity_id == subtree.c.id))
-    return list(rows)
-
-
 def on_entities_deleted(
     listener: Callable[[AsyncSession, ObjectStore | None, list[UUID]], Awaitable[None]],
 ) -> None:
@@ -295,16 +288,11 @@ async def delete_entity(
     entity = await _get_entity(session, project_id, entity_id)
     if entity.is_root:
         raise RootImmutableError()
+    # Listeners see the rows before they go, and queue what must be deleted from storage after the commit.
     for listener in _deletion_listeners:
         await listener(session, store, await _subtree_ids(session, project_id, entity_id))
-    # Collect blob keys before the cascade removes the rows.
-    keys = await _file_keys_in_subtree(session, project_id, entity_id) if store else []
     # The self-FK ON DELETE CASCADE removes the whole subtree.
     await session.execute(
         delete(TreeEntity).where(TreeEntity.id == entity_id, TreeEntity.project_id == project_id)
     )
     await session.flush()
-    # Best-effort blob cleanup after the DB delete (storage is not transactional).
-    for key in keys:
-        if store is not None:
-            await store.delete(key)

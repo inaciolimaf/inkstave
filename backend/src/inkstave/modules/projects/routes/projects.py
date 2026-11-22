@@ -19,6 +19,7 @@ from inkstave.modules.compile import OutputRepository, OutputStore
 from inkstave.modules.projects.access.capabilities import Capability, capabilities_for
 from inkstave.modules.projects.access.deps import require_capability
 from inkstave.modules.projects.access.service import role_for, set_suggest_mode, suggest_mode_for
+from inkstave.modules.projects.blobs import purge_file_blobs_for_project
 from inkstave.modules.projects.catalog import service as project_service
 from inkstave.modules.projects.catalog.service import ListedProject, ProjectNotFoundError, ProjectScope
 from inkstave.modules.projects.schemas.project import (
@@ -216,6 +217,8 @@ async def delete_project(
     # Soft-delete doesn't FK-cascade; sweep the project's compile-output bytes.
     output_store = OutputStore(storage=store, repo=OutputRepository(session), settings=settings)
     await output_store.delete_for_project(project_id)
+    # The file blobs go after the commit (queued on the session, not deleted here).
+    await purge_file_blobs_for_project(session, store, project_id)
 
 
 @router.get(

@@ -25,6 +25,7 @@ in [projects.md](projects.md). Live editing is in [collab.md](collab.md).
 | `backend/src/inkstave/infra/storage/local.py` | `LocalObjectStore` |
 | `backend/src/inkstave/infra/storage/s3.py` | `S3ObjectStore` |
 | `backend/src/inkstave/infra/storage/factory.py` | `get_object_store(settings)` picks the backend |
+| `backend/src/inkstave/infra/storage/after_commit.py` | `schedule_delete_after_commit`: blob deletes queued on a session, run after its commit, dropped on rollback |
 | `backend/src/inkstave/infra/deps.py` | FastAPI dependency, overridden in tests |
 | `backend/src/inkstave/core/http/body_limit.py` | `BodySizeLimitMiddleware` |
 | `frontend/src/modules/editor/autosave/use-document-autosave.ts` | The autosave state machine |
@@ -135,8 +136,9 @@ traversal is stripped, not rejected. `upload_file` then:
 The entity is flushed before the checks, so rejections rely on the unit of work rolling it back. Any
 failure at or after step 4 also deletes the blob key.
 
-`BodySizeLimitMiddleware` runs first. Paths ending in `/files` or `/import` get `max_upload_bytes`;
-everything else gets `max_request_body_bytes`.
+`BodySizeLimitMiddleware` runs first. Paths ending in `/files` or `/import` get `max_upload_bytes`; a
+document's `PUT` path (`/projects/{id}/documents/{entity}`) gets `max_document_bytes` × 6 + 4 KiB, since a
+document's JSON can be up to 6 times its bytes; everything else gets `max_request_body_bytes`.
 
 ### Download and delete
 
@@ -221,7 +223,7 @@ in `backend/src/inkstave/worker.py`.
 - **`PUT` strips the document.** `DocumentContentReplace` extends `StrictModel`, which sets `str_strip_whitespace=True`, so `content` loses leading and trailing whitespace, including the final newline. `"  a\n\n"` is stored as `"a"`. The client then records `serverText` as the unstripped text it sent, so it does not notice. No test covers it.
 - **The autosave branch is not reached in a normal build.** `collabWsUrl` falls back to a derived URL, so `COLLAB_ENABLED` is always true. `useDocumentAutosave`, the conflict dialog and the save indicator run only in tests or for a deployment that changes this constant. ADR 0019 describes them as the working baseline.
 - **REST and an open room do not coordinate.** `replace_content` does not touch CRDT state. Once a document has CRDT state with text, `_load` in `backend/src/inkstave/modules/collab/rooms/manager.py` ignores `documents.content`, and a later flush overwrites the REST write. An API client calling `PUT` loses its edit silently if the document has been opened in collab.
-- `MAX_REQUEST_BODY_BYTES` (1 MiB) is below `MAX_DOCUMENT_BYTES` (2 MB), and `/documents/` paths get the JSON cap. A REST save of over about 1 MiB is 413 from the middleware, and `content_too_large` is only reachable below that.
+- The document size is one rule now: `MAX_DOCUMENT_BYTES` (2 MB) is the effective limit, and the body cap of the document route is derived from it (see above). A document over the limit is `content_too_large`; the transport's 413 is `payload_too_large` and only for bodies beyond the derived cap.
 - Postgres `text` cannot hold a NUL. Neither `replace_content` nor `decode_text` removes one, so a `\u0000` in a PUT, or in an imported text entry, fails at the database rather than as a typed error.
 - `S3ObjectStore.put` joins the whole stream into memory before `put_object`, so the streaming guarantee holds for S3 reads only. A 50 MB upload is held in full. There is no multipart upload. The size cap still applies, since the join runs the guarded generator.
 - `delete_entity` removes blobs before the transaction commits. A failed commit leaves rows pointing at deleted blobs. `store.delete` is not wrapped despite the "best-effort" comment, so a storage error fails the request partway through.

@@ -2,18 +2,18 @@
 
 Rows cascade with their document, but the blobs they point at live in object storage, which a
 database cascade cannot reach. The keys are read before the delete, and the blobs are removed after
-the commit: a rolled-back delete keeps its blobs, and a failed blob delete is logged, not raised.
+the commit (through ``infra.storage.after_commit``): a rolled-back delete keeps its blobs, and a
+failed blob delete is logged, not raised.
 """
 
 from __future__ import annotations
 
-import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import event, select
+from sqlalchemy import select
 
-from inkstave.core.tasks import spawn
+from inkstave.infra.storage.after_commit import schedule_delete_after_commit
 from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
 
 if TYPE_CHECKING:
@@ -22,10 +22,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from inkstave.infra.storage.base import ObjectStore
-
-logger = logging.getLogger(__name__)
-
-_QUEUE_KEY = "history.blobs_to_purge"
 
 
 async def _blob_keys(session: AsyncSession, doc_ids: list[UUID]) -> list[str]:
@@ -54,10 +50,8 @@ async def purge_blobs_after_commit(
     if not ids:
         return
     keys = await _blob_keys(session, ids)
-    if not keys:
-        return
-    queue = _queue(session)
-    queue.extend((store, key) for key in keys)
+    if keys:
+        schedule_delete_after_commit(session, store, keys)
 
 
 async def purge_blobs_for_deleted(
@@ -69,35 +63,3 @@ async def purge_blobs_for_deleted(
     """
     if store is not None:
         await purge_blobs_after_commit(session, store, entity_ids)
-
-
-def _queue(session: AsyncSession) -> list[tuple[ObjectStore, str]]:
-    """The session's pending purges, registering its commit and rollback listeners on first use."""
-    info: dict[str, Any] = session.sync_session.info
-    if _QUEUE_KEY not in info:
-        info[_QUEUE_KEY] = []
-        event.listen(session.sync_session, "after_commit", _on_commit)
-        event.listen(session.sync_session, "after_rollback", _on_rollback)
-    queue: list[tuple[ObjectStore, str]] = info[_QUEUE_KEY]
-    return queue
-
-
-def _on_commit(session: Any) -> None:  # the sync session, which the architecture test keeps out of imports
-    queue: list[tuple[ObjectStore, str]] = session.info.get(_QUEUE_KEY) or []
-    if not queue:
-        return
-    session.info[_QUEUE_KEY] = []
-    spawn(_delete_all(queue), name="history-blob-purge")
-
-
-def _on_rollback(session: Any) -> None:
-    if session.info.get(_QUEUE_KEY):
-        session.info[_QUEUE_KEY] = []
-
-
-async def _delete_all(queue: list[tuple[ObjectStore, str]]) -> None:
-    for store, key in queue:
-        try:
-            await store.delete(key)
-        except Exception:  # any storage backend's failure: log the orphan, keep deleting the rest
-            logger.exception("could not delete history blob %s; it is orphaned", key)

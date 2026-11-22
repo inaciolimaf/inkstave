@@ -7,6 +7,8 @@ cover name/content validation and permission/conflict concerns respectively.
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,6 +71,11 @@ async def test_delete_removes_entity_and_blob(
 
     deleted = await client.delete(f"{_files(pid)}/{eid}", headers=headers)
     assert deleted.status_code == 204
+    # The blob goes after the commit, in the background: wait for it with a deadline.
+    for _ in range(500):
+        if not await store.exists(key):
+            break
+        await asyncio.sleep(0.01)
     assert await store.exists(key) is False
     assert (await client.get(f"{_files(pid)}/{eid}", headers=headers)).status_code == 404
 
