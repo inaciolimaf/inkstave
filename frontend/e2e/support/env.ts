@@ -21,8 +21,11 @@ export const e2e = {
   backendPort: num("E2E_BACKEND_PORT", 8099),
   /** Port the Vite preview server listens on. */
   frontendPort: num("E2E_FRONTEND_PORT", 4173),
-  /** Flake retries (CI defaults to 1, local to 0). */
-  retries: num("E2E_RETRIES", process.env.CI ? 1 : 0),
+  /**
+   * Retries of a failed test. 0 everywhere, CI included: a flaky test is a bug to fix (wait on the
+   * state it depends on), not a retry to hide it. The override is for a diagnosis run only.
+   */
+  retries: num("E2E_RETRIES", 0),
   /**
    * Worker parallelism. When `E2E_PLAYWRIGHT_WORKERS` is set it is honoured
    * verbatim (explicit override). When unset this is `undefined`, and

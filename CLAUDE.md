@@ -63,8 +63,8 @@ applies in both places: here and in the skill.
    but every line you write must be your own independent implementation. Do not
    copy, paste, or mechanically translate Overleaf source. If a spec points you
    at an Overleaf file, treat it as a textbook, not a clipboard.
-3. **Keep the full test suite under 3 minutes.** Unit, integration and e2e run in
-   parallel, so the slowest of the three is what counts. If something is slow (LaTeX compile, real LLM call), it belongs in
+3. **Keep the whole CI run under 3 minutes.** The jobs run side by side; the CI `gate` job fails
+   when the run's wall clock, from its first job's start, passes 180 s (or a job failed). If something is slow (LaTeX compile, real LLM call), it belongs in
    an async ARQ job and must be stubbed/mocked in tests. Measure before merging.
 4. **A spec is done only when its Definition of Done and Acceptance criteria
    pass, including the tests it requires.** "It runs" is not "it's done".
@@ -159,14 +159,14 @@ targets, so what passes here passes there.
 | `make test` | backend unit + integration |
 | `make coverage` | the same, with the coverage floor |
 | `make test-unit` / `make test-integration` | the two tiers as CI splits them |
-| `make budget` | gate the 3-minute budget |
+| `make budget` | gate the per-test limit from the JUnit files (the whole run is gated by CI's `gate` job) |
 | `make web-types` | regenerate `docs/api/openapi.json` and `frontend/src/api/types.ts` |
 | `make web-test` | eslint, prettier check, `tsc -b`, Vitest |
 | `make web-coverage` | Vitest with the coverage floor |
 | `make web-build` | production bundle |
 | `make web-budget` | gate the initial JS of `frontend/dist` at 250 KB gzip; needs a build |
 | `make e2e-infra` | throwaway Postgres + Redis for Playwright |
-| `make e2e-smoke` | the in-budget Playwright tier (what CI runs) |
+| `make e2e-smoke` | the in-budget Playwright tier (what CI runs, in 2 shards: `make e2e-smoke E2E_ARGS=--shard=1/2`) |
 | `make e2e` / `make mobile` / `make e2e-flows` / `make e2e-all` | routes / 390x844 / journeys / smoke plus `@full` |
 | `make up-prod` | production stack; it publishes no host port, see `docs/admin-guide.md` |
 
@@ -214,6 +214,9 @@ default run. Details: `docs/system/overview.md`.
 Stateful features get a **"do it again" test**: the action run twice in a row, again after a reload
 (remount from the server's state), and again after switching document (`*.again.test.ts(x)`, e.g.
 `frontend/src/modules/agent/AgentPanel.again.test.tsx`).
+E2E: a test that needs a signed-in browser or API client gets the worker's sign-in (`frontend/e2e/support/session.ts`,
+one login per worker and user); only a test that changes the session (logout, register, login) signs in on its own.
+Playwright retries are 0 everywhere, CI included: fix a flaky test, do not retry it. CI uses the system Chrome.
 
 ## Workflow
 
