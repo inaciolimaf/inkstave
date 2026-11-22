@@ -119,6 +119,8 @@ Keep-alives are `: ping` comments.
 `seq` counts from 0 in every run. The panel's reducer drops an event whose `seq` it has already seen, so
 `send` in `frontend/src/modules/agent/useRunActions.ts` clears `seenSeqs` when a run starts; otherwise a
 second run in the same chat loses its first events and, when `done` is among them, never ends.
+An `error` that is not `cancelled` closes the open reply as complete, so the next run's tokens start a
+new bubble instead of joining the failed one (found by `reducer.props.test.ts`).
 
 ## How it works
 

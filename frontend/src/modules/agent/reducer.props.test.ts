@@ -90,9 +90,9 @@ describe("agent reducer properties", () => {
   it("a sequence of runs shows every run's text exactly once and none stays running", () => {
     fc.assert(
       fc.property(
-        fc.integer({ min: 1, max: 4 }).chain((count) =>
-          fc.tuple(...Array.from({ length: count }, (_, i) => runPlan(i))),
-        ),
+        fc
+          .integer({ min: 1, max: 4 })
+          .chain((count) => fc.tuple(...Array.from({ length: count }, (_, i) => runPlan(i)))),
         fc.array(picksFor(64), { minLength: 4, maxLength: 4 }),
         (plans, picksPerRun) => {
           let state = initialRunState("s");

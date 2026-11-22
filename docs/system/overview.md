@@ -226,6 +226,28 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 | E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
+### Property tests
+
+Property tests check invariants over generated inputs on the pure seams of the stateful cores. They
+run in the unit tier, need no database, and share one Hypothesis profile (`inkstave` in
+`backend/tests/conftest.py`: `derandomize=True`, `max_examples=50`, `deadline=1000` ms). Fast-check
+tests run in Vitest with 50 to 100 runs each.
+
+| Property | File | Budget (measured) |
+|---|---|---|
+| A version reconstructs to its text; restore then diff is empty; an unchanged update changes no state | `backend/tests/unit/test_props_history.py` | ~0.6 s |
+| Replicas converge (FIFO inboxes, random interleaving) and the merged log flushes to the same text | `backend/tests/unit/test_props_collab.py` | ~0.3 s |
+| Applying the hunks of `diff_text(a, b)` gives b and back; any hunk subset applies deterministically | `backend/tests/unit/test_props_diff.py` | ~0.1 s |
+| The LaTeX log parser never raises; SyncTeX raises only `SyncTexParseError` | `backend/tests/unit/test_props_parsers.py` | ~0.2 s |
+| Agent reducer: repeated events change nothing; every run's text shows once and no run stays streaming | `frontend/src/modules/agent/reducer.props.test.ts` | ~0.5 s |
+| The minimal edit turns the current text into the target | `frontend/src/modules/diff-review/hunks.props.test.ts` | ~0.1 s |
+
+Budget: at most 8 s for the backend properties and 5 s for the Vitest properties, checked with
+`pytest --durations` and the Vitest verbose reporter. Collab delivery is FIFO per inbox on purpose:
+pycrdt does not converge when a delete set arrives before its items and the updates are shuffled
+(about 45% of random orders diverged in a measurement), and the server relays one causally ordered
+log, so that order does not occur.
+
 The tiers are chosen by marker, not by folder. `backend/tests/conftest.py` adds one structural rule:
 a test under `backend/tests/unit` that reaches the `_template_db` fixture fails collection with
 `pytest.UsageError`.
