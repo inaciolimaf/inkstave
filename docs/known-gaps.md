@@ -24,10 +24,6 @@ document's live text is in the collaboration session, which the workspace does n
 
 ### Frontend standard
 
-**`flushBeforeCompile` does nothing.** `EditorWorkspace` never assigns `flushRef`, so a compile or agent message
-does not wait for pending edits to reach the server. *Why:* found while splitting the editor; a fix changes
-the compile path and needs its own test.
-
 **An inline review does not survive a reload.** The outcome is stored once, when the last hunk is decided
 (spec 110). Until then the decisions live in this page only: after a reload the proposal shows as pending, and a
 hunk accepted before it is drawn as blocked, since its old lines are gone. *Why:* storing each hunk decision on
