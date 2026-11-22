@@ -29,6 +29,10 @@ document's live text is in the collaboration session, which the workspace does n
 hunk accepted before it is drawn as blocked, since its old lines are gone. *Why:* storing each hunk decision on
 the server needs a schema and route of its own; the page-level memory covers closing and reopening the review.
 
+**Reloading during an agent run does not reattach to it.** The panel becomes usable again, but the server's run
+keeps going unseen until it ends and the session is reloaded. *Why:* found by the "do it again" tests; reattaching
+needs the stream to resume from the last seen event.
+
 **Field metrics are not collected.** *Why:* `web-vitals` waits for real users.
 
 **The landing animates paint.** `.ink-underline` transitions `background-size` and `transition-all`
@@ -157,14 +161,12 @@ run; the rest were read, not run.
 
 - Compiles have no reaper. A job enqueued before commit, a dead worker or an ARQ timeout leaves a row `queued` or
   `running`, and coalescing then returns it forever.
-- Agent runs: `_resolve_llm` and `precheck_run` run outside any `try`, so a missing API key or a Redis failure
-  leaves the session `queued` and new messages get 409. A worker crash does the same.
+- A stalled agent run is reaped lazily: the session shows its stale state until the user sends the next message.
 - Zip imports enqueue before commit, with `max_tries=1`.
 - E-mail retries never happen: ARQ retries only on `Retry`, so `max_tries=3` on `send_email_job` does nothing.
 
 ### Authorization and security
 
-- Agent event and cancel routes accept any `run_id`, unbound to the session in the path.
 - `COMPILE_ALLOWED_FOR_VIEWERS` is ignored by the compile job and the compile SSE route.
 - Password-reset links survive an e-mail change, and `complete_password_reset` ignores `is_active`.
 - Deleting the last admin reopens the public `POST /api/setup/admin`.
@@ -187,8 +189,6 @@ run; the rest were read, not run.
 - The daily compile quota counts requests, is a fixed window and fails open. Concurrency caps are count-then-insert
   with no lock.
 - The effective document size limit is `MAX_REQUEST_BODY_BYTES` (1 MiB), not `MAX_DOCUMENT_BYTES` (2 MB).
-- `AGENT_MAX_TOKENS_PER_RUN` and the per-run cost cap are unreachable with defaults, since the 1000000 soft cap stops
-  first.
 - `gzip.decompress` on SyncTeX data has no output bound.
 - The editor's comment highlights and the editor-bar badge read only the loaded comment pages, so with more than
   50 threads they are incomplete until "Load more" (spec 118 paging).
