@@ -105,6 +105,7 @@ async def test_missing_token_rejected_4401_no_room(app: Any, db_session: AsyncSe
     components = install_collab(app, db_session, redis)
     project, entity, _ = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id)) as ws:  # no ?token=
+        await ws.expect_accept()
         assert await ws.close_code() == CLOSE_UNAUTHORIZED  # AC1
     assert components.rooms.room_count() == 0  # AC4
     assert entity.id not in components.manager.load_count  # AC4 — never acquired
@@ -114,6 +115,7 @@ async def test_malformed_token_rejected_4401(app: Any, db_session: AsyncSession,
     components = install_collab(app, db_session, redis)
     project, entity, _ = await _setup(db_session)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id), query="token=not-a-jwt") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == CLOSE_UNAUTHORIZED  # AC2
     assert components.rooms.room_count() == 0
     assert entity.id not in components.manager.load_count
@@ -139,6 +141,7 @@ async def test_expired_token_rejected_4401(app: Any, db_session: AsyncSession, r
     )
     expired_token, _ = expired_service.create_access_token(user)
     async with ASGIWebSocketClient(app, _path(project.id, entity.id), query=f"token={expired_token}") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == CLOSE_UNAUTHORIZED  # AC3 (expiry enforced)
     assert components.rooms.room_count() == 0
     assert entity.id not in components.manager.load_count
@@ -151,9 +154,11 @@ async def test_non_member_4403_and_unknown_4404(app: Any, db_session: AsyncSessi
     async with ASGIWebSocketClient(
         app, _path(project.id, entity.id), query=f"token={tokens['outsider']}"
     ) as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == CLOSE_FORBIDDEN  # AC5
     # Valid token, unknown project/doc ids → 4404.
     async with ASGIWebSocketClient(app, _path(uuid4(), uuid4()), query=f"token={tokens['editor']}") as ws:
+        await ws.expect_accept()
         assert await ws.close_code() == CLOSE_NOT_FOUND  # AC5
 
 
