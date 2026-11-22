@@ -293,9 +293,6 @@ as Coolify. A standalone run needs a `ports:` entry added.
   `urllib3`, `starlette`, `anyio` and `langgraph-sdk` among the rest. `set -e` then stops the script
   before the frontend step, which would fail regardless: `npm audit` needs a `package-lock.json`,
   and this is a pnpm project. Expiry dates in the allowlist format are not enforced by the script.
-- **`PUBLIC_HTTP_PORT` does nothing.** `.env.example`, `README.md`, `docs/admin-guide.md` and
-  `docs/release-checklist.md` describe it. No compose file reads it, and `docker-compose.prod.yml`
-  publishes no port.
 - **Rate-limit windows are fixed.** A burst across a boundary can reach twice the limit. The Lua
   script exists twice, in `limiter.py` and `policies.py`.
 - **The login limit behind a proxy is weaker without trusted headers.** Stand-down is the safer

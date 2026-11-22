@@ -276,7 +276,3 @@ async def _run_compile_body(ctx: dict[str, Any], compile_id: str) -> dict[str, A
         finally:
             # Backstop: remove the workdir on every path (idempotent; never raises).
             await cleanup_workdir(workdir_path)
-
-
-async def noop_persist_hook(session: Any, compile_id: UUID, project_id: UUID, result: CompileResult) -> None:
-    """No-op output-persistence seam (replaced by spec 23's OutputStore)."""

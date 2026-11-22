@@ -172,19 +172,6 @@ export class EditorPage {
   }
 
   /** The transient "Saving…" badge (REST autosave in-flight); note U+2026 ellipsis. */
-  savingBadge(): Locator {
-    return this.page.getByText("Saving…", { exact: true });
-  }
-
-  /** The REST-autosave status region (only mounted in non-collab/REST mode). */
-  saveStatus(): Locator {
-    return this.page.getByTestId("save-status");
-  }
-
-  unsavedBadge(): Locator {
-    return this.page.getByText("Unsaved changes");
-  }
-
   /** A New file button in the tree toolbar (aria-label "New file"). */
   async createFile(name: string): Promise<void> {
     await this.openFiles();

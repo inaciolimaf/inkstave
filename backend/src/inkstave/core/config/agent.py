@@ -50,7 +50,6 @@ class AgentSettings(BaseSettings):
     agent_diff_max_doc_chars: int = 400000
 
     # API + streaming (spec 44).
-    agent_stream_transport: str = "sse"
     agent_stream_heartbeat_s: int = 15
     agent_run_ttl_s: int = 900
     # Silence after which a run with no progress counts as dead (its worker crashed). 0 derives it:
@@ -60,8 +59,6 @@ class AgentSettings(BaseSettings):
     agent_max_message_chars: int = 40000
 
     # Context + LaTeX parsing (spec 48).
-    agent_context_token_budget: int = 8000
-    agent_context_surrounding_lines: int = 40
     agent_section_extra_commands: str = ""
     agent_context_cache: str = "memory"  # memory | redis | off
 

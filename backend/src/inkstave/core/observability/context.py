@@ -45,12 +45,6 @@ def clear_context(tokens: dict[str, Token[str | None]]) -> None:
             var.reset(token)
 
 
-def reset_all() -> None:
-    """Hard-reset every context var to None (used at job/WS boundaries)."""
-    for var in _VARS.values():
-        var.set(None)
-
-
 def current_context() -> dict[str, str]:
     """The currently-bound (non-None) context fields, for the log formatter."""
     out: dict[str, str] = {}

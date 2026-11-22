@@ -78,9 +78,6 @@ class CoreSettingsMixin:
     app_version: str = "0.0.0"
     git_sha: str = "unknown"
     metrics_public: bool = True
-    otel_enabled: bool = False
-    otel_exporter_otlp_endpoint: str = "http://localhost:4317"
-    otel_service_name: str = "inkstave-backend"
     readiness_check_timeout_s: float = 2.0
 
 

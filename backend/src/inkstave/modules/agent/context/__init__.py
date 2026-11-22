@@ -2,8 +2,6 @@
 
 from inkstave.modules.agent.context.locate import locate_section
 from inkstave.modules.agent.context.models import (
-    ContextBundle,
-    ContextChunk,
     FileEntry,
     ProjectMap,
     SectionMatch,
@@ -15,8 +13,6 @@ from inkstave.modules.agent.context.project_map import build_project_map
 from inkstave.modules.agent.context.select import estimate_tokens
 
 __all__ = [
-    "ContextBundle",
-    "ContextChunk",
     "FileEntry",
     "ProjectMap",
     "SectionMatch",

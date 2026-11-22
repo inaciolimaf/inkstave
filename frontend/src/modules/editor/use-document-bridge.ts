@@ -9,7 +9,7 @@ import { findNodeByPath } from "./sync-decoration";
 export function useDocumentBridge(projectId: string, treeRoot: TreeNode | undefined) {
   const documentBridge = useMemo(
     () =>
-      config.agentEnabled && config.collabWsUrl
+      config.agentEnabled
         ? createEditorBridge(projectId, (path) =>
             treeRoot ? (findNodeByPath(treeRoot, path)?.id ?? null) : null,
           )

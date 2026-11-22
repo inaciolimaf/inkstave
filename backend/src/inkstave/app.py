@@ -28,7 +28,6 @@ from inkstave.core.http.headers import SecurityHeadersMiddleware
 from inkstave.core.observability.log import configure_logging
 from inkstave.core.observability.metrics import set_build_info
 from inkstave.core.observability.middleware import RequestContextMiddleware
-from inkstave.core.observability.tracing import setup_tracing
 from inkstave.infra.redis import create_redis_pool, ping_redis
 from inkstave.modules.admin.routes import health, setup
 from inkstave.modules.collab.ws import router as collab_ws
@@ -191,7 +190,6 @@ def create_app() -> FastAPI:
     )
     _install_middleware(app, settings)
 
-    setup_tracing(app, settings)  # no-op unless OTEL_ENABLED=true
     register_exception_handlers(app)
 
     # Root-level probes (version-independent) + the versioned API router.

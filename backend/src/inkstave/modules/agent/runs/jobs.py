@@ -39,7 +39,6 @@ from inkstave.modules.agent.safety import (
     AgentAuditAction,
     AuditUsage,
     acquire_run,
-    avg_rate_per_1k,
     is_budget_exempt,
     without_budget_caps,
 )
@@ -101,9 +100,6 @@ def _build_deps(scope: RunScope, llm: Any, run_id: str) -> AgentDeps:
         should_cancel=should_cancel,
         object_store=scope.object_store,
         injection_guard=settings.agent_injection_guard == "on",
-        run_token_budget=settings.agent_max_tokens_per_run,
-        run_cost_budget_usd=settings.agent_max_cost_per_run_usd,
-        cost_per_1k=avg_rate_per_1k(settings, llm.model),
     )
 
 

@@ -51,7 +51,6 @@ http_request_duration = _metric(
 ws_connections_active = _metric(
     Gauge, "inkstave_ws_connections_active", "Active WebSocket connections", labelnames=("kind",)
 )
-ws_messages = _metric(Counter, "inkstave_ws_messages", "WebSocket messages", labelnames=("direction", "kind"))
 compile_duration = _metric(
     Histogram,
     "inkstave_compile_duration_seconds",

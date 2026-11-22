@@ -1,32 +1,34 @@
 # infra/tectonic/packages.toml
 #
-# Inkstave LaTeX package configuration for the Tectonic engine.
+# Package settings. Exactly what reads each key (checked against the code):
 #
-# Tectonic fetches the LaTeX packages a document needs on demand from a
-# "bundle" and caches them in TECTONIC_CACHE_DIR. You normally do NOT list every
-# package by hand — Tectonic resolves dependencies automatically. This file lets
-# a deployer: (a) pin the bundle, (b) declare a lightweight default set to
-# pre-warm the cache so first compiles are fast and work offline, and
-# (c) add extra packages without editing any source code.
+#   [bundle] format       READ by the worker at startup and handed to the runner, which stores it
+#                         and never uses it: the Tectonic command always passes `--outfmt pdf`.
+#   [packages] prewarm    READ by scripts/build_completion_packages.py, which builds the
+#                         editor's package-completion list. NOT read by the Docker warm-up:
+#                         infra/tectonic/Dockerfile carries its own \usepackage list, kept in
+#                         sync by hand.
+#
+# Parsed but NOT used at runtime. Use the setting named here instead:
+#   [bundle] url                 -> TECTONIC_BUNDLE_URL (the worker reads that setting only)
+#   [cache] dir                  -> TECTONIC_CACHE_DIR
+#   [cache] prewarm_on_build     -> nothing reads it; the warm-up lives in infra/tectonic/Dockerfile
+#   [policy] allow_network_fetch -> NOT enforced; TECTONIC_OFFLINE=true is what stops network fetches
 
 [bundle]
-# Empty url => use Tectonic's built-in default bundle for the pinned format.
-# Pin this in production for reproducible builds.
-url = ""                 # overrides TECTONIC_BUNDLE_URL when non-empty
-format = "latex"         # tectonic output format / TeX format
+# Not read (see the header). Set TECTONIC_BUNDLE_URL to pin a bundle.
+url = ""
+format = "latex"         # read, stored, no effect (see the header)
 
 [cache]
-# Where downloaded packages live. Empty => use TECTONIC_CACHE_DIR env var.
+# Not read (see the header). Set TECTONIC_CACHE_DIR instead.
 dir = ""
-# If true, a build step pre-fetches the `prewarm` set into the cache so the
-# image ships with them and offline compiles work.
+# Not read by anything. The image warm-up in infra/tectonic/Dockerfile does the prewarm.
 prewarm_on_build = true
 
 [packages]
-# The lightweight default set pre-warmed into the cache. These are the packages
-# a typical document uses; extend this list to make more packages available
-# offline. Adding here does NOT require code changes — only re-running the
-# prewarm/build step.
+# The package list the editor's completion data is built from (READ by
+# scripts/build_completion_packages.py). The Docker warm-up keeps its own copy.
 prewarm = [
   "amsmath",
   "amsfonts",
@@ -45,25 +47,14 @@ prewarm = [
 ]
 
 [policy]
-# When true, compiles may reach the network to fetch packages not yet cached.
-# When false (recommended for hardened/offline deployments), only prewarmed and
-# previously-cached packages are available; a missing package fails the compile.
+# Not enforced (see the header). For an offline deployment set TECTONIC_OFFLINE=true.
 allow_network_fetch = true
 
 # -------------------------------------------------------------------------------
 # How to add a package
 # -------------------------------------------------------------------------------
-# No application-code change is ever required — only this file.
-#
-#   1. Add the package name to the [packages] `prewarm` list above (it is fetched
-#      into the Tectonic cache so it works offline and first compiles are fast).
-#   2. Apply it:
-#        - if packages.toml is MOUNTED (the default prod compose mounts it
-#          read-only): restart the `backend` and `worker` services
-#          (`docker compose -f docker-compose.prod.yml restart backend worker`); or
-#        - if it is BAKED into the image: rebuild `inkstave-backend`.
-#   3. Tectonic still resolves transitive dependencies automatically, so you only
-#      list the top-level package you `\usepackage{...}`.
-#
-# To keep an offline/hardened deployment strict, set `allow_network_fetch = false`
-# above; then ONLY the prewarmed + already-cached packages are available.
+#   1. Add the package to the [packages] `prewarm` list above.
+#   2. Add it to the \usepackage list in infra/tectonic/Dockerfile (the warm-up step).
+#   3. Run `python scripts/build_completion_packages.py` so the editor offers it.
+#   4. Rebuild the `inkstave-tectonic` image. Tectonic still resolves transitive dependencies
+#      automatically, so list only the top-level package a document \usepackage's.

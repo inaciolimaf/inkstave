@@ -186,10 +186,10 @@ run; the rest were read, not run.
 
 ### Settings with no effect
 
-`OTEL_ENABLED` (no opentelemetry package), `HISTORY_COMPACT_INTERVAL_S`, `NOTIFICATION_SWEEP_INTERVAL_S`,
-`AGENT_CONTEXT_TOKEN_BUDGET`, `AGENT_CONTEXT_SURROUNDING_LINES` (their reader `select_context` was dead code), `AGENT_STREAM_TRANSPORT`, `AGENT_SECTION_EXTRA_COMMANDS`, `TEST_DB_TEMPLATE`,
-`PUBLIC_HTTP_PORT`, and most of `infra/tectonic/packages.toml` at runtime. `COMPILE_SANDBOX_MEMORY_MB` is ignored
-while `COMPILE_ADDRESS_SPACE_BYTES` has its default.
+`infra/tectonic/packages.toml`: `[bundle] format` is stored by the runner and never used (`--outfmt pdf` is
+hard-coded), and `[bundle] url`, `[cache] dir`, `[cache] prewarm_on_build` and `[policy] allow_network_fetch`
+are parsed and ignored. The file's header and [compile.md](system/compile.md) say what each key does. The
+`[packages] prewarm` list is read, by the completion-data script only.
 
 ### Observability
 
@@ -198,6 +198,12 @@ while `COMPILE_ADDRESS_SPACE_BYTES` has its default.
 
 ### Unused code
 
-The helpers left in `backend/src/inkstave/modules/agent/context/select.py` after `select_context` was removed
-(`_outline_summary`, `_section_text`, `_fit`, `_target_chunk`, `_related_chunk`, `_candidates`). `COLLAB_ENABLED` is always true in a real build, so REST autosave and its conflict dialog are
-unreachable.
+Kept after the sweep because tests use them or they are a contract: `set_request_id` (the test fixture
+resets the context with it), `apply_hunks` and `InMemoryEventSink` (test support), `serialize_state` and
+`deserialize_state`, `section_range` and `match_score` (tests only), `RefreshStore.is_member_valid`,
+`DocumentManager.flush_text_if_dirty` (no production caller), `room_count`, `is_empty` and `local_broadcast`,
+`build_prewarm_document` and `PackageConfig.allow_network_fetch` (tests only), `AuthorizationService` and its
+`can` (no caller), `ObjectStat.checksum` (never set), `writable` on the export buffer
+(io protocol), and `text_synced_seq` (a database column: removing it needs a migration). `knip` reports 86
+unused exports and 70 unused exported types in `frontend/src`, mostly barrel re-exports and test helpers;
+they are not removed yet.

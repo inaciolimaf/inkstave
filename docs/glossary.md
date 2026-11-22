@@ -69,11 +69,6 @@ are English-only today ([known gaps](known-gaps.md)).
 | Overleaf template import | `source=overleaf_template` | "Template do Overleaf" |
 | Compatibility report | `compat_report` | "Relatório de compatibilidade" |
 | Delete (soft) | `soft_delete_project` | "Excluir" |
-| Version conflict | `VersionConflictError` | "Conflito" |
-| Keep mine | `resolveKeepMine` | "Manter minha versão" |
-| Reload server version | `resolveReload` | "Recarregar versão do servidor" |
-| Saved, saving | `SaveStatus` | "Salvo", "Salvando…" |
-| Unsaved changes | `SaveStatus` | "Alterações não salvas" |
 
 ## Editor tools
 
