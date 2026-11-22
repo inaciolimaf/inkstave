@@ -90,7 +90,7 @@ export function useCollabDoc(options: UseCollabDocOptions): CollabDocSession | n
   authorRef.current = author;
 
   useEffect(() => {
-    if (!enabled || !documentId || !config.collabWsUrl) {
+    if (!enabled || !documentId) {
       setCore(null);
       return;
     }

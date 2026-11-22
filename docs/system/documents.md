@@ -3,7 +3,7 @@
 A project's tree holds two kinds of content. A document is UTF-8 text the editor works on, stored in
 PostgreSQL with an integer version. A file is a binary such as an image or PDF, stored in object
 storage with its metadata in PostgreSQL. This domain covers the document content API and its
-optimistic concurrency, the autosave contract the editor follows over REST, binary upload and
+optimistic concurrency, the version-checked REST write, binary upload and
 download, and the storage backends. It comes from specs 13, 14 and 19. The tree that owns these rows is
 in [projects.md](projects.md). Live editing is in [collab.md](collab.md).
 
@@ -28,19 +28,13 @@ in [projects.md](projects.md). Live editing is in [collab.md](collab.md).
 | `backend/src/inkstave/infra/storage/after_commit.py` | `schedule_delete_after_commit`: blob deletes queued on a session, run after its commit, dropped on rollback |
 | `backend/src/inkstave/infra/deps.py` | FastAPI dependency, overridden in tests |
 | `backend/src/inkstave/core/http/body_limit.py` | `BodySizeLimitMiddleware` |
-| `frontend/src/modules/editor/autosave/use-document-autosave.ts` | The autosave state machine |
-| `frontend/src/modules/editor/autosave/types.ts` | `SaveStatus`, timing constants |
-| `frontend/src/modules/editor/api.ts` | `getDocument`, `saveDocument`, `VersionConflictError` |
-| `frontend/src/modules/editor/conflict-dialog.tsx` | Conflict resolution dialog |
-| `frontend/src/modules/editor/save-status-indicator.tsx` | Save status |
-| `frontend/src/modules/editor/unsaved-changes-guard.tsx` | `beforeunload` guard |
+| `frontend/src/modules/editor/api.ts` | `getDocument` (the editor loads the document over REST and writes it over the live session) |
 | `frontend/src/modules/file-tree/use-uploads.ts` | Upload progress and name-conflict prompt |
 
 Tests live in `backend/tests/integration/test_documents_api.py`,
 `backend/tests/integration/test_document_service.py`, `backend/tests/integration/test_files_api.py`,
 `backend/tests/integration/test_files_api_validation.py`,
-`backend/tests/integration/test_files_api_access.py`, `backend/tests/unit/test_storage.py` and
-`frontend/src/modules/editor/autosave/use-document-autosave.test.ts`.
+`backend/tests/integration/test_files_api_access.py`, `backend/tests/unit/test_storage.py`.
 
 ## Data
 
@@ -101,25 +95,11 @@ successful PUT, even if the content is unchanged.
 `max_document_bytes`. `documents.content` is the text that compile, export and other readers see, and
 `flush_open_project_docs` brings it up to date before those reads.
 
-### Autosave contract
+### Version-checked writes
 
-`useDocumentAutosave` is the REST client of this API. States are `clean`, `dirty`, `saving`, `error`,
-`offline` and `conflict`.
-
-1. It seeds `baseVersion`, `serverText` and `localText` from the fetched document, once per document id.
-2. An edit marks `dirty` and arms a debounce of `DEBOUNCE_MS` (1000). Blur, tab hide, the `online` event and Ctrl/Cmd+S flush at once.
-3. `flush` sends the whole text with `base_version`. It skips when text matches `serverText` and is single-flight through `savingRef`. Edits arriving mid-save re-flush on the next tick.
-4. On success, `version` becomes the new `baseVersion`.
-5. On 409, status is `conflict`, and flushes stop until the user chooses. `resolveKeepMine` rebases on `current_version` and re-saves. `resolveReload` takes the server text.
-6. Other failures retry after `RETRY_BACKOFF_MS` (1, 2, 4, 8 seconds). Past `MAX_RETRIES` it stops at `error` with a manual retry. If the browser is offline, status is `offline`.
-7. Leaving a document fires one last `saveDocument` for unsaved text.
-
-`hasUnsaved` is any status other than `clean`, and feeds the `beforeunload` guard.
-
-This path applies only when collaboration is off. `editor-pane.tsx` takes `collabEnabled` from
-`COLLAB_ENABLED`, which is `Boolean(config.collabWsUrl)`. With collab active, `CollabEditor` receives
-text over the WebSocket, the save indicator is hidden, and `onLocalChange` is never called, so the hook
-sends nothing.
+`PUT` takes `base_version`. A write against a stale version gets 409 `version_conflict` with the current
+version and content, and nothing is saved. The editor does not call `PUT`: the live session
+([collab.md](collab.md)) writes the document. The e2e helpers use `PUT` to seed content.
 
 ### Upload
 
@@ -197,7 +177,6 @@ in `backend/src/inkstave/worker.py`.
 | Delete of a missing key is idempotent, on both backends | `backend/tests/unit/test_storage.py::test_local_missing_and_delete`, `backend/tests/unit/test_storage.py::test_s3_roundtrip_and_notfound` |
 | The S3 backend requires a bucket | `backend/tests/unit/test_storage.py::test_s3_requires_bucket` |
 | S3 GET does not buffer the object | no dedicated test; the fake store test only checks round-trip bytes |
-| Autosave debounces, is single-flight, retries with a cap, and resolves conflicts | test cases in `frontend/src/modules/editor/autosave/use-document-autosave.test.ts` |
 
 ## Settings
 
@@ -221,14 +200,12 @@ in `backend/src/inkstave/worker.py`.
 ## Points of attention
 
 - **`PUT` strips the document.** `DocumentContentReplace` extends `StrictModel`, which sets `str_strip_whitespace=True`, so `content` loses leading and trailing whitespace, including the final newline. `"  a\n\n"` is stored as `"a"`. The client then records `serverText` as the unstripped text it sent, so it does not notice. No test covers it.
-- **The autosave branch is not reached in a normal build.** `collabWsUrl` falls back to a derived URL, so `COLLAB_ENABLED` is always true. `useDocumentAutosave`, the conflict dialog and the save indicator run only in tests or for a deployment that changes this constant. ADR 0019 describes them as the working baseline.
 - **REST and an open room do not coordinate.** `replace_content` does not touch CRDT state. Once a document has CRDT state with text, `_load` in `backend/src/inkstave/modules/collab/rooms/manager.py` ignores `documents.content`, and a later flush overwrites the REST write. An API client calling `PUT` loses its edit silently if the document has been opened in collab.
 - The document size is one rule now: `MAX_DOCUMENT_BYTES` (2 MB) is the effective limit, and the body cap of the document route is derived from it (see above). A document over the limit is `content_too_large`; the transport's 413 is `payload_too_large` and only for bodies beyond the derived cap.
 - Postgres `text` cannot hold a NUL. Neither `replace_content` nor `decode_text` removes one, so a `\u0000` in a PUT, or in an imported text entry, fails at the database rather than as a typed error.
 - `S3ObjectStore.put` joins the whole stream into memory before `put_object`, so the streaming guarantee holds for S3 reads only. A 50 MB upload is held in full. There is no multipart upload. The size cap still applies, since the join runs the guarded generator.
 - `delete_entity` removes blobs before the transaction commits. A failed commit leaves rows pointing at deleted blobs. `store.delete` is not wrapped despite the "best-effort" comment, so a storage error fails the request partway through.
 - Soft-deleting a project removes no file blobs. See [projects.md](projects.md).
-- After a document switch, a save already in flight is not checked against the current document id. When it resolves it patches `baseVersion` and `serverText` onto the next document's state. The result is a spurious save or conflict. The final save on leaving a document uses `.catch(() => {})`, so a failed last save is lost with no signal.
 - The upload conflict prompt cannot work. `onReplaceConflict` re-sends the same name, and the backend has no overwrite, so "Substituir" always gets a second `name_conflict`.
 - `sanitize_filename` is ASCII-only. `Café.png` is stored as `Caf_.png`, while tree rename accepts Unicode.
 - The download header writes the name raw into `filename="..."`, with no RFC 5987 form. Starlette encodes headers as latin-1, so a file renamed to a name outside latin-1 makes the download fail with a server error. Export's `content_disposition` handles this.

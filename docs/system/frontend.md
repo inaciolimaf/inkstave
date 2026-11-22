@@ -59,7 +59,7 @@ Each module has an `index.ts`. Other modules, routes and the app import only fro
 | `frontend/src/modules/collab` | Yjs provider, session hook, presence, cursors | `InkstaveWsProvider`, `useCollabDoc`, `collabDocUrl`, `usePresence`, `ConnectionStatusBadge`, `OnlineUsers`, type `CollabDocSession` | none |
 | `frontend/src/modules/diff-review` | Inline review of agent proposals in the text, rebase, CRDT apply, and the live write a search replace uses | `ReviewBar`, `useInlineReview`, `inlineReviewExtension`, `createEditorBridge`, types `DocumentBridge`, `LiveTextBridge`, `TextSplice` | collab |
 | `frontend/src/modules/discussion` | Project chat panel, its unread button, the shared project event stream, comment threads on the text (spec 118) | `ChatPanel`, `ChatButton`, `useChatUnread`, `useProjectEvents`, `subscribeProjectEvents`, `PROJECT_EVENT_TYPES`, `CommentsPanel`, `CommentsButton`, `useCommentThreads`, `useCommentMutations`, `commentMarks`, `encodeAnchor`, `resolveAnchor`, types `ProjectEvent`, `ProjectEventHandlers`, `CommentThread` | auth, sharing (the member list, through its index) |
-| `frontend/src/modules/editor` | Workspace layout, CodeMirror, autosave, preferences, outline, LaTeX autocomplete (`completion/`), the Git clone dialog (spec 121), and the comments wiring (`useWorkspaceComments`) | `EditorWorkspace` | every other module except landing |
+| `frontend/src/modules/editor` | Workspace layout, CodeMirror, preferences, outline, LaTeX autocomplete (`completion/`), the Git clone dialog (spec 121), and the comments wiring (`useWorkspaceComments`) | `EditorWorkspace` | every other module except landing |
 | `frontend/src/modules/file-tree` | Tree panel, dialogs, uploads, keyboard | `FileTreePanel`, `useProjectTree`, types `TreeEntity`, `TreeNode` | none |
 | `frontend/src/modules/history` | Timeline, diff view, labels, restore | `HistoryPanel` | sharing |
 | `frontend/src/modules/insert-tools` | Insert menu, symbol palette, table builder, equation editor (spec 114) | `InsertMenu` | none |
@@ -554,10 +554,9 @@ Vite reads these at build time. The template is `frontend/.env.example`. `fronte
   - The boundary rule covers `frontend/src` only, so `frontend/tests/helpers/screen.tsx` imports
     `@/modules/auth/auth-context` directly.
   - `frontend/src` has 8 inline `eslint-disable` comments, and no `any`, `ts-ignore` or `ts-expect-error`.
-- **The REST autosave path does not run in a real build.** `collabWsUrl` is never empty, because `||` falls
-  through to a derived URL, so `COLLAB_ENABLED` in `frontend/src/modules/editor/editor-workspace.tsx` is always
-  true. `frontend/.env.example` still says an empty value falls back to REST autosave, which is wrong. The
-  `useDocumentAutosave` branch stays tested, but only tests that leave `collabEnabled` off reach it.
+- **Collaboration is always on.** `collabWsUrl` is never empty, because `||` falls through to a derived URL.
+  The editor has no REST autosave, conflict dialog or save indicator: those were removed with the
+  `COLLAB_ENABLED` switch that could turn them on. Saving is the live session; Ctrl/Cmd+S waits for its flush.
 - **Non-`apiClient` calls have no refresh.** XHR uploads, `EventSource` URLs and the WebSocket use the access token
   as it stands, and the last two put it in the URL because those APIs cannot set headers. An expired token fails an upload with no retry. On the WebSocket, a reconnect with an expired token
   gets 4401, which is terminal, so the editor stays offline until the session is recreated.

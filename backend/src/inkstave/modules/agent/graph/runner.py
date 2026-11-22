@@ -57,10 +57,30 @@ async def _build_transcript(db: AsyncSession, session: AgentSession, user_messag
     """A freshly-computed system prompt (never persisted) + stored history + input."""
     prior = await repo.list_messages(db, session.id)
     system = build_system_prompt(PromptContext(project_id=str(session.project_id)))
+    history = [_to_llm_message(m.role, m.content, m.tool_calls, m.tool_call_id) for m in prior]
     transcript: list[LLMMessage] = [LLMMessage(role="system", content=system)]
-    transcript.extend(_to_llm_message(m.role, m.content, m.tool_calls, m.tool_call_id) for m in prior)
+    transcript.extend(_answered_calls_only(history))
     transcript.append(LLMMessage(role="user", content=user_message))
     return transcript
+
+
+def _answered_calls_only(history: list[LLMMessage]) -> list[LLMMessage]:
+    """Drop the tool calls that never got a result.
+
+    A turn that stops before its tools run (the step cap, a cancel) stores its last calls with no
+    result. A provider rejects a history like that, so every later message of the session would fail.
+    """
+    answered = {m.tool_call_id for m in history if m.role == "tool"}
+    cleaned: list[LLMMessage] = []
+    for message in history:
+        calls = message.tool_calls or []
+        if message.role == "assistant" and any(call.id not in answered for call in calls):
+            kept = [call for call in calls if call.id in answered]
+            if not kept and not message.content:
+                continue
+            message = message.model_copy(update={"tool_calls": kept or None})
+        cleaned.append(message)
+    return cleaned
 
 
 def _initial_state(session: AgentSession, transcript: list[LLMMessage]) -> AgentState:

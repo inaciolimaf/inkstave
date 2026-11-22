@@ -33,8 +33,5 @@ class AgentDeps:
     events: EventSink | None = None
     should_cancel: Callable[[], Awaitable[bool]] | None = None
     object_store: ObjectStore | None = None  # lets view_image read project files
-    # Safety (spec 49): per-run budget caps + injection framing. 0 / False disables.
+    # Safety (spec 49): injection framing. The budget caps are read from settings by safety/budget.py.
     injection_guard: bool = True
-    run_token_budget: int = 0
-    run_cost_budget_usd: float = 0.0
-    cost_per_1k: float = 0.0

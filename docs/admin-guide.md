@@ -25,7 +25,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 Services: `postgres`, `redis`, `backend`, `worker`, `frontend`. **No service
 publishes a host port.** The frontend container only `expose`s port 80 so that a
 managed proxy (Coolify, Traefik) can route a domain to it without colliding on the
-host's :80. `PUBLIC_HTTP_PORT` stays in `.env.example`, but no compose file reads it.
+host's :80.
 
 To reach a standalone stack from the host, add a mapping in a file of your own, for
 example `docker-compose.local.yml`:
@@ -117,9 +117,6 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `APP_VERSION` | No | `0.0.0` | inkstave_build_info version | backend |
 | `GIT_SHA` | No | `unknown` | inkstave_build_info git_sha (set in CI) | backend |
 | `METRICS_PUBLIC` | No | `true` | gate /metrics exposure (bind to internal net in prod) | backend |
-| `OTEL_ENABLED` | No | `false` | turn OpenTelemetry tracing on | backend, worker, collab/websocket |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | `http://localhost:4317` | OTLP target when enabled | backend, worker, collab/websocket |
-| `OTEL_SERVICE_NAME` | No | `inkstave-backend` | OTel resource attribute | backend, worker, collab/websocket |
 | `READINESS_CHECK_TIMEOUT_S` | No | `2` | per-dependency /readyz probe timeout (seconds) | backend |
 | `DB_POOL_SIZE` | No | `10` | SQLAlchemy async pool size | backend, worker |
 | `DB_MAX_OVERFLOW` | No | `5` | extra connections beyond the pool | backend, worker |
@@ -134,11 +131,10 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `SMTP_TIMEOUT_S` | No | `30` | seconds per SMTP operation | backend, worker |
 | `CACHE_ENABLED` | No | `true` | hot-read Redis cache master switch | backend |
 | `CACHE_TTL_SECONDS` | No | `30` | hot-read cache TTL | backend |
-| `SUITE_BUDGET_SECONDS` | No | `180` | hard CI gate: fail if the slowest stage exceeds this | tests |
-| `SUITE_WARN_SECONDS` | No | `150` | early-warning threshold | tests |
+| `SUITE_BUDGET_SECONDS` | No | `180` | `scripts/run_timed.sh` (local run) fails above this; CI's `gate` job uses 180 s | tests |
+| `SUITE_WARN_SECONDS` | No | `150` | `scripts/run_timed.sh` early-warning threshold | tests |
 | `SLOW_TEST_WARN_S` | No | `3` | per-test warn threshold | tests |
 | `SLOW_TEST_FAIL_S` | No | `10` | per-test fail threshold (non-@slow) | tests |
-| `TEST_DB_TEMPLATE` | No | `inkstave_test_tmpl` | not read by any code: each xdist worker migrates its own database (ADR 0053) | tests |
 | `CORS_ORIGINS` | Yes | `http://localhost:5173` | CORS allow-list (CORS_ALLOWED_ORIGINS); never '*' with creds | backend |
 | `HSTS_ENABLED` | No | `false` | emit Strict-Transport-Security (true in prod) | backend |
 | `TRUST_PROXY_HEADERS` | No | `false` | trust X-Forwarded-For for client IP (only behind a proxy) | backend, collab/websocket |
@@ -190,7 +186,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `COMPILE_MAX_LOG_BYTES` | No | `2097152` | captured .log truncation cap (2 MiB) | worker |
 | `COMPILE_MAX_STDOUT_BYTES` | No | `262144` | stdout/stderr capture cap (256 KiB) | worker |
 | `COMPILE_CPU_SECONDS` | No | `60` | best-effort RLIMIT_CPU (empty disables) | worker |
-| `COMPILE_ADDRESS_SPACE_BYTES` | No | `2147483648` | best-effort RLIMIT_AS (empty disables) | worker |
+| `COMPILE_ADDRESS_SPACE_BYTES` | No | `2147483648` | best-effort RLIMIT_AS (empty disables). Left unset, it follows `COMPILE_SANDBOX_MEMORY_MB` | worker |
 | `COMPILE_KEEP_WORKDIR_ON_FAILURE` | No | `false` | keep failed workdirs for debugging | worker |
 | `COMPILE_OUTPUT_PREFIX` | No | `compiles` | storage key prefix for compile outputs | backend, worker |
 | `COMPILE_RETAIN_PER_PROJECT` | No | `10` | keep the newest N compiles' outputs per project | worker |
@@ -235,7 +231,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `HISTORY_INLINE_MAX_BYTES` | No | `65536` | payloads/snapshots above this offload to blob storage | collab/websocket |
 | `HISTORY_COMPACT_MIN_UPDATES` | No | `50` | min updates before the sweep compacts a doc | worker |
 | `HISTORY_COMPACT_MERGE_BYTES` | No | `4096` | adjacent updates smaller than this may be merged | worker |
-| `HISTORY_COMPACT_INTERVAL_S` | No | `300` | compaction sweep interval (mocked in tests) | worker |
+| `HISTORY_COMPACT_INTERVAL_S` | No | `300` | compaction sweep interval; a value under an hour sets the cron minutes (300 = every 5 min) | worker |
 | `HISTORY_BLOB_PREFIX` | No | `history/` | blob-storage key prefix for offloaded history | backend, collab/websocket |
 | `HISTORY_DIFF_MAX_BYTES` | No | `2097152` | max reconstructed text per diff side before 413 | backend |
 | `HISTORY_VERSIONS_PAGE_MAX` | No | `200` | upper bound for the versions list `limit` (set false for editor+) | backend |
@@ -260,13 +256,10 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `AGENT_TOOL_IMAGE_MAX_BYTES` | No | `3750000` | byte cap for view_image (the Claude API takes 5 MB of base64) | backend, worker |
 | `AGENT_DIFF_CONTEXT_LINES` | No | `3` | unified-diff context lines per hunk (spec 43) | backend, worker |
 | `AGENT_DIFF_MAX_DOC_CHARS` | No | `400000` | refuse to diff documents larger than this | backend, worker |
-| `AGENT_STREAM_TRANSPORT` | No | `sse` | sse \| ws (spec 44) | backend |
 | `AGENT_STREAM_HEARTBEAT_S` | No | `15` | SSE heartbeat interval | backend |
 | `AGENT_RUN_TTL_S` | No | `900` | TTL for per-run last-event + cancel keys | backend, worker |
 | `AGENT_MAX_MESSAGE_CHARS` | No | `40000` | max user message length | backend |
-| `AGENT_CONTEXT_TOKEN_BUDGET` | No | `8000` | No effect: `select_context` was removed (see agent docs) | backend, worker |
-| `AGENT_CONTEXT_SURROUNDING_LINES` | No | `40` | context lines around a located section | backend, worker |
-| `AGENT_SECTION_EXTRA_COMMANDS` | No | `—` | extra sectioning command names (comma-separated) | backend, worker |
+| `AGENT_SECTION_EXTRA_COMMANDS` | No | `—` | extra sectioning command names (comma-separated), read by `locate_section` as sections | backend, worker |
 | `AGENT_CONTEXT_CACHE` | No | `memory` | memory \| redis \| off | backend, worker |
 | `AGENT_MAX_RUNS_PER_MINUTE_PER_USER` | No | `10` | per-user agent run-rate cap (runs per minute) | backend, worker |
 | `AGENT_MAX_CONCURRENT_RUNS_PER_USER` | No | `2` | max simultaneous agent runs per user | backend, worker |
@@ -294,7 +287,7 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `MAGIC_LOGIN_TOKEN_TTL` | No | `600` | passwordless sign-in link lifetime (seconds) | backend |
 | `REQUIRE_VERIFIED_EMAIL_TO_LOGIN` | No | `false` | if true, credential login requires a confirmed email | backend |
 | `NOTIFICATION_INVITE_TTL_DAYS` | No | `30` | TTL for invite notifications | backend |
-| `NOTIFICATION_SWEEP_INTERVAL_S` | No | `3600` | expiry sweep interval (mocked in tests) | worker |
+| `NOTIFICATION_SWEEP_INTERVAL_S` | No | `3600` | expiry sweep interval; a value under an hour sets the cron minutes | worker |
 | `VITE_NOTIFICATIONS_POLL_INTERVAL_MS` | No | `60000` | frontend bell poll interval | frontend build |
 | `VITE_AGENT_ENABLED` | No | `true` | show the AI agent chat panel (spec 46; "false" hides it) | frontend build |
 | `FILE_STORAGE_BACKEND` | No | `local` | local \| s3 | backend, worker |
@@ -319,12 +312,13 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `COMPILE_SANDBOX_IMAGE` | No | `inkstave-tectonic` | offline compile image (infra/tectonic/Dockerfile) | worker |
 | `COMPILE_SANDBOX_RUNTIME` | No | `runsc` | Docker runtime for the sandbox (gVisor) | worker |
 | `COMPILE_SANDBOX_DOCKER_BIN` | No | `docker` | docker client the worker shells out to (point at the socket-proxy) | worker |
-| `COMPILE_SANDBOX_MEMORY_MB` | No | `2048` | container --memory cap (when COMPILE_ADDRESS_SPACE_BYTES unset) | worker |
+| `COMPILE_SANDBOX_MEMORY_MB` | No | `2048` | container --memory cap; it is also the default address space (see `COMPILE_ADDRESS_SPACE_BYTES`) | worker |
 | `COMPILE_SANDBOX_CPUS` | No | `1.0` | container --cpus cap | worker |
 | `COMPILE_SANDBOX_PIDS_LIMIT` | No | `256` | container --pids-limit (fork-bomb guard) | worker |
 | `COMPILE_SANDBOX_TMPFS_MB` | No | `256` | size of the writable /tmp tmpfs in the container | worker |
 | `LLM_STUB` | No | `false` | true swaps the agent LLM for a deterministic in-process stub (no network); e2e uses true | backend, worker |
 | `LLM_STUB_DELAY_MS` | No | `0` | Pause before each stub reply, 0 to 5000; only the e2e sets it |
+| `LLM_STUB_SCENARIO` | No | `happy` | Test only, with `LLM_STUB=true`: the scripted run the stub plays (`happy`, or one mistake such as `old_text_not_found`, `provider_error`); an unknown name stops the worker |
 | `E2E_BASE_URL` | No | `http://localhost:4173` | where Playwright points the browser (Vite preview origin) | tests |
 | `E2E_API_URL` | No | `http://localhost:8099` | backend origin the e2e frontend talks to | tests |
 | `E2E_DATABASE_URL` | No | `postgresql+asyncpg://inkstave:inkstave@localhost:5433/inkstave_e2e` | docker-compose.test.yml Postgres | tests |
@@ -339,7 +333,6 @@ collaboration; `AGENT_`/`ANTHROPIC_`/`OPENROUTER_`/`LLM_STUB` are the AI agent; 
 | `E2E_COMPILE_WORKDIR` | No | `/tmp/inkstave-e2e-compiles` | compile workdir root of the e2e backend | tests |
 | `E2E_EMAIL_DIR` | No | `/tmp/inkstave-e2e-emails` | where the e2e backend's file sender writes e-mails | tests |
 | `E2E_HISTORY_DEBOUNCE_MS` | No | `200` | history debounce of the e2e backend | tests |
-| `PUBLIC_HTTP_PORT` | No | `80` | not read by any compose file; see Deployment | none |
 | `MIGRATE_ON_START` | No | `false` | strict: refuse to start unless the DB is at head. | backend |
 
 ## First run
@@ -431,9 +424,8 @@ section and [docs/e2e-strategy.md](e2e-strategy.md) for the mock path used in te
   port 8000. nginx does not proxy them: through the frontend container they fall
   to the SPA and answer 200. nginx answers `/healthz` itself. Probe the backend
   directly.
-- **Tracing** — optional OpenTelemetry (`OTEL_ENABLED=true`,
-  `OTEL_EXPORTER_OTLP_ENDPOINT`). No `opentelemetry` package ships in the image, so
-  enabling it only logs the import failure until one is installed.
+- **Tracing** is not offered. No OpenTelemetry code or package is in the image; request logs carry a
+  `trace_id` equal to the request id.
 
 ## Account administration
 

@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from inkstave.core.config.settings import get_settings
 from inkstave.core.observability.log import JsonLogFormatter
-from inkstave.core.observability.tracing import current_trace_id
 from inkstave.modules.auth.credentials.tokens import build_token_service
 from tests.conftest import FakeRedisRaising
 from tests.factories import UserFactory
@@ -70,8 +69,7 @@ async def test_request_id_roundtrip_and_finish_log(async_client: AsyncClient) ->
     assert f["http.path"] == "/api/v1/openapi.json"  # route template, never the raw id
     assert f["http.status_code"] == 200
     assert "http.duration_ms" in f
-    assert f["trace_id"] == "smoke-123"  # OTEL off → trace_id == request_id (AC10)
-    assert current_trace_id() is None  # no OpenTelemetry initialized (AC10)
+    assert f["trace_id"] == "smoke-123"  # no tracing backend: trace_id == request_id (AC10)
 
 
 async def test_malformed_inbound_request_id_is_replaced(async_client: AsyncClient) -> None:

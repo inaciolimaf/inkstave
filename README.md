@@ -46,7 +46,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 **`docker-compose.prod.yml` publishes no host port.** The `frontend` container only
 exposes port 80 on the compose network, for a managed proxy such as Coolify or Traefik
-to route a domain to it, and `PUBLIC_HTTP_PORT` is not read. To open it on
+to route a domain to it. To open it on
 `http://localhost` without a proxy, add a `ports` mapping in a compose file of your own:
 see [Deployment](docs/admin-guide.md#deployment). Put TLS in front of it for a public
 deployment. The full first-run flow, scaling, backups and troubleshooting are in the
@@ -138,10 +138,11 @@ table of every spec and what it decides is the [roadmap](specs/README.md#the-roa
 
 ## Performance & testing budget
 
-A hard project constraint: **each stage of the test suite (unit, integration, e2e)
-must run in under 3 minutes**, and CI runs the three in parallel. Long-running work (LaTeX compiles, AI agent runs)
-is pushed to async ARQ jobs and is mocked/stubbed in the fast test tiers. CI
-measures and enforces this gate.
+A hard project constraint: **the whole CI run lasts at most 3 minutes**, from the start of its
+first job to the end of its last one. The jobs run side by side (unit, integration, e2e in shards),
+so the slowest one sets the pace. Long-running work (LaTeX compiles, AI agent runs) is pushed to
+async ARQ jobs and is mocked/stubbed in the fast test tiers. CI's `gate` job measures and enforces
+this limit; `docs/system/overview.md` lists the settings that keep it there.
 
 ## Security & sandboxed compiles
 

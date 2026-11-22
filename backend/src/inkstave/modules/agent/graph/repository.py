@@ -53,10 +53,6 @@ async def run_belongs_to_session(db: AsyncSession, session_id: UUID, run_id: UUI
     return found is not None
 
 
-async def get_session(db: AsyncSession, session_id: UUID) -> AgentSession | None:
-    return await db.get(AgentSession, session_id)
-
-
 async def list_sessions(db: AsyncSession, *, project_id: UUID, user_id: UUID) -> list[AgentSession]:
     rows = await db.execute(
         select(AgentSession)

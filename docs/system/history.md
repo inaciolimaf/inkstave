@@ -225,7 +225,7 @@ Defined in `backend/src/inkstave/core/config/groups.py`.
 | `HISTORY_INLINE_MAX_BYTES` | 65536 | Above this, data goes to the blob store |
 | `HISTORY_COMPACT_MIN_UPDATES` | 50 | Rows before the sweep picks a document |
 | `HISTORY_COMPACT_MERGE_BYTES` | 4096 | Updates under this may be merged |
-| `HISTORY_COMPACT_INTERVAL_S` | 300 | No effect: nothing reads it, the cron in `backend/src/inkstave/worker.py` is fixed |
+| `HISTORY_COMPACT_INTERVAL_S` | 300 | Sets the compaction cron minutes in `backend/src/inkstave/worker.py` (under an hour; 300 = every 5 min) |
 | `HISTORY_BLOB_PREFIX` | `history/` | Object key prefix |
 | `HISTORY_DIFF_MAX_BYTES` | 2097152 | Largest side of a diff |
 | `HISTORY_VERSIONS_PAGE_MAX` | 200 | Cap on `limit` |

@@ -155,7 +155,7 @@ coverage-combine: ## Merge the unit + integration coverage; fails below fail_und
 	cd backend && COVERAGE_FILE=../$(RESULTS)/combined.coverage uv run coverage xml \
 		-o ../$(RESULTS)/coverage.xml --fail-under=0
 
-budget: ## Gate the 3-minute budget (stage times in UNIT_S, INTEGRATION_S, E2E_S)
+budget: ## Gate the per-test limit from the JUnit files (the whole run is gated by CI's `gate` job)
 	$(PYTHON) backend/scripts/build_test_timing.py $(RESULTS) test-timing.json
 	$(PYTHON) backend/scripts/check_test_budget.py test-timing.json
 
@@ -221,6 +221,7 @@ web-build: ## Build the production bundle
 web-budget: ## Fail if the initial JS of frontend/dist passes 250 KB gzip; needs a build
 	node scripts/check-bundle.mjs
 
+# E2E_ARGS passes extra flags to Playwright, for example a shard in CI: make e2e-smoke E2E_ARGS=--shard=1/2
 # The Playwright targets do not depend on web-build: the config's webServer builds the bundle
 # itself, with the API URL of the e2e backend. They need `make e2e-infra` first.
 e2e: ## Playwright: every route opens
@@ -232,8 +233,8 @@ mobile: ## Playwright: every route fits 390x844
 e2e-flows: ## Playwright: real journeys, without the @full tier
 	$(PLAYWRIGHT) --project=flows
 
-e2e-smoke: ## Playwright: the whole in-budget tier (what CI runs)
-	$(PLAYWRIGHT) --project=smoke
+e2e-smoke: ## Playwright: the whole in-budget tier (what CI runs; E2E_ARGS adds flags, e.g. --shard=1/2)
+	$(PLAYWRIGHT) --project=smoke $(E2E_ARGS)
 
 e2e-all: ## Playwright: smoke plus the opt-in @full tier
 	$(PLAYWRIGHT) --project=smoke --project=full

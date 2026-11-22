@@ -39,7 +39,6 @@ from __future__ import annotations
 import contextlib
 import gzip
 import io
-import os
 import posixpath
 import re
 import zlib
@@ -301,11 +300,6 @@ class SyncTexIndex:
         if len(raw) > max_bytes:
             raise SyncTexTooLargeError(f"synctex text exceeds {max_bytes} bytes")
         return cls._parse(raw.decode("utf-8", "replace"))
-
-    @classmethod
-    def from_gz_path(cls, path: str | os.PathLike[str]) -> SyncTexIndex:
-        with open(path, "rb") as handle:
-            return cls.from_gz_bytes(handle.read())
 
     @classmethod
     def _parse(cls, text: str) -> SyncTexIndex:

@@ -223,7 +223,7 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 | Default backend | `addopts`: `-m 'not slow and not e2e and not live'`, `-n auto` | Postgres for the integration part | `make test` |
 | Unit | `UNIT_MARKERS` in `Makefile` | nothing | `make test-unit` |
 | Integration | `INTEGRATION_MARKERS` in `Makefile`, the `integration` marker | Postgres; Redis is faked | `make test-integration` |
-| E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs |
+| E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs, in two shards |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
 Tests are type-checked too: `make types` runs strict mypy over `backend/src`, `backend/scripts` and `backend/tests` (the `files` list in `backend/pyproject.toml`). Fixtures and helpers are annotated; a fake that stands in for a real object is `cast` to the type it replaces; every `# type: ignore[code]` in tests ends with a reason comment. Tests get no mypy relaxation: the relaxations for tests are in ruff (`S`, `ANN`, `PLR0913`, `E501`).
@@ -233,7 +233,7 @@ Tests are type-checked too: `make types` runs strict mypy over `backend/src`, `b
 Empty fixtures hid bug 5548812 (a document with content before its first edit reconstructed its
 history as empty). Feature tests that need existing data start from a **lived-in project**, built
 by `backend/tests/factories/lived_in.py` with plain inserts (no services, no compile, no LLM; about
-0.1 s per build, asserted under 200 ms):
+0.1 s per build, asserted under 1 s so a loaded parallel run does not flake):
 
 | Piece | Content |
 |---|---|
@@ -293,8 +293,27 @@ state left over from the previous action (a seen-event set, the transcript order
 dependent test skips and the run stays green. Each xdist worker uses its own database, migrated once
 and rolled back per test. `backend/tests/fixtures/env.py` strips the machine's settings before
 collection and points `DATABASE_URL` at a refused port, so a test that did not ask for the database
-cannot find one. CI runs unit, integration and e2e in parallel and enforces a 180 s budget on the slowest (`make budget`) and an
-80% coverage floor on unit plus integration (`make coverage-combine`).
+cannot find one.
+
+**CI runs in about 180 s, and the `gate` job measures it.** Lint, typecheck, unit, integration and the
+two e2e shards (`make e2e-smoke E2E_ARGS=--shard=N/2`) run side by side, with no `needs` between them.
+`budget` (after unit and integration) gates the per-test limit from the JUnit files (`make budget`) and
+the 80% coverage floor on unit plus integration (`make coverage-combine`). `gate` needs every one of
+them: it fails when a job did not succeed, and when the run's wall clock, from the start of the run's
+first job, passes 180 s (queue time included). The whole-run check was a stage maximum before; the
+clock replaces it, so the stages no longer report their seconds. The `budget` step keeps the per-test
+limit; `scripts/run_timed.sh` (`just test-timed`) still gates the total of a local run against
+`SUITE_BUDGET_SECONDS`.
+
+**CI speed settings, and why.** Postgres (integration) runs on tmpfs with a 2 s health interval; the
+Python jobs set `COVERAGE_CORE=sysmon`; `setup-uv` keeps its cache (`prune-cache: false`, the prune took
+up to 108 s); every job has `timeout-minutes`; Node is 25, as the frontend image. The e2e jobs use the
+Google Chrome of the runner (`channel: "chrome"`, only when `CI` is set), so they download no browser.
+Playwright runs with **0 retries** everywhere (`E2E_RETRIES` overrides it for a diagnosis run): a flaky
+test is fixed, not retried. Each e2e test reuses its worker's sign-in: a worker logs in once per user and
+keeps its own refresh-token chain (`frontend/e2e/support/session.ts`), so the refresh-token rotation and
+its reuse detection are untouched; the tests that change the session (logout, `auth.spec.ts`) log in on
+their own.
 
 ## Rules and guarantees
 
@@ -346,8 +365,9 @@ cannot find one. CI runs unit, integration and e2e in parallel and enforces a 18
   skipped.
 - **Tier selection trusts the marker.** A file in `backend/tests/integration` without the
   `integration` marker runs in the unit tier. No test currently carries `slow`, `e2e` or `live`.
-- **`HISTORY_COMPACT_INTERVAL_S` and `NOTIFICATION_SWEEP_INTERVAL_S` drive nothing.** The cron
-  entries are fixed. Only `COMPILE_RETENTION_SWEEP_S` takes effect, read at worker import.
+- **The sweep intervals are read at worker import.** `COMPILE_RETENTION_SWEEP_S`,
+  `HISTORY_COMPACT_INTERVAL_S` and `NOTIFICATION_SWEEP_INTERVAL_S` set the cron minutes through
+  `_cron_jobs`. Intervals of an hour or more run hourly.
 - **`app.state.arq_pool` is never closed** by the lifespan.
 - **`docs/adr/0057-cicd-bootstrap.md` describes a CD workflow that does not exist.** It cites a
   `cd.yml`; `.github/workflows/ci.yml` is the only workflow. It also cites pre-move paths.

@@ -32,6 +32,8 @@ CANCELLED = "cancelled"
 BUDGET_EXCEEDED = "budget_exceeded"
 # The provider returned a tool call the LLM client could not parse (see openrouter.py).
 TOOL_CALL_UNPARSED = "tool_call_unparsed"
+# The model answered with neither text nor a tool call.
+EMPTY_REPLY = "empty_reply"
 
 # User-facing closing text for a terminal error — the raw sentinel / exception string
 # is never persisted into the chat transcript (spec 50 refactor).
@@ -42,6 +44,7 @@ _ERROR_CLOSINGS = {
         "I tried to edit a file but the response could not be read. Please try again, "
         "or ask for a smaller change (one file or section at a time)."
     ),
+    EMPTY_REPLY: "The model sent no reply. Please try again.",
 }
 
 # Shown (and streamed) when the turn is cut off by the iteration/token budget while the
@@ -175,15 +178,18 @@ async def _complete_live(
     return response
 
 
-def _unparsed_tool_call(response: LLMResponse) -> str | None:
-    """The sentinel for a tool call the client could not parse, else ``None``.
+def _unusable_response(response: LLMResponse) -> str | None:
+    """The sentinel for a response that cannot be an answer, else ``None``.
 
-    The provider signalled a tool call but forced `finish_reason` to "error" with no
-    usable calls. Ending the turn as a plain answer would drop the intended edit
-    silently, so the caller fails loudly instead (spec 41 §4).
+    A tool call the client could not parse: the provider signalled one but forced `finish_reason`
+    to "error" with no usable calls. Ending the turn as a plain answer would drop the intended edit
+    silently, so the caller fails loudly instead (spec 41 §4). And a reply with neither text nor a
+    tool call: shown as a capped answer it would look like partial work, so it fails too.
     """
     if not response.tool_calls and response.finish_reason == "error":
         return TOOL_CALL_UNPARSED
+    if not response.tool_calls and not (response.content or "").strip():
+        return EMPTY_REPLY
     return None
 
 
@@ -231,9 +237,9 @@ def make_plan(deps: AgentDeps) -> Any:
             len(response.tool_calls or []),
             response.usage.total,
         )
-        unparsed = _unparsed_tool_call(response)
-        if unparsed is not None:
-            return _terminal(unparsed)
+        unusable = _unusable_response(response)
+        if unusable is not None:
+            return _terminal(unusable)
 
         return _plan_update(state, response)
 

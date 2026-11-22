@@ -1,7 +1,7 @@
 # Observability
 
 What operators can see of a running Inkstave: structured logs with correlation ids, Prometheus
-metrics, optional OpenTelemetry tracing, and health and readiness probes. Spec 51, later hardened by
+metrics, and health and readiness probes. No tracing backend is offered. Spec 51, later hardened by
 specs 52 and 55.
 
 ## Where it is
@@ -12,7 +12,6 @@ specs 52 and 55.
 | `backend/src/inkstave/core/observability/context.py` | Correlation context vars, `bind_context`, `clear_context`, `current_context` |
 | `backend/src/inkstave/core/observability/middleware.py` | `RequestContextMiddleware`: request id, finish log, HTTP metrics |
 | `backend/src/inkstave/core/observability/metrics.py` | Metric catalogue and helpers |
-| `backend/src/inkstave/core/observability/tracing.py` | Optional OpenTelemetry setup, `current_trace_id` |
 | `backend/src/inkstave/core/logging.py` | `get_request_id`, `set_request_id` over the shared context var |
 | `backend/src/inkstave/modules/admin/routes/health.py` | Probes and `/metrics` |
 | `backend/tests/unit/test_observability.py` | Redaction, formatter, context, metrics helpers |
@@ -65,8 +64,7 @@ downstream code. For each HTTP request it:
 
 1. Reads the `REQUEST_ID_HEADER` header. It keeps the value only if it matches
    `^[A-Za-z0-9._-]{1,128}$`, otherwise it generates a `uuid4` hex.
-2. Binds `request_id` and `trace_id`. `trace_id` is the OpenTelemetry trace id when tracing is on,
-   otherwise the request id.
+2. Binds `request_id` and `trace_id`. `trace_id` is the request id: no tracing backend is offered.
 3. Echoes the id on the response.
 4. On finish calls `_record`: `logger.info("request")` on `inkstave.access`, or `logger.error("request
    failed")` with the traceback, plus `observe_http`.
@@ -100,7 +98,6 @@ exposition.
 | `inkstave_http_requests` | Counter | `method`, `path`, `status` | API, `observe_http` |
 | `inkstave_http_request_duration_seconds` | Histogram | `method`, `path` | API, `observe_http` |
 | `inkstave_ws_connections_active` | Gauge | `kind` | API, `track_ws("collab")` |
-| `inkstave_ws_messages` | Counter | `direction`, `kind` | nothing |
 | `inkstave_build_info` | Gauge | `version`, `git_sha` | API, `set_build_info` |
 | `inkstave_rate_limit_errors` | Counter | `policy` | API, `inc_rate_limit_error` |
 | `inkstave_job_queue_depth` | Gauge | `queue` | API, `sample_queue_depth` at scrape time, on `COMPILE_QUEUE_NAME` |
@@ -117,9 +114,9 @@ Histogram buckets stop at 10 s (`_DURATION_BUCKETS`), shared by HTTP, compile an
 
 ### Tracing
 
-`setup_tracing` is a no-op unless `OTEL_ENABLED=true`, and nothing from `opentelemetry` is imported
-otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and calls
-`FastAPIInstrumentor.instrument_app`. Any failure logs and continues without tracing.
+Tracing is not offered. `OTEL_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_SERVICE_NAME` were
+removed: no `opentelemetry` package is in the image, so the flag could never do anything. `trace_id`
+in the logs is the request id.
 
 ## Rules and guarantees
 
@@ -160,9 +157,6 @@ otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and c
 | `REQUEST_ID_HEADER` | `X-Request-ID` | Inbound and outbound header; also allowed by CORS |
 | `APP_VERSION`, `GIT_SHA` | `0.0.0`, `unknown` | `inkstave_build_info` |
 | `METRICS_PUBLIC` | `true` | `false` makes the app answer 404 on `/metrics` |
-| `OTEL_ENABLED` | `false` | Turns tracing on |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTLP target |
-| `OTEL_SERVICE_NAME` | `inkstave-backend` | Resource name |
 | `READINESS_CHECK_TIMEOUT_S` | `2.0` | Per-check bound of `/readyz` and `doctor` |
 | `LOG_JSON` | `true` | `false` selects console output, as `LOG_FORMAT=console` does |
 
@@ -177,7 +171,6 @@ otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and c
   no `start_http_server`. `/metrics` on the API serves these names with no samples.
   `backend/tests/integration/test_observability_api.py::test_metrics_endpoint` only checks that the
   names appear.
-- **`inkstave_ws_messages` is never incremented.**
 - **A 500 is logged as `request`, not `request failed`.** `UnhandledErrorMiddleware` answers the 500
   and does not re-raise, so the finish log carries the status and the request id. The traceback is in
   the `inkstave.error` log line.
@@ -189,10 +182,6 @@ otherwise. When on it builds a `TracerProvider` with an OTLP gRPC exporter and c
 - **Uvicorn logs too.** Its own access log is separate from `inkstave.access` and is not JSON.
 - **`/ready` and `/readyz` differ on purpose.** `/ready` stays Redis-only with a fixed 0.5 s bound
   (`READY_TIMEOUT_SECONDS`), kept from spec 02.
-- **`OTEL_ENABLED=true` does nothing on a stock image.** No `opentelemetry` package is in
-  `backend/pyproject.toml`, so `setup_tracing` hits `ImportError`, logs it and continues.
-- **`reset_all` is unused.** Its docstring says job and WebSocket boundaries use it; they use
-  `clear_context`.
 - **Slow compiles lose histogram precision.** Anything over 10 s lands in `+Inf`, and
   `TECTONIC_COMPILE_TIMEOUT_S` defaults to 60.
 - **`METRICS_PUBLIC` defaults to true.** The route has no authentication. In production only nginx's

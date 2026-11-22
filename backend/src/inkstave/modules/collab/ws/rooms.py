@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from time import monotonic
 from uuid import UUID
 
-CLOSE_NORMAL = 1000
 CLOSE_DEAD = 4000  # ping timeout / connection dead
 CLOSE_BAD_MESSAGE = 4400  # bad/oversize message
 CLOSE_UNAUTHORIZED = 4401  # JWT missing/invalid/expired

@@ -13,7 +13,6 @@ from starlette.routing import Match
 
 from inkstave.core.observability import metrics
 from inkstave.core.observability.context import bind_context, clear_context
-from inkstave.core.observability.tracing import current_trace_id
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -101,7 +100,8 @@ class RequestContextMiddleware:
             return
 
         request_id = self._request_id(scope)
-        tokens = bind_context(request_id=request_id, trace_id=current_trace_id() or request_id)
+        # No tracing backend is offered (docs/system/observability.md): the trace id is the request id.
+        tokens = bind_context(request_id=request_id, trace_id=request_id)
         status_code = 500
         start = perf_counter()
 

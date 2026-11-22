@@ -3,9 +3,9 @@
  *
  * Waits for the backend to be ready, registers the two e2e users (User A + User B)
  * via the API, and records a small run-context file the specs read for each user's
- * email/id. Browser auth itself is per-context (a fresh login per test, because
- * refresh tokens rotate — see support/auth.ts), so no shared storage-state is
- * written here. The auth journey registers its own throwaway user through the UI.
+ * email/id. Browser auth is not written here: each worker signs in once and keeps its
+ * own refresh-token chain (support/session.ts), because refresh tokens rotate. The
+ * auth journey registers its own throwaway user through the UI.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 

@@ -64,7 +64,7 @@ def _test_overrides() -> dict[str, str]:
         "DATABASE_URL": UNREACHABLE_DATABASE_URL,
         "ENVIRONMENT": "test",
         # Spec 51 §5.6 mandates the test profile force LOG_LEVEL=warning (LOG_FORMAT=json,
-        # OTEL_ENABLED=false, METRICS_PUBLIC=true already come from config defaults).
+        # METRICS_PUBLIC=true already come from config defaults).
         "LOG_LEVEL": "WARNING",
         # Minimal argon2 cost so password hashing is sub-millisecond in tests.
         "ARGON2_TIME_COST": "1",

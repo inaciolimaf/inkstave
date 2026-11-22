@@ -178,7 +178,9 @@ async def startup(ctx: dict[str, Any]) -> None:
         # e2e/test only (spec 54): deterministic agent LLM, no network.
         from inkstave.modules.agent.llm.stub import StubAgentLLM
 
-        ctx["llm_client"] = StubAgentLLM(delay_s=settings.llm_stub_delay_ms / 1000)
+        ctx["llm_client"] = StubAgentLLM(
+            delay_s=settings.llm_stub_delay_ms / 1000, scenario=settings.llm_stub_scenario
+        )
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
@@ -191,6 +193,35 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     engine = ctx.get("engine")
     if engine is not None:
         await engine.dispose()
+
+
+def _cron_jobs(settings: Any) -> list[Any]:
+    """The scheduled jobs. Each sweep runs at the interval its setting names (see `_sweep_minutes`)."""
+    return [
+        # Retention sweep driven by COMPILE_RETENTION_SWEEP_S (default 3600 → hourly).
+        cron(
+            cleanup_compile_outputs,
+            minute=_sweep_minutes(settings.compile_retention_sweep_s),
+            run_at_startup=False,
+        ),
+        # Stuck compiles (a lost job, a dead worker): settled as timeout, every five minutes.
+        cron(reap_stale_compiles, minute=set(range(0, 60, 5)), run_at_startup=False),
+        # History compaction sweep, driven by HISTORY_COMPACT_INTERVAL_S (default 300 → every 5 min).
+        cron(
+            compact_history,
+            minute=_sweep_minutes(settings.history_compact_interval_s),
+            run_at_startup=False,
+        ),
+        # Notification expiry sweep, driven by NOTIFICATION_SWEEP_INTERVAL_S (default 3600 → hourly).
+        cron(
+            sweep_notifications,
+            minute=_sweep_minutes(settings.notification_sweep_interval_s),
+            run_at_startup=False,
+        ),
+        # Optional agent-audit retention prune (spec 49/68 #207). The job is a no-op
+        # unless AGENT_AUDIT_RETENTION_DAYS is positive, so the default deploy is inert.
+        cron(agent_audit_cleanup, hour=3, minute=30, run_at_startup=False),
+    ]
 
 
 class WorkerSettings:
@@ -208,23 +239,7 @@ class WorkerSettings:
         func(agent_audit_cleanup, name="agent_audit_cleanup", max_tries=1),
         func(import_project_zip, name="import_project_zip", max_tries=1),
     ]
-    cron_jobs = [
-        # Retention sweep driven by COMPILE_RETENTION_SWEEP_S (default 3600 → hourly).
-        cron(
-            cleanup_compile_outputs,
-            minute=_sweep_minutes(_settings.compile_retention_sweep_s),
-            run_at_startup=False,
-        ),
-        # History compaction sweep (~every 5 min; HISTORY_COMPACT_INTERVAL_S documents intent).
-        # Stuck compiles (a lost job, a dead worker): settled as timeout, every five minutes.
-        cron(reap_stale_compiles, minute=set(range(0, 60, 5)), run_at_startup=False),
-        cron(compact_history, minute=set(range(0, 60, 5)), run_at_startup=False),
-        # Notification expiry sweep (hourly; NOTIFICATION_SWEEP_INTERVAL_S documents intent).
-        cron(sweep_notifications, minute=0, run_at_startup=False),
-        # Optional agent-audit retention prune (spec 49/68 #207). The job is a no-op
-        # unless AGENT_AUDIT_RETENTION_DAYS is positive, so the default deploy is inert.
-        cron(agent_audit_cleanup, hour=3, minute=30, run_at_startup=False),
-    ]
+    cron_jobs = _cron_jobs(_settings)
     on_startup = startup
     on_shutdown = shutdown
     queue_name = _settings.compile_queue_name

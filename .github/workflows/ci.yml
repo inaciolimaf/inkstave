@@ -2,13 +2,11 @@ name: CI
 
 # Every step is a Makefile target, so a green `make` is a green CI.
 #
-# Job graph: `lint` and `typecheck` run in parallel (no shared artifact). The three
-# test stages — `unit`, `integration`, `e2e` — each depend only on `typecheck`, so they
-# fan out and run concurrently; each provisions whatever it needs (integration: a
-# Postgres service; e2e: docker-compose.test.yml). The `budget` job depends on all
-# three: it fails the build if the slowest stage exceeds the 180 s budget,
-# parsing the stages' JUnit XML so the slow-test detector runs on real durations, and
-# applies the backend coverage floor to unit + integration together.
+# Job graph: lint, typecheck, unit, integration and the e2e shards run side by side, with no
+# `needs` between them. `budget` reads the unit and integration outputs (per-test limit and the
+# coverage floor). `gate` needs every one of them: it fails on any job that did not succeed and
+# when the run's wall clock, from its first job's start, passes 180 s (docs/system/overview.md).
+# The `mutation` job stays outside the gate: it is slow by design and gates its own score.
 on:
   push:
     branches: [main]
@@ -23,11 +21,16 @@ defaults:
     # Explicit, for `-o pipefail`: the default shell lets a pipe hide a failing gate.
     shell: bash
 
+env:
+  # coverage.py on sys.monitoring (Python >= 3.12): far lighter than the trace function.
+  COVERAGE_CORE: sysmon
+
 jobs:
-  # --- Stage 1: lint --------------------------------------------------------- #
+  # --- Lint: backend and frontend lint, docs, fix-commit rule, bundle budget -- #
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # Full history: the fix-test rule reads the commits of the pushed or pull-request range.
       - uses: actions/checkout@v7
@@ -37,12 +40,13 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+          prune-cache: false # the post-job prune took up to 108 s
       - run: make install-backend
       - uses: pnpm/action-setup@v6
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 25
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: make install-web
@@ -68,23 +72,24 @@ jobs:
       - name: Initial JS stays within the budget
         run: make web-build web-budget
 
-  # --- Stage 2: type-check --------------------------------------------------- #
+  # --- Type-check: mypy, tsc, and the API contract ---------------------------- #
   typecheck:
     name: Type-check
     runs-on: ubuntu-latest
-    # Independent of lint (no shared artifact); runs in parallel with it.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+          prune-cache: false
       - run: make install-backend
       - uses: pnpm/action-setup@v6
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 25
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: make install-web
@@ -95,44 +100,40 @@ jobs:
       - name: API contract is up to date
         run: make web-types-check
 
-  # --- Stage 3: unit (fakes only, no real services) -------------------------- #
+  # --- Unit: backend unit tier and the Vitest suite with its coverage floor --- #
   unit:
     name: Unit
     runs-on: ubuntu-latest
-    # Depends only on typecheck; runs in parallel with the integration job.
-    needs: typecheck
-    outputs:
-      seconds: ${{ steps.measure.outputs.seconds }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+          prune-cache: false
       - run: make install-backend
       - uses: pnpm/action-setup@v6
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 25
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: make install-web
       - name: Run unit tests (pytest unit subset + Vitest with coverage)
-        id: measure
-        run: scripts/measure_stage.sh make test-unit web-coverage
+        run: make test-unit web-coverage
       - uses: actions/upload-artifact@v7
         with:
           name: unit-results
           path: test-results/
           if-no-files-found: error
 
-  # --- Stage 4: integration (ephemeral Postgres; Redis is faked) ------------- #
+  # --- Integration: backend integration tier against a throwaway Postgres ----- #
   integration:
     name: Integration
     runs-on: ubuntu-latest
-    # Depends only on typecheck (no unit artifact needed); runs in parallel with unit.
-    needs: typecheck
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -141,78 +142,81 @@ jobs:
           POSTGRES_PASSWORD: inkstave
           POSTGRES_DB: inkstave
         ports: ["5432:5432"]
+        # The data lives in memory: the CI database is thrown away anyway.
         options: >-
+          --tmpfs /var/lib/postgresql/data
           --health-cmd "pg_isready -U inkstave"
-          --health-interval 5s --health-timeout 5s --health-retries 10
+          --health-interval 2s --health-timeout 3s --health-retries 30
     env:
       TEST_DATABASE_URL: postgresql+asyncpg://inkstave:inkstave@localhost:5432/inkstave_test
-    outputs:
-      seconds: ${{ steps.measure.outputs.seconds }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+          prune-cache: false
       - run: make install-backend
       - name: Run integration tests
-        id: measure
-        run: scripts/measure_stage.sh make test-integration
+        run: make test-integration
       - uses: actions/upload-artifact@v7
         with:
           name: integration-results
           path: test-results/
           if-no-files-found: error
 
-  # --- Stage 5: e2e (Playwright smoke; LLM + compile stubbed per spec 54) ----- #
+  # --- E2E: Playwright smoke tier, in two shards, each with its own infra ----- #
   e2e:
-    name: E2E (smoke)
+    name: E2E (smoke, shard ${{ matrix.shard }}/2)
     # Pinned: Playwright 1.60 cannot install Chromium on ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
-    # Starts its own Postgres + Redis (docker-compose.test.yml); needs no
-    # unit/integration artifact, so it depends only on typecheck and runs alongside them.
-    needs: typecheck
-    outputs:
-      seconds: ${{ steps.measure.outputs.seconds }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+          prune-cache: false
       - run: make install-backend
       - uses: pnpm/action-setup@v6
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 25
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: make install-web
-      - name: Cache Playwright browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}
-      - name: Install Chromium
-        run: make e2e-install
+      # The runner ships Google Chrome; Playwright uses it (channel "chrome"), so no browser download.
       - name: Start e2e infra (Postgres + Redis)
         run: make e2e-infra
-      - name: Run Playwright smoke
-        id: measure
-        run: scripts/measure_stage.sh make e2e-smoke
+      - name: Run Playwright smoke (shard ${{ matrix.shard }} of 2)
+        run: make e2e-smoke E2E_ARGS="--shard=${{ matrix.shard }}/2"
+      - name: Keep the failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-failures-${{ matrix.shard }}
+          path: frontend/test-results/
+          if-no-files-found: ignore
 
-  # --- Budget gate: the slowest stage must be < 180 s ------------------------ #
+  # --- Budget: per-test limit and the backend coverage floor ----------------- #
   budget:
     name: Budget and coverage gates
     runs-on: ubuntu-latest
-    needs: [unit, integration, e2e]
+    timeout-minutes: 15
+    needs: [unit, integration]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+          prune-cache: false
       - run: make install-backend
       - name: Download unit results
         uses: actions/download-artifact@v8
@@ -224,14 +228,10 @@ jobs:
         with:
           name: integration-results
           path: test-results
-      - name: Enforce the 180 s budget
-        env:
-          UNIT_S: ${{ needs.unit.outputs.seconds }}
-          INTEGRATION_S: ${{ needs.integration.outputs.seconds }}
-          E2E_S: ${{ needs.e2e.outputs.seconds }}
+      - name: Enforce the per-test limit
         run: make budget | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Backend coverage floor (unit + integration)
-        # Runs even when the budget fails, so one red gate cannot hide the other.
+        # Runs even when the per-test gate fails, so one red gate cannot hide the other.
         if: ${{ !cancelled() }}
         run: make coverage-combine
       - uses: actions/upload-artifact@v7
@@ -239,3 +239,33 @@ jobs:
           name: backend-coverage
           path: test-results/coverage.xml
           if-no-files-found: ignore
+
+  # --- Gate: every job succeeded, and the whole run took at most 180 s -------- #
+  gate:
+    name: Gate (all jobs, 180 s wall clock)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lint, typecheck, unit, integration, e2e, budget]
+    if: always()
+    permissions:
+      actions: read # to read the run's start time
+    env:
+      NEEDS: ${{ toJSON(needs) }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Every job succeeded
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' >/dev/null || {
+            echo "::error::a job did not succeed"
+            exit 1
+          }
+      - name: At most 180 s from the start of the run until here
+        run: |
+          start=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT" --jq .run_started_at)
+          total=$(( $(date +%s) - $(date -u -d "$start" +%s) ))
+          echo "run took ${total}s (queue time included; limit 180s)" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$total" -gt 180 ]; then
+            echo "::error::CI took ${total}s; the limit is 180s"
+            exit 1
+          fi

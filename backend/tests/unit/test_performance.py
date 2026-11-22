@@ -96,7 +96,7 @@ def test_crdt_burst_converges_within_bound() -> None:
 # --- CI timing builder (the budget job's input) ------------------------------ #
 
 
-def test_build_timing_sums_the_stages_and_ranks_junit_durations(tmp_path: Any, monkeypatch: Any) -> None:
+def test_build_timing_ranks_junit_durations_and_leaves_the_run_clock_to_ci(tmp_path: Any) -> None:
     path = Path(__file__).resolve().parents[2] / "scripts" / "build_test_timing.py"
     spec = importlib.util.spec_from_file_location("build_test_timing", path)
     assert spec is not None
@@ -108,12 +108,15 @@ def test_build_timing_sums_the_stages_and_ranks_junit_durations(tmp_path: Any, m
         '<testcase classname="a" name="heavy" time="12"/></testsuite>'
     )
     (tmp_path / "broken.xml").write_text("<not-closed")
-    monkeypatch.setenv("UNIT_S", "20")
-    monkeypatch.setenv("INTEGRATION_S", "30")
-    monkeypatch.setenv("E2E_S", "75")
 
     timing = builder.build_timing(tmp_path)
 
-    assert timing["total_s"] == 75  # the stages run in parallel, so the slowest counts
+    assert "total_s" not in timing  # CI's gate job measures the whole run
     assert [case["name"] for case in timing["slowest"]] == ["a::heavy", "a::fast"]
     assert not gate.evaluate(timing).ok  # `heavy` is over the per-test limit
+
+
+def test_gate_without_a_run_clock_checks_only_the_per_test_limit() -> None:
+    result = gate.evaluate({"slowest": [{"name": "test_quick", "duration_s": 1, "slow_marked": False}]})
+    assert result.ok
+    assert result.messages == []

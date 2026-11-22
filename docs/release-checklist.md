@@ -60,7 +60,7 @@ it. See the [Admin Guide](admin-guide.md) for production operations detail.
 
 ## 6. Smoke the key user flow
 
-- [ ] Open the published URL (`PUBLIC_HTTP_PORT`); sign in as the admin.
+- [ ] Open the published URL; sign in as the admin.
 - [ ] Create a project, edit `main.tex`, **compile to PDF**, view the preview.
 - [ ] Open the **AI agent** panel, request an edit, confirm it appears as a
       reviewable diff and is **not** applied without approval.

@@ -1,8 +1,8 @@
 """Write the ``test-timing.json`` that ``check_test_budget.py`` gates on (spec 53).
 
-Takes each CI stage's wall clock from ``UNIT_S``, ``INTEGRATION_S`` and ``E2E_S``, keeps the
-slowest as the suite's time, and takes the per-test durations from the JUnit files in a
-directory. Stdlib only on purpose: the gate must run with a bare ``python3``.
+Takes the per-test durations from the JUnit files in a directory. The whole run's wall clock is
+not measured here: CI's ``gate`` job measures it from the start of the run. Stdlib only on purpose:
+the gate must run with a bare ``python3``.
 
 Usage:
     python scripts/build_test_timing.py <junit-dir> <output.json>
@@ -11,17 +11,12 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
 SLOWEST_KEPT = 20
-
-
-def _stage_seconds(name: str) -> float:
-    return float(os.environ.get(name) or 0)
 
 
 def _cases(path: Path) -> list[dict[str, Any]]:
@@ -44,17 +39,9 @@ def _cases(path: Path) -> list[dict[str, Any]]:
 
 
 def build_timing(junit_dir: Path) -> dict[str, Any]:
-    unit, integration, e2e = map(_stage_seconds, ("UNIT_S", "INTEGRATION_S", "E2E_S"))
     cases = [case for path in sorted(junit_dir.glob("*.xml")) for case in _cases(path)]
     cases.sort(key=lambda case: case["duration_s"], reverse=True)
-    return {
-        # The stages run in parallel, so the slowest one is the time people wait.
-        "total_s": max(unit, integration, e2e),
-        "backend_s": integration,
-        "frontend_s": unit,
-        "e2e_s": e2e,
-        "slowest": cases[:SLOWEST_KEPT],
-    }
+    return {"slowest": cases[:SLOWEST_KEPT]}
 
 
 def main(argv: list[str]) -> int:

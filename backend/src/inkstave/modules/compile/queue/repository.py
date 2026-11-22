@@ -138,30 +138,3 @@ class CompileRepository:
         await self._session.flush()
         await self._session.refresh(row)
         return row
-
-    async def set_status(self, row: Compile, status: str) -> Compile:
-        """Named status-transition helper (spec 22 §5.2.6) delegating to :meth:`update`."""
-        return await self.update(row, status=status)
-
-    async def set_result(
-        self,
-        row: Compile,
-        *,
-        status: str,
-        exit_code: int | None = None,
-        duration_ms: int | None = None,
-        error_message: str | None = None,
-    ) -> Compile:
-        """Named terminal-result helper (spec 22 §5.2.6) delegating to :meth:`update`.
-
-        Sets only the fields explicitly provided; behaviour matches calling
-        :meth:`update` with the same keyword arguments.
-        """
-        fields: dict[str, Any] = {"status": status}
-        if exit_code is not None:
-            fields["exit_code"] = exit_code
-        if duration_ms is not None:
-            fields["duration_ms"] = duration_ms
-        if error_message is not None:
-            fields["error_message"] = error_message
-        return await self.update(row, **fields)
