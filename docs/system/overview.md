@@ -226,6 +226,8 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 | E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
+Tests are type-checked too: `make types` runs strict mypy over `backend/src`, `backend/scripts` and `backend/tests` (the `files` list in `backend/pyproject.toml`). Fixtures and helpers are annotated; a fake that stands in for a real object is `cast` to the type it replaces; every `# type: ignore[code]` in tests ends with a reason comment. Tests get no mypy relaxation: the relaxations for tests are in ruff (`S`, `ANN`, `PLR0913`, `E501`).
+
 ### Lived-in projects
 
 Empty fixtures hid bug 5548812 (a document with content before its first edit reconstructed its

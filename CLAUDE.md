@@ -215,6 +215,8 @@ Stateful features get a **"do it again" test**: the action run twice in a row, a
 (remount from the server's state), and again after switching document (`*.again.test.ts(x)`, e.g.
 `frontend/src/modules/agent/AgentPanel.again.test.tsx`).
 
+Tests are type-checked by `make types` too (strict mypy, `tests` in `backend/pyproject.toml` `[tool.mypy] files`). A `# type: ignore[code]` in a test carries its reason on the same line, and a fake that stands in for a real object is `cast` to the type it replaces.
+
 ## Workflow
 
 1. Read the domain's `docs/system/` file.
