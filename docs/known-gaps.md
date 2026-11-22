@@ -159,15 +159,14 @@ run; the rest were read, not run.
 
 ### Stuck work
 
-- Compiles have no reaper. A job enqueued before commit, a dead worker or an ARQ timeout leaves a row `queued` or
-  `running`, and coalescing then returns it forever.
+- If the compile enqueue fails after the request commits, the request answers 500 and the row stays `queued` until
+  the reaper settles it (up to 10 minutes), blocking coalescing and the caps for that project meanwhile.
 - A stalled agent run is reaped lazily: the session shows its stale state until the user sends the next message.
 - Zip imports enqueue before commit, with `max_tries=1`.
 - E-mail retries never happen: ARQ retries only on `Retry`, so `max_tries=3` on `send_email_job` does nothing.
 
 ### Authorization and security
 
-- `COMPILE_ALLOWED_FOR_VIEWERS` is ignored by the compile job and the compile SSE route.
 - `logout` and `confirm-email-change` have no rate limit.
 - Behind an untrusted proxy (`TRUST_PROXY_HEADERS=false`), the per-IP limits stand down: `refresh` and
   `reset_password` then have no limit at all (their tokens are random, so guessing stays infeasible), and
@@ -182,11 +181,9 @@ run; the rest were read, not run.
 
 ### Limits that do not hold
 
-- `COMPILE_MAX_OUTPUT_BYTES` is never enforced, and `/out` has no disk cap in the sandbox.
-- The daily compile quota counts requests, is a fixed window and fails open. Concurrency caps are count-then-insert
-  with no lock.
+- `/out` has no disk cap in the compile sandbox (`COMPILE_MAX_OUTPUT_BYTES` is checked only after the run).
+- The daily compile quota counts requests and is a fixed window.
 - The effective document size limit is `MAX_REQUEST_BODY_BYTES` (1 MiB), not `MAX_DOCUMENT_BYTES` (2 MB).
-- `gzip.decompress` on SyncTeX data has no output bound.
 - The editor's comment highlights and the editor-bar badge read only the loaded comment pages, so with more than
   50 threads they are incomplete until "Load more" (spec 118 paging).
 
