@@ -24,9 +24,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from inkstave.modules.agent.diffs.compute import compute_diff, content_hash
-from inkstave.modules.agent.diffs.models import ProposedDiff
-from inkstave.modules.agent.models import AgentMessage, AgentSession
+from inkstave.modules.agent.models import AgentSession
 from inkstave.modules.collab.crdt.ydocument import YDocument
 from inkstave.modules.discussion.comments.models import CommentMessage, CommentThread
 from inkstave.modules.history.models import HistoryChunk, HistoryUpdate
@@ -36,6 +34,7 @@ from inkstave.modules.projects.models.membership import MembershipRole, Membersh
 from inkstave.modules.projects.models.project import Project
 from inkstave.modules.projects.models.share_link import ProjectShareLink, ShareLinkRole
 from inkstave.modules.projects.models.tree_entity import TreeEntity, TreeEntityType
+from tests.factories.lived_in_agent import proposal_rows
 from tests.factories.user import UserFactory
 
 if TYPE_CHECKING:
@@ -84,16 +83,13 @@ class LivedInProject:
     collaborator: User
     ids: dict[str, UUID]
     folder_ids: dict[str, UUID]
+    project_id: UUID  # a plain value: the ORM object expires when the project is soft-deleted
     contents: dict[str, str] = field(default_factory=lambda: dict(DOC_CONTENTS))
     blob_key: str = ""
     thread_id: UUID = field(default_factory=uuid4)
     session_id: UUID = field(default_factory=uuid4)
     proposal_id: UUID = field(default_factory=uuid4)
     share_link_id: UUID = field(default_factory=uuid4)
-
-    @property
-    def project_id(self) -> UUID:
-        return self.project.id
 
     @property
     def main_id(self) -> UUID:
@@ -199,32 +195,6 @@ def _update_rows(
     ]
 
 
-def _proposal_rows(
-    project_id: UUID, session_id: UUID, doc_id: UUID, proposal_id: UUID, reply_id: UUID
-) -> list[object]:
-    """A user turn, the agent's reply, and the open proposal that reply made for ``chapters/intro.tex``."""
-    diff_text, hunks, stats = compute_diff(INTRO_TEX, PROPOSED_INTRO, path="chapters/intro.tex")
-    proposal = ProposedDiff(
-        id=proposal_id,
-        session_id=session_id,
-        project_id=project_id,
-        doc_id=doc_id,
-        path="chapters/intro.tex",
-        base_version="1",
-        base_hash=content_hash(INTRO_TEX),
-        diff_text=diff_text,
-        hunks=hunks,
-        stats=stats,
-        message_id=reply_id,
-        rationale="Make the introduction less tentative.",
-    )
-    ask = AgentMessage(session_id=session_id, seq=1, role="user", content="Tighten the introduction.")
-    reply = AgentMessage(
-        id=reply_id, session_id=session_id, seq=2, role="assistant", content="Here is a tighter version."
-    )
-    return [ask, reply, proposal]
-
-
 async def build_lived_in_project(
     session: AsyncSession, object_store: ObjectStore, *, name: str = "Thesis"
 ) -> LivedInProject:
@@ -247,7 +217,12 @@ async def build_lived_in_project(
     await session.flush()
     session.add_all(updates)
     lived = LivedInProject(
-        project=project, owner=owner, collaborator=collaborator, ids=ids, folder_ids=folder_ids
+        project=project,
+        owner=owner,
+        collaborator=collaborator,
+        ids=ids,
+        folder_ids=folder_ids,
+        project_id=project.id,
     )
     await _attach_blob(session, object_store, lived)
     _attach_collaboration(session, lived)
@@ -331,8 +306,14 @@ async def _attach_discussion_and_agent(session: AsyncSession, lived: LivedInProj
         )
     )
     await session.flush()
-    rows = _proposal_rows(
-        lived.project_id, lived.session_id, lived.ids["chapters/intro.tex"], lived.proposal_id, uuid4()
+    rows = proposal_rows(
+        lived.project_id,
+        lived.session_id,
+        lived.ids["chapters/intro.tex"],
+        lived.proposal_id,
+        uuid4(),
+        INTRO_TEX,
+        PROPOSED_INTRO,
     )
     session.add_all(rows[:-1])
     await session.flush()
