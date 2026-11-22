@@ -29,10 +29,10 @@ async def test_cross_instance_relay_and_origin_exclusion() -> None:
     seen_a: list[tuple[bytes, str | None]] = []
     seen_b: list[tuple[bytes, str | None]] = []
 
-    async def on_a(payload: bytes, exclude: str | None) -> None:
+    async def on_a(payload: bytes, exclude: str | None, remote: bool) -> None:
         seen_a.append((payload, exclude))
 
-    async def on_b(payload: bytes, exclude: str | None) -> None:
+    async def on_b(payload: bytes, exclude: str | None, remote: bool) -> None:
         seen_b.append((payload, exclude))
 
     sub_a = await bridge_a.subscribe(doc, on_a)
@@ -66,7 +66,7 @@ def _conn(conn_id: str, doc: UUID) -> Connection:
 def _forwarder(rooms: RoomManager, doc: UUID) -> Any:
     """Relay a Redis payload into one instance's local room."""
 
-    async def forward(payload: bytes, exclude: str | None) -> None:
+    async def forward(payload: bytes, exclude: str | None, remote: bool) -> None:
         rooms.local_broadcast(doc, payload, exclude)
 
     return forward

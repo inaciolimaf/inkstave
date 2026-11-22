@@ -21,14 +21,10 @@ from inkstave.modules.collab.rooms.store import CrdtStore
 
 class _FakeStore:
     def __init__(self) -> None:
-        self.synced: list[int] = []
         self._next = 0
 
-    async def load(self, document_id: UUID) -> tuple[bytes | None, int]:
+    async def load(self, document_id: UUID, *, seed: bool = False) -> tuple[bytes | None, int]:
         return None, 0
-
-    async def max_update_id(self, document_id: UUID) -> int:
-        return 0
 
     async def append_update(self, document_id: UUID, update: bytes, origin: str | None) -> int:
         await asyncio.sleep(0)
@@ -38,18 +34,21 @@ class _FakeStore:
     async def snapshot(self, **_: Any) -> int:
         return 0
 
-    async def mark_text_synced(self, document_id: UUID, seq: int) -> None:
-        self.synced.append(seq)
+    async def flush_text(
+        self, document_id: UUID, memory_state: bytes | None, write_text: Any
+    ) -> tuple[Any, int]:
+        text = YDocument()
+        if memory_state is not None:
+            text.apply_update(memory_state)
+        await write_text(None, document_id, text.text)
+        return memory_state, 0
 
 
 class _FakeBridge:
     def __init__(self) -> None:
         self.flushed: list[str] = []
 
-    async def load_initial_text(self, document_id: UUID) -> str:
-        return ""
-
-    async def flush_text(self, document_id: UUID, text: str) -> None:
+    async def write_text(self, session: Any, document_id: UUID, text: str) -> None:
         await asyncio.sleep(0)  # a real write awaits the database here
         self.flushed.append(text)
 

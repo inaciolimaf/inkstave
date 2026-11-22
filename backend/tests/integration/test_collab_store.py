@@ -64,7 +64,6 @@ async def test_load_rebuilds_snapshot_then_ordered_log(db_session: AsyncSession)
     await store.snapshot(
         document_id=doc_id,
         state=base.get_state(),
-        state_vector=base.get_state_vector(),
         upto_update_id=None,
     )
     for update in _updates(base.get_state(), ["AB", "ABC", "ABCD"]):
@@ -100,7 +99,6 @@ async def test_compaction_truncates_log_and_preserves_text(db_session: AsyncSess
     new_seq = await store.snapshot(
         document_id=doc_id,
         state=editor.get_state(),
-        state_vector=editor.get_state_vector(),
         upto_update_id=last_id,
     )
     assert new_seq >= 1
@@ -181,7 +179,6 @@ async def test_suggestions_map_survives_compaction(db_session: AsyncSession) -> 
     await store.snapshot(
         document_id=doc_id,
         state=server.get_state(),
-        state_vector=server.get_state_vector(),
         upto_update_id=last_id,
     )
 

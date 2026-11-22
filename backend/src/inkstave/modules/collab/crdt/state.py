@@ -53,7 +53,6 @@ class _Entry:
     refcount: int = 0
     seq: int = 0
     updates_since_snapshot: int = 0
-    last_update_id: int = 0
     last_snapshot_at: float = field(default_factory=monotonic)
     dirty_text: bool = False
     flush_task: asyncio.Task[None] | None = None

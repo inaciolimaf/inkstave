@@ -20,8 +20,9 @@ from pycrdt import Decoder, write_message
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
-# (payload, exclude_connection_id) — exclude is set only on the origin instance.
-OnMessage = Callable[[bytes, str | None], Awaitable[None]]
+# (payload, exclude_connection_id, remote). The exclude is set only on the origin instance;
+# ``remote`` is True when the message came from another instance (its update must be applied here).
+OnMessage = Callable[[bytes, str | None, bool], Awaitable[None]]
 
 
 def encode_envelope(instance_id: str, origin_conn_id: str, payload: bytes) -> bytes:
@@ -89,5 +90,6 @@ class RedisBridge:
                 continue
             instance_id, origin_conn_id, payload = decode_envelope(bytes(data))
             # Only exclude the sender on its *own* instance (local loopback).
-            exclude = origin_conn_id if instance_id == self._instance_id else None
-            await on_message(payload, exclude)
+            remote = instance_id != self._instance_id
+            exclude = None if remote else origin_conn_id
+            await on_message(payload, exclude, remote)

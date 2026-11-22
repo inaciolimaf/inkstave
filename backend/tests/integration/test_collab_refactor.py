@@ -269,7 +269,6 @@ async def test_compaction_boundary_load_is_exact(db_session: AsyncSession) -> No
     await store.snapshot(
         document_id=doc_id,
         state=partial.get_state(),
-        state_vector=partial.get_state_vector(),
         upto_update_id=ids[1],
     )
 

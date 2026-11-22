@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from inkstave.core.tasks import spawn
-from inkstave.modules.collab.crdt.protocol import encode_awareness
+from inkstave.modules.collab.crdt.protocol import SyncUpdate, encode_awareness, read_message
 from inkstave.modules.collab.ws.redis_bridge import OnMessage
 from inkstave.modules.collab.ws.rooms import CLOSE_FORBIDDEN, CLOSE_NOT_FOUND, CLOSE_SLOW_CONSUMER, Connection
 from inkstave.modules.projects import (
@@ -29,6 +30,8 @@ from inkstave.modules.projects import (
 if TYPE_CHECKING:
     from inkstave.modules.auth import User
     from inkstave.modules.collab.ws.components import CollabComponents
+
+logger = logging.getLogger(__name__)
 
 
 async def _authorize(
@@ -83,8 +86,21 @@ async def _force_close(conn: Connection, code: int) -> None:
         await conn.websocket.close(code=code)  # type: ignore[attr-defined]
 
 
+async def _apply_remote(components: CollabComponents, document_id: UUID, payload: bytes) -> None:
+    """Apply an update relayed from another replica to the local copy (ADR 0123)."""
+    parsed = read_message(payload)
+    if not isinstance(parsed, SyncUpdate):
+        return  # awareness is ephemeral: relayed to the sockets only
+    try:
+        await components.manager.apply_remote_update(document_id, parsed.update)
+    except Exception:  # broad on purpose: one bad relayed frame must not end the Redis subscription
+        logger.warning("could not apply a relayed update for document %s", document_id, exc_info=True)
+
+
 def _make_forwarder(components: CollabComponents, document_id: UUID) -> OnMessage:
-    async def on_message(payload: bytes, exclude: str | None) -> None:
+    async def on_message(payload: bytes, exclude: str | None, remote: bool) -> None:
+        if remote:
+            await _apply_remote(components, document_id, payload)
         # Honours COLLAB_WS_SLOW_CLIENT_TIMEOUT_MS: a full queue gets that grace window first.
         overflowed = await components.rooms.local_broadcast_timed(document_id, payload, exclude)
         for conn in overflowed:

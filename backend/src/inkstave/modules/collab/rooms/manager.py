@@ -25,6 +25,10 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+# Origin tag of an update applied from another replica (ADR 0123). Such an update is applied to
+# the local copy only: the replica that received it from its client already appended it.
+REMOTE_ORIGIN = "remote"
+
 __all__ = [
     "CollabSettings",
     "DocumentManager",
@@ -84,26 +88,12 @@ class DocumentManager:
 
     async def _load(self, document_id: UUID) -> _Entry:
         self.load_count[document_id] = self.load_count.get(document_id, 0) + 1
-        state, seq = await self._store.load(document_id)
+        # The store merges the snapshot and the log, and seeds an empty text from documents.content.
+        state, seq = await self._store.load(document_id, seed=True)
         ydoc = YDocument()
         if state is not None:
             ydoc.apply_update(state)
-        entry = _Entry(ydoc=ydoc, seq=seq)
-        entry.last_update_id = await self._store.max_update_id(document_id)
-
-        # First-ever open with empty CRDT but existing spec-13 content: seed it.
-        if not ydoc.text:
-            seed = await self._bridge.load_initial_text(document_id)
-            if seed:
-                ydoc.replace_text(seed)
-                entry.seq = await self._store.snapshot(
-                    document_id=document_id,
-                    state=ydoc.get_state(),
-                    state_vector=ydoc.get_state_vector(),
-                    upto_update_id=None,
-                )
-                entry.last_snapshot_at = monotonic()
-        return entry
+        return _Entry(ydoc=ydoc, seq=seq)
 
     async def release(self, document_id: UUID) -> None:
         async with self._lock(document_id):
@@ -160,8 +150,7 @@ class DocumentManager:
         async with self._lock(document_id):
             entry = self._require(document_id)
             entry.ydoc.apply_update(update, origin=origin)
-            new_id = await self._store.append_update(document_id, update, origin)
-            entry.last_update_id = max(entry.last_update_id, new_id)
+            await self._store.append_update(document_id, update, origin)
             entry.updates_since_snapshot += 1
             entry.dirty_text = True
             await self._maybe_compact(document_id, entry)
@@ -180,8 +169,7 @@ class DocumentManager:
             async with self._lock(document_id):
                 entry = self._require(document_id)
                 update = entry.ydoc.replace_text(new_text)
-                new_id = await self._store.append_update(document_id, update, origin)
-                entry.last_update_id = max(entry.last_update_id, new_id)
+                await self._store.append_update(document_id, update, origin)
                 entry.updates_since_snapshot += 1
                 entry.dirty_text = True
                 await self._maybe_compact(document_id, entry)
@@ -210,8 +198,7 @@ class DocumentManager:
                 if not edits:
                     return b"", outcome
                 update = entry.ydoc.apply_edits(edits)
-                new_id = await self._store.append_update(document_id, update, origin)
-                entry.last_update_id = max(entry.last_update_id, new_id)
+                await self._store.append_update(document_id, update, origin)
                 entry.updates_since_snapshot += 1
                 entry.dirty_text = True
                 await self._maybe_compact(document_id, entry)
@@ -235,6 +222,20 @@ class DocumentManager:
         a worker job (agent/compile) reads that column — see ``collab.flush``.
         """
         return set(self._entries)
+
+    async def apply_remote_update(self, document_id: UUID, update: bytes) -> None:
+        """Apply an update another replica relayed through Redis (ADR 0123).
+
+        Kept in the local copy so this replica's server document stays complete, and it does not
+        persist or relay it again (no echo). Ignored when the document is not open here.
+        """
+        async with self._lock(document_id):
+            entry = self._entries.get(document_id)
+            if entry is None:
+                return
+            entry.ydoc.apply_update(update, origin=REMOTE_ORIGIN)
+            entry.dirty_text = True
+        self._schedule_flush(document_id)
 
     async def handle_awareness(self, document_id: UUID, update: bytes) -> bytes:
         """Merge an awareness update and return the raw blob to relay (ephemeral)."""
@@ -269,20 +270,20 @@ class DocumentManager:
             entry = self._entries.get(document_id)
             if entry is None or (not force and not entry.dirty_text):
                 return
-            text = entry.ydoc.text
-            seq = entry.seq
             entry.dirty_text = False
             pending = entry.flush_task
             # The timer calls this from inside its own task: cancelling it here would abort the write below.
             if pending is not None and pending is not asyncio.current_task() and not pending.done():
                 pending.cancel()
             entry.flush_task = None
-            # The write stays under the lock: two flushes must reach the column in the order they
-            # copied the text, or an older copy written last leaves the agent and compile on stale text.
-            await self._bridge.flush_text(document_id, text)
-            # Record that spec-13 content is current as of this seq, so a recovered
-            # process can tell its persisted text is not stale.
-            await self._store.mark_text_synced(document_id, seq)
+            # The write stays under the lock, and the store writes the merged text under its own lock,
+            # so two flushes (on this replica or another) reach the column in the order they read it.
+            state, seq = await self._store.flush_text(
+                document_id, entry.ydoc.get_state(), self._bridge.write_text
+            )
+            if state is not None:
+                entry.ydoc.apply_update(state)  # catch up with what other replicas have stored
+            entry.seq = seq
 
     async def _maybe_compact(self, document_id: UUID, entry: _Entry) -> None:
         by_count = entry.updates_since_snapshot >= self._settings.snapshot_every_updates
@@ -291,18 +292,30 @@ class DocumentManager:
             await self._compact(document_id, entry)
 
     async def _compact(self, document_id: UUID, entry: _Entry) -> None:
-        """Snapshot the current state and truncate the log up to the high-water id."""
+        """Snapshot the merged state and truncate the log rows it covers.
+
+        The store merges with the stored state before it writes, so a replica that has not yet
+        received another replica's update cannot drop that update. The catch-up afterwards brings
+        this copy up to the stored state.
+        """
         entry.seq = await self._store.snapshot(
-            document_id=document_id,
-            state=entry.ydoc.get_state(),
-            state_vector=entry.ydoc.get_state_vector(),
-            upto_update_id=entry.last_update_id,
+            document_id=document_id, state=entry.ydoc.get_state(), upto_update_id=None
         )
+        state, _seq = await self._store.load(document_id)
+        if state is not None:
+            entry.ydoc.apply_update(state)
         entry.updates_since_snapshot = 0
         entry.last_snapshot_at = monotonic()
 
     async def flush(self, document_id: UUID) -> None:
-        """Force the text bridge now, and compact if the log has grown."""
+        """Write the document's merged text to ``documents.content`` now, and compact if the log has grown.
+
+        A document open on another replica is written from the stored state, which holds every
+        update that replica has acknowledged.
+        """
+        if document_id not in self._entries:
+            await self._store.flush_text(document_id, None, self._bridge.write_text)
+            return
         await self.flush_text_now(document_id)
         async with self._lock(document_id):
             entry = self._entries.get(document_id)
