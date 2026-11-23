@@ -36,6 +36,7 @@ here too. From specs 06–08, 10, 59, 63, 92, 104 and 113; setup and provisionin
 | `frontend/src/modules/settings` | Settings page and the e-mail change confirm page |
 | `frontend/src/lib/token-store.ts`, `frontend/src/lib/api-client.ts` | Access token in memory, refresh token in `localStorage`; refresh on 401, one in flight per tab |
 | `backend/tests/integration/test_session_revocation.py`, `backend/tests/integration/test_login_attempts.py`, `backend/tests/integration/test_auth.py`, `backend/tests/integration/test_email_auth_flows_104.py`, `backend/tests/integration/test_auth_tokens_104.py`, `backend/tests/integration/test_account_api_59.py`, `backend/tests/integration/test_bootstrap_57.py`, `backend/tests/integration/test_reset_token_binding.py`, `backend/tests/integration/test_last_admin_guard.py`, `backend/tests/integration/test_rate_limit_gaps.py`, `backend/tests/integration/test_proxy_stand_down.py` | Revocation; login limits; login and refresh; link flows; link tokens; settings; setup; reset-link binding; last admin; limits on the audit's routes; the proxy stand-down |
+| `backend/tests/unit/test_throttle_limiter.py`, `backend/tests/unit/test_throttle_policies.py`, `backend/tests/unit/test_login_throttle.py` (doubles in `backend/tests/unit/_throttle_doubles.py`) | Unit tests of the throttling, no database: client IP and the stand-down rule, window counters, named policies and their fail modes, login counting and forgiveness |
 
 ## Data
 
