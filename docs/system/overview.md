@@ -341,8 +341,9 @@ pure files in `paths`, the tiers, `max-test-seconds = 5`) in `backend/pyproject.
   `pytest_add_cli_args_test_selection`, minus the source-reading tests. They were found with per-test
   coverage, plus the Hypothesis property tests, whose coverage contexts Hypothesis renames. Every unit
   test took 8.7 s on a CI runner, and these take about 3 s. A new test file for a mutated module goes
-  in the list. The selection runs in one process in under 5 s; the tool measures it first and exits 1
-  past that. It is run twice in one process by hand before the first run, to catch state leaking
+  in the list. The selection runs in one process in under 5 s; the tool measures it first, on a second, warm
+  run (mutmut runs it again and again, so the first run's bytecode and disk cache are paid once; the
+  CI job also compiles the bytecode at install), and exits 1 past that. It is run twice in one process by hand before the first run, to catch state leaking
   between tests.
 - `make mutation`: the functions changed since `MUTATION_BASE` (default `origin/main`). `make
   mutation-all`: every file in `paths`, every survivor's diff in `backend/mutants-survivors.md`, at most

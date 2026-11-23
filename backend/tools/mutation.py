@@ -154,9 +154,14 @@ def load_settings() -> Settings:
 
 
 def test_seconds(settings: Settings) -> float:
-    """How long the tests mutmut runs take in one process, by pytest's own clock."""
+    """How long the tests mutmut runs take in one process, by pytest's own clock, on a warm run.
+
+    mutmut runs them again and again, so the first run's cost (bytecode, a cold disk cache: about
+    half the time on a fresh CI runner) is paid once; a first run warms up and is not counted.
+    """
     cmd = [sys.executable, "-m", "pytest", "-q", "-p", "no:xdist", "-p", "no:cacheprovider"]
     cmd += ["-o", "addopts=", *_extra(settings.pytest_args), *settings.marker_args(), *settings.test_paths]
+    subprocess.run(cmd, cwd=ROOT, capture_output=True, timeout=300, check=False)  # noqa: S603
     done = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=300, check=False)  # noqa: S603
     last = done.stdout.strip().splitlines()[-1] if done.stdout.strip() else ""
     found = PYTEST_TIME.search(last)

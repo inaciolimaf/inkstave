@@ -235,6 +235,8 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: make install-backend
+        env:
+          UV_COMPILE_BYTECODE: 1 # the speed check then measures the tests, not the compile
       - name: mutmut on the changed functions
         env:
           # Pull request: against the base branch. Push: against the previous tip of main
