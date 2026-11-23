@@ -53,6 +53,7 @@ dev = [
     "asyncpg-stubs>=0.31.3",
     "import-linter>=2.15",
     "hypothesis>=6.170.17",
+    "mutmut==3.8.1",
 ]
 
 [tool.uv]
@@ -66,7 +67,7 @@ target-version = "py312"
 # Deliberately `extend-exclude` (not a plain `exclude`): plain `exclude` would
 # *replace* ruff's built-in default excludes (.venv, .git, __pycache__, …),
 # whereas `extend-exclude` preserves them and merely adds `migrations/` on top.
-extend-exclude = ["migrations"]
+extend-exclude = ["migrations", "mutants"]  # mutants: mutmut's copies of the code (make mutation)
 
 [tool.ruff.lint]
 # The project standard's ruleset, plus the project's stricter structural budget:
@@ -296,6 +297,110 @@ markers = [
     "integration: tests requiring the test database / wired app",
     "e2e: end-to-end tests (Playwright-driven; run separately)",
     "live: manual smoke hitting a real external service (needs a real key; never in CI)",
+]
+
+# --- mutation testing (tools/mutation.py, make mutation) ---------------------------------------
+# tools/mutation.py narrows what is mutated (the functions a change touched) and adds the test
+# selection of [tool.mutation]; run mutation testing through it, not through `mutmut` directly.
+[tool.mutmut]
+source_paths = ["src/inkstave"]
+# Unit tests only (no database, no Redis server, no browser), and only the files that run code in
+# [tool.mutation].paths: every unit test took 8.7 s on a CI runner, these about 3 s. The list comes
+# from per-test coverage (`coverage run` with `dynamic_context = test_function` over tests/unit/,
+# then the test files whose contexts reach those paths), plus the Hypothesis property tests, whose
+# contexts Hypothesis renames. A new test file for a mutated module goes in this list too.
+pytest_add_cli_args_test_selection = [
+    "tests/unit/test_agent_config_caps.py",
+    "tests/unit/test_agent_context.py",
+    "tests/unit/test_agent_core.py",
+    "tests/unit/test_agent_diffs_unit.py",
+    "tests/unit/test_agent_safety.py",
+    "tests/unit/test_agent_tools_unit.py",
+    "tests/unit/test_auth_logging_92.py",
+    "tests/unit/test_collab_debounced_flush.py",
+    "tests/unit/test_collab_flush_order.py",
+    "tests/unit/test_compile_daily_quota.py",
+    "tests/unit/test_history_diff.py",
+    "tests/unit/test_logparse_parser.py",
+    "tests/unit/test_logparse_service.py",
+    "tests/unit/test_props_collab.py",
+    "tests/unit/test_props_diff.py",
+    "tests/unit/test_props_history.py",
+    "tests/unit/test_props_parsers.py",
+    "tests/unit/test_rate_limit.py",
+    "tests/unit/test_security.py",
+    "tests/unit/test_synctex_gzip_bound.py",
+    "tests/unit/test_synctex_service.py",
+]
+pytest_add_cli_args = [
+    "-p", "no:xdist", "-p", "no:cacheprovider", "-o", "addopts=",
+    # These read the source tree (architecture, docs, API contract, lint-like checks). Under mutmut
+    # they read the trampolined copy in mutants/ and fail the clean run.
+    "--ignore=tests/unit/test_architecture.py",
+    "--ignore=tests/unit/test_docs.py",
+    "--ignore=tests/unit/test_api_contract.py",
+    "--ignore=tests/unit/test_compat_rules.py",
+    "--ignore=tests/unit/test_compat_scan.py",
+    "--ignore=tests/unit/test_compat_rules_path.py",
+    "--ignore=tests/unit/test_docker_packaging.py",
+    "--ignore=tests/unit/test_size_lint.py",
+    "--ignore=tests/unit/test_fix_has_test.py",
+    "--ignore=tests/unit/test_env_example_62.py",
+    "--ignore=tests/unit/test_keyword_only_signatures_96.py",
+    "--ignore=tests/unit/test_performance.py",
+    "--ignore=tests/unit/test_async_offload_93.py",
+    "--ignore=tests/unit/test_compile_speed_guard.py",
+    "--ignore=tests/unit/test_compile_packages.py",
+    "--ignore=tests/unit/test_external_timeouts.py",
+    "--ignore=tests/unit/test_production_secrets.py",
+    # Reads backend/scripts/audit.sh, which mutants/ does not copy.
+    "--deselect=tests/unit/test_security.py::test_audit_script_exists_and_runs_both_tools",
+    # The LLM adapters are not mutated, and importing the provider SDKs costs about 1 s of the 5 s.
+    "--ignore=tests/unit/test_anthropic_adapter.py",
+    "--ignore=tests/unit/test_openrouter_adapter.py",
+    "--ignore=tests/unit/test_agent_llm.py",
+]
+# Log lines and error messages are text for people: mutating them makes tests compare sentences.
+# The whole statement is skipped; the conditions around it are still mutated.
+do_not_mutate_patterns = ['\blogger\.', '\blogging\.', '\braise [\w.]*Error\(', '\bwarnings\.warn\(']
+
+[tool.mutation]
+# Only the pure code is mutated: functions with no database session, no HTTP and no object store.
+# Files whose functions need a live server or database stay with the integration tests.
+paths = [
+    # domain rules (80%)
+    "src/inkstave/modules/history/versions/diff.py",
+    "src/inkstave/modules/history/versions/capture_values.py",
+    "src/inkstave/modules/collab/rooms/manager.py",
+    "src/inkstave/modules/agent/graph/edits.py",
+    "src/inkstave/modules/agent/diffs/compute.py",
+    "src/inkstave/modules/agent/tools/propose_edit.py",
+    "src/inkstave/modules/agent/tools/read_file.py",
+    "src/inkstave/modules/auth/throttling/*.py",
+    "src/inkstave/modules/agent/safety/budget.py",
+    "src/inkstave/modules/agent/safety/rate_limit.py",
+    # heuristics (65%)
+    "src/inkstave/modules/agent/graph/state.py",
+    "src/inkstave/modules/agent/graph/prompts.py",
+    "src/inkstave/modules/agent/context/locate.py",
+    "src/inkstave/modules/agent/tools/_latex.py",
+    "src/inkstave/modules/compile/logparse/latex_log_parser.py",
+    "src/inkstave/modules/compile/synctex/parser.py",
+]
+# The unit tests of the selection must finish in `max-test-seconds` in one process.
+test-selection = ""
+max-test-seconds = 5
+# The first tier whose paths match a file wins.
+tiers = [
+    { name = "heuristics", min-score = 65, paths = [
+        "src/inkstave/modules/agent/graph/state.py",
+        "src/inkstave/modules/agent/graph/prompts.py",
+        "src/inkstave/modules/agent/context/locate.py",
+        "src/inkstave/modules/agent/tools/_latex.py",
+        "src/inkstave/modules/compile/logparse/latex_log_parser.py",
+        "src/inkstave/modules/compile/synctex/parser.py",
+    ] },
+    { name = "domain rules", min-score = 80, paths = ["src/inkstave/modules/*"] },
 ]
 
 [tool.coverage.run]

@@ -160,6 +160,7 @@ targets, so what passes here passes there.
 | `make coverage` | the same, with the coverage floor |
 | `make test-unit` / `make test-integration` | the two tiers as CI splits them; `SHARD=K/N` runs one slice of integration (CI runs 3) |
 | `make budget` | gate the per-test limit from the JUnit files (the whole run is gated by CI's `gate` job) |
+| `make mutation` / `make mutation-all` | mutation testing of the functions changed since `origin/main` / of every file in `[tool.mutation].paths` |
 | `make web-types` | regenerate `docs/api/openapi.json` and `frontend/src/api/types.ts` |
 | `make web-test` | eslint, prettier check, `tsc -b`, Vitest |
 | `make web-coverage` | Vitest with the coverage floor |
@@ -211,6 +212,11 @@ Pyramid: unit (no database; a unit test that uses it fails collection), integrat
 Vitest, Playwright. Vitest imports `describe`/`it`/`expect` from `vitest` (no globals), and a test that writes to
 `console.error` or `console.warn` fails unless it calls `allowConsole` (`frontend/src/test/console-guard.ts`). A bug comes with a test. Slow work is marked `@slow` and stays out of the
 default run. Details: `docs/system/overview.md`.
+Mutation testing (`make mutation`, `make mutation-all`; `backend/tools/mutation.py`): only the pure files in
+`[tool.mutation].paths` are mutated, and only the unit tests run, never the integration tests, the database,
+Redis or e2e. A change to a mutated function must reach its tier's minimum (domain rules 80%, heuristics 65%),
+and the mutation selection stays under 5 s. Log lines and error messages are not mutated
+(`do_not_mutate_patterns`). Details: `docs/system/overview.md`.
 Stateful features get a **"do it again" test**: the action run twice in a row, again after a reload
 (remount from the server's state), and again after switching document (`*.again.test.ts(x)`, e.g.
 `frontend/src/modules/agent/AgentPanel.again.test.tsx`).

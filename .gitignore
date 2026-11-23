@@ -55,6 +55,9 @@ Thumbs.db
 .claude/validation/
 
 # --- test run artifacts ---
+# mutation testing (backend/tools/mutation.py): mutmut's working copy and the survivors list
+backend/mutants/
+backend/mutants-survivors.md
 test-junit.xml
 test-timing.json
 

@@ -219,6 +219,38 @@ jobs:
           path: frontend/test-results/
           if-no-files-found: ignore
 
+  # --- Mutation testing: the functions this change touched (make mutation) --- #
+  # Outside the gate: it is not in the `gate` job's needs, so it never adds to the 180 s. Red when a tier
+  # scores below its minimum or the unit tests it runs pass 5 s; a run past 270 s only warns.
+  mutation:
+    name: Mutation testing (changed functions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the merge base must be in the clone
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: make install-backend
+        env:
+          UV_COMPILE_BYTECODE: 1 # the speed check then measures the tests, not the compile
+      - name: mutmut on the changed functions
+        env:
+          # Pull request: against the base branch. Push: against the previous tip of main
+          # (HEAD~1 when the branch is new and the event carries no previous tip).
+          MUTATION_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || (github.event.before == '0000000000000000000000000000000000000000' && 'HEAD~1' || github.event.before) }}
+        run: |
+          rc=0
+          timeout 270 make mutation || rc=$?
+          if [ "$rc" -eq 124 ]; then
+            echo "::warning::mutation testing hit 270 s; run make mutation locally"
+            exit 0
+          fi
+          exit "$rc"
+
   # --- Budget: per-test limit and the backend coverage floor ----------------- #
   budget:
     name: Budget and coverage gates

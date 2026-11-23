@@ -322,6 +322,39 @@ keeps its own refresh-token chain (`frontend/e2e/support/session.ts`), so the re
 its reuse detection are untouched; the tests that change the session (logout, `auth.spec.ts`) log in on
 their own.
 
+### Mutation testing
+
+Mutation testing measures whether the unit tests would notice a wrong line: mutmut changes one
+operator at a time (`>` into `>=`, `True` into `False`) and a mutant no test fails on has survived.
+`backend/tools/mutation.py` (with `mutation_report.py`) runs it on the functions a change touched.
+Configuration: `[tool.mutmut]` (source, the unit selection, the pytest arguments that skip the
+source-reading tests, `do_not_mutate_patterns` for log and error text) and `[tool.mutation]` (the
+pure files in `paths`, the tiers, `max-test-seconds = 5`) in `backend/pyproject.toml`.
+
+- Only pure files are mutated: no database session, no HTTP, no object store. Their integration tests
+  are too slow to run once per mutant. Each file is listed in `[tool.mutation].paths` on purpose.
+- Tiers: domain rules 80% (history versions, collab room manager, agent edits and diffs, the agent
+  tools, auth throttling, the agent budget and rate limit), heuristics 65% (agent graph state and
+  prompts, the locator, the LaTeX log and SyncTeX parsers). A survivor with no test running its
+  function ("no tests") counts as a survivor.
+- The selection is the unit test files that run code in `paths`, listed in
+  `pytest_add_cli_args_test_selection`, minus the source-reading tests. They were found with per-test
+  coverage, plus the Hypothesis property tests, whose coverage contexts Hypothesis renames. Every unit
+  test took 8.7 s on a CI runner, and these take about 3 s. A new test file for a mutated module goes
+  in the list. The selection runs in one process in under 5 s; the tool measures it first, on a second, warm
+  run (mutmut runs it again and again, so the first run's bytecode and disk cache are paid once; the
+  CI job also compiles the bytecode at install), and exits 1 past that. It is run twice in one process by hand before the first run, to catch state leaking
+  between tests.
+- `make mutation`: the functions changed since `MUTATION_BASE` (default `origin/main`). `make
+  mutation-all`: every file in `paths`, every survivor's diff in `backend/mutants-survivors.md`, at most
+  40 minutes. Workers: `MUTATION_WORKERS` (default every core); `mutants/` is git-ignored.
+- CI job `mutation` (`.github/workflows/ci.yml`) runs `make mutation` on the pull request's base or on
+  the previous tip of main, outside the 180 s gate; a run past 270 s only warns.
+- Current state (first baseline, every file in `paths`, 2673 mutants, 6.6 min on two workers): domain
+  rules 42% (minimum 80%), heuristics 68% (minimum 65%). Most domain survivors have no unit test
+  that runs them: their behaviour is pinned by integration tests, which mutation does not run. A change
+  to a below-tier function turns the CI job red until its unit tests catch the mutants.
+
 ## Rules and guarantees
 
 | Invariant | Test |
