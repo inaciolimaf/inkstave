@@ -222,7 +222,7 @@ close use it. Work that outlives a process or runs long is an ARQ job.
 |---|---|---|---|
 | Default backend | `addopts`: `-m 'not slow and not e2e and not live'`, `-n auto` | Postgres for the integration part | `make test` |
 | Unit | `UNIT_MARKERS` in `Makefile` | nothing | `make test-unit` |
-| Integration | `INTEGRATION_MARKERS` in `Makefile`, the `integration` marker | Postgres; Redis is faked | `make test-integration` |
+| Integration | `INTEGRATION_MARKERS` in `Makefile`, the `integration` marker | Postgres; Redis is faked | `make test-integration` (`SHARD=K/N` for one slice) |
 | E2E | Playwright projects `routes`, `mobile`, `flows`, `smoke`, `full` | `make e2e-infra` | `make e2e-smoke` is what CI runs, in two shards |
 | Real compile | `RUN_REAL_COMPILE=1` and `tectonic` on the path | Tectonic | `backend/tests/smoke/test_real_compile.py` |
 
@@ -295,10 +295,14 @@ and rolled back per test. `backend/tests/fixtures/env.py` strips the machine's s
 collection and points `DATABASE_URL` at a refused port, so a test that did not ask for the database
 cannot find one.
 
-**CI runs in about 180 s, and the `gate` job measures it.** Lint, typecheck, unit, integration and the
+**CI runs in about 180 s, and the `gate` job measures it.** Lint, typecheck, the backend unit tier, Vitest
+(`web-unit`, a job of its own), the three integration shards (`make test-integration SHARD=K/3`) and the
 two e2e shards (`make e2e-smoke E2E_ARGS=--shard=N/2`) run side by side, with no `needs` between them.
+The integration tier alone took about 220 s on one runner. `--shard=K/N` (`backend/tests/fixtures/shard.py`)
+gives whole files to one shard, largest first, to the shard with the fewest tests, so every worker and job
+computes the same split; each shard writes `integration-K-junit.xml` and `integration-K.coverage`.
 `budget` (after unit and integration) gates the per-test limit from the JUnit files (`make budget`) and
-the 80% coverage floor on unit plus integration (`make coverage-combine`). `gate` needs every one of
+the 80% coverage floor on unit plus every integration shard (`make coverage-combine`). `gate` needs every one of
 them: it fails when a job did not succeed, and when the run's wall clock, from the start of the run's
 first job, passes 180 s (queue time included). The whole-run check was a stage maximum before; the
 clock replaces it, so the stages no longer report their seconds. The `budget` step keeps the per-test
@@ -309,6 +313,9 @@ limit; `scripts/run_timed.sh` (`just test-timed`) still gates the total of a loc
 Python jobs set `COVERAGE_CORE=sysmon`; `setup-uv` keeps its cache (`prune-cache: false`, the prune took
 up to 108 s); every job has `timeout-minutes`; Node is 25, as the frontend image. The e2e jobs use the
 Google Chrome of the runner (`channel: "chrome"`, only when `CI` is set), so they download no browser.
+Node 25 has its own `localStorage` and `sessionStorage`, empty objects with no methods unless
+`--localstorage-file` is given, and Vitest kept them over jsdom's; `frontend/src/test/jsdom-environment.ts`
+puts jsdom's back.
 Playwright runs with **0 retries** everywhere (`E2E_RETRIES` overrides it for a diagnosis run): a flaky
 test is fixed, not retried. Each e2e test reuses its worker's sign-in: a worker logs in once per user and
 keeps its own refresh-token chain (`frontend/e2e/support/session.ts`), so the refresh-token rotation and
@@ -330,9 +337,13 @@ pure files in `paths`, the tiers, `max-test-seconds = 5`) in `backend/pyproject.
   tools, auth throttling, the agent budget and rate limit), heuristics 65% (agent graph state and
   prompts, the locator, the LaTeX log and SyncTeX parsers). A survivor with no test running its
   function ("no tests") counts as a survivor.
-- The selection is `tests/unit/` minus the source-reading tests and the LLM adapter tests (the provider
-  SDKs cost about 1 s of import). It runs in one process in under 5 s; the tool measures it first and
-  exits 1 past that. It is run twice in one process by hand before the first run, to catch state leaking
+- The selection is the unit test files that run code in `paths`, listed in
+  `pytest_add_cli_args_test_selection`, minus the source-reading tests. They were found with per-test
+  coverage, plus the Hypothesis property tests, whose coverage contexts Hypothesis renames. Every unit
+  test took 8.7 s on a CI runner, and these take about 3 s. A new test file for a mutated module goes
+  in the list. The selection runs in one process in under 5 s; the tool measures it first, on a second, warm
+  run (mutmut runs it again and again, so the first run's bytecode and disk cache are paid once; the
+  CI job also compiles the bytecode at install), and exits 1 past that. It is run twice in one process by hand before the first run, to catch state leaking
   between tests.
 - `make mutation`: the functions changed since `MUTATION_BASE` (default `origin/main`). `make
   mutation-all`: every file in `paths`, every survivor's diff in `backend/mutants-survivors.md`, at most
