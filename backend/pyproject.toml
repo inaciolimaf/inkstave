@@ -304,8 +304,34 @@ markers = [
 # selection of [tool.mutation]; run mutation testing through it, not through `mutmut` directly.
 [tool.mutmut]
 source_paths = ["src/inkstave"]
-# Unit tests only: no database, no Redis server, no browser (CLAUDE.md, "Tests").
-pytest_add_cli_args_test_selection = ["tests/unit/"]
+# Unit tests only (no database, no Redis server, no browser), and only the files that run code in
+# [tool.mutation].paths: every unit test took 8.7 s on a CI runner, these about 3 s. The list comes
+# from per-test coverage (`coverage run` with `dynamic_context = test_function` over tests/unit/,
+# then the test files whose contexts reach those paths), plus the Hypothesis property tests, whose
+# contexts Hypothesis renames. A new test file for a mutated module goes in this list too.
+pytest_add_cli_args_test_selection = [
+    "tests/unit/test_agent_config_caps.py",
+    "tests/unit/test_agent_context.py",
+    "tests/unit/test_agent_core.py",
+    "tests/unit/test_agent_diffs_unit.py",
+    "tests/unit/test_agent_safety.py",
+    "tests/unit/test_agent_tools_unit.py",
+    "tests/unit/test_auth_logging_92.py",
+    "tests/unit/test_collab_debounced_flush.py",
+    "tests/unit/test_collab_flush_order.py",
+    "tests/unit/test_compile_daily_quota.py",
+    "tests/unit/test_history_diff.py",
+    "tests/unit/test_logparse_parser.py",
+    "tests/unit/test_logparse_service.py",
+    "tests/unit/test_props_collab.py",
+    "tests/unit/test_props_diff.py",
+    "tests/unit/test_props_history.py",
+    "tests/unit/test_props_parsers.py",
+    "tests/unit/test_rate_limit.py",
+    "tests/unit/test_security.py",
+    "tests/unit/test_synctex_gzip_bound.py",
+    "tests/unit/test_synctex_service.py",
+]
 pytest_add_cli_args = [
     "-p", "no:xdist", "-p", "no:cacheprovider", "-o", "addopts=",
     # These read the source tree (architecture, docs, API contract, lint-like checks). Under mutmut

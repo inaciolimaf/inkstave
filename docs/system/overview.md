@@ -330,9 +330,12 @@ pure files in `paths`, the tiers, `max-test-seconds = 5`) in `backend/pyproject.
   tools, auth throttling, the agent budget and rate limit), heuristics 65% (agent graph state and
   prompts, the locator, the LaTeX log and SyncTeX parsers). A survivor with no test running its
   function ("no tests") counts as a survivor.
-- The selection is `tests/unit/` minus the source-reading tests and the LLM adapter tests (the provider
-  SDKs cost about 1 s of import). It runs in one process in under 5 s; the tool measures it first and
-  exits 1 past that. It is run twice in one process by hand before the first run, to catch state leaking
+- The selection is the unit test files that run code in `paths`, listed in
+  `pytest_add_cli_args_test_selection`, minus the source-reading tests. They were found with per-test
+  coverage, plus the Hypothesis property tests, whose coverage contexts Hypothesis renames. Every unit
+  test took 8.7 s on a CI runner, and these take about 3 s. A new test file for a mutated module goes
+  in the list. The selection runs in one process in under 5 s; the tool measures it first and exits 1
+  past that. It is run twice in one process by hand before the first run, to catch state leaking
   between tests.
 - `make mutation`: the functions changed since `MUTATION_BASE` (default `origin/main`). `make
   mutation-all`: every file in `paths`, every survivor's diff in `backend/mutants-survivors.md`, at most

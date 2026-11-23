@@ -176,7 +176,9 @@ def check_speed(settings: Settings) -> bool:
     ok = took <= settings.max_test_seconds
     verdict = "ok" if ok else "OVER: make them faster or move the slow ones out of the selection"
     budget = f"{took:.2f} s of {settings.max_test_seconds:g} s"
-    which = " ".join([*settings.marker_args(), *settings.test_paths])
+    tests = settings.test_paths
+    paths = tests if len(tests) <= 3 else [f"{len(tests)} test files"]
+    which = " ".join([*settings.marker_args(), *paths])
     print(f"Tests for mutation ({which}): {budget}, {verdict}")
     return ok
 
