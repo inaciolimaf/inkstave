@@ -143,14 +143,19 @@ test-unit: ## Run the backend unit tier, writing junit and coverage data
 	cd backend && COVERAGE_FILE=../$(RESULTS)/unit.coverage uv run pytest -m "$(UNIT_MARKERS)" \
 		--cov=inkstave --cov-report= --cov-fail-under=0 --junitxml=../$(RESULTS)/unit-junit.xml
 
-test-integration: ## Run the backend integration tier, writing junit and coverage data
-	mkdir -p $(RESULTS)
-	cd backend && COVERAGE_FILE=../$(RESULTS)/integration.coverage uv run pytest -m "$(INTEGRATION_MARKERS)" \
-		--cov=inkstave --cov-report= --cov-fail-under=0 --junitxml=../$(RESULTS)/integration-junit.xml
+# SHARD=K/N runs one of N slices of the tier (CI runs 3); each slice writes its own files.
+SHARD ?=
+SHARD_SUFFIX := $(if $(SHARD),-$(firstword $(subst /, ,$(SHARD))))
 
-coverage-combine: ## Merge the unit + integration coverage; fails below fail_under
+test-integration: ## Run the backend integration tier (SHARD=K/N for one slice), writing junit and coverage
+	mkdir -p $(RESULTS)
+	cd backend && COVERAGE_FILE=../$(RESULTS)/integration$(SHARD_SUFFIX).coverage uv run pytest \
+		-m "$(INTEGRATION_MARKERS)" $(if $(SHARD),--shard=$(SHARD)) \
+		--cov=inkstave --cov-report= --cov-fail-under=0 --junitxml=../$(RESULTS)/integration$(SHARD_SUFFIX)-junit.xml
+
+coverage-combine: ## Merge the unit + integration (every shard) coverage; fails below fail_under
 	cd backend && COVERAGE_FILE=../$(RESULTS)/combined.coverage uv run coverage combine --keep \
-		../$(RESULTS)/unit.coverage ../$(RESULTS)/integration.coverage
+		$(addprefix ../,$(wildcard $(RESULTS)/unit.coverage $(RESULTS)/integration*.coverage))
 	cd backend && COVERAGE_FILE=../$(RESULTS)/combined.coverage uv run coverage report
 	cd backend && COVERAGE_FILE=../$(RESULTS)/combined.coverage uv run coverage xml \
 		-o ../$(RESULTS)/coverage.xml --fail-under=0

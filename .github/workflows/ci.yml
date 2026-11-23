@@ -2,7 +2,7 @@ name: CI
 
 # Every step is a Makefile target, so a green `make` is a green CI.
 #
-# Job graph: lint, typecheck, unit, integration and the e2e shards run side by side, with no
+# Job graph: lint, typecheck, unit, web-unit, the integration shards and the e2e shards run side by side, with no
 # `needs` between them. `budget` reads the unit and integration outputs (per-test limit and the
 # coverage floor). `gate` needs every one of them: it fails on any job that did not succeed and
 # when the run's wall clock, from its first job's start, passes 180 s (docs/system/overview.md).
@@ -100,9 +100,9 @@ jobs:
       - name: API contract is up to date
         run: make web-types-check
 
-  # --- Unit: backend unit tier and the Vitest suite with its coverage floor --- #
+  # --- Unit: backend unit tier --------------------------------------------- #
   unit:
-    name: Unit
+    name: Unit (backend)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -113,6 +113,21 @@ jobs:
           cache-dependency-glob: backend/uv.lock
           prune-cache: false
       - run: make install-backend
+      - name: Run the backend unit tier
+        run: make test-unit
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unit-results
+          path: test-results/
+          if-no-files-found: error
+
+  # --- Web unit: Vitest with its coverage floor, a job of its own for time ---- #
+  web-unit:
+    name: Unit (web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with: { version: 9 }
       - uses: actions/setup-node@v4
@@ -121,19 +136,19 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: make install-web
-      - name: Run unit tests (pytest unit subset + Vitest with coverage)
-        run: make test-unit web-coverage
-      - uses: actions/upload-artifact@v7
-        with:
-          name: unit-results
-          path: test-results/
-          if-no-files-found: error
+      - name: Run Vitest with coverage
+        run: make web-coverage
 
   # --- Integration: backend integration tier against a throwaway Postgres ----- #
+  # Three shards: the tier alone takes about 220 s on one runner (the whole run has 180 s).
   integration:
-    name: Integration
+    name: Integration (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:16-alpine
@@ -158,10 +173,10 @@ jobs:
           prune-cache: false
       - run: make install-backend
       - name: Run integration tests
-        run: make test-integration
+        run: make test-integration SHARD=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v7
         with:
-          name: integration-results
+          name: integration-results-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: error
 
@@ -253,10 +268,11 @@ jobs:
         with:
           name: unit-results
           path: test-results
-      - name: Download integration results
+      - name: Download integration results (every shard)
         uses: actions/download-artifact@v8
         with:
-          name: integration-results
+          pattern: integration-results-*
+          merge-multiple: true
           path: test-results
       - name: Enforce the per-test limit
         run: make budget | tee -a "$GITHUB_STEP_SUMMARY"
@@ -275,7 +291,7 @@ jobs:
     name: Gate (all jobs, 180 s wall clock)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint, typecheck, unit, integration, e2e, budget]
+    needs: [lint, typecheck, unit, web-unit, integration, e2e, budget]
     if: always()
     permissions:
       actions: read # to read the run's start time
