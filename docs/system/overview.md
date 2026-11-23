@@ -350,7 +350,7 @@ pure files in `paths`, the tiers, `max-test-seconds = 5`) in `backend/pyproject.
   40 minutes. Workers: `MUTATION_WORKERS` (default every core); `mutants/` is git-ignored.
 - CI job `mutation` (`.github/workflows/ci.yml`) runs `make mutation` on the pull request's base or on
   the previous tip of main, outside the 180 s gate; a run past 270 s only warns.
-- Current state: domain rules 97% (1510 of 1562 mutants killed; first baseline 42%), heuristics 68%
+- Current state: domain rules 96% (1506 of 1562 mutants killed; first baseline 42%), heuristics 68%
   (first baseline, minimum 65%). Per domain area: collab rooms manager 97%, agent edit path 94%, auth
   throttling 96%, history diff and capture values 99%, agent budget and rate limits 100%. The survivors
   left are equivalent mutants or error and note wording. A change to a below-tier function turns the

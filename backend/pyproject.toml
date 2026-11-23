@@ -310,17 +310,28 @@ source_paths = ["src/inkstave"]
 # then the test files whose contexts reach those paths), plus the Hypothesis property tests, whose
 # contexts Hypothesis renames. A new test file for a mutated module goes in this list too.
 pytest_add_cli_args_test_selection = [
+    "tests/unit/test_agent_budget_unit.py",
     "tests/unit/test_agent_config_caps.py",
     "tests/unit/test_agent_context.py",
     "tests/unit/test_agent_core.py",
     "tests/unit/test_agent_diffs_unit.py",
+    "tests/unit/test_agent_propose_edit_unit.py",
+    "tests/unit/test_agent_rate_limit_unit.py",
+    "tests/unit/test_agent_read_file_unit.py",
     "tests/unit/test_agent_safety.py",
     "tests/unit/test_agent_tools_unit.py",
     "tests/unit/test_auth_logging_92.py",
     "tests/unit/test_collab_debounced_flush.py",
     "tests/unit/test_collab_flush_order.py",
+    "tests/unit/test_collab_manager_flush.py",
+    "tests/unit/test_collab_manager_lifecycle.py",
+    "tests/unit/test_collab_manager_races.py",
+    "tests/unit/test_collab_manager_shutdown.py",
+    "tests/unit/test_collab_manager_writes.py",
     "tests/unit/test_compile_daily_quota.py",
+    "tests/unit/test_history_capture_values.py",
     "tests/unit/test_history_diff.py",
+    "tests/unit/test_login_throttle.py",
     "tests/unit/test_logparse_parser.py",
     "tests/unit/test_logparse_service.py",
     "tests/unit/test_props_collab.py",
@@ -331,6 +342,8 @@ pytest_add_cli_args_test_selection = [
     "tests/unit/test_security.py",
     "tests/unit/test_synctex_gzip_bound.py",
     "tests/unit/test_synctex_service.py",
+    "tests/unit/test_throttle_limiter.py",
+    "tests/unit/test_throttle_policies.py",
 ]
 pytest_add_cli_args = [
     "-p", "no:xdist", "-p", "no:cacheprovider", "-o", "addopts=",
