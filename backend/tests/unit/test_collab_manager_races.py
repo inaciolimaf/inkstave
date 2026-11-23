@@ -8,6 +8,8 @@ hold the store's writes open with gates and check who gets the lock first.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Coroutine
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -51,6 +53,7 @@ async def test_a_server_write_runs_after_the_updates_already_queued_on_the_lock(
             seen.append(text)
             return [(len(text), len(text), "!")], None
 
+        server_call: Coroutine[Any, Any, object]
         if server_write == "update":
             server_call = h.manager.apply_server_update(doc, "restored", "restore")
         else:

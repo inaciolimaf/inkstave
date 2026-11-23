@@ -7,7 +7,8 @@ Each test pins one rule the lifecycle keeps (spec 28, ADR 0123). The recording f
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -176,7 +177,7 @@ async def test_document_operations_wait_for_the_document_lock(operation: str) ->
         doc = uuid4()
         handle = await h.manager.acquire(doc)
         update = edit_update(handle.ydoc.get_state(), "typed")
-        calls: dict[str, Callable[[], Awaitable[object]]] = {
+        calls: dict[str, Callable[[], Coroutine[Any, Any, object]]] = {
             "handle_update": lambda: h.manager.handle_update(doc, update, origin="client"),
             "apply_remote_update": lambda: h.manager.apply_remote_update(doc, update),
             "handle_sync_step1": lambda: h.manager.handle_sync_step1(doc, YDocument().get_state_vector()),
@@ -184,7 +185,7 @@ async def test_document_operations_wait_for_the_document_lock(operation: str) ->
         lock = h.manager._lock(doc)
         await lock.acquire()
 
-        pending = asyncio.create_task(calls[operation]())
+        pending: asyncio.Task[object] = asyncio.create_task(calls[operation]())
         await settle()
         assert not pending.done()
         assert h.store.appends == []
