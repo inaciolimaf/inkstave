@@ -16,7 +16,7 @@ const jsdom = builtinEnvironments.jsdom;
 
 const STORAGES = ["localStorage", "sessionStorage"] as const;
 
-function useJsdomStorage(global: Record<string, unknown>): void {
+function restoreJsdomStorage(global: Record<string, unknown>): void {
   const window = (global.jsdom as { window: Record<string, unknown> }).window;
   for (const name of STORAGES) {
     Object.defineProperty(global, name, {
@@ -34,7 +34,7 @@ export default <Environment>{
     const { AbortController, AbortSignal } = global;
     const environment = await jsdom.setup(global, options);
     Object.assign(global, { AbortController, AbortSignal });
-    useJsdomStorage(global);
+    restoreJsdomStorage(global);
     return environment;
   },
 };
