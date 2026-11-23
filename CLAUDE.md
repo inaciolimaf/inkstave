@@ -158,7 +158,7 @@ targets, so what passes here passes there.
 | `make fix-tests` | every `fix` commit in `FIX_RANGE` (default `origin/main..HEAD`) changes a test file; CI runs it on the pushed or PR range |
 | `make test` | backend unit + integration |
 | `make coverage` | the same, with the coverage floor |
-| `make test-unit` / `make test-integration` | the two tiers as CI splits them |
+| `make test-unit` / `make test-integration` | the two tiers as CI splits them; `SHARD=K/N` runs one slice of integration (CI runs 3) |
 | `make budget` | gate the per-test limit from the JUnit files (the whole run is gated by CI's `gate` job) |
 | `make web-types` | regenerate `docs/api/openapi.json` and `frontend/src/api/types.ts` |
 | `make web-test` | eslint, prettier check, `tsc -b`, Vitest |
