@@ -42,6 +42,7 @@ pytest_plugins = (
     "tests.fixtures.env",
     "tests.fixtures.database",
     "tests.fixtures.services",
+    "tests.fixtures.shard",
 )
 
 # Property tests (Hypothesis) run under one fixed profile: derandomized so a CI run and a
